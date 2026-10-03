@@ -32,6 +32,10 @@
         }
     </script>
     <style>
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -53,14 +57,19 @@
 
     <!-- Sidebar Navigation for Desktop -->
     <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-white min-h-screen p-4 flex-shrink-0">
-        <div class="flex items-center space-x-3 px-3 py-4 border-b border-slate-800">
-            <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
-                <i class="fa-solid font-bold fa-building-user text-xl"></i>
+        <div class="flex items-center justify-between px-3 py-4 border-b border-slate-800">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
+                    <i class="fa-solid font-bold fa-building-user text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base leading-tight">Sistem RT 005/RW 02</h1>
+                    <p class="text-xs text-slate-400">Tanjung Duren Utara</p>
+                </div>
             </div>
-            <div>
-                <h1 class="font-bold text-base leading-tight">Sistem RT 005/RW 02</h1>
-                <p class="text-xs text-slate-400">Tanjung Duren Utara</p>
-            </div>
+            <button onclick="refreshData()" id="desktop-refresh-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Muat Ulang Data">
+                <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
         </div>
 
         <!-- Connection Status Pill -->
@@ -116,6 +125,9 @@
         </div>
         <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="p-2 text-slate-300 hover:text-white focus:outline-none">
             <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+        <button onclick="refreshData()" id="mobile-refresh-btn" class="p-2 text-slate-300 hover:text-white focus:outline-none" title="Muat Ulang Data">
+            <i class="fa-solid fa-arrows-rotate text-xl"></i>
         </button>
     </header>
 
@@ -678,6 +690,43 @@
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
+        }
+
+        // Refresh data from Google Sheets
+        function refreshData() {
+            const btns = [document.getElementById('desktop-refresh-btn'), document.getElementById('mobile-refresh-btn')];
+            
+            // Show loading state on buttons
+            btns.forEach(btn => {
+                if (btn) {
+                    btn.classList.add('animate-spin');
+                    btn.style.animation = 'spin 1s linear infinite';
+                }
+            });
+
+            showToast('Memuat ulang data dari Google Sheets...', 'info');
+
+            // Call sync and re-render after
+            syncFromGoogleSheets();
+
+            setTimeout(() => {
+                renderDashboardStats();
+                renderWargaTable();
+                renderKasTable();
+                renderPengumumanCards();
+                renderKegiatanCards();
+                updateLastUpdated();
+                updateConnectionUI();
+
+                btns.forEach(btn => {
+                    if (btn) {
+                        btn.classList.remove('animate-spin');
+                        btn.style.animation = '';
+                    }
+                });
+
+                showToast('Data berhasil dimuat ulang!', 'success');
+            }, 1500);
         }
 
         function updateLastUpdated() {
