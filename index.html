@@ -636,6 +636,46 @@
             localStorage.setItem('rt_data_version', DATA_VERSION);
         }
 
+        // Track deleted records by content signature (persists through reload & re-sync)
+        let localDeletes = {
+            warga: JSON.parse(localStorage.getItem('rt_local_deletes_warga')) || [],
+            kas: JSON.parse(localStorage.getItem('rt_local_deletes_kas')) || [],
+            pengumuman: JSON.parse(localStorage.getItem('rt_local_deletes_pengumuman')) || [],
+            kegiatan: JSON.parse(localStorage.getItem('rt_local_deletes_kegiatan')) || []
+        };
+
+        function getSignature(type, item) {
+            if (!item) return '';
+            if (type === 'warga') return [item.nik || '', item.nama || '', item.hp || '', item.alamat || ''].join('|');
+            if (type === 'kas') return [item.tanggal || '', item.nama || '', item.noRumah || '', item.jenis || '', item.jumlah || '', item.keterangan || ''].join('|');
+            if (type === 'pengumuman') return [item.tanggal || '', item.judul || '', item.isi || '', item.kategori || '', item.pj || ''].join('|');
+            if (type === 'kegiatan') return [item.namaKegiatan || '', item.tanggal || '', item.waktu || '', item.lokasi || '', item.pj || '', item.keterangan || ''].join('|');
+            return JSON.stringify(item);
+        }
+
+        function saveLocalDeletes(type) {
+            localStorage.setItem('rt_local_deletes_' + type, JSON.stringify(localDeletes[type]));
+        }
+
+        function trackLocalDelete(type, item) {
+            const sig = getSignature(type, item);
+            if (sig && !localDeletes[type].includes(sig)) {
+                localDeletes[type].push(sig);
+                saveLocalDeletes(type);
+            }
+        }
+
+        // Filter out records that were deleted locally (prevents re-appearing after reload)
+        function applyLocalDeletes(type, rows) {
+            if (!localDeletes[type] || localDeletes[type].length === 0) return rows;
+            const keep = rows.filter(r => !localDeletes[type].includes(getSignature(type, r)));
+            // Remove signatures that no longer exist in Sheets (truly deleted)
+            const stillPresent = new Set(rows.map(r => getSignature(type, r)));
+            localDeletes[type] = localDeletes[type].filter(s => stillPresent.has(s));
+            saveLocalDeletes(type);
+            return keep;
+        }
+
         // State Storage
         let appState = {
             warga: JSON.parse(localStorage.getItem('rt_warga')) || initialWarga,
@@ -1049,33 +1089,44 @@
 
         // Deletion Functions
         function deleteWarga(index) {
-            if(confirm('Hapus data warga ini?')) {
-                deleteRecord('Data_Warga', index, appState.warga, renderWargaTable);
+            const item = appState.warga[index];
+            const warningMsg = `⚠️ PERHATIAN!`;
+            const detailMsg = `Anda akan menghapus data warga:
+• Nama: ${item?.nama || 'Tidak diketahui'}
+• NIK: ${item?.nik || '-'}
+• No. HP: ${item?.hp || '-'}`;
+            const confirmMsg = `${warningMsg}\n\n${detailMsg}\n\nYakin ingin menghapus data ini?`;
+
+            if(confirm(confirmMsg)) {
+                deleteRecord('Data_Warga', index, appState.warga, renderWargaTable, 'warga');
             }
         }
 
         function deleteKas(index) {
             if(confirm('Hapus catatan kas ini?')) {
-                deleteRecord('Iuran_Kas', index, appState.kas, renderKasTable);
+                deleteRecord('Iuran_Kas', index, appState.kas, renderKasTable, 'kas');
             }
         }
 
         function deletePengumuman(index) {
             if(confirm('Hapus pengumuman ini?')) {
-                deleteRecord('Pengumuman', index, appState.pengumuman, renderPengumumanCards);
+                deleteRecord('Pengumuman', index, appState.pengumuman, renderPengumumanCards, 'pengumuman');
             }
         }
 
         function deleteKegiatan(index) {
             if(confirm('Hapus agenda kegiatan ini?')) {
-                deleteRecord('Kegiatan_Warga', index, appState.kegiatan, renderKegiatanCards);
+                deleteRecord('Kegiatan_Warga', index, appState.kegiatan, renderKegiatanCards, 'kegiatan');
             }
         }
 
         // Generic delete: send to Sheets FIRST, then update local if successful
-        function deleteRecord(sheetName, index, arrayRef, renderFn) {
+        function deleteRecord(sheetName, index, arrayRef, renderFn, localDeleteKey) {
+            const item = arrayRef[index];
+
             if (!appState.scriptUrl) {
                 // Local mode: just delete locally
+                trackLocalDelete(localDeleteKey, item);
                 arrayRef.splice(index, 1);
                 saveLocalState();
                 renderFn();
@@ -1103,9 +1154,10 @@
             window[callbackName] = function (res) {
                 clearTimeout(timer);
                 cleanup();
-                
+
                 if (res && res.result === 'success') {
-                    // Success: now delete locally
+                    // Success: delete locally & track signature so reload won't bring it back
+                    trackLocalDelete(localDeleteKey, item);
                     arrayRef.splice(index, 1);
                     saveLocalState();
                     renderFn();
@@ -1228,18 +1280,18 @@
                 return;
             }
             const d = res.data;
-            appState.warga = (d.Data_Warga || []).map(r => ({
+            appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
                 nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
-            }));
-            appState.kas = (d.Iuran_Kas || []).map(r => ({
+            })));
+            appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
                 tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
-            }));
-            appState.pengumuman = (d.Pengumuman || []).map(r => ({
+            })));
+            appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
                 tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
-            }));
-            appState.kegiatan = (d.Kegiatan_Warga || []).map(r => ({
+            })));
+            appState.kegiatan = applyLocalDeletes('kegiatan', (d.Kegiatan_Warga || []).map(r => ({
                 namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
-            }));
+            })));
             saveLocalState();
             renderWargaTable();
             renderKasTable();
@@ -1274,9 +1326,10 @@
             appState.kas = [];
             appState.pengumuman = [];
             appState.kegiatan = [];
-            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan'].forEach(function (key) {
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan'].forEach(function (key) {
                 localStorage.removeItem(key);
             });
+            localDeletes = { warga: [], kas: [], pengumuman: [], kegiatan: [] };
             renderDashboardStats();
             renderWargaTable();
             renderKasTable();
