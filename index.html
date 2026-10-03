@@ -458,7 +458,7 @@
     <div id="modal-warga" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-lg text-slate-800">Tambah Data Warga</h3>
+                <h3 id="modal-warga-title" class="font-bold text-lg text-slate-800">Tambah Data Warga</h3>
                 <button onclick="closeModal('modal-warga')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="form-warga" onsubmit="submitWarga(event)" class="space-y-3">
@@ -487,7 +487,7 @@
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-warga')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">Simpan Warga</button>
+                    <button type="submit" id="btn-save-warga" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm">Simpan Warga</button>
                 </div>
             </form>
         </div>
@@ -497,7 +497,7 @@
     <div id="modal-kas" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-lg text-slate-800">Catat Transaksi Kas</h3>
+                <h3 id="modal-kas-title" class="font-bold text-lg text-slate-800">Catat Transaksi Kas</h3>
                 <button onclick="closeModal('modal-kas')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="form-kas" onsubmit="submitKas(event)" class="space-y-3">
@@ -530,7 +530,7 @@
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-kas')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm">Simpan Transaksi</button>
+                    <button type="submit" id="btn-save-kas" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm">Simpan Transaksi</button>
                 </div>
             </form>
         </div>
@@ -540,7 +540,7 @@
     <div id="modal-pengumuman" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-lg text-slate-800">Buat Pengumuman Baru</h3>
+                <h3 id="modal-pengumuman-title" class="font-bold text-lg text-slate-800">Buat Pengumuman Baru</h3>
                 <button onclick="closeModal('modal-pengumuman')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="form-pengumuman" onsubmit="submitPengumuman(event)" class="space-y-3">
@@ -571,7 +571,7 @@
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-pengumuman')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-sm">Terbitkan</button>
+                    <button type="submit" id="btn-save-pengumuman" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-sm">Terbitkan</button>
                 </div>
             </form>
         </div>
@@ -581,7 +581,7 @@
     <div id="modal-kegiatan" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-lg text-slate-800">Tambah Agenda Kegiatan</h3>
+                <h3 id="modal-kegiatan-title" class="font-bold text-lg text-slate-800">Tambah Agenda Kegiatan</h3>
                 <button onclick="closeModal('modal-kegiatan')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="form-kegiatan" onsubmit="submitKegiatan(event)" class="space-y-3">
@@ -613,7 +613,7 @@
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-kegiatan')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
-                    <button type="submit" class="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm">Simpan Agenda</button>
+                    <button type="submit" id="btn-save-kegiatan" class="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm">Simpan Agenda</button>
                 </div>
             </form>
         </div>
@@ -643,6 +643,9 @@
             pengumuman: JSON.parse(localStorage.getItem('rt_local_deletes_pengumuman')) || [],
             kegiatan: JSON.parse(localStorage.getItem('rt_local_deletes_kegiatan')) || []
         };
+
+        // Track which item is being edited (null = add mode)
+        let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null };
 
         function getSignature(type, item) {
             if (!item) return '';
@@ -869,7 +872,8 @@
                     <td class="p-4">${statusBadge}</td>
                     <td class="p-4 text-slate-600">${item.alamat}</td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="editWarga(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -924,7 +928,8 @@
                     <td class="p-4 ${amountClass}">${formatRupiah(item.jumlah)}</td>
                     <td class="p-4 text-slate-500 text-xs">${item.keterangan || '-'}</td>
                     <td class="p-4 text-center">
-                        <button onclick="deleteKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -955,7 +960,10 @@
                     </div>
                     <div class="pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
                         <span><i class="fa-regular fa-circle-user mr-1"></i>${item.pj}</span>
-                        <button onclick="deletePengumuman(${index})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash-can"></i> Hapus</button>
+                        <div class="flex space-x-2">
+                            <button onclick="editPengumuman(${index})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i> Edit</button>
+                            <button onclick="deletePengumuman(${index})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash-can"></i> Hapus</button>
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -988,7 +996,8 @@
                             ${item.keterangan ? `<p class="mt-2 text-slate-500 italic bg-slate-50 p-2 rounded-lg">"${item.keterangan}"</p>` : ''}
                         </div>
                     </div>
-                    <div class="pt-2 flex justify-end">
+                    <div class="pt-2 flex justify-end space-x-2">
+                        <button onclick="editKegiatan(${index})" class="text-xs text-blue-500 hover:text-blue-700 flex items-center space-x-1"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
                         <button onclick="deleteKegiatan(${index})" class="text-xs text-rose-500 hover:text-rose-700 flex items-center space-x-1"><i class="fa-solid fa-trash-can"></i><span>Hapus</span></button>
                     </div>
                 `;
@@ -998,7 +1007,14 @@
 
         // Modal Control Helpers
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            // Reset edit mode and modal UI
+            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; }
+            else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
+            else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; }
+            else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; }
+        }
 
         // Form Submit Handlers
         function submitWarga(e) {
@@ -1012,14 +1028,23 @@
                 alamat: document.getElementById('warga-alamat').value
             };
 
-            appState.warga.push({ nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
-            saveLocalState();
-            renderWargaTable();
-            sendToGoogleSheets(data);
+            if (editMode.warga !== null) {
+                appState.warga[editMode.warga] = { nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
+                editMode.warga = null;
+                saveLocalState();
+                renderWargaTable();
+                sendToGoogleSheets(data);
+                showToast('Data warga diperbarui!', 'success');
+            } else {
+                appState.warga.push({ nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
+                saveLocalState();
+                renderWargaTable();
+                sendToGoogleSheets(data);
+                showToast('Data warga berhasil disimpan!', 'success');
+            }
 
             closeModal('modal-warga');
             document.getElementById('form-warga').reset();
-            showToast('Data warga berhasil disimpan!', 'success');
         }
 
         function submitKas(e) {
@@ -1034,14 +1059,23 @@
                 keterangan: document.getElementById('kas-keterangan').value
             };
 
-            appState.kas.push(data);
-            saveLocalState();
-            renderKasTable();
-            sendToGoogleSheets(data);
+            if (editMode.kas !== null) {
+                appState.kas[editMode.kas] = data;
+                editMode.kas = null;
+                saveLocalState();
+                renderKasTable();
+                sendToGoogleSheets(data);
+                showToast('Transaksi kas diperbarui!', 'success');
+            } else {
+                appState.kas.push(data);
+                saveLocalState();
+                renderKasTable();
+                sendToGoogleSheets(data);
+                showToast('Catatan kas berhasil disimpan!', 'success');
+            }
 
             closeModal('modal-kas');
             document.getElementById('form-kas').reset();
-            showToast('Catatan kas berhasil disimpan!', 'success');
         }
 
         function submitPengumuman(e) {
@@ -1055,14 +1089,23 @@
                 pj: document.getElementById('pengumuman-pj').value
             };
 
-            appState.pengumuman.push(data);
-            saveLocalState();
-            renderPengumumanCards();
-            sendToGoogleSheets(data);
+            if (editMode.pengumuman !== null) {
+                appState.pengumuman[editMode.pengumuman] = data;
+                editMode.pengumuman = null;
+                saveLocalState();
+                renderPengumumanCards();
+                sendToGoogleSheets(data);
+                showToast('Pengumuman diperbarui!', 'success');
+            } else {
+                appState.pengumuman.push(data);
+                saveLocalState();
+                renderPengumumanCards();
+                sendToGoogleSheets(data);
+                showToast('Pengumuman berhasil diterbitkan!', 'success');
+            }
 
             closeModal('modal-pengumuman');
             document.getElementById('form-pengumuman').reset();
-            showToast('Pengumuman berhasil diterbitkan!', 'success');
         }
 
         function submitKegiatan(e) {
@@ -1077,14 +1120,86 @@
                 keterangan: document.getElementById('kegiatan-keterangan').value
             };
 
-            appState.kegiatan.push(data);
-            saveLocalState();
-            renderKegiatanCards();
-            sendToGoogleSheets(data);
+            if (editMode.kegiatan !== null) {
+                appState.kegiatan[editMode.kegiatan] = data;
+                editMode.kegiatan = null;
+                saveLocalState();
+                renderKegiatanCards();
+                sendToGoogleSheets(data);
+                showToast('Agenda kegiatan diperbarui!', 'success');
+            } else {
+                appState.kegiatan.push(data);
+                saveLocalState();
+                renderKegiatanCards();
+                sendToGoogleSheets(data);
+                showToast('Agenda kegiatan berhasil ditambahkan!', 'success');
+            }
 
             closeModal('modal-kegiatan');
             document.getElementById('form-kegiatan').reset();
-            showToast('Agenda kegiatan berhasil ditambahkan!', 'success');
+        }
+
+        // Edit Functions
+        function editWarga(index) {
+            const item = appState.warga[index];
+            if (!item) return;
+            
+            editMode.warga = index;
+            document.getElementById('modal-warga-title').textContent = 'Edit Data Warga';
+            document.getElementById('warga-nama').value = item.nama || '';
+            document.getElementById('warga-nik').value = item.nik || '';
+            document.getElementById('warga-hp').value = item.hp || '';
+            document.getElementById('warga-status').value = item.statusTinggal || 'Tetap';
+            document.getElementById('warga-alamat').value = item.alamat || '';
+            document.getElementById('btn-save-warga').textContent = 'Perbarui Warga';
+            openModal('modal-warga');
+        }
+
+        function editKas(index) {
+            const item = appState.kas[index];
+            if (!item) return;
+            
+            editMode.kas = index;
+            document.getElementById('modal-kas-title').textContent = 'Edit Transaksi Kas';
+            document.getElementById('kas-tanggal').value = item.tanggal || '';
+            document.getElementById('kas-jenis').value = item.jenis || 'Pemasukan';
+            document.getElementById('kas-nama').value = item.nama || '';
+            document.getElementById('kas-norumah').value = item.noRumah || '';
+            document.getElementById('kas-jumlah').value = item.jumlah || '';
+            document.getElementById('kas-keterangan').value = item.keterangan || '';
+            document.getElementById('btn-save-kas').textContent = 'Perbarui Transaksi';
+            openModal('modal-kas');
+        }
+
+        function editPengumuman(index) {
+            const item = appState.pengumuman[index];
+            if (!item) return;
+            
+            editMode.pengumuman = index;
+            document.getElementById('modal-pengumuman-title').textContent = 'Edit Pengumuman';
+            document.getElementById('pengumuman-tanggal').value = item.tanggal || '';
+            document.getElementById('pengumuman-judul').value = item.judul || '';
+            document.getElementById('pengumuman-kategori').value = item.kategori || 'Informasi Umum';
+            document.getElementById('pengumuman-isi').value = item.isi || '';
+            document.getElementById('pengumuman-pj').value = item.pj || '';
+            document.getElementById('btn-save-pengumuman').textContent = 'Perbarui Pengumuman';
+            openModal('modal-pengumuman');
+        }
+
+        function editKegiatan(index) {
+            const item = appState.kegiatan[index];
+            if (!item) return;
+            
+            editMode.kegiatan = index;
+            document.getElementById('modal-kegiatan-title').textContent = 'Edit Agenda Kegiatan';
+            document.getElementById('kegiatan-nama').value = item.namaKegiatan || '';
+            document.getElementById('kegiatan-tanggal').value = item.tanggal || '';
+            document.getElementById('kegiatan-waktu').value = item.waktu || '';
+            document.getElementById('kegiatan-lokasi').value = item.lokasi || '';
+            document.getElementById('kegiatan-pj').value = item.pj || '';
+            document.getElementById('kegiatan-keterangan').value = item.keterangan || '';
+            document.getElementById('btn-save-kegiatan').textContent = 'Perbarui Agenda';
+            openModal('modal-kegiatan');
         }
 
         // Deletion Functions
