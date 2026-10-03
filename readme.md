@@ -43,45 +43,7 @@ Timestamp	Nama Kegiatan	Tanggal Pelaksanaan	Waktu	Lokasi	Penanggung Jawab	Ketera
 
 ## ⚙️ Kode Google Apps Script (`Code.gs`)
 
-Buka Google Sheets Anda, pilih menu **Ekstensi > Apps Script**, lalu salin dan tempelkan kode berikut:
-
-```javascript
-function doPost(e) {
-  try {
-    var data = JSON.parse(e.postData.contents);
-    var sheetName = data.sheetName;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(sheetName);
-    
-    if (!sheet) {
-      return ContentService.createTextOutput(JSON.stringify({ "result": "error", "message": "Sheet tidak ditemukan" }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    var timestamp = new Date();
-    var rowData = [timestamp];
-    
-    if (sheetName === "Data_Warga") {
-      rowData.push(data.nama, data.nik, data.noHp, data.statusTinggal, data.alamat);
-    } else if (sheetName === "Iuran_Kas") {
-      rowData.push(data.tanggal, data.nama, data.noRumah, data.jenis, data.jumlah, data.keterangan);
-    } else if (sheetName === "Pengumuman") {
-      rowData.push(data.tanggal, data.judul, data.isi, data.kategori, data.pj);
-    } else if (sheetName === "Kegiatan_Warga") {
-      rowData.push(data.namaKegiatan, data.tanggal, data.waktu, data.lokasi, data.pj, data.keterangan);
-    }
-    
-    sheet.appendRow(rowData);
-    
-    return ContentService.createTextOutput(JSON.stringify({ "result": "success" }))
-      .setMimeType(ContentService.MimeType.JSON);
-      
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ "result": "error", "message": error.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-```
+Kode Apps Script sudah tersedia pada file `Apps Script/code.gs`. Buka Google Sheets Anda, pilih menu **Ekstensi > Apps Script**, lalu salin dan tempelkan isi file tersebut.
 
 ### Langkah Deployment Web App:
 1. Klik tombol **Deploy > New Deployment**.
@@ -90,6 +52,11 @@ function doPost(e) {
 4. Atur *Who has access*: **Anyone** (Siapa saja).
 5. Klik **Deploy**, lalu salin **Web App URL** yang didapat.
 6. Buka aplikasi web RT, masuk ke tab **Koneksi App Script**, lalu tempelkan URL tersebut dan klik **Simpan**.
+
+> **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
+
+### Membaca data dari Google Sheets
+Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (bila Web App URL sudah tersimpan) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di tab **Koneksi App Script** untuk menyegarkan data kapan saja.
 
 ---
 

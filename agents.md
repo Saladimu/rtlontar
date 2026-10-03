@@ -74,6 +74,6 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 ## ⚙️ Maintenance & Development Guidelines for AI Agents
 
 1. **Responsive First Directive:** Seluruh perombakan antarmuka harus mempertahankan prinsip responsif seluler (`sm:`, `md:`, `lg:` breakpoints pada Tailwind CSS).
-2. **CORS Protocol Management:** Panggilan `fetch()` ke Google Apps Script harus dikonfigurasi dengan mode `'no-cors'` karena batasan pengalihan domain Google (*redirect behavior*).
+2. **CORS Protocol Management:** Panggilan `fetch()` ke Google Apps Script harus menggunakan `mode: 'no-cors'` dengan `Content-Type: text/plain;charset=utf-8` (bukan `application/json`). Header `application/json` tidak tergolong *CORS-safelisted*, sehingga pada mode `no-cors` browser membuang header tersebut dan body berisiko tidak terkirim dengan benar. Body tetap dikirim sebagai string JSON dan dibaca backend melalui `e.postData.contents`.
 3. **Data Integrity:** Pastikan sinkronisasi antara kunci properti JSON pada skrip *frontend* selaras dengan urutan indeks `rowData.push()` pada backend Google Apps Script.
 4. **Offline Resilience:** Selalu simpan state terbaru ke `localStorage` sebelum meluncurkan perintah `fetch()` ke jaringan external.

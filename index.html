@@ -413,6 +413,12 @@
                     <button onclick="testConnection()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
                         Tes Koneksi
                     </button>
+                    <button onclick="syncFromGoogleSheets()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
+                        Muat Data dari Sheets
+                    </button>
+                    <button onclick="resetAllData()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
+                        Reset Semua Data
+                    </button>
                 </div>
 
                 <hr class="border-slate-100">
@@ -603,24 +609,20 @@
 
     <!-- ================= JAVASCRIPT APP LOGIC ================= -->
     <script>
-        // Default Mock Initial Data
-        const initialWarga = [
-            { nama: 'Budi Santoso', nik: '3173012010850001', hp: '081298765432', statusTinggal: 'Tetap', alamat: 'Jl. Tanjung Duren Utara No. 12' },
-            { nama: 'Siti Aminah', nik: '3173015504900003', hp: '085712345678', statusTinggal: 'Kontrak', alamat: 'Gg. Salak No. 4B' }
-        ];
+        // Default Initial Data (kosong - mulai dari tampilan bersih)
+        const initialWarga = [];
+        const initialKas = [];
+        const initialPengumuman = [];
+        const initialKegiatan = [];
 
-        const initialKas = [
-            { tanggal: '2026-10-01', nama: 'Budi Santoso', noRumah: 'No. 12', jenis: 'Pemasukan', jumlah: 50000, keterangan: 'Iuran Bulanan Oktober' },
-            { tanggal: '2026-10-02', nama: 'Pembelian Lampu Jalan', noRumah: '-', jenis: 'Pengeluaran', jumlah: 75000, keterangan: 'Beli 2 Bohlam LED RT' }
-        ];
-
-        const initialPengumuman = [
-            { tanggal: '2026-10-01', judul: 'Jadwal Fogging Nyamuk DBD', isi: 'Diberitahukan kepada warga RT 005 bahwa akan dilaksanakan fogging pada hari Sabtu pagi.', kategori: 'Penting/Mendesak', pj: 'Ketua RT 005' }
-        ];
-
-        const initialKegiatan = [
-            { namaKegiatan: 'Kerja Bakti Masal', tanggal: '2026-10-10', waktu: '07:00', lokasi: 'Area Selokan Utama RT', pj: 'Sie Kebersihan', keterangan: 'Harap membawa cangkul & kantong sampah' }
-        ];
+        // One-time cleanup: hapus seluruh record lokal (demo/lama) agar tampilan bersih.
+        const DATA_VERSION = 'clean-2026-10-03';
+        if (localStorage.getItem('rt_data_version') !== DATA_VERSION) {
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan'].forEach(function (key) {
+                localStorage.removeItem(key);
+            });
+            localStorage.setItem('rt_data_version', DATA_VERSION);
+        }
 
         // State Storage
         let appState = {
@@ -640,6 +642,9 @@
             renderPengumumanCards();
             renderKegiatanCards();
             updateConnectionUI();
+
+            // Jika URL tersimpan, muat data langsung dari Google Sheets.
+            if (appState.scriptUrl) syncFromGoogleSheets();
 
             // Default dates in forms
             const today = new Date().toISOString().split('T')[0];
@@ -1035,6 +1040,7 @@
             localStorage.setItem('rt_script_url', url);
             updateConnectionUI();
             showToast('URL Google Apps Script berhasil disimpan!', 'success');
+            if (url) syncFromGoogleSheets();
         }
 
         function updateConnectionUI() {
@@ -1058,11 +1064,13 @@
                 return;
             }
 
-            // Send async POST request to Google Apps Script Web App
+            // Send async POST request to Google Apps Script Web App.
+            // Use text/plain so this stays a CORS "simple request" (no preflight).
+            // The Apps Script doPost still reads the raw JSON via e.postData.contents.
             fetch(appState.scriptUrl, {
                 method: 'POST',
-                mode: 'no-cors', // Standard Google Apps Script Web App CORS mode
-                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors', // Required because Apps Script does not return CORS headers
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             })
             .then(() => {
@@ -1081,6 +1089,107 @@
             }
             showToast('Menguji koneksi ke Google Apps Script...', 'info');
             sendToGoogleSheets({ test: true });
+        }
+
+        // Baca / muat data dari Google Sheets memakai JSONP (bebas kendala CORS)
+        function syncFromGoogleSheets() {
+            if (!appState.scriptUrl) {
+                showToast('Silakan masukkan dan simpan Web App URL terlebih dahulu', 'error');
+                return;
+            }
+
+            const callbackName = '__rtSheetsRead_' + Date.now();
+            const script = document.createElement('script');
+            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
+
+            const cleanup = () => {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+
+            const timer = setTimeout(() => {
+                cleanup();
+                showToast('Timeout saat memuat data dari Google Sheets', 'error');
+            }, 15000);
+
+            window[callbackName] = function (res) {
+                clearTimeout(timer);
+                cleanup();
+                applySheetsData(res);
+            };
+
+            script.onerror = function () {
+                clearTimeout(timer);
+                cleanup();
+                showToast('Gagal memuat data dari Google Sheets', 'error');
+            };
+
+            script.src = appState.scriptUrl + sep + 'action=read&callback=' + callbackName;
+            document.body.appendChild(script);
+        }
+
+        function applySheetsData(res) {
+            if (!res || res.result !== 'success' || !res.data) {
+                showToast('Gagal memuat data dari Google Sheets', 'error');
+                return;
+            }
+            const d = res.data;
+            appState.warga = (d.Data_Warga || []).map(r => ({
+                nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
+            }));
+            appState.kas = (d.Iuran_Kas || []).map(r => ({
+                tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
+            }));
+            appState.pengumuman = (d.Pengumuman || []).map(r => ({
+                tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+            }));
+            appState.kegiatan = (d.Kegiatan_Warga || []).map(r => ({
+                namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
+            }));
+            saveLocalState();
+            renderWargaTable();
+            renderKasTable();
+            renderPengumumanCards();
+            renderKegiatanCards();
+            showToast('Data berhasil dimuat dari Google Sheets', 'success');
+        }
+
+        function fmtDate(v) {
+            if (v === null || v === undefined || v === '') return '';
+            if (v instanceof Date) {
+                return v.getFullYear() + '-' + String(v.getMonth() + 1).padStart(2, '0') + '-' + String(v.getDate()).padStart(2, '0');
+            }
+            const s = String(v);
+            const match = s.match(/^\d{4}-\d{2}-\d{2}/);
+            return match ? match[0] : s;
+        }
+
+        function fmtTime(v) {
+            if (v === null || v === undefined || v === '') return '';
+            const s = String(v);
+            const match = s.match(/(\d{2}):(\d{2})/);
+            return match ? match[1] + ':' + match[2] : s;
+        }
+
+        // Revoke semua record lokal agar tampilan kembali bersih
+        function resetAllData() {
+            if (!confirm('Hapus SEMUA data (warga, kas, pengumuman, kegiatan) dari tampilan ini? Tindakan ini tidak dapat dibatalkan.')) {
+                return;
+            }
+            appState.warga = [];
+            appState.kas = [];
+            appState.pengumuman = [];
+            appState.kegiatan = [];
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan'].forEach(function (key) {
+                localStorage.removeItem(key);
+            });
+            renderDashboardStats();
+            renderWargaTable();
+            renderKasTable();
+            renderPengumumanCards();
+            renderKegiatanCards();
+            updateLastUpdated();
+            showToast('Semua data berhasil dihapus. Tampilan sudah bersih.', 'success');
         }
 
         // Helper Utility Functions
