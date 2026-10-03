@@ -6,12 +6,14 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 
 ## 🚀 Fitur Utama
 
-- **📊 Ringkasan / Dashboard Dashboard:** Menampilkan statistik total warga, saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
-- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi fitur pencarian dan filter.
-- **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi.
-- **📢 Pengumuman RT:** Papan informasi digital resmi untuk menyebarkan imbauan dan berita penting.
-- **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT.
-- **🔗 Integrasi Google Apps Script:** Pengiriman data form langsung terhubung ke Google Sheets, dengan *fallback* **localStorage** jika dijalankan tanpa internet/koneksi backend.
+- **📊 Ringkasan / Dashboard:** Menampilkan statistik total warga, saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
+- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
+- **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Hapus** tersedia.
+- **📢 Pengumuman RT:** Papan informasi digital resmi untuk menyebarkan imbauan dan berita penting. **Edit & Hapus** tersedia.
+- **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT. **Edit & Hapus** tersedia.
+- **🔄 Refresh Data Manual:** Tombol refresh di header desktop/mobile untuk memuat ulang data dari Google Sheets kapan saja.
+- **🔗 Integrasi Google Apps Script:** Pengiriman data form langsung terhubung ke Google Sheets, **sync delete**, dengan *fallback* **localStorage** jika dijalankan tanpa internet/koneksi backend.
+- **⚠️ Delete Persistence:** Sistem melacak record yang dihapus agar tidak muncul kembali setelah reload/sync.
 
 ---
 
@@ -41,9 +43,33 @@ Timestamp	Nama Kegiatan	Tanggal Pelaksanaan	Waktu	Lokasi	Penanggung Jawab	Ketera
 
 ---
 
-## ⚙️ Kode Google Apps Script (`Code.gs`)
+## ⚙️ Kode Google Apps Script (`Apps Script/code.gs`)
 
-Kode Apps Script sudah tersedia pada file `Apps Script/code.gs`. Buka Google Sheets Anda, pilih menu **Ekstensi > Apps Script**, lalu salin dan tempelkan isi file tersebut.
+Kode Apps Script sudah tersedia pada folder `Apps Script/code.gs`. Lihat juga dokumentasi lengkap di `Apps Script/readme.md`.
+
+Lihat `Apps Script/readme.md` untuk:
+- Struktur database detail
+- API endpoints (GET/POST)
+- Panduan deployment
+- Troubleshooting
+
+<details>
+<summary>📖 Panduan Singkat (klik untuk buka)</summary>
+
+**Langkah Deployment:**
+1. Buka Google Sheets → Ekstensi → Apps Script
+2. Salin isi `code.gs` dan tempel di editor
+3. Deploy > New Deployment → pilih **Web app**
+4. Execute as: **Me** | Who has access: **Anyone**
+5. Salin Web App URL ke aplikasi web (tab Koneksi)
+6. Setelah update kode, Deploy > Manage deployments > Edit > New version > Deploy
+
+**Perubahan Terbaru di code.gs:**
+- ✅ `doGet` mendukung `action=delete` + JSONP callback
+- ✅ `handleDelete()` untuk hapus baris dengan validasi
+- ✅ `doPost` mendukung delete action via POST (fallback)
+- ✅ Format tanggal otomatis saat read dari Sheets
+</details>
 
 ### Langkah Deployment Web App:
 1. Klik tombol **Deploy > New Deployment**.
@@ -56,7 +82,13 @@ Kode Apps Script sudah tersedia pada file `Apps Script/code.gs`. Buka Google She
 > **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
 
 ### Membaca data dari Google Sheets
-Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (bila Web App URL sudah tersimpan) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di tab **Koneksi App Script** untuk menyegarkan data kapan saja.
+Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (bila Web App URL sudah tersimpan) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di tab **Koneksi App Script** atau **tombol Refresh 🔄** di header untuk menyegarkan data kapan saja.
+
+### Edit & Delete Data
+Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit** ✏️ dan **Hapus** 🗑️ di setiap record.
+- **Hapus**: Data warga akan menampilkan warning dialog detail sebelum dihapus.
+- **Edit**: Modal akan terbuka dengan data yang sudah terisi, klik simpan untuk menyimpan perubahan.
+- **Delete Sync**: Penghapusan dilakukan di Google Sheets dulu, jika gagal data lokal tidak berubah.
 
 ---
 
