@@ -7,17 +7,18 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
 ## 🏗️ System Architecture Overview
 
 - **Frontend Architecture:** Single Page Application (SPA) berbasis HTML5, diselaraskan dengan Tailwind CSS CDN untuk *utility styling*, dan FontAwesome CDN untuk ikonografi.
-- **Backend Architecture:** Serverless Function via Google Apps Script (`doPost` HTTP Endpoint).
+- **Backend Architecture:** Serverless Function via Google Apps Script (`doGet` + `doPost` HTTP Endpoints).
 - **Database Layer:** Google Sheets (Relational-like Tabular Spreadsheet Storage).
 - **State Persistence Layer:** Dual Storage Mode:
-  - *Primary:* Dynamic asynchronous HTTP POST request ke Google Apps Script Web App.
+  - *Primary:* Dynamic asynchronous HTTP request ke Google Apps Script Web App.
   - *Fallback / Local State:* `localStorage` browser untuk akses offline dan *instant rendering*.
+- **Delete Sync:** Operasi hapus menggunakan **GET dengan JSONP** untuk memastikan sinkronisasi ke Google Sheets sebelum pembaruan lokal.
 
 ---
 
 ## 📦 Data Schema & Agent Payload Contracts
 
-Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dikirimkan menggunakan metode `POST` dengan *Content-Type* `application/json` yang membawa objek `sheetName`.
+Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dikirimkan menggunakan metode `POST` dengan *Content-Type* `text/plain;charset=utf-8` yang membawa objek `sheetName`.
 
 ### 1. Modul Data Warga (`sheetName: "Data_Warga"`)
 ```json
@@ -71,9 +72,137 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 
 ---
 
+## 📡 API Endpoints
+
+### GET Requests (JSONP Support)
+
+| Action | Parameter | Deskripsi |
+|--------|-----------|-----------|
+| `read` | `action=read` | Baca semua data dari 4 sheet |
+| `delete` | `action=delete&sheetName=X&rowIndex=Y` | Hapus baris di sheet X (JSONP callback) |
+
+**Contoh:**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=read&callback=fn
+GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&rowIndex=0&callback=fn
+```
+
+### POST Requests
+
+Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
+
+---
+
+## 🛠️ New Features & Implementation Details
+
+### 1. Edit Functionality
+Semua modul memiliki tombol **Edit** ✏️ yang membuka modal dengan data terisi otomatis.
+
+**Cara kerja:**
+- `editMode` object melacak index yang sedang diedit: `{ warga: null, kas: null, pengumuman: null, kegiatan: null }`
+- Saat tombol Edit diklik, isi form diisi dengan data record, tombol submit berubah menjadi "Perbarui"
+- `submitXxx()` memeriksa `editMode` — jika bukan null, lakukan update; jika null, lakukan insert
+
+**Fungsi edit tersedia:**
+- `editWarga(index)`
+- `editKas(index)`
+- `editPengumuman(index)`
+- `editKegiatan(index)`
+
+### 2. Delete with Google Sheets Sync
+
+**Flow baru (terbaru):**
+1. Tombol delete ditekan → tampilkan warning (untuk Warga) atau confirm box
+2. Panggil `deleteRecord(sheetName, index, arrayRef, renderFn, type)`
+3. **Kirim DELETE ke Google Sheets dulu** via GET + JSONP
+4. **Hanya jika sukses** → hapus dari `appState` dan `localStorage`
+5. Jika gagal → tampilkan error, data tetap ada
+
+**Mengapa order ini penting?**
+- Jika delete lokal dilakukan dulu, lalu sync gagal → data hilang tapi tidak terhapus dari Sheets
+- Dengan menghapus di Sheets dulu, kita pastikan konsistensi data
+
+**Local Delete Tracking:**
+- Simpan `localDeletes` sebagai array content signatures per tipe
+- Signature dibuat dari kombinasi field unik (NIK+Nama+HP+Alamat untuk Warga, dll)
+- Saat reload/sync, filter records yang signature-nya ada di `localDeletes`
+- Bersihkan entries yang sudah tidak ada di Sheets
+
+### 3. Delete Warning for Warga
+Untuk modul Data Warga, tampilkan dialog konfirmasi yang lebih detail:
+```
+⚠️ PERHATIAN!
+
+Anda akan menghapus data warga:
+• Nama: [nama]
+• NIK: [nik]
+• No. HP: [hp]
+
+Yakin ingin menghapus data ini?
+```
+
+### 4. Refresh Button
+Tombol refresh di:
+- **Desktop:** Header sidebar kanan atas (ikon 🔄)
+- **Mobile:** Header atas sebelah kanan menu hamburger
+
+**Behavior:**
+- Menampilkan spinner animasi
+- Toast "Memuat ulang data dari Google Sheets..."
+- Panggil `syncFromGoogleSheets()`
+- Re-render semua tampilan
+- Toast sukses "Data berhasil dimuat ulang!"
+
+---
+
 ## ⚙️ Maintenance & Development Guidelines for AI Agents
 
 1. **Responsive First Directive:** Seluruh perombakan antarmuka harus mempertahankan prinsip responsif seluler (`sm:`, `md:`, `lg:` breakpoints pada Tailwind CSS).
-2. **CORS Protocol Management:** Panggilan `fetch()` ke Google Apps Script harus menggunakan `mode: 'no-cors'` dengan `Content-Type: text/plain;charset=utf-8` (bukan `application/json`). Header `application/json` tidak tergolong *CORS-safelisted*, sehingga pada mode `no-cors` browser membuang header tersebut dan body berisiko tidak terkirim dengan benar. Body tetap dikirim sebagai string JSON dan dibaca backend melalui `e.postData.contents`.
-3. **Data Integrity:** Pastikan sinkronisasi antara kunci properti JSON pada skrip *frontend* selaras dengan urutan indeks `rowData.push()` pada backend Google Apps Script.
-4. **Offline Resilience:** Selalu simpan state terbaru ke `localStorage` sebelum meluncurkan perintah `fetch()` ke jaringan external.
+
+2. **CORS Protocol Management:**
+   - Untuk **POST** (add/update): Gunakan `mode: 'no-cors'` dengan `Content-Type: text/plain;charset=utf-8`
+   - Untuk **DELETE**: Gunakan **GET + JSONP** via `<script src>` dengan callback parameter. Ini menghindari masalah CORS dan memungkinkan pembacaan response.
+   - Jangan gunakan `application/json` pada mode `no-cors` karena browser akan strip header tersebut.
+
+3. **Data Integrity:**
+   - Pastikan sinkronisasi antara kunci properti JSON pada skrip *frontend* selaras dengan urutan indeks `rowData.push()` pada backend Google Apps Script.
+   - Untuk delete: `rowIndex` di frontend adalah 0-based array index. Di Apps Script, konversi ke row spreadsheet: `rowIndex + 2` (row 1 = header, row 2 = data pertama).
+
+4. **Offline Resilience:**
+   - Selalu simpan state terbaru ke `localStorage` sebelum meluncurkan perintah `fetch()` ke jaringan external.
+   - Implementasikan `localDeletes` tracking untuk mencegah record yang dihapus muncul kembali setelah reload.
+
+5. **Edit Flow Best Practices:**
+   - Gunakan `editMode` object untuk membedakan mode tambah vs edit
+   - Reset `editMode` ke null saat modal ditutup
+   - Ubah teks tombol submit secara dinamis ("Simpan" vs "Perbarui")
+   - Ubah judul modal secara dinamis
+
+6. **Delete Flow Best Practices:**
+   - SELALU hapus dari Sheets dulu, baru update lokal
+   - Gunakan JSONP GET untuk operasi delete (bukan POST)
+   - Tampilkan loading state selama proses delete berlangsung
+   - Handle timeout dan error dengan toast notification
+
+---
+
+## 📂 File Reference
+
+| File | Deskripsi |
+|------|-----------|
+| `index.html` | Frontend SPA utama |
+| `Apps Script/code.gs` | Backend Apps Script (doGet + doPost) |
+| `Apps Script/readme.md` | Dokumentasi lengkap API & Deployment |
+| `readme.md` | Dokumentasi proyek utama |
+| `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
+
+---
+
+## 🔧 Recent Changes (2026-10-03)
+
+- ✅ **Edit buttons** ditambahkan ke semua 4 modul (Warga, Kas, Pengumuman, Kegiatan)
+- ✅ **Delete sync to Google Sheets** — urutan operasi dibalik: Sheets dulu, baru local
+- ✅ **Delete persistence** — tracking by content signature mencegah record muncul kembali
+- ✅ **Warga delete warning** — dialog detail menampilkan Nama, NIK, No. HP
+- ✅ **Refresh button** — tombol 🔄 di header desktop & mobile
+- ✅ **JSONP delete handler** — `doGet` sekarang support `action=delete` dengan callback
