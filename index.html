@@ -1050,63 +1050,81 @@
         // Deletion Functions
         function deleteWarga(index) {
             if(confirm('Hapus data warga ini?')) {
-                appState.warga.splice(index, 1);
-                saveLocalState();
-                renderWargaTable();
-                sendDeleteToGoogleSheets('Data_Warga', index);
-                showToast('Data warga dihapus', 'info');
+                deleteRecord('Data_Warga', index, appState.warga, renderWargaTable);
             }
         }
 
         function deleteKas(index) {
             if(confirm('Hapus catatan kas ini?')) {
-                appState.kas.splice(index, 1);
-                saveLocalState();
-                renderKasTable();
-                sendDeleteToGoogleSheets('Iuran_Kas', index);
-                showToast('Catatan kas dihapus', 'info');
+                deleteRecord('Iuran_Kas', index, appState.kas, renderKasTable);
             }
         }
 
         function deletePengumuman(index) {
             if(confirm('Hapus pengumuman ini?')) {
-                appState.pengumuman.splice(index, 1);
-                saveLocalState();
-                renderPengumumanCards();
-                sendDeleteToGoogleSheets('Pengumuman', index);
-                showToast('Pengumuman dihapus', 'info');
+                deleteRecord('Pengumuman', index, appState.pengumuman, renderPengumumanCards);
             }
         }
 
         function deleteKegiatan(index) {
             if(confirm('Hapus agenda kegiatan ini?')) {
-                appState.kegiatan.splice(index, 1);
-                saveLocalState();
-                renderKegiatanCards();
-                sendDeleteToGoogleSheets('Kegiatan_Warga', index);
-                showToast('Agenda dihapus', 'info');
+                deleteRecord('Kegiatan_Warga', index, appState.kegiatan, renderKegiatanCards);
             }
         }
 
-        // Send delete request to Google Sheets
-        function sendDeleteToGoogleSheets(sheetName, rowIndex) {
+        // Generic delete: send to Sheets FIRST, then update local if successful
+        function deleteRecord(sheetName, index, arrayRef, renderFn) {
             if (!appState.scriptUrl) {
-                console.log("Local mode active: Google Apps Script URL not configured.");
+                // Local mode: just delete locally
+                arrayRef.splice(index, 1);
+                saveLocalState();
+                renderFn();
+                showToast('Dihapus (mode lokal)', 'info');
                 return;
             }
 
-            fetch(appState.scriptUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'delete', sheetName: sheetName, rowIndex: rowIndex })
-            })
-            .then(() => {
-                console.log(`Deleted row ${rowIndex} from ${sheetName} in Google Sheets`);
-            })
-            .catch(err => {
-                console.error("Error deleting from Google Sheets:", err);
-            });
+            showToast('Menghapus dari Google Sheets...', 'info');
+
+            // Use GET with action=delete for CORS-free call (JSONP style)
+            const callbackName = '__rtDelete_' + Date.now();
+            const script = document.createElement('script');
+            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
+
+            const cleanup = () => {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+
+            const timer = setTimeout(() => {
+                cleanup();
+                showToast('Timeout menghapus dari Google Sheets', 'error');
+            }, 10000);
+
+            window[callbackName] = function (res) {
+                clearTimeout(timer);
+                cleanup();
+                
+                if (res && res.result === 'success') {
+                    // Success: now delete locally
+                    arrayRef.splice(index, 1);
+                    saveLocalState();
+                    renderFn();
+                    showToast('Dihapus dari Google Sheets', 'success');
+                } else {
+                    const msg = res?.message || 'Gagal menghapus';
+                    showToast('Gagal: ' + msg, 'error');
+                }
+            };
+
+            script.onerror = function () {
+                clearTimeout(timer);
+                cleanup();
+                showToast('Gagal terhubung ke Google Sheets', 'error');
+            };
+
+            // Send as JSONP: action=delete&sheetName=...&rowIndex=...&callback=...
+            script.src = appState.scriptUrl + sep + 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&rowIndex=' + index + '&callback=' + callbackName;
+            document.body.appendChild(script);
         }
 
         // Google Apps Script Integration Logic

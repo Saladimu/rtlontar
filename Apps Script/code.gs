@@ -1,8 +1,15 @@
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
-  var payload = (params.action === 'read')
-    ? readAllSheets()
-    : { "result": "success", "message": "Web App aktif" };
+  var payload;
+
+  // Handle delete action via GET (for JSONP support)
+  if (params.action === 'delete') {
+    payload = handleDelete(params);
+  } else if (params.action === 'read') {
+    payload = readAllSheets();
+  } else {
+    payload = { "result": "success", "message": "Web App aktif" };
+  }
 
   // Dukungan JSONP untuk membaca data lintas-domain tanpa masalah CORS.
   if (params.callback) {
@@ -12,6 +19,34 @@ function doGet(e) {
   }
 
   return respond(payload);
+}
+
+// Handle delete request
+function handleDelete(params) {
+  var sheetName = params.sheetName;
+  var rowIndex = parseInt(params.rowIndex);
+
+  if (!sheetName || isNaN(rowIndex)) {
+    return { "result": "error", "message": "Parameter tidak valid" };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(sheetName);
+
+  if (!sheet) {
+    return { "result": "error", "message": "Sheet tidak ditemukan: " + sheetName };
+  }
+
+  var numRows = sheet.getLastRow() - 1; // exclude header
+  if (rowIndex < 0 || rowIndex >= numRows) {
+    return { "result": "error", "message": "Index baris tidak valid: " + rowIndex };
+  }
+
+  // Row 1 is header, so data starts at row 2
+  // rowIndex 0 -> row 2, rowIndex 1 -> row 3, etc.
+  sheet.deleteRow(rowIndex + 2);
+
+  return { "result": "success", "message": "Row " + (rowIndex + 1) + " deleted from " + sheetName };
 }
 
 function readAllSheets() {
