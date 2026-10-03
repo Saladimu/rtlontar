@@ -72,6 +72,22 @@ function doPost(e) {
     }
 
     var timestamp = new Date();
+    // Handle delete action
+    if (data.action === "delete") {
+      var rowIndex = data.rowIndex; // 0-based index from app (matches array position)
+      if (rowIndex === undefined || rowIndex < 0) {
+        return respond({ "result": "error", "message": "Invalid row index" });
+      }
+      var numRows = sheet.getLastRow() - 1; // exclude header
+      if (rowIndex >= numRows) {
+        return respond({ "result": "error", "message": "Row index out of range" });
+      }
+      // Row 1 is header, so data starts at row 2
+      // rowIndex 0 -> row 2, rowIndex 1 -> row 3, etc.
+      sheet.deleteRow(rowIndex + 2);
+      return respond({ "result": "success", "message": "Row deleted" });
+    }
+
     var rowData = [timestamp];
 
     if (sheetName === "Data_Warga") {

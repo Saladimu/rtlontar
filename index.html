@@ -1004,6 +1004,7 @@
                 appState.warga.splice(index, 1);
                 saveLocalState();
                 renderWargaTable();
+                sendDeleteToGoogleSheets('Data_Warga', index);
                 showToast('Data warga dihapus', 'info');
             }
         }
@@ -1013,6 +1014,7 @@
                 appState.kas.splice(index, 1);
                 saveLocalState();
                 renderKasTable();
+                sendDeleteToGoogleSheets('Iuran_Kas', index);
                 showToast('Catatan kas dihapus', 'info');
             }
         }
@@ -1022,6 +1024,7 @@
                 appState.pengumuman.splice(index, 1);
                 saveLocalState();
                 renderPengumumanCards();
+                sendDeleteToGoogleSheets('Pengumuman', index);
                 showToast('Pengumuman dihapus', 'info');
             }
         }
@@ -1031,8 +1034,30 @@
                 appState.kegiatan.splice(index, 1);
                 saveLocalState();
                 renderKegiatanCards();
+                sendDeleteToGoogleSheets('Kegiatan_Warga', index);
                 showToast('Agenda dihapus', 'info');
             }
+        }
+
+        // Send delete request to Google Sheets
+        function sendDeleteToGoogleSheets(sheetName, rowIndex) {
+            if (!appState.scriptUrl) {
+                console.log("Local mode active: Google Apps Script URL not configured.");
+                return;
+            }
+
+            fetch(appState.scriptUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'delete', sheetName: sheetName, rowIndex: rowIndex })
+            })
+            .then(() => {
+                console.log(`Deleted row ${rowIndex} from ${sheetName} in Google Sheets`);
+            })
+            .catch(err => {
+                console.error("Error deleting from Google Sheets:", err);
+            });
         }
 
         // Google Apps Script Integration Logic
