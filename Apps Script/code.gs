@@ -101,7 +101,10 @@ function readAllSheets() {
       return row.map(function (cell, col) {
         if (col === 0) return toId(cell); // kolom A = ID stabil
         if (cell instanceof Date && fmt[col]) {
-          return Utilities.formatDate(cell, tz, fmt[col]);
+          var formatted = Utilities.formatDate(cell, tz, fmt[col]);
+          // DEBUG: Log the formatting
+          console.log('DEBUG ' + name + ' col ' + col + ': raw=' + cell + ' (type=' + typeof cell + ') -> formatted=' + formatted);
+          return formatted;
         }
         return cell;
       });
