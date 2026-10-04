@@ -1493,6 +1493,18 @@
             const statusBadge = document.getElementById('public-portal-status-badge');
             const enabledSection = document.getElementById('public-portal-enabled');
             const disabledSection = document.getElementById('public-portal-disabled');
+            const portalLink = document.getElementById('public-portal-link');
+            const urlDisplay = document.getElementById('public-portal-url-display');
+
+            // Update public.html link with Web App URL
+            if (portalLink && appState.scriptUrl) {
+                const publicUrl = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
+                portalLink.href = publicUrl;
+            }
+            if (urlDisplay && appState.scriptUrl) {
+                urlDisplay.href = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
+                urlDisplay.textContent = `public.html?url=${appState.scriptUrl.substring(0, 40)}...`;
+            }
 
             if (isEnabled) {
                 // Show nav items
