@@ -257,3 +257,11 @@ Frontend (index.html, public.html)
 ### Larangan
 ❌ **JANGAN** lakukan konversi timezone di frontend (misal: GMT+7 adjustment, `toLocaleTimeString()`, dll)
 ✅ **HANYA** lakukan reformat string yang sudah benar dari Apps Script
+
+### Troubleshooting Tanggal Salah
+Jika tanggal显示 salah (misal: source "2026-10-02" tapi display "2026-10-01"):
+1. Buka browser console (F12)
+2. Look for log: `=== RAW DATA FROM SHEETS ===`
+3. Check `tanggal raw value` - should be string "2026-10-02"
+4. If it's a Date object or ISO string, there's a serialization issue in Apps Script
+5. Check `tanggal formatted` output to see what the formatter returns
