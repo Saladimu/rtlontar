@@ -101,6 +101,10 @@
                 <i class="fa-solid fa-calendar-check w-5"></i>
                 <span class="font-medium text-sm">Kegiatan Warga</span>
             </button>
+            <button onclick="switchTab('publicportal')" id="nav-publicportal" class="nav-btn hidden w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i class="fa-solid fa-globe w-5"></i>
+                <span class="font-medium text-sm">Portal Publik</span>
+            </button>
             <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-gear w-5"></i>
                 <span class="font-medium text-sm">Koneksi App Script</span>
@@ -147,6 +151,9 @@
         </button>
         <button onclick="switchTab('kegiatan'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-calendar-check w-5 text-rose-400"></i><span>Kegiatan Warga</span>
+        </button>
+        <button onclick="switchTab('publicportal'); toggleMobileMenu();" id="nav-publicportal-mobile" class="w-full hidden text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+            <i class="fa-solid fa-globe w-5 text-blue-400"></i><span>Portal Publik</span>
         </button>
         <button onclick="switchTab('settings'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-gear w-5 text-slate-400"></i><span>Koneksi Google Sheets</span>
@@ -436,6 +443,31 @@
                     </button>
                 </div>
 
+                <!-- Public Portal Configuration -->
+                <div class="space-y-4 pt-4 border-t border-slate-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800">Halaman Publik (Public Portal)</h4>
+                            <p class="text-xs text-slate-500 mt-0.5">Izinkan warga melihat Pengumuman & Agenda Kegiatan tanpa akses data warga/kas.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-public-portal" onchange="togglePublicPortal()" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+
+                    <div id="public-portal-info" class="hidden p-4 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-blue-900">Link Halaman Publik:</span>
+                            <a id="public-portal-link" href="public.html" target="_blank" class="text-xs text-blue-600 hover:underline font-medium inline-flex items-center space-x-1">
+                                <span>Buka Halaman</span>
+                                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                            </a>
+                        </div>
+                        <p class="text-[11px] text-blue-700">Warga dapat mengakses URL di atas untuk melihat informasi terbaru secara real-time dari Google Sheets.</p>
+                    </div>
+                </div>
+
                 <hr class="border-slate-100">
 
                 <!-- Tutorial Accordion / Guide -->
@@ -449,6 +481,84 @@
                         <li>Atur <i>Who has access</i> menjadi <b>Anyone</b> (Siapa saja).</li>
                         <li>Salin Web App URL hasil deployment dan tempelkan pada kolom di atas.</li>
                     </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PANEL 6: PUBLIC PORTAL ================= -->
+        <section id="panel-publicportal" class="tab-panel hidden space-y-6">
+            <div class="border-b border-slate-200 pb-4">
+                <h2 class="text-2xl font-bold text-slate-800">Portal Publik</h2>
+                <p class="text-sm text-slate-500">Halaman khusus untuk warga yang hanya menampilkan Pengumuman & Agenda Kegiatan</p>
+            </div>
+
+            <!-- Status Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-globe text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">Status Portal Publik</h3>
+                            <p class="text-xs text-slate-500">Aktifkan agar warga dapat mengakses informasi RT</p>
+                        </div>
+                    </div>
+                    <div id="public-portal-status-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700">
+                        NON-AKTIF
+                    </div>
+                </div>
+
+                <div id="public-portal-enabled" class="hidden space-y-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-semibold text-blue-900">Portal Publik Aktif</p>
+                            <p class="text-xs text-blue-600">Warga dapat mengakses URL berikut untuk melihat informasi RT</p>
+                        </div>
+                        <button onclick="window.open('public.html','_blank')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center space-x-2">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                            <span>Buka Portal</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs text-blue-700">
+                        <i class="fa-solid fa-link"></i>
+                        <a id="public-portal-url-display" href="public.html" target="_blank" class="font-medium hover:underline">public.html</a>
+                    </div>
+                    <p class="text-[11px] text-blue-600">Catatan: Data akan diperbarui otomatis dari Google Sheets setiap kali halaman dibuka.</p>
+                </div>
+
+                <div id="public-portal-disabled" class="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                    <p class="text-sm text-slate-600">
+                        <i class="fa-solid fa-circle-info mr-2 text-slate-400"></i>
+                        Portal publik saat ini non-aktif. Aktifkan dari tab <b>Koneksi App Script</b> untuk memungkinkan akses warga.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature Comparison -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                <h4 class="font-bold text-slate-800 mb-4">Apa yang Bisa Dilihat Warga?</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                        <h5 class="font-semibold text-emerald-800 text-sm mb-2">
+                            <i class="fa-solid fa-check-circle mr-1"></i> Bisa Dilihat
+                        </h5>
+                        <ul class="text-xs text-emerald-700 space-y-1">
+                            <li>&bull; Pengumuman RT</li>
+                            <li>&bull; Agenda Kegiatan Warga</li>
+                            <li>&bull; Informasi resmi RT</li>
+                        </ul>
+                    </div>
+                    <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl">
+                        <h5 class="font-semibold text-rose-800 text-sm mb-2">
+                            <i class="fa-solid fa-xmark-circle mr-1"></i> Tidak Bisa Dilihat
+                        </h5>
+                        <ul class="text-xs text-rose-700 space-y-1">
+                            <li>&bull; Data pribadi warga</li>
+                            <li>&bull; Rekening kas RT</li>
+                            <li>&bull; Tombol tambah/edit/hapus</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>
@@ -713,6 +823,7 @@
             renderPengumumanCards();
             renderKegiatanCards();
             updateConnectionUI();
+            updatePublicPortalUI();
 
             // Jika URL tersimpan, muat data langsung dari Google Sheets.
             if (appState.scriptUrl) syncFromGoogleSheets();
@@ -723,6 +834,11 @@
             if (document.getElementById('pengumuman-tanggal')) document.getElementById('pengumuman-tanggal').value = today;
             if (document.getElementById('kegiatan-tanggal')) document.getElementById('kegiatan-tanggal').value = today;
             if (document.getElementById('script-url-input')) document.getElementById('script-url-input').value = appState.scriptUrl;
+
+            // Load public portal toggle state
+            const portalEnabled = localStorage.getItem('rt_public_portal_enabled') === 'true';
+            const toggleCheckbox = document.getElementById('toggle-public-portal');
+            if (toggleCheckbox) toggleCheckbox.checked = portalEnabled;
 
             // Switch to dashboard tab by default
             switchTab('dashboard');
@@ -1358,6 +1474,50 @@
                 deskPill.className = "inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-medium";
                 deskPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5"></span> Local Only`;
                 if(mobPill) mobPill.innerText = "Mode Local Storage";
+            }
+            updatePublicPortalUI();
+        }
+
+        // Public Portal Toggle
+        function togglePublicPortal() {
+            const isChecked = document.getElementById('toggle-public-portal').checked;
+            localStorage.setItem('rt_public_portal_enabled', isChecked);
+            updatePublicPortalUI();
+            showToast(isChecked ? 'Portal Publik diaktifkan!' : 'Portal Publik dinonaktifkan.', isChecked ? 'success' : 'info');
+        }
+
+        function updatePublicPortalUI() {
+            const isEnabled = localStorage.getItem('rt_public_portal_enabled') === 'true';
+            const navDesktop = document.getElementById('nav-publicportal');
+            const navMobile = document.getElementById('nav-publicportal-mobile');
+            const statusBadge = document.getElementById('public-portal-status-badge');
+            const enabledSection = document.getElementById('public-portal-enabled');
+            const disabledSection = document.getElementById('public-portal-disabled');
+
+            if (isEnabled) {
+                // Show nav items
+                if (navDesktop) navDesktop.classList.remove('hidden');
+                if (navMobile) navMobile.classList.remove('hidden');
+                // Update badge
+                if (statusBadge) {
+                    statusBadge.className = 'px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700';
+                    statusBadge.textContent = 'AKTIF';
+                }
+                // Show enabled/disabled sections
+                if (enabledSection) enabledSection.classList.remove('hidden');
+                if (disabledSection) disabledSection.classList.add('hidden');
+            } else {
+                // Hide nav items
+                if (navDesktop) navDesktop.classList.add('hidden');
+                if (navMobile) navMobile.classList.add('hidden');
+                // Update badge
+                if (statusBadge) {
+                    statusBadge.className = 'px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700';
+                    statusBadge.textContent = 'NON-AKTIF';
+                }
+                // Show enabled/disabled sections
+                if (enabledSection) enabledSection.classList.add('hidden');
+                if (disabledSection) disabledSection.classList.remove('hidden');
             }
         }
 
