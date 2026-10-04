@@ -198,8 +198,16 @@
                 if (script.parentNode) script.parentNode.removeChild(script);
 
                 if (res && res.result === 'success' && res.data) {
-                    renderPengumuman(res.data.Pengumuman || []);
-                    renderKegiatan(res.data.Kegiatan_Warga || []);
+                    // Convert arrays to objects (same mapping as index.html)
+                    const pengumuman = (res.data.Pengumuman || []).map(r => ({
+                        _id: r[0], tanggal: r[1], judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+                    }));
+                    const kegiatan = (res.data.Kegiatan_Warga || []).map(r => ({
+                        _id: r[0], namaKegiatan: r[1], tanggal: r[2], waktu: r[3], lokasi: r[4], pj: r[5], keterangan: r[6]
+                    }));
+
+                    renderPengumuman(pengumuman);
+                    renderKegiatan(kegiatan);
                 } else {
                     showLoadError();
                 }
