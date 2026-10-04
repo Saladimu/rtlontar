@@ -238,24 +238,26 @@ Google Sheets (GMT+7)
         ▼
 Apps Script (code.gs)
   - Utilities.formatDate(cell, tz, format) menggunakan spreadsheet timezone
-  - Mengirim string terformat: "yyyy-MM-dd" dan "HH:mm"
+  - Mengirim STRING terformat: "yyyy-MM-dd" dan "HH:mm"
         │
         ▼
 Frontend (index.html, public.html)
-  - fmtDate() / formatDateDDMMMYYYY(): reformat string, TIDAK konversi timezone
-  - fmtTime() / formatTimeOnly(): reformat string, TIDAK konversi timezone
+  - fmtDate() / formatDateDDMMMYYYY(): reformat STRING, TIDAK konversi timezone
+  - fmtTime() / formatTimeOnly(): reformat STRING, TIDAK konversi timezone
 ```
 
 ### Fungsi Format (Frontend)
 | Fungsi | Input | Output |
 |--------|-------|--------|
-| `fmtDate(v)` | `"2026-10-03"` atau Date object | `"2026-10-03"` |
-| `fmtTime(v)` | `"07:00"` atau Date object | `"07:00"` |
+| `fmtDate(v)` | `"2026-10-03"` | `"2026-10-03"` |
+| `fmtTime(v)` | `"07:00"` | `"07:00"` |
 | `formatDateDDMMMYYYY(v)` | `"2026-10-03"` | `"03-Oct-2026"` |
 | `formatTimeOnly(v)` | `"07:00"` | `"07:00 am"` |
 
 ### Larangan
-❌ **JANGAN** lakukan konversi timezone di frontend (misal: GMT+7 adjustment, `toLocaleTimeString()`, dll)
+❌ **JANGAN** lakukan konversi timezone di frontend
+❌ **JANGAN** parse string sebagai Date object untuk dikonversi
+❌ **JANGAN** gunakan `new Date()`, `getHours()`, `getTimezoneOffset()`, dll
 ✅ **HANYA** lakukan reformat string yang sudah benar dari Apps Script
 
 ### Troubleshooting Tanggal Salah
