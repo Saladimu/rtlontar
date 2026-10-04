@@ -180,6 +180,22 @@
             }
         });
 
+        // Format date helper: dd-Mmm-YYYY HH:MM am/pm
+        function formatDateDDMMMYYYY(v) {
+            if (!v) return '';
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const d = new Date(v);
+            if (isNaN(d)) return String(v);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = months[d.getMonth()];
+            const year = d.getFullYear();
+            let hours = d.getHours();
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12 || 12;
+            return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+        }
+
         function updateLastUpdated() {
             const now = new Date();
             const dateStr = now.toLocaleDateString('id-ID', {
@@ -200,10 +216,10 @@
                 if (res && res.result === 'success' && res.data) {
                     // Convert arrays to objects (same mapping as index.html)
                     const pengumuman = (res.data.Pengumuman || []).map(r => ({
-                        _id: r[0], tanggal: r[1], judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+                        _id: r[0], tanggal: formatDateDDMMMYYYY(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
                     }));
                     const kegiatan = (res.data.Kegiatan_Warga || []).map(r => ({
-                        _id: r[0], namaKegiatan: r[1], tanggal: r[2], waktu: r[3], lokasi: r[4], pj: r[5], keterangan: r[6]
+                        _id: r[0], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), waktu: r[3], lokasi: r[4], pj: r[5], keterangan: r[6]
                     }));
 
                     renderPengumuman(pengumuman);
