@@ -179,27 +179,64 @@
             }
         });
 
-        // Format date: dd-Mmm-YYYY (dates are already formatted by Apps Script in correct timezone)
+        // Format date: dd-Mmm-YYYY (handles both string and Date object input)
         function formatDateDDMMMYYYY(v) {
             if (!v) return '';
-            // Apps Script returns "yyyy-MM-dd" string - convert to "dd-Mmm-YYYY"
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            const parts = String(v).split('-');
-            if (parts.length !== 3) return String(v);
-            const year = parts[0];
-            const monthIndex = parseInt(parts[1]) - 1;
-            const day = parts[2];
-            return `${day}-${months[monthIndex]}-${year}`;
+
+            // Handle Date object (from JSON deserialization)
+            let dateObj;
+            if (v instanceof Date) {
+                dateObj = v;
+            } else {
+                dateObj = new Date(v);
+            }
+
+            if (isNaN(dateObj.getTime())) {
+                // If not a valid date, try parsing as "yyyy-MM-dd" string
+                const parts = String(v).split('-');
+                if (parts.length === 3) {
+                    const year = parts[0];
+                    const monthIndex = parseInt(parts[1]) - 1;
+                    const day = parts[2];
+                    return `${day}-${months[monthIndex] || '?'}-${year}`;
+                }
+                return String(v);
+            }
+
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const month = months[dateObj.getMonth()];
+            const year = dateObj.getFullYear();
+            return `${day}-${month}-${year}`;
         }
 
-        // Format time: keep as-is from Apps Script (already in correct timezone)
+        // Format time: HH:MM am/pm (handles both string and Date object input)
         function formatTimeOnly(v) {
             if (!v) return '';
-            // Apps Script returns "HH:mm" format - add am/pm
-            const parts = String(v).split(':');
-            if (parts.length < 2) return String(v);
-            let hours = parseInt(parts[0]);
-            const minutes = parts[1];
+
+            // Handle Date object
+            let dateObj;
+            if (v instanceof Date) {
+                dateObj = v;
+            } else {
+                dateObj = new Date('1970-01-01T' + v + ':00');
+            }
+
+            if (isNaN(dateObj.getTime())) {
+                // Fallback: parse as "HH:mm" string
+                const parts = String(v).split(':');
+                if (parts.length >= 2) {
+                    let hours = parseInt(parts[0]);
+                    const minutes = parts[1];
+                    const ampm = hours >= 12 ? 'pm' : 'am';
+                    hours = hours % 12 || 12;
+                    return `${hours}:${minutes} ${ampm}`;
+                }
+                return String(v);
+            }
+
+            let hours = dateObj.getHours();
+            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
             const ampm = hours >= 12 ? 'pm' : 'am';
             hours = hours % 12 || 12;
             return `${hours}:${minutes} ${ampm}`;
