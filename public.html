@@ -307,19 +307,29 @@
             document.getElementById('count-kegiatan').textContent = '-';
         }
 
-        function showLoadError() {
-            const html = `
-                <div class="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center">
-                    <i class="fa-solid fa-triangle-exclamation text-4xl text-rose-400 mb-3"></i>
-                    <h3 class="font-bold text-rose-900 text-lg mb-2">Gagal memuat data</h3>
-                    <p class="text-sm text-rose-700">
-                        Tidak dapat terhubung ke Google Sheets.<br>
-                        Pastikan URL Web App sudah benar danApps Script sudah dideploy.
-                    </p>
-                </div>
-            `;
-            document.getElementById('pengumuman-container').innerHTML = html;
-            document.getElementById('kegiatan-container').innerHTML = '';
+        // Toggle manual URL input
+        function toggleUrlInput() {
+            const section = document.getElementById('url-input-section');
+            const btnText = document.getElementById('url-input-btn-text');
+            if (section.classList.contains('hidden')) {
+                section.classList.remove('hidden');
+                btnText.textContent = 'Tutup';
+                document.getElementById('manual-url-input').focus();
+            } else {
+                section.classList.add('hidden');
+                btnText.textContent = 'Atur URL';
+            }
+        }
+
+        // Save manually entered URL
+        function saveManualUrl() {
+            const url = document.getElementById('manual-url-input').value.trim();
+            if (!url) {
+                alert('Silakan masukkan URL Web App!');
+                return;
+            }
+            localStorage.setItem('rt_public_webapp_url', url);
+            window.location.href = 'public.html?url=' + encodeURIComponent(url);
         }
     </script>
 </body>
