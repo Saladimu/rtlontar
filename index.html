@@ -1669,10 +1669,10 @@
                 _id: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
             })));
             appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
-                _id: r[0], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+                _id: r[0], tanggal: fmtDateFormatted(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
             })));
             appState.kegiatan = applyLocalDeletes('kegiatan', (d.Kegiatan_Warga || []).map(r => ({
-                _id: r[0], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
+                _id: r[0], namaKegiatan: r[1], tanggal: fmtDateFormatted(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
             })));
             saveLocalState();
             renderWargaTable();
@@ -1696,6 +1696,30 @@
             const s = String(v);
             const match = s.match(/^\d{4}-\d{2}-\d{2}/);
             return match ? match[0] : s;
+        }
+
+        // Format date: dd-Mmm-YYYY (consistent with public.html)
+        function fmtDateFormatted(v) {
+            if (!v) return '';
+            const str = String(v);
+            const parts = str.split('-');
+
+            // Case 1: Already formatted string "yyyy-MM-dd" from Apps Script
+            if (parts.length === 3 && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                const year = parts[0];
+                const monthIndex = parseInt(parts[1]) - 1;
+                const day = parts[2];
+                return day + '-' + months[monthIndex] + '-' + year;
+            }
+
+            // Case 2: If it's already in dd-Mmm-YYYY format, return as-is
+            if (/^\d{2}-\w{3}-\d{4}$/.test(str)) {
+                return str;
+            }
+
+            // Case 3: Fallback
+            return str;
         }
 
         function fmtTime(v) {
