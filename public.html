@@ -185,15 +185,20 @@
         function formatDateDDMMMYYYY(v) {
             if (!v) return '';
 
+            console.log('formatDateDDMMMYYYY input:', v, 'type:', typeof v);
+
             // Case 1: Already formatted string from Apps Script ("yyyy-MM-dd")
             const str = String(v);
             const parts = str.split('-');
+            console.log('  Parts after split:', parts);
             if (parts.length === 3 && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                 const year = parts[0];
                 const monthIndex = parseInt(parts[1]) - 1;
                 const day = parts[2];
-                return `${day}-${months[monthIndex]}-${year}`;
+                const result = `${day}-${months[monthIndex]}-${year}`;
+                console.log('  Case 1 (string) =>', result);
+                return result;
             }
 
             // Case 2: Date object or ISO string - treat as UTC and convert to GMT+7
@@ -203,8 +208,10 @@
             } else {
                 dateObj = new Date(v);
             }
+            console.log('  Parsed Date object:', dateObj.toISOString());
 
             if (isNaN(dateObj.getTime())) {
+                console.log('  Invalid date, returning raw:', str);
                 return str;
             }
 
@@ -212,12 +219,15 @@
             const gmt7Offset = 7 * 60; // minutes
             const utc = dateObj.getTime() + dateObj.getTimezoneOffset() * 60000;
             const gmt7Date = new Date(utc + gmt7Offset * 60000);
+            console.log('  After GMT+7 conversion:', gmt7Date.toISOString(), 'date:', gmt7Date.getDate());
 
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const day = String(gmt7Date.getDate()).padStart(2, '0');
             const month = months[gmt7Date.getMonth()];
             const year = gmt7Date.getFullYear();
-            return `${day}-${month}-${year}`;
+            const result = `${day}-${month}-${year}`;
+            console.log('  Case 2 (Date) =>', result);
+            return result;
         }
 
         // Format time: HH:MM am/pm
@@ -279,13 +289,29 @@
                 if (script.parentNode) script.parentNode.removeChild(script);
 
                 if (res && res.result === 'success' && res.data) {
+                    // DEBUG: Log raw data to console
+                    console.log('=== RAW DATA FROM SHEETS ===');
+                    console.log('Pengumuman[0]:', res.data.Pengumuman?.[0]);
+                    console.log('Kegiatan[0]:', res.data.Kegiatan_Warga?.[0]);
+
                     // Convert arrays to objects (same mapping as index.html)
-                    const pengumuman = (res.data.Pengumuman || []).map(r => ({
-                        _id: r[0], tanggal: formatDateDDMMMYYYY(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
-                    }));
-                    const kegiatan = (res.data.Kegiatan_Warga || []).map(r => ({
-                        _id: r[0], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), waktu: r[3], lokasi: r[4], pj: r[5], keterangan: r[6]
-                    }));
+                    const pengumuman = (res.data.Pengumuman || []).map(r => {
+                        console.log('Processing Pengumuman row:', r);
+                        console.log('  tanggal raw value:', r[1], 'type:', typeof r[1]);
+                        const formatted = formatDateDDMMMYYYY(r[1]);
+                        console.log('  tanggal formatted:', formatted);
+                        return {
+                            _id: r[0], tanggal: formatted, judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+                        };
+                    });
+                    const kegiatan = (res.data.Kegiatan_Warga || []).map(r => {
+                        console.log('Processing Kegiatan row:', r);
+                        console.log('  tanggal raw:', r[2], 'type:', typeof r[2]);
+                        console.log('  waktu raw:', r[3], 'type:', typeof r[3]);
+                        return {
+                            _id: r[0], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), waktu: formatTimeOnly(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
+                        };
+                    });
 
                     renderPengumuman(pengumuman);
                     renderKegiatan(kegiatan);
