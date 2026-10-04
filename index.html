@@ -515,14 +515,14 @@
                             <p class="text-sm font-semibold text-blue-900">Portal Publik Aktif</p>
                             <p class="text-xs text-blue-600">Warga dapat mengakses URL berikut untuk melihat informasi RT</p>
                         </div>
-                        <button onclick="window.open('public.html','_blank')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center space-x-2">
+                        <button onclick="openPublicPortal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-medium flex items-center space-x-2">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i>
                             <span>Buka Portal</span>
                         </button>
                     </div>
                     <div class="flex items-center space-x-2 text-xs text-blue-700">
                         <i class="fa-solid fa-link"></i>
-                        <a id="public-portal-url-display" href="public.html" target="_blank" class="font-medium hover:underline">public.html</a>
+                        <a id="public-portal-url-display" href="#" target="_blank" class="font-medium hover:underline">public.html</a>
                     </div>
                     <p class="text-[11px] text-blue-600">Catatan: Data akan diperbarui otomatis dari Google Sheets setiap kali halaman dibuka.</p>
                 </div>
@@ -1486,6 +1486,15 @@
             showToast(isChecked ? 'Portal Publik diaktifkan!' : 'Portal Publik dinonaktifkan.', isChecked ? 'success' : 'info');
         }
 
+        function openPublicPortal() {
+            if (!appState.scriptUrl) {
+                showToast('URL Google Apps Script belum disimpan!', 'error');
+                return;
+            }
+            const publicUrl = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
+            window.open(publicUrl, '_blank');
+        }
+
         function updatePublicPortalUI() {
             const isEnabled = localStorage.getItem('rt_public_portal_enabled') === 'true';
             const navDesktop = document.getElementById('nav-publicportal');
@@ -1502,8 +1511,11 @@
                 portalLink.href = publicUrl;
             }
             if (urlDisplay && appState.scriptUrl) {
-                urlDisplay.href = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
-                urlDisplay.textContent = `public.html?url=${appState.scriptUrl.substring(0, 40)}...`;
+                const publicUrl = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
+                urlDisplay.href = publicUrl;
+                urlDisplay.textContent = publicUrl;
+            } else if (urlDisplay) {
+                urlDisplay.textContent = 'Belum dikonfigurasi';
             }
 
             if (isEnabled) {
