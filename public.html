@@ -180,54 +180,55 @@
         });
 
         // Format date: dd-Mmm-YYYY
-        // RULE: Google Sheets stores dates in GMT+7, Apps Script formats them correctly.
-        // Frontend only reformat strings, NO timezone conversion.
+        // RULE: Frontend only reformats strings from Apps Script. NO timezone conversion.
         function formatDateDDMMMYYYY(v) {
             if (!v) return '';
-
-            console.log('formatDateDDMMMYYYY input:', v, 'type:', typeof v);
-
-            // Case 1: Already formatted string from Apps Script ("yyyy-MM-dd")
             const str = String(v);
             const parts = str.split('-');
-            console.log('  Parts after split:', parts);
+
+            // Case 1: Already formatted string "yyyy-MM-dd" from Apps Script
             if (parts.length === 3 && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
                 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
                 const year = parts[0];
                 const monthIndex = parseInt(parts[1]) - 1;
                 const day = parts[2];
-                const result = `${day}-${months[monthIndex]}-${year}`;
-                console.log('  Case 1 (string) =>', result);
-                return result;
+                return `${day}-${months[monthIndex]}-${year}`;
             }
 
-            // Case 2: Date object or ISO string - treat as UTC and convert to GMT+7
-            let dateObj;
-            if (v instanceof Date) {
-                dateObj = v;
-            } else {
-                dateObj = new Date(v);
-            }
-            console.log('  Parsed Date object:', dateObj.toISOString());
-
-            if (isNaN(dateObj.getTime())) {
-                console.log('  Invalid date, returning raw:', str);
+            // Case 2: If it's already in dd-Mmm-YYYY format, return as-is
+            if (/^\d{2}-\w{3}-\d{4}$/.test(str)) {
                 return str;
             }
 
-            // Convert from UTC to GMT+7
-            const gmt7Offset = 7 * 60; // minutes
-            const utc = dateObj.getTime() + dateObj.getTimezoneOffset() * 60000;
-            const gmt7Date = new Date(utc + gmt7Offset * 60000);
-            console.log('  After GMT+7 conversion:', gmt7Date.toISOString(), 'date:', gmt7Date.getDate());
+            // Case 3: Fallback - try to parse and return raw
+            console.warn('Unexpected date format:', str);
+            return str;
+        }
 
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            const day = String(gmt7Date.getDate()).padStart(2, '0');
-            const month = months[gmt7Date.getMonth()];
-            const year = gmt7Date.getFullYear();
-            const result = `${day}-${month}-${year}`;
-            console.log('  Case 2 (Date) =>', result);
-            return result;
+        // Format time: HH:MM am/pm
+        // RULE: Frontend only reformats strings from Apps Script. NO timezone conversion.
+        function formatTimeOnly(v) {
+            if (!v) return '';
+            const str = String(v);
+
+            // Case 1: Already formatted string "HH:mm" from Apps Script
+            const timeMatch = str.match(/^(\d{2}):(\d{2})$/);
+            if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const minutes = timeMatch[2];
+                const ampm = hours >= 12 ? 'pm' : 'am';
+                hours = hours % 12 || 12;
+                return `${hours}:${minutes} ${ampm}`;
+            }
+
+            // Case 2: If already has am/pm, return as-is
+            if (/^\d{1,2}:\d{2}\s*[ap]m$/i.test(str)) {
+                return str;
+            }
+
+            // Case 3: Fallback
+            console.warn('Unexpected time format:', str);
+            return str;
         }
 
         // Format time: HH:MM am/pm
