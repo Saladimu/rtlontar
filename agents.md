@@ -218,3 +218,8 @@ Tombol refresh di:
 - ✅ **Warga delete warning** — dialog detail menampilkan Nama, NIK, No. HP
 - ✅ **Refresh button** — tombol 🔄 di header desktop & mobile
 - ✅ **JSONP delete handler** — `doGet` sekarang support `action=delete` dengan callback
+- ✅ **Public Portal** — halaman publik `public.html` untuk warga (hanya Pengumuman & Kegiatan)
+- ✅ **GMT+7 Timezone** — semua formatting tanggal & waktu menggunakan timezone Asia/Jakarta (GMT+7)
+  - Fungsi: `toGMT7()`, `formatGMT7Date()`, `formatGMT7Time()`
+  - Pengumuman: `dd-Mmm-YYYY` format
+  - Kegiatan: waktu `HH:MM am/pm` di badge atas kanan, tanggal `dd-Mmm-YYYY` di bawah
