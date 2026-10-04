@@ -80,16 +80,28 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 |--------|-----------|-----------|
 | `read` | `action=read` | Baca semua data dari 4 sheet |
 | `delete` | `action=delete&sheetName=X&rowIndex=Y` | Hapus baris di sheet X (JSONP callback) |
+| `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
 
 **Contoh:**
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=read&callback=fn
 GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&rowIndex=0&callback=fn
+GET https://script.google.com/macros/s/XXXX/exec?action=version&callback=fn
 ```
+
+> **Verifikasi deployment:** `CODE_VERSION` di `code.gs` harus sama dengan `EXPECTED_BACKEND_VERSION` di `index.html`. `read` mengembalikan `version`, jadi frontend akan memunculkan peringatan jika Web App masih menjalankan versi lama. Tombol **Cek Versi Backend** juga tersedia di UI.
 
 ### POST Requests
 
 Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
+
+| `action` | Parameter | Deskripsi |
+|----------|-----------|-----------|
+| `add` (default) | `{ sheetName, ...field }` | Tambah baris baru |
+| `update` | `{ action:"update", sheetName, rowIndex, ...field }` | Perbarui baris ke-`rowIndex` (0-based di luar header). Timestamp asli dipertahankan, **tidak** menambah baris baru |
+| `delete` | `{ action:"delete", sheetName, rowIndex }` | Hapus baris ke-`rowIndex` (0-based di luar header) |
+
+> **Penting:** Operasi `update` **wajib** menyertakan `action:"update"`. Tanpa itu `doPost` menganggapnya `add` dan menambahkan baris duplikat.
 
 ---
 
@@ -101,7 +113,7 @@ Semua modul memiliki tombol **Edit** ✏️ yang membuka modal dengan data teris
 **Cara kerja:**
 - `editMode` object melacak index yang sedang diedit: `{ warga: null, kas: null, pengumuman: null, kegiatan: null }`
 - Saat tombol Edit diklik, isi form diisi dengan data record, tombol submit berubah menjadi "Perbarui"
-- `submitXxx()` memeriksa `editMode` — jika bukan null, lakukan update; jika null, lakukan insert
+- `submitXxx()` memeriksa `editMode` — jika bukan null, kirim `{ action:'update', rowIndex, ...fields }`; jika null, lakukan insert (`add`)
 
 **Fungsi edit tersedia:**
 - `editWarga(index)`

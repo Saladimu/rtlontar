@@ -428,6 +428,9 @@
                     <button onclick="syncFromGoogleSheets()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
                         Muat Data dari Sheets
                     </button>
+                    <button onclick="checkBackendVersion()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
+                        Cek Versi Backend
+                    </button>
                     <button onclick="resetAllData()" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
                         Reset Semua Data
                     </button>
@@ -628,7 +631,7 @@
         const initialKegiatan = [];
 
         // One-time cleanup: hapus seluruh record lokal (demo/lama) agar tampilan bersih.
-        const DATA_VERSION = 'clean-2026-10-03';
+        const DATA_VERSION = 'clean-2026-10-04';
         if (localStorage.getItem('rt_data_version') !== DATA_VERSION) {
             ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan'].forEach(function (key) {
                 localStorage.removeItem(key);
@@ -646,6 +649,19 @@
 
         // Track which item is being edited (null = add mode)
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null };
+
+        // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
+        const EXPECTED_BACKEND_VERSION = 'id-v2-2026-10-04';
+
+        // ID stabil untuk tiap baris. Dikirim ke Sheets sebagai kolom A (Timestamp)
+        // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
+        function newId() {
+            return 't' + Date.now() + Math.random().toString(36).slice(2, 8);
+        }
+
+        function findIndexById(arr, id) {
+            return arr.findIndex(function (item) { return item && item._id === id; });
+        }
 
         function getSignature(type, item) {
             if (!item) return '';
@@ -1029,14 +1045,19 @@
             };
 
             if (editMode.warga !== null) {
-                appState.warga[editMode.warga] = { nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
+                const editId = editMode.warga;
+                const idx = findIndexById(appState.warga, editId);
+                const updated = { _id: editId, nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
+                if (idx !== -1) appState.warga[idx] = updated;
                 editMode.warga = null;
                 saveLocalState();
                 renderWargaTable();
-                sendToGoogleSheets(data);
+                sendToGoogleSheets({ action: 'update', id: editId, ...data });
                 showToast('Data warga diperbarui!', 'success');
             } else {
-                appState.warga.push({ nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
+                const id = newId();
+                data.timestamp = id;
+                appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
                 saveLocalState();
                 renderWargaTable();
                 sendToGoogleSheets(data);
@@ -1060,14 +1081,18 @@
             };
 
             if (editMode.kas !== null) {
-                appState.kas[editMode.kas] = data;
+                const editId = editMode.kas;
+                const idx = findIndexById(appState.kas, editId);
+                if (idx !== -1) appState.kas[idx] = Object.assign({ _id: editId }, data);
                 editMode.kas = null;
                 saveLocalState();
                 renderKasTable();
-                sendToGoogleSheets(data);
+                sendToGoogleSheets({ action: 'update', id: editId, ...data });
                 showToast('Transaksi kas diperbarui!', 'success');
             } else {
-                appState.kas.push(data);
+                const id = newId();
+                data.timestamp = id;
+                appState.kas.push(Object.assign({ _id: id }, data));
                 saveLocalState();
                 renderKasTable();
                 sendToGoogleSheets(data);
@@ -1090,14 +1115,18 @@
             };
 
             if (editMode.pengumuman !== null) {
-                appState.pengumuman[editMode.pengumuman] = data;
+                const editId = editMode.pengumuman;
+                const idx = findIndexById(appState.pengumuman, editId);
+                if (idx !== -1) appState.pengumuman[idx] = Object.assign({ _id: editId }, data);
                 editMode.pengumuman = null;
                 saveLocalState();
                 renderPengumumanCards();
-                sendToGoogleSheets(data);
+                sendToGoogleSheets({ action: 'update', id: editId, ...data });
                 showToast('Pengumuman diperbarui!', 'success');
             } else {
-                appState.pengumuman.push(data);
+                const id = newId();
+                data.timestamp = id;
+                appState.pengumuman.push(Object.assign({ _id: id }, data));
                 saveLocalState();
                 renderPengumumanCards();
                 sendToGoogleSheets(data);
@@ -1121,14 +1150,18 @@
             };
 
             if (editMode.kegiatan !== null) {
-                appState.kegiatan[editMode.kegiatan] = data;
+                const editId = editMode.kegiatan;
+                const idx = findIndexById(appState.kegiatan, editId);
+                if (idx !== -1) appState.kegiatan[idx] = Object.assign({ _id: editId }, data);
                 editMode.kegiatan = null;
                 saveLocalState();
                 renderKegiatanCards();
-                sendToGoogleSheets(data);
+                sendToGoogleSheets({ action: 'update', id: editId, ...data });
                 showToast('Agenda kegiatan diperbarui!', 'success');
             } else {
-                appState.kegiatan.push(data);
+                const id = newId();
+                data.timestamp = id;
+                appState.kegiatan.push(Object.assign({ _id: id }, data));
                 saveLocalState();
                 renderKegiatanCards();
                 sendToGoogleSheets(data);
@@ -1143,8 +1176,9 @@
         function editWarga(index) {
             const item = appState.warga[index];
             if (!item) return;
+            if (!item._id) { item._id = newId(); saveLocalState(); }
             
-            editMode.warga = index;
+            editMode.warga = item._id;
             document.getElementById('modal-warga-title').textContent = 'Edit Data Warga';
             document.getElementById('warga-nama').value = item.nama || '';
             document.getElementById('warga-nik').value = item.nik || '';
@@ -1158,8 +1192,9 @@
         function editKas(index) {
             const item = appState.kas[index];
             if (!item) return;
+            if (!item._id) { item._id = newId(); saveLocalState(); }
             
-            editMode.kas = index;
+            editMode.kas = item._id;
             document.getElementById('modal-kas-title').textContent = 'Edit Transaksi Kas';
             document.getElementById('kas-tanggal').value = item.tanggal || '';
             document.getElementById('kas-jenis').value = item.jenis || 'Pemasukan';
@@ -1174,8 +1209,9 @@
         function editPengumuman(index) {
             const item = appState.pengumuman[index];
             if (!item) return;
+            if (!item._id) { item._id = newId(); saveLocalState(); }
             
-            editMode.pengumuman = index;
+            editMode.pengumuman = item._id;
             document.getElementById('modal-pengumuman-title').textContent = 'Edit Pengumuman';
             document.getElementById('pengumuman-tanggal').value = item.tanggal || '';
             document.getElementById('pengumuman-judul').value = item.judul || '';
@@ -1189,8 +1225,9 @@
         function editKegiatan(index) {
             const item = appState.kegiatan[index];
             if (!item) return;
+            if (!item._id) { item._id = newId(); saveLocalState(); }
             
-            editMode.kegiatan = index;
+            editMode.kegiatan = item._id;
             document.getElementById('modal-kegiatan-title').textContent = 'Edit Agenda Kegiatan';
             document.getElementById('kegiatan-nama').value = item.namaKegiatan || '';
             document.getElementById('kegiatan-tanggal').value = item.tanggal || '';
@@ -1238,11 +1275,15 @@
         // Generic delete: send to Sheets FIRST, then update local if successful
         function deleteRecord(sheetName, index, arrayRef, renderFn, localDeleteKey) {
             const item = arrayRef[index];
+            if (!item) return;
+            if (!item._id) { item._id = newId(); saveLocalState(); }
+            const id = item._id;
 
             if (!appState.scriptUrl) {
                 // Local mode: just delete locally
                 trackLocalDelete(localDeleteKey, item);
-                arrayRef.splice(index, 1);
+                const li = findIndexById(arrayRef, id);
+                if (li !== -1) arrayRef.splice(li, 1);
                 saveLocalState();
                 renderFn();
                 showToast('Dihapus (mode lokal)', 'info');
@@ -1273,7 +1314,8 @@
                 if (res && res.result === 'success') {
                     // Success: delete locally & track signature so reload won't bring it back
                     trackLocalDelete(localDeleteKey, item);
-                    arrayRef.splice(index, 1);
+                    const li = findIndexById(arrayRef, id);
+                    if (li !== -1) arrayRef.splice(li, 1);
                     saveLocalState();
                     renderFn();
                     showToast('Dihapus dari Google Sheets', 'success');
@@ -1289,8 +1331,8 @@
                 showToast('Gagal terhubung ke Google Sheets', 'error');
             };
 
-            // Send as JSONP: action=delete&sheetName=...&rowIndex=...&callback=...
-            script.src = appState.scriptUrl + sep + 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&rowIndex=' + index + '&callback=' + callbackName;
+            // Send as JSONP: action=delete&sheetName=...&id=...&callback=...
+            script.src = appState.scriptUrl + sep + 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&id=' + encodeURIComponent(id) + '&callback=' + callbackName;
             document.body.appendChild(script);
         }
 
@@ -1389,6 +1431,47 @@
             document.body.appendChild(script);
         }
 
+        // Cek versi code.gs yang sedang aktif di Web App (untuk memastikan sudah redeploy).
+        function checkBackendVersion() {
+            if (!appState.scriptUrl) {
+                showToast('Simpan Web App URL terlebih dahulu', 'error');
+                return;
+            }
+            const callbackName = '__rtVersion_' + Date.now();
+            const script = document.createElement('script');
+            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
+            const cleanup = () => {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+            const timer = setTimeout(() => {
+                cleanup();
+                showToast('Timeout cek versi backend', 'error');
+            }, 10000);
+
+            window[callbackName] = function (res) {
+                clearTimeout(timer);
+                cleanup();
+                const v = res && res.version;
+                if (v === EXPECTED_BACKEND_VERSION) {
+                    showToast('Backend sudah versi terbaru (' + v + ')', 'success');
+                } else if (v) {
+                    showToast('Backend versi lama (' + v + '). Redeploy code.gs > New version.', 'error');
+                } else {
+                    showToast('Backend belum diperbarui. Redeploy code.gs > New version.', 'error');
+                }
+            };
+
+            script.onerror = function () {
+                clearTimeout(timer);
+                cleanup();
+                showToast('Gagal cek versi backend', 'error');
+            };
+
+            script.src = appState.scriptUrl + sep + 'action=version&callback=' + callbackName;
+            document.body.appendChild(script);
+        }
+
         function applySheetsData(res) {
             if (!res || res.result !== 'success' || !res.data) {
                 showToast('Gagal memuat data dari Google Sheets', 'error');
@@ -1396,23 +1479,29 @@
             }
             const d = res.data;
             appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
-                nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
+                _id: r[0], nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
-                tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
+                _id: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
             })));
             appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
-                tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+                _id: r[0], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
             })));
             appState.kegiatan = applyLocalDeletes('kegiatan', (d.Kegiatan_Warga || []).map(r => ({
-                namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
+                _id: r[0], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
             })));
             saveLocalState();
             renderWargaTable();
             renderKasTable();
             renderPengumumanCards();
             renderKegiatanCards();
-            showToast('Data berhasil dimuat dari Google Sheets', 'success');
+
+            if (res.version !== EXPECTED_BACKEND_VERSION) {
+                console.warn('Backend version mismatch:', res.version, 'expected:', EXPECTED_BACKEND_VERSION);
+                showToast('PERINGATAN: backend Apps Script masih versi lama (' + (res.version || 'tidak diketahui') + '). Deploy versi baru agar edit tidak membuat duplikat.', 'error');
+            } else {
+                showToast('Data berhasil dimuat dari Google Sheets', 'success');
+            }
         }
 
         function fmtDate(v) {

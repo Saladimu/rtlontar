@@ -67,7 +67,9 @@ Lihat `Apps Script/readme.md` untuk:
 **Perubahan Terbaru di code.gs:**
 - ✅ `doGet` mendukung `action=delete` + JSONP callback
 - ✅ `handleDelete()` untuk hapus baris dengan validasi
-- ✅ `doPost` mendukung delete action via POST (fallback)
+- ✅ `doPost` mendukung `action=add` / `action=update` / `action=delete`
+- ✅ `action=update` memperbarui baris (mempertahankan Timestamp) tanpa menambah baris duplikat
+- ✅ `action=version` + `CODE_VERSION` untuk memverifikasi Web App sudah redeploy (tombol **Cek Versi Backend**)
 - ✅ Format tanggal otomatis saat read dari Sheets
 </details>
 
