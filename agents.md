@@ -220,6 +220,40 @@ Tombol refresh di:
 - ✅ **JSONP delete handler** — `doGet` sekarang support `action=delete` dengan callback
 - ✅ **Public Portal** — halaman publik `public.html` untuk warga (hanya Pengumuman & Kegiatan)
   - Data diambil langsung dari Google Sheets via JSONP
-  - Tanggal & waktu sudah diformat oleh Apps Script di timezone spreadsheet
+  - Tanggal & waktu sudah diformat oleh Apps Script menggunakan timezone spreadsheet (GMT+7)
   - Frontend hanya melakukan reformat: "yyyy-MM-dd" → "dd-Mmm-YYYY", "HH:mm" → "HH:MM am/pm"
-  - Tidak perlu konversi timezone tambahan di frontend
+  - **Tidak ada konversi timezone tambahan di frontend** — data sudah benar dari sumber
+
+---
+
+## 🌍 Rule: Timezone GMT+7 (Asia/Jakarta)
+
+### Sumber Data
+Google Sheets menyimpan dan memformat semua tanggal/waktu menggunakan timezone **GMT+7 (Asia/Jakarta)**.
+
+### Alur Data
+```
+Google Sheets (GMT+7)
+        │
+        ▼
+Apps Script (code.gs)
+  - Utilities.formatDate(cell, tz, format) menggunakan spreadsheet timezone
+  - Mengirim string terformat: "yyyy-MM-dd" dan "HH:mm"
+        │
+        ▼
+Frontend (index.html, public.html)
+  - fmtDate() / formatDateDDMMMYYYY(): reformat string, TIDAK konversi timezone
+  - fmtTime() / formatTimeOnly(): reformat string, TIDAK konversi timezone
+```
+
+### Fungsi Format (Frontend)
+| Fungsi | Input | Output |
+|--------|-------|--------|
+| `fmtDate(v)` | `"2026-10-03"` atau Date object | `"2026-10-03"` |
+| `fmtTime(v)` | `"07:00"` atau Date object | `"07:00"` |
+| `formatDateDDMMMYYYY(v)` | `"2026-10-03"` | `"03-Oct-2026"` |
+| `formatTimeOnly(v)` | `"07:00"` | `"07:00 am"` |
+
+### Larangan
+❌ **JANGAN** lakukan konversi timezone di frontend (misal: GMT+7 adjustment, `toLocaleTimeString()`, dll)
+✅ **HANYA** lakukan reformat string yang sudah benar dari Apps Script
