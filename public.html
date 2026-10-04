@@ -179,12 +179,24 @@
             }
         });
 
-        // Format date: dd-Mmm-YYYY (handles both string and Date object input)
+        // Format date: dd-Mmm-YYYY
+        // RULE: Google Sheets stores dates in GMT+7, Apps Script formats them correctly.
+        // Frontend only reformat strings, NO timezone conversion.
         function formatDateDDMMMYYYY(v) {
             if (!v) return '';
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-            // Handle Date object (from JSON deserialization)
+            // Case 1: Already formatted string from Apps Script ("yyyy-MM-dd")
+            const str = String(v);
+            const parts = str.split('-');
+            if (parts.length === 3 && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                const year = parts[0];
+                const monthIndex = parseInt(parts[1]) - 1;
+                const day = parts[2];
+                return `${day}-${months[monthIndex]}-${year}`;
+            }
+
+            // Case 2: Date object or ISO string - treat as UTC and convert to GMT+7
             let dateObj;
             if (v instanceof Date) {
                 dateObj = v;
@@ -193,50 +205,57 @@
             }
 
             if (isNaN(dateObj.getTime())) {
-                // If not a valid date, try parsing as "yyyy-MM-dd" string
-                const parts = String(v).split('-');
-                if (parts.length === 3) {
-                    const year = parts[0];
-                    const monthIndex = parseInt(parts[1]) - 1;
-                    const day = parts[2];
-                    return `${day}-${months[monthIndex] || '?'}-${year}`;
-                }
-                return String(v);
+                return str;
             }
 
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const month = months[dateObj.getMonth()];
-            const year = dateObj.getFullYear();
+            // Convert from UTC to GMT+7
+            const gmt7Offset = 7 * 60; // minutes
+            const utc = dateObj.getTime() + dateObj.getTimezoneOffset() * 60000;
+            const gmt7Date = new Date(utc + gmt7Offset * 60000);
+
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const day = String(gmt7Date.getDate()).padStart(2, '0');
+            const month = months[gmt7Date.getMonth()];
+            const year = gmt7Date.getFullYear();
             return `${day}-${month}-${year}`;
         }
 
-        // Format time: HH:MM am/pm (handles both string and Date object input)
+        // Format time: HH:MM am/pm
+        // RULE: Google Sheets stores times in GMT+7, Apps Script formats them correctly.
+        // Frontend only reformat strings, NO timezone conversion.
         function formatTimeOnly(v) {
             if (!v) return '';
 
-            // Handle Date object
+            // Case 1: Already formatted string from Apps Script ("HH:mm")
+            const str = String(v);
+            const timeMatch = str.match(/^(\d{2}):(\d{2})$/);
+            if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const minutes = timeMatch[2];
+                const ampm = hours >= 12 ? 'pm' : 'am';
+                hours = hours % 12 || 12;
+                return `${hours}:${minutes} ${ampm}`;
+            }
+
+            // Case 2: Date object or ISO string - treat as UTC and convert to GMT+7
             let dateObj;
             if (v instanceof Date) {
                 dateObj = v;
             } else {
-                dateObj = new Date('1970-01-01T' + v + ':00');
+                dateObj = new Date(v);
             }
 
             if (isNaN(dateObj.getTime())) {
-                // Fallback: parse as "HH:mm" string
-                const parts = String(v).split(':');
-                if (parts.length >= 2) {
-                    let hours = parseInt(parts[0]);
-                    const minutes = parts[1];
-                    const ampm = hours >= 12 ? 'pm' : 'am';
-                    hours = hours % 12 || 12;
-                    return `${hours}:${minutes} ${ampm}`;
-                }
-                return String(v);
+                return str;
             }
 
-            let hours = dateObj.getHours();
-            const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+            // Convert from UTC to GMT+7
+            const gmt7Offset = 7 * 60; // minutes
+            const utc = dateObj.getTime() + dateObj.getTimezoneOffset() * 60000;
+            const gmt7Date = new Date(utc + gmt7Offset * 60000);
+
+            let hours = gmt7Date.getHours();
+            const minutes = String(gmt7Date.getMinutes()).padStart(2, '0');
             const ampm = hours >= 12 ? 'pm' : 'am';
             hours = hours % 12 || 12;
             return `${hours}:${minutes} ${ampm}`;
