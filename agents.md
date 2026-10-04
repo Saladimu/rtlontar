@@ -219,7 +219,7 @@ Tombol refresh di:
 - ✅ **Refresh button** — tombol 🔄 di header desktop & mobile
 - ✅ **JSONP delete handler** — `doGet` sekarang support `action=delete` dengan callback
 - ✅ **Public Portal** — halaman publik `public.html` untuk warga (hanya Pengumuman & Kegiatan)
-- ✅ **GMT+7 Timezone** — semua formatting tanggal & waktu menggunakan timezone Asia/Jakarta (GMT+7)
-  - Fungsi: `toGMT7()`, `formatGMT7Date()`, `formatGMT7Time()`
-  - Pengumuman: `dd-Mmm-YYYY` format
-  - Kegiatan: waktu `HH:MM am/pm` di badge atas kanan, tanggal `dd-Mmm-YYYY` di bawah
+  - Data diambil langsung dari Google Sheets via JSONP
+  - Tanggal & waktu sudah diformat oleh Apps Script di timezone spreadsheet
+  - Frontend hanya melakukan reformat: "yyyy-MM-dd" → "dd-Mmm-YYYY", "HH:mm" → "HH:MM am/pm"
+  - Tidak perlu konversi timezone tambahan di frontend
