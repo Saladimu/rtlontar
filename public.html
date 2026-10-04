@@ -146,37 +146,6 @@
         // ============================================================
         const DEFAULT_WEB_APP_URL = '';
 
-        // GMT+7 (Asia/Jakarta) timezone helper
-        const GMT7_OFFSET = 7 * 60; // minutes offset from UTC
-
-        function toGMT7(date) {
-            if (!date || isNaN(date.getTime())) return date;
-            const utc = date.getTime() + date.getTimezoneOffset() * 60000;
-            return new Date(utc + GMT7_OFFSET * 60000);
-        }
-
-        function formatGMT7Date(v) {
-            if (!v) return '';
-            const d = new Date(v);
-            const gmt7 = toGMT7(d);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            const day = String(gmt7.getDate()).padStart(2, '0');
-            const month = months[gmt7.getMonth()];
-            const year = gmt7.getFullYear();
-            return `${day}-${month}-${year}`;
-        }
-
-        function formatGMT7Time(v) {
-            if (!v) return '';
-            const d = new Date(v);
-            const gmt7 = toGMT7(d);
-            let hours = gmt7.getHours();
-            const minutes = String(gmt7.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'pm' : 'am';
-            hours = hours % 12 || 12;
-            return `${hours}:${minutes} ${ampm}`;
-        }
-
         // Get URL from query param (?url=...) or localStorage or use default
         function getWebAppUrl() {
             // First try query parameter
@@ -210,30 +179,30 @@
             }
         });
 
-        // Format date helper: dd-Mmm-YYYY (without time)
+        // Format date: dd-Mmm-YYYY (dates are already formatted by Apps Script in correct timezone)
         function formatDateDDMMMYYYY(v) {
-            return formatGMT7Date(v);
+            if (!v) return '';
+            // Apps Script returns "yyyy-MM-dd" string - convert to "dd-Mmm-YYYY"
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const parts = String(v).split('-');
+            if (parts.length !== 3) return String(v);
+            const year = parts[0];
+            const monthIndex = parseInt(parts[1]) - 1;
+            const day = parts[2];
+            return `${day}-${months[monthIndex]}-${year}`;
         }
 
-        // Format date with time: dd-Mmm-YYYY HH:MM am/pm
-        function formatDateWithTime(v) {
+        // Format time: keep as-is from Apps Script (already in correct timezone)
+        function formatTimeOnly(v) {
             if (!v) return '';
-            const d = new Date(v);
-            const gmt7 = toGMT7(d);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-            const day = String(gmt7.getDate()).padStart(2, '0');
-            const month = months[gmt7.getMonth()];
-            const year = gmt7.getFullYear();
-            let hours = gmt7.getHours();
-            const minutes = String(gmt7.getMinutes()).padStart(2, '0');
+            // Apps Script returns "HH:mm" format - add am/pm
+            const parts = String(v).split(':');
+            if (parts.length < 2) return String(v);
+            let hours = parseInt(parts[0]);
+            const minutes = parts[1];
             const ampm = hours >= 12 ? 'pm' : 'am';
             hours = hours % 12 || 12;
-            return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
-        }
-
-        // Format time only: HH:MM am/pm
-        function formatTimeOnly(v) {
-            return formatGMT7Time(v);
+            return `${hours}:${minutes} ${ampm}`;
         }
 
         function updateLastUpdated() {
