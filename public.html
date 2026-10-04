@@ -180,8 +180,20 @@
             }
         });
 
-        // Format date helper: dd-Mmm-YYYY HH:MM am/pm
+        // Format date helper: dd-Mmm-YYYY (without time)
         function formatDateDDMMMYYYY(v) {
+            if (!v) return '';
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const d = new Date(v);
+            if (isNaN(d)) return String(v);
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = months[d.getMonth()];
+            const year = d.getFullYear();
+            return `${day}-${month}-${year}`;
+        }
+
+        // Format date with time: dd-Mmm-YYYY HH:MM am/pm
+        function formatDateWithTime(v) {
             if (!v) return '';
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const d = new Date(v);
@@ -194,6 +206,18 @@
             const ampm = hours >= 12 ? 'pm' : 'am';
             hours = hours % 12 || 12;
             return `${day}-${month}-${year} ${hours}:${minutes} ${ampm}`;
+        }
+
+        // Format time only: HH:MM am/pm
+        function formatTimeOnly(v) {
+            if (!v) return '';
+            const d = new Date(v);
+            if (isNaN(d)) return String(v);
+            let hours = d.getHours();
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'pm' : 'am';
+            hours = hours % 12 || 12;
+            return `${hours}:${minutes} ${ampm}`;
         }
 
         function updateLastUpdated() {
@@ -288,7 +312,7 @@
                     <div class="flex items-start justify-between mb-2">
                         <h3 class="font-bold text-slate-800 text-sm">${item.namaKegiatan}</h3>
                         <span class="text-xs px-2 py-0.5 bg-rose-50 text-rose-600 rounded-lg">
-                            <i class="fa-regular fa-clock mr-1"></i>${item.waktu}
+                            <i class="fa-regular fa-clock mr-1"></i>${formatTimeOnly(item.waktu)}
                         </span>
                     </div>
                     <div class="space-y-1 text-xs text-slate-600">
