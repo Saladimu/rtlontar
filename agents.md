@@ -223,6 +223,7 @@ Tombol refresh di:
   - Tanggal & waktu sudah diformat oleh Apps Script menggunakan timezone spreadsheet (GMT+7)
   - Frontend hanya melakukan reformat: "yyyy-MM-dd" → "dd-Mmm-YYYY", "HH:mm" → "HH:MM am/pm"
   - **Tidak ada konversi timezone tambahan di frontend** — data sudah benar dari sumber
+  - Format konsisten di semua halaman: `index.html` dan `public.html` menampilkan tanggal yang sama
 
 ---
 
