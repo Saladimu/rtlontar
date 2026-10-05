@@ -58,14 +58,21 @@
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-slate-200">
         <div class="max-w-5xl mx-auto px-4 py-4">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
-                    <i class="fa-solid fa-building-user text-white"></i>
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-building-user text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg text-slate-800" data-rt="headerName">RT Tanjung Duren Utara</h1>
+                        <p class="text-xs text-slate-500" data-rt="publicSubtitle">Portal Informasi Publik - RT 005/RW 02</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="font-bold text-lg text-slate-800" data-rt="headerName">RT Tanjung Duren Utara</h1>
-                    <p class="text-xs text-slate-500" data-rt="publicSubtitle">Portal Informasi Publik - RT 005/RW 02</p>
-                </div>
+                <button id="refresh-btn" onclick="refreshPublicData()" title="Muat ulang data"
+                    class="flex items-center space-x-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 px-3 py-2 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    <i id="refresh-icon" class="fa-solid fa-rotate-right"></i>
+                    <span class="hidden sm:inline">Muat Ulang</span>
+                </button>
             </div>
         </div>
     </header>
@@ -222,6 +229,33 @@
             document.getElementById('last-update-time').innerText = dateStr;
         }
 
+        // Tampilkan spinner di kedua container saat memuat data.
+        function showPublicLoading() {
+            document.getElementById('pengumuman-container').innerHTML =
+                '<div class="flex justify-center py-12"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-slate-300"></i></div>';
+            document.getElementById('kegiatan-container').innerHTML =
+                '<div class="flex justify-center col-span-full py-12"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-slate-300"></i></div>';
+        }
+
+        // Muat ulang data publik (dipakai tombol "Muat Ulang").
+        function refreshPublicData() {
+            if (!WEB_APP_URL) { showConfigNeeded(); return; }
+
+            const btn = document.getElementById('refresh-btn');
+            const icon = document.getElementById('refresh-icon');
+            if (btn && btn.disabled) return;
+
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('fa-spin');
+            showPublicLoading();
+
+            loadPublicData(function () {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('fa-spin');
+                updateLastUpdated();
+            });
+        }
+
         // Apakah record boleh tampil publik. Default: tampil (kompatibel data lama).
         function isPublicVal(v) {
             if (v === true) return true;
@@ -230,7 +264,7 @@
             return !(s === 'tidak' || s === 'no' || s === 'false' || s === '0' || s === 'draft');
         }
 
-        function loadPublicData() {
+        function loadPublicData(onComplete) {
             const callbackName = '__publicData_' + Date.now();
             const script = document.createElement('script');
 
@@ -256,10 +290,13 @@
                 } else {
                     showLoadError();
                 }
+
+                if (typeof onComplete === 'function') onComplete();
             };
 
             script.onerror = function() {
                 showLoadError();
+                if (typeof onComplete === 'function') onComplete();
             };
 
             const sep = WEB_APP_URL.indexOf('?') === -1 ? '?' : '&';
@@ -338,6 +375,20 @@
                 'Kegiatan': 'bg-purple-100 text-purple-700'
             };
             return map[kategori] || 'bg-slate-100 text-slate-700';
+        }
+
+        function showLoadError() {
+            const html = `
+                <div class="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center">
+                    <i class="fa-solid fa-triangle-exclamation text-4xl text-rose-400 mb-3"></i>
+                    <h3 class="font-bold text-rose-900 text-lg mb-2">Gagal memuat data</h3>
+                    <p class="text-sm text-rose-700">Periksa koneksi internet lalu tekan tombol "Muat Ulang".</p>
+                </div>
+            `;
+            document.getElementById('pengumuman-container').innerHTML = html;
+            document.getElementById('kegiatan-container').innerHTML = '';
+            document.getElementById('count-pengumuman').textContent = '-';
+            document.getElementById('count-kegiatan').textContent = '-';
         }
 
         function showConfigNeeded() {
