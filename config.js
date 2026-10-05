@@ -11,15 +11,15 @@
    ============================================================ */
 window.RT_CONFIG = {
     appName: 'Sistem RT',
-    rt: '005',
-    rw: '02',
+    rt: '017',
+    rw: '06',
     kelurahan: 'Tanjung Duren Utara',
     kecamatan: 'Grogol Petamburan',
     kota: 'Jakarta Barat',
     provinsi: 'DKI Jakarta',
     tahun: new Date().getFullYear(),
-    alamatContoh: 'Jl. Tanjung Duren Utara No. 12',
-    lokasiContoh: 'Lap. Bulutangkis RT'
+    alamatContoh: 'Jl. Lontar Barat No. 06',
+    lokasiContoh: 'Depan lapangan'
 };
 
 (function () {
