@@ -58,6 +58,8 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
   "token": "String (Required - harus sama dengan ADMIN_TOKEN)",
   "nama": "String (Required)",
   "nik": "String (Optional)",
+  "tempat": "String (Optional - Tempat Lahir)",
+  "tanggalLahir": "YYYY-MM-DD (Optional - Tanggal Lahir)",
   "noHp": "String (Required)",
   "statusTinggal": "String [Tetap | Kontrak]",
   "alamat": "String (Required)"
@@ -149,7 +151,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 > **Penting:** Operasi `update` **wajib** menyertakan `action:"update"`. Tanpa itu `doPost` menganggapnya `add` dan menambahkan baris duplikat.
 
 > **Field per sheet:**
-> - `Data_Warga`: `nama, nik, noHp, statusTinggal, alamat`
+> - `Data_Warga`: `nama, nik, tempat, tanggalLahir, noHp, statusTinggal, alamat`
 > - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan`
 > - `Pengumuman`: `tanggal, judul, isi, kategori, pj, publik` (`Ya`/`Tidak`)
 > - `Kegiatan_Warga`: `namaKegiatan, tanggal, waktu, lokasi, pj, keterangan, publik` (`Ya`/`Tidak`)
@@ -302,7 +304,8 @@ Tombol refresh di:
 - ✅ **Token admin (`ADMIN_TOKEN`)** — proteksi server-side untuk semua operasi tulis & baca lengkap (`isAuthorized`, `safeEqual`, `unauthorized`)
 - ✅ **Endpoint `readPublic`** — portal publik hanya menerima Pengumuman & Kegiatan `Publik=Ya`; `Data_Warga`/`Iuran_Kas` tidak lagi terkirim keluar
 - ✅ **Frontend token** — input Token Admin di panel Integrasi, `saveAdminToken()`, simpan di `localStorage` `rt_admin_token`, `promptForAdminToken()` saat `code:"unauthorized"`
-- ✅ `index.html` `EXPECTED_BACKEND_VERSION` = `publik-v5-2026-10-05`; `CODE_VERSION` di `code.gs` disamakan
+- ✅ `index.html` `EXPECTED_BACKEND_VERSION` = `publik-v6-2026-10-05`; `CODE_VERSION` di `code.gs` disamakan
+- ✅ **Kolom baru `Data_Warga`**: `Tempat Lahir` + `Tanggal Lahir` (setelah `NIK`); `migrateDataWargaLayout()` menyisipkan otomatis 2 kolom (`insertColumnsBefore(4,2)`) untuk sheet lama, `EXPECTED_FIELDS.Data_Warga = 8`, payload `tempat`/`tanggalLahir`, tabel & form warga diperbarui
 - ✅ Perbaikan bug: blok mapping duplikat di `applySheetsData()` dihapus (mengakibatkan `_id` salah & tanggal edit kosong)
 - ✅ Perbaikan bug: tanggal di kartu Pengumuman/Kegiatan admin kini diformat `dd-Mmm-yyyy` lewat `fmtDateDisplay()` (sebelumnya menampilkan `yyyy-MM-dd` mentah); diterapkan juga ke widget dashboard & tabel Kas
 - ✅ `public.html` disederhanakan: fitur "Atur URL" (input manual + fallback `localStorage` `rt_public_webapp_url`) dihapus; URL hanya dari `?url=`

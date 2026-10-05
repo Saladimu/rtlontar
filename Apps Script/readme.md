@@ -47,6 +47,8 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | Timestamp | DateTime | 2026-10-03 10:30:00 |
 | Nama Lengkap | String | Budi Santoso |
 | NIK | String | 3173012304567890 |
+| Tempat Lahir | String | Jakarta |
+| Tanggal Lahir | Date | 1990-05-17 |
 | No HP | String | 081234567890 |
 | Status Tempat Tinggal | String | Tetap / Kontrak |
 | Alamat/No Rumah | String | Jl. Tanjung Duren No. 12 |
@@ -150,7 +152,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 
 | Sheet | Payload Fields |
 |-------|----------------|
-| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nama`, `nik`, `noHp`, `statusTinggal`, `alamat` |
+| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nama`, `nik`, `tempat`, `tanggalLahir`, `noHp`, `statusTinggal`, `alamat` |
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
@@ -162,6 +164,8 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
   "id": "id-1728031200000-ab12cd",
   "nama": "Budi Santoso",
   "nik": "3173012304567890",
+  "tempat": "Jakarta",
+  "tanggalLahir": "1990-05-17",
   "noHp": "081234567890",
   "statusTinggal": "Tetap",
   "alamat": "Jl. Tanjung Duren No. 12"
@@ -176,6 +180,8 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
   "id": "id-1728031200000-ab12cd",
   "nama": "Budi Santoso (revisi)",
   "nik": "3173012304567890",
+  "tempat": "Bandung",
+  "tanggalLahir": "1990-05-17",
   "noHp": "081234567890",
   "statusTinggal": "Kontrak",
   "alamat": "Jl. Tanjung Duren No. 15"
@@ -229,6 +235,8 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
 | `ensureSpreadsheetFormat(ss, sheet, name)` | Set timezone Asia/Jakarta + format `dd-mm-yyyy hh:mm` + header ID |
+| `migrateLayout(sheet, name)` | Migrasi header: sisipkan `Publik` (Pengumuman/Kegiatan_Warga) & delegasi `Data_Warga` |
+| `migrateDataWargaLayout(sheet, desired)` | Sisipkan kolom `Tempat Lahir` & `Tanggal Lahir` (setelah `NIK`) bila belum ada; idempoten |
 | `buildRowData(sheetName, data, timestamp, id)` | Susun array baris (Timestamp, field, ID) |
 | `respond(obj)` | Helper: return JSON dengan MIME type benar |
 
@@ -254,9 +262,9 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 
 3. **Timestamp**: Otomatis ditambahkan Apps Script saat `appendRow` (kolom pertama di setiap sheet), berupa `Date` asli berformat `dd-mm-yyyy hh:mm` (GMT+7).
 
-4. **Format Tanggal**: `readAllSheets()` memformat kolom tanggal jadi `yyyy-MM-dd` dan waktu jadi `HH:mm` sebelum dikirim ke frontend.
+4. **Format Tanggal**: `readAllSheets()` memformat kolom tanggal jadi `yyyy-MM-dd` (termasuk `Tanggal Lahir` pada `Data_Warga`) dan waktu jadi `HH:mm` sebelum dikirim ke frontend.
 
-5. **Migrasi**: Saat pertama kali `read`, header `ID` dibuat, kolom `Publik` disisipkan (Pengumuman & Kegiatan_Warga), dan semua baris lama otomatis diberi ID + `Publik=Ya`. Tidak ada langkah manual.
+5. **Migrasi**: Saat pertama kali `read`, header `ID` dibuat, kolom `Publik` disisipkan (Pengumuman & Kegiatan_Warga), kolom `Tempat Lahir` & `Tanggal Lahir` disisipkan pada `Data_Warga` (setelah `NIK`), dan semua baris lama otomatis diberi ID + `Publik=Ya`. Tidak ada langkah manual.
 
 6. **Publik**: Kolom `Publik` bernilai `Ya`/`Tidak`. Hanya record `Ya` yang tampil di `public.html`. Di sisi admin, gunakan tombol toggle (ikon mata) pada kartu Pengumuman/Kegiatan untuk mengubahnya.
 

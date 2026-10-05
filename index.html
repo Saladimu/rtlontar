@@ -282,7 +282,7 @@
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row gap-3 items-center justify-between">
                 <div class="relative w-full md:w-80">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="search-warga" oninput="renderWargaTable()" placeholder="Cari nama, NIK, atau no rumah..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="search-warga" oninput="renderWargaTable()" placeholder="Cari nama, NIK, tempat lahir, atau alamat..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div class="flex items-center space-x-2 w-full md:w-auto">
                     <label class="text-xs font-medium text-slate-500 whitespace-nowrap">Status:</label>
@@ -302,6 +302,8 @@
                             <tr>
                                 <th class="p-4">Nama Lengkap</th>
                                 <th class="p-4">NIK</th>
+                                <th class="p-4">Tempat Lahir</th>
+                                <th class="p-4">Tanggal Lahir</th>
                                 <th class="p-4">No. HP</th>
                                 <th class="p-4">Status Tinggal</th>
                                 <th class="p-4">Alamat / No. Rumah</th>
@@ -602,6 +604,16 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">NIK (Nomor Induk Kependudukan)</label>
                     <input type="text" id="warga-nik" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="317301...">
                 </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tempat Lahir</label>
+                        <input type="text" id="warga-tempat" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jakarta">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Lahir</label>
+                        <input type="date" id="warga-tanggallahir" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">No. HP / WhatsApp *</label>
                     <input type="tel" id="warga-hp" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08123456789">
@@ -788,7 +800,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v5-2026-10-05';
+        const EXPECTED_BACKEND_VERSION = 'publik-v6-2026-10-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -812,7 +824,7 @@
 
         function getSignature(type, item) {
             if (!item) return '';
-            if (type === 'warga') return [item.nik || '', item.nama || '', item.hp || '', item.alamat || ''].join('|');
+            if (type === 'warga') return [item.nik || '', item.nama || '', item.tempat || '', item.tanggalLahir || '', item.hp || '', item.alamat || ''].join('|');
             if (type === 'kas') return [item.tanggal || '', item.nama || '', item.noRumah || '', item.jenis || '', item.jumlah || '', item.keterangan || ''].join('|');
             if (type === 'pengumuman') return [item.tanggal || '', item.judul || '', item.isi || '', item.kategori || '', item.pj || ''].join('|');
             if (type === 'kegiatan') return [item.namaKegiatan || '', item.tanggal || '', item.waktu || '', item.lokasi || '', item.pj || '', item.keterangan || ''].join('|');
@@ -1018,13 +1030,15 @@
             const filtered = appState.warga.filter(item => {
                 const matchSearch = item.nama.toLowerCase().includes(search) || 
                                     (item.nik && item.nik.includes(search)) || 
+                                    (item.tempat && item.tempat.toLowerCase().includes(search)) ||
+                                    (item.tanggalLahir && item.tanggalLahir.includes(search)) ||
                                     item.alamat.toLowerCase().includes(search);
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
                 return matchSearch && matchStatus;
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada data warga ditemukan.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">Tidak ada data warga ditemukan.</td></tr>`;
                 return;
             }
 
@@ -1039,6 +1053,8 @@
                 tr.innerHTML = `
                     <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
                     <td class="p-4 text-slate-500 text-xs">${item.nik || '-'}</td>
+                    <td class="p-4 text-slate-600">${item.tempat || '-'}</td>
+                    <td class="p-4 text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</td>
                     <td class="p-4 text-slate-600">${item.hp}</td>
                     <td class="p-4">${statusBadge}</td>
                     <td class="p-4 text-slate-600">${item.alamat}</td>
@@ -1208,6 +1224,8 @@
                 sheetName: "Data_Warga",
                 nama: document.getElementById('warga-nama').value,
                 nik: document.getElementById('warga-nik').value,
+                tempat: document.getElementById('warga-tempat').value,
+                tanggalLahir: document.getElementById('warga-tanggallahir').value,
                 noHp: document.getElementById('warga-hp').value,
                 statusTinggal: document.getElementById('warga-status').value,
                 alamat: document.getElementById('warga-alamat').value
@@ -1216,7 +1234,7 @@
             if (editMode.warga !== null) {
                 const editId = editMode.warga;
                 const idx = findIndexById(appState.warga, editId);
-                const updated = { _id: editId, nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
+                const updated = { _id: editId, nama: data.nama, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
                 if (idx !== -1) appState.warga[idx] = updated;
                 editMode.warga = null;
                 saveLocalState();
@@ -1226,7 +1244,7 @@
             } else {
                 const id = newId();
                 data.id = id;
-                appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
+                appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
                 saveLocalState();
                 renderWargaTable();
                 sendToGoogleSheets(data);
@@ -1353,6 +1371,8 @@
             document.getElementById('modal-warga-title').textContent = 'Edit Data Warga';
             document.getElementById('warga-nama').value = item.nama || '';
             document.getElementById('warga-nik').value = item.nik || '';
+            document.getElementById('warga-tempat').value = item.tempat || '';
+            document.getElementById('warga-tanggallahir').value = item.tanggalLahir || '';
             document.getElementById('warga-hp').value = item.hp || '';
             document.getElementById('warga-status').value = item.statusTinggal || 'Tetap';
             document.getElementById('warga-alamat').value = item.alamat || '';
@@ -1452,6 +1472,8 @@
             const detailMsg = `Anda akan menghapus data warga:
 • Nama: ${item?.nama || 'Tidak diketahui'}
 • NIK: ${item?.nik || '-'}
+• Tempat Lahir: ${item?.tempat || '-'}
+• Tanggal Lahir: ${fmtDateDisplay(item?.tanggalLahir) || '-'}
 • No. HP: ${item?.hp || '-'}`;
             const confirmMsg = `${warningMsg}\n\n${detailMsg}\n\nYakin ingin menghapus data ini?`;
 
@@ -1784,7 +1806,7 @@
             }
             const d = res.data;
             appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
-                _id: r[r.length - 1], nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
+                _id: r[r.length - 1], nama: r[1], nik: r[2], tempat: r[3], tanggalLahir: fmtDate(r[4]), hp: r[5], statusTinggal: r[6], alamat: r[7]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
                 _id: r[r.length - 1], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]

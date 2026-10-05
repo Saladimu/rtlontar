@@ -7,7 +7,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 ## 🚀 Fitur Utama
 
 - **📊 Ringkasan / Dashboard:** Menampilkan statistik total warga, saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
-- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
+- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, Tempat & Tanggal Lahir, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
 - **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Hapus** tersedia.
 - **📢 Pengumuman RT:** Papan informasi digital resmi untuk menyebarkan imbauan dan berita penting. **Edit & Hapus** tersedia.
 - **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT. **Edit & Hapus** tersedia.
@@ -29,7 +29,7 @@ Buat file baru di **Google Sheets**, buat 4 tab/sheet dengan nama exact di bawah
 
 ### 1. Tab `Data_Warga`
 ```tsv
-Timestamp	Nama Lengkap	NIK	No HP	Status Tempat Tinggal	Alamat/No Rumah
+Timestamp	Nama Lengkap	NIK	Tempat Lahir	Tanggal Lahir	No HP	Status Tempat Tinggal	Alamat/No Rumah
 ```
 
 ### 2. Tab `Iuran_Kas`
