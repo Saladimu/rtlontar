@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-rt="titleAdmin">Dashboard RT - Tanjung Duren Utara</title>
+    <title data-rt="titleAdmin">Dashboard RT 017/RW 06 - Tanjung Duren Utara</title>
+    <link rel="icon" type="image/png" href="rt-icon.png">
+    <link rel="apple-touch-icon" href="rt-icon.png">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -52,8 +54,15 @@
             background: #94a3b8;
         }
     </style>
-    <!-- Konfigurasi identitas RT (ubah di config.js) -->
-    <script src="config.js"></script>
+    <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
+         agar perubahan config.js langsung terlihat tanpa hard refresh. -->
+    <script>
+        (function () {
+            var s = document.createElement('script');
+            s.src = 'config.js?v=' + Date.now();
+            document.head.appendChild(s);
+        })();
+    </script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row">
 
@@ -61,15 +70,15 @@
     <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-white min-h-screen p-4 flex-shrink-0">
         <div class="flex items-center justify-between px-3 py-4 border-b border-slate-800">
             <div class="flex items-center space-x-3">
-                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-lg">
-                    <i class="fa-solid font-bold fa-building-user text-xl"></i>
+                <div class="w-10 h-10 rounded-xl shadow-lg overflow-hidden bg-white flex-shrink-0">
+                    <img src="rt-icon.png" alt="Logo RT" class="w-full h-full object-cover">
                 </div>
                 <div>
-                    <h1 class="font-bold text-base leading-tight" data-rt="appNameRt">Sistem RT 005/RW 02</h1>
+                    <h1 class="font-bold text-base leading-tight" data-rt="appNameRt">Sistem RT 017/RW 06</h1>
                     <p class="text-xs text-slate-400" data-rt="kelurahan">Tanjung Duren Utara</p>
                 </div>
             </div>
-            <button onclick="refreshData()" id="desktop-refresh-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Muat Ulang Data">
+            <button onclick="refreshData()" id="desktop-refresh-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Muat Ulang Aplikasi (Hard Refresh)">
                 <i class="fa-solid fa-arrows-rotate"></i>
             </button>
         </div>
@@ -114,15 +123,15 @@
         </nav>
 
         <div class="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-            <span data-rt="footerAdmin">&copy; 2026 RT Tanjung Duren Utara</span>
+            <span data-rt="footerAdmin">&copy; 2026 RT 017 / RW 06 Tanjung Duren Utara</span>
         </div>
     </aside>
 
     <!-- Mobile Top Navigation Header -->
     <header class="md:hidden bg-slate-900 text-white p-4 sticky top-0 z-30 shadow-md flex justify-between items-center">
         <div class="flex items-center space-x-3">
-            <div class="bg-blue-600 p-2 rounded-lg">
-                <i class="fa-solid fa-building-user text-lg"></i>
+            <div class="w-9 h-9 rounded-lg overflow-hidden bg-white flex-shrink-0">
+                <img src="rt-icon.png" alt="Logo RT" class="w-full h-full object-cover">
             </div>
             <div>
                 <h1 class="font-bold text-sm leading-tight" data-rt="headerName">RT Tanjung Duren Utara</h1>
@@ -132,7 +141,7 @@
         <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="p-2 text-slate-300 hover:text-white focus:outline-none">
             <i class="fa-solid fa-bars text-xl"></i>
         </button>
-        <button onclick="refreshData()" id="mobile-refresh-btn" class="p-2 text-slate-300 hover:text-white focus:outline-none" title="Muat Ulang Data">
+        <button onclick="refreshData()" id="mobile-refresh-btn" class="p-2 text-slate-300 hover:text-white focus:outline-none" title="Muat Ulang Aplikasi (Hard Refresh)">
             <i class="fa-solid fa-arrows-rotate text-xl"></i>
         </button>
     </header>
@@ -364,7 +373,7 @@
                                 <th class="p-4">Nama Warga / Keterangan</th>
                                 <th class="p-4">No. Rumah</th>
                                 <th class="p-4">Jenis Transaksi</th>
-                                <th class="p-4">Jumlah (Rp)</th>
+                                <th class="p-4 text-right">Jumlah (Rp)</th>
                                 <th class="p-4">Catatan</th>
                                 <th class="p-4 text-center">Aksi</th>
                             </tr>
@@ -844,6 +853,15 @@
 
         // Application Init
         window.onload = function() {
+            // Bersihkan parameter cache-buster hard-refresh agar URL tetap rapi.
+            try {
+                const cleanUrl = new URL(window.location.href);
+                if (cleanUrl.searchParams.has('_rtcache')) {
+                    cleanUrl.searchParams.delete('_rtcache');
+                    history.replaceState(null, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+                }
+            } catch (e) { /* abaikan */ }
+
             updateLastUpdated();
             renderDashboardStats();
             renderWargaTable();
@@ -892,10 +910,14 @@
         }
 
         // Refresh data from Google Sheets
+        // Tombol "Muat Ulang" di menu utama = HARD REFRESH.
+        // Membuka ulang halaman dengan cache-buster (?_rtcache=<ts>) agar HTML &
+        // config.js terbaru benar-benar diambil ulang dari server (melewati cache
+        // browser). Saat load, window.onload menjalankan syncFromGoogleSheets(),
+        // sehingga data, konfigurasi, dan tampilan ikut tersinkron.
         function refreshData() {
             const btns = [document.getElementById('desktop-refresh-btn'), document.getElementById('mobile-refresh-btn')];
-            
-            // Show loading state on buttons
+
             btns.forEach(btn => {
                 if (btn) {
                     btn.classList.add('animate-spin');
@@ -903,29 +925,17 @@
                 }
             });
 
-            showToast('Memuat ulang data dari Google Sheets...', 'info');
-
-            // Call sync and re-render after
-            syncFromGoogleSheets();
+            showToast('Menyegarkan aplikasi (hard refresh)...', 'info');
 
             setTimeout(() => {
-                renderDashboardStats();
-                renderWargaTable();
-                renderKasTable();
-                renderPengumumanCards();
-                renderKegiatanCards();
-                updateLastUpdated();
-                updateConnectionUI();
-
-                btns.forEach(btn => {
-                    if (btn) {
-                        btn.classList.remove('animate-spin');
-                        btn.style.animation = '';
-                    }
-                });
-
-                showToast('Data berhasil dimuat ulang!', 'success');
-            }, 1500);
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('_rtcache', Date.now().toString());
+                    window.location.replace(url.toString());
+                } catch (e) {
+                    window.location.reload();
+                }
+            }, 400);
         }
 
         function updateLastUpdated() {
@@ -1085,7 +1095,7 @@
                     <td class="p-4 font-medium text-slate-800">${item.nama}</td>
                     <td class="p-4 text-slate-600 text-xs">${item.noRumah || '-'}</td>
                     <td class="p-4">${jenisBadge}</td>
-                    <td class="p-4 ${amountClass}">${formatRupiah(item.jumlah)}</td>
+                    <td class="p-4 text-right ${amountClass}">${formatRupiah(item.jumlah)}</td>
                     <td class="p-4 text-slate-500 text-xs">${item.keterangan || '-'}</td>
                     <td class="p-4 text-center">
                         <button onclick="editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>

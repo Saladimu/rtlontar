@@ -285,6 +285,14 @@ Tombol refresh di:
     - Semua teks identitas RT wajib berasal dari `config.js` (`RT_CONFIG`).
     - Tambah elemen baru dengan atribut `data-rt="<key>"` dan daftarkan key-nya di `config.js`.
     - Jangan menulis nama RT/kelurahan/kecamatan langsung di `index.html` atau `public.html`.
+    - `config.js` dimuat dengan **cache-buster** (`config.js?v=<timestamp>`) agar perubahan config langsung terlihat tanpa hard refresh manual.
+
+12. **Hard Refresh (Tombol "Muat Ulang" di Menu Utama):**
+    - Tombol refresh di header desktop/mobile `index.html` memanggil `refreshData()` yang melakukan **hard refresh**, bukan sekadar sync data.
+    - Implementasi: set query `?_rtcache=<Date.now()>` lalu `window.location.replace(url)`, sehingga HTML & `config.js` terbaru diambil ulang dari server (melewati cache browser).
+    - Karena `window.onload` memanggil `syncFromGoogleSheets()` (bila `scriptUrl` tersimpan), hard refresh otomatis menyinkronkan **data + konfigurasi + tampilan** sekaligus.
+    - Parameter `_rtcache` dibersihkan setelah load via `history.replaceState()` agar URL tetap rapi.
+    - Jangan mengganti perilaku ini menjadi `location.reload()` biasa, karena reload biasa tidak menjamin melewati cache di semua browser.
 
 ---
 
@@ -315,6 +323,9 @@ Tombol refresh di:
 - ✅ Perbaikan bug: tanggal di kartu Pengumuman/Kegiatan admin kini diformat `dd-Mmm-yyyy` lewat `fmtDateDisplay()` (sebelumnya menampilkan `yyyy-MM-dd` mentah); diterapkan juga ke widget dashboard & tabel Kas
 - ✅ `public.html` disederhanakan: fitur "Atur URL" (input manual + fallback `localStorage` `rt_public_webapp_url`) dihapus; URL hanya dari `?url=`
 - ✅ **Parameterisasi identitas RT** lewat `config.js` (`RT_CONFIG`) + helper `window.RT.apply()`; teks di `index.html`/`public.html` memakai atribut `data-rt` / `data-rt-placeholder`
+- ✅ **Hard refresh tombol "Muat Ulang"** di menu utama `index.html` — `refreshData()` menambahkan `?_rtcache=<ts>` lalu `location.replace()`, sehingga HTML & `config.js` terbaru diambil ulang (melewati cache) dan data ikut tersinkron saat `onload`; `_rtcache` dibersihkan via `history.replaceState()`
+- ✅ **`config.js` cache-busting** — dimuat via `config.js?v=<timestamp>` di kedua halaman; fallback `data-rt` di HTML diperbarui ke nilai saat ini; `appName` double-space diperbaiki
+- ✅ **Favicon & logo `rt-icon.png`** — dipasang sebagai `rel="icon"` / `apple-touch-icon` dan sebagai logo header (desktop/mobile admin & portal publik)
 
 ## 🔧 Recent Changes (2026-10-03)
 
