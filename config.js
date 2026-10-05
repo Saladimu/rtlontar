@@ -13,7 +13,7 @@ window.RT_CONFIG = {
     appName: 'Sistem',
     rt: '017',
     rw: '06',
-    kelurahan: 'Tanjung Duren Utara',
+    kelurahan: 'Lontar Barat',
     kecamatan: 'Grogol Petamburan',
     kota: 'Jakarta Barat',
     provinsi: 'DKI Jakarta',
