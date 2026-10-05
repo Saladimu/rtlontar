@@ -53,11 +53,22 @@
         }
     </style>
     <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
-         agar perubahan config.js langsung terlihat tanpa hard refresh. -->
+         agar perubahan config.js langsung terlihat tanpa hard refresh.
+         Indikator window.RT_CONFIG_READY dipakai skrip utama untuk menunggu
+         config selesai dimuat (menghindari race async). -->
     <script>
         (function () {
+            window.RT_CONFIG_READY = false;
             var s = document.createElement('script');
             s.src = 'config.js?v=' + Date.now();
+            s.onload = function () {
+                window.RT_CONFIG_READY = true;
+                if (typeof window.__onConfigReady === 'function') window.__onConfigReady();
+            };
+            s.onerror = function () {
+                window.RT_CONFIG_READY = true;
+                if (typeof window.__onConfigReady === 'function') window.__onConfigReady();
+            };
             document.head.appendChild(s);
         })();
     </script>
@@ -77,7 +88,7 @@
                         <p class="text-xs text-slate-500" data-rt="publicSubtitle">Portal Informasi Publik - RT 017/RW 06</p>
                     </div>
                 </div>
-                <button id="refresh-btn" onclick="refreshPublicData()" title="Muat ulang data"
+                <button id="refresh-btn" onclick="refreshPublicData()" title="Muat Ulang Aplikasi (Hard Refresh)"
                     class="flex items-center space-x-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 px-3 py-2 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed">
                     <i id="refresh-icon" class="fa-solid fa-rotate-right"></i>
                     <span class="hidden sm:inline">Muat Ulang</span>
@@ -136,30 +147,91 @@
     <!-- ================= JAVASCRIPT ================= -->
     <script>
         // ============================================================
-        // KONFIGURASI — URL Web App dibaca dari query param ?url=...
+        // KONFIGURASI — URL Web App diambil dari config.js (RT_CONFIG.publicApiUrl).
+        // Fallback: query param ?url=... untuk kompatibilitas lama.
         // ============================================================
-        const DEFAULT_WEB_APP_URL = '';
 
-        // Get URL from query param (?url=...) or use default
+        // Ambil URL Web App: utamakan config.js, lalu ?url=...
         function getWebAppUrl() {
+            const cfgUrl = (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl)
+                ? String(window.RT_CONFIG.publicApiUrl).trim()
+                : '';
+            if (cfgUrl) return cfgUrl;
+
             const params = new URLSearchParams(window.location.search);
             const urlFromParam = params.get('url');
             if (urlFromParam) return decodeURIComponent(urlFromParam);
 
-            return DEFAULT_WEB_APP_URL;
+            return '';
         }
 
-        const WEB_APP_URL = getWebAppUrl();
+        let WEB_APP_URL = '';
+
+        // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
+        // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
+        const EXPECTED_CONFIG_VERSION = '1';
+
+        // Jalankan cb setelah config.js siap dibaca (hindari race async).
+        function whenConfigReady(cb) {
+            if (window.RT_CONFIG || window.RT_CONFIG_READY) { cb(); return; }
+            window.__onConfigReady = cb;
+        }
+
+        // Buka ulang halaman dengan cache-buster (?_rtcache=<ts>) agar HTML &
+        // config.js terbaru benar-benar diambil ulang (melewati cache browser).
+        function hardReload() {
+            try {
+                const u = new URL(window.location.href);
+                u.searchParams.set('_rtcache', Date.now().toString());
+                window.location.replace(u.toString());
+            } catch (e) {
+                window.location.reload();
+            }
+        }
+
+        // Gerbang versi config: bila RT_CONFIG.version berbeda dari yang diharapkan HTML ini,
+        // artinya HTML lama masih ter-cache -> hard refresh sekali agar ikut diperbarui.
+        // Guard sessionStorage mencegah reload berulang (bila versi memang belum disinkronkan).
+        function enforceConfigVersion() {
+            const v = (window.RT_CONFIG && window.RT_CONFIG.version) ? String(window.RT_CONFIG.version) : '';
+            if (!v || v === EXPECTED_CONFIG_VERSION) return false;
+            const key = 'rt_cfg_reload_' + v;
+            let done = false;
+            try { done = !!sessionStorage.getItem(key); } catch (e) { /* abaikan */ }
+            if (done) {
+                console.warn('Versi config berbeda (' + v + ' vs ' + EXPECTED_CONFIG_VERSION + '), reload dilewati (guard).');
+                return false;
+            }
+            try { sessionStorage.setItem(key, '1'); } catch (e) { /* abaikan */ }
+            hardReload();
+            return true;
+        }
+
+        // Bersihkan parameter cache-buster hard-refresh agar URL tetap rapi.
+        (function stripCacheBuster() {
+            try {
+                const u = new URL(window.location.href);
+                if (u.searchParams.has('_rtcache')) {
+                    u.searchParams.delete('_rtcache');
+                    history.replaceState(null, '', u.pathname + u.search + u.hash);
+                }
+            } catch (e) { /* abaikan */ }
+        })();
 
         // Init
         document.addEventListener('DOMContentLoaded', function() {
-            updateLastUpdated();
+            whenConfigReady(function () {
+                if (enforceConfigVersion()) return;
+                WEB_APP_URL = getWebAppUrl();
+                updateLastUpdated();
 
-            if (WEB_APP_URL) {
-                loadPublicData();
-            } else {
-                showConfigNeeded();
-            }
+                if (WEB_APP_URL) {
+                    showPublicLoading();
+                    loadPublicData();
+                } else {
+                    showConfigNeeded();
+                }
+            });
         });
 
         // Format date: dd-Mmm-YYYY
@@ -246,23 +318,19 @@
                 '<div class="flex justify-center col-span-full py-12"><i class="fa-solid fa-circle-notch fa-spin text-3xl text-slate-300"></i></div>';
         }
 
-        // Muat ulang data publik (dipakai tombol "Muat Ulang").
+        // Tombol "Muat Ulang" = HARD REFRESH.
+        // Membuka ulang halaman dengan cache-buster (?_rtcache=<ts>) agar HTML &
+        // config.js terbaru benar-benar diambil ulang dari server (melewati cache
+        // browser). Saat load, init menjalankan loadPublicData() kembali.
         function refreshPublicData() {
-            if (!WEB_APP_URL) { showConfigNeeded(); return; }
-
             const btn = document.getElementById('refresh-btn');
             const icon = document.getElementById('refresh-icon');
             if (btn && btn.disabled) return;
 
             if (btn) btn.disabled = true;
             if (icon) icon.classList.add('fa-spin');
-            showPublicLoading();
 
-            loadPublicData(function () {
-                if (btn) btn.disabled = false;
-                if (icon) icon.classList.remove('fa-spin');
-                updateLastUpdated();
-            });
+            setTimeout(hardReload, 300);
         }
 
         // Apakah record boleh tampil publik. Default: tampil (kompatibel data lama).
@@ -423,10 +491,11 @@
                     <h3 class="font-bold text-amber-900 text-lg mb-2">Konfigurasi diperlukan</h3>
                     <p class="text-sm text-amber-700 mb-4">
                         Halaman publik membutuhkan URL Google Apps Script agar dapat menampilkan data.<br>
-                        Hubungi admin untuk membuka halaman ini.
+                        Isi <b>publicApiUrl</b> pada <b>config.js</b> dengan URL Web App (berakhiran /exec),
+                        atau hubungi admin.
                     </p>
                     <p class="text-xs text-amber-600 font-mono bg-amber-100 p-2 rounded">
-                        Gunakan: public.html?url=https://script.google.com/macros/s/xxxx/exec
+                        config.js &rarr; RT_CONFIG.publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec'
                     </p>
                 </div>
             `;

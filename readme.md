@@ -120,6 +120,9 @@ Semua identitas RT (nama, nomor RT/RW, kelurahan, kecamatan, kota, tahun footer,
 
 ```js
 window.RT_CONFIG = {
+    // Naikkan versi ini setiap kali mengubah config.js (mis. '2', '3', ...).
+    // Halaman akan membandingkannya dan hard-refresh otomatis bila berbeda.
+    version: '1',
     appName: 'Sistem RT',
     rt: '005',
     rw: '02',
@@ -129,9 +132,17 @@ window.RT_CONFIG = {
     provinsi: 'DKI Jakarta',
     tahun: new Date().getFullYear(),
     alamatContoh: 'Jl. Tanjung Duren Utara No. 12',
-    lokasiContoh: 'Lap. Bulutangkis RT'
+    lokasiContoh: 'Lap. Bulutangkis RT',
+
+    // URL Web App Google Apps Script (berakhiran /exec) untuk Portal Publik.
+    // Isi agar public.html dapat diakses cukup lewat "public.html" tanpa ?url=...
+    publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec'
 };
 ```
+
+> **Portal Publik tanpa URL panjang:** isi `publicApiUrl` dengan URL Web App Anda. Setelah itu tautan yang dibagikan ke warga cukup **`public.html`** (URL Apps Script tidak tampil di address bar). `public.html` tetap mendukung `?url=...` sebagai fallback bila `publicApiUrl` masih kosong. `config.js` dimuat dengan cache-bust dan tombol **Muat Ulang** melakukan *hard refresh*, sehingga perubahan config selalu terbaru. Pemuatan config juga menunggu (*readiness gate*) agar tidak ada kedipan "belum dikonfigurasi".
+
+> **Auto hard refresh (versi config):** setiap kali mengubah `config.js`, naikkan `version` **dan** samakan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila browser masih memegang HTML lama (versi tak cocok), halaman otomatis melakukan *hard refresh* sekali agar HTML & config sinkron; ada pengaman anti-loop, jadi tidak akan reload berulang.
 
 > Pastikan file `config.js` ikut diunggah saat publikasi.
 
@@ -144,4 +155,4 @@ window.RT_CONFIG = {
 3. Pada bagian **Branch**, pilih `main` / `master` lalu klik **Save**.
 4. Website akan aktif secara publik dalam beberapa menit.
 
-> **Catatan keamanan:** `index.html` adalah halaman **admin** dan tidak memiliki layar login — proteksi ada di token backend. Jangan bagikan link admin (`index.html`) ke warga; bagikan hanya link portal publik (`public.html?url=...`). Data warga/kas tidak akan terkirim ke portal publik berkat endpoint `readPublic`, dan tanpa token `ADMIN_TOKEN` siapa pun tetap tidak bisa mengubah data.
+> **Catatan keamanan:** `index.html` adalah halaman **admin** dan tidak memiliki layar login — proteksi ada di token backend. Jangan bagikan link admin (`index.html`) ke warga; bagikan hanya link portal publik (**`public.html`**). Data warga/kas tidak akan terkirim ke portal publik berkat endpoint `readPublic`, dan tanpa token `ADMIN_TOKEN` siapa pun tetap tidak bisa mengubah data. Toggle **Portal Publik ON/OFF** ditegakkan di sisi server, bukan sekadar menyembunyikan tampilan.

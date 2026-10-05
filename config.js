@@ -10,6 +10,11 @@
    atribut data-rt / data-rt-placeholder.
    ============================================================ */
 window.RT_CONFIG = {
+    // Versi konfigurasi. Naikkan (mis. '2', '3', ...) setiap kali mengubah config.js.
+    // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
+    // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
+    // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
+    version: '1',
     appName: 'Sistem',
     rt: '017',
     rw: '06',
@@ -19,7 +24,13 @@ window.RT_CONFIG = {
     provinsi: 'DKI Jakarta',
     tahun: new Date().getFullYear(),
     alamatContoh: 'Jl. Lontar Barat No. 06',
-    lokasiContoh: 'Depan lapangan'
+    lokasiContoh: 'Depan lapangan',
+
+    // URL Web App Google Apps Script untuk Portal Publik (endpoint readPublic).
+    // Salin URL Web App (yang berakhiran /exec) di sini agar public.html dapat
+    // diakses cukup lewat "public.html" tanpa parameter ?url=...
+    // Kosongkan ('') untuk memakai parameter ?url=... (kompatibilitas lama).
+    publicApiUrl: 'https://script.google.com/macros/s/AKfycbwOHCJ8GT8FUhWFx5yQ9YvAp9_EqVnIbihyl-n1MUl7yb0YBwX6OUQS4osfrFS7L9cE/exec'
 };
 
 (function () {

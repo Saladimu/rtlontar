@@ -58,8 +58,17 @@
          agar perubahan config.js langsung terlihat tanpa hard refresh. -->
     <script>
         (function () {
+            window.RT_CONFIG_READY = false;
             var s = document.createElement('script');
             s.src = 'config.js?v=' + Date.now();
+            s.onload = function () {
+                window.RT_CONFIG_READY = true;
+                if (typeof window.__onConfigReady === 'function') window.__onConfigReady();
+            };
+            s.onerror = function () {
+                window.RT_CONFIG_READY = true;
+                if (typeof window.__onConfigReady === 'function') window.__onConfigReady();
+            };
             document.head.appendChild(s);
         })();
     </script>
@@ -792,6 +801,10 @@
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
         const EXPECTED_BACKEND_VERSION = 'publik-v7-2026-10-05';
 
+        // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
+        // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
+        const EXPECTED_CONFIG_VERSION = '1';
+
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
         function newId() {
@@ -1009,6 +1022,14 @@
 
             // Switch to dashboard tab by default
             switchTab('dashboard');
+
+            // Bila config.js belum selesai dimuat, tunggu sampai siap. Setelah siap:
+            // (1) perbarui tautan portal (publicApiUrl dari config.js), dan
+            // (2) jalankan gerbang versi config (hard refresh bila HTML basi).
+            runWhenConfigReady(function () {
+                if (enforceConfigVersion()) return;
+                updatePublicPortalUI();
+            });
         };
 
         // Tab Switch Navigation Handler
@@ -1040,6 +1061,16 @@
         // config.js terbaru benar-benar diambil ulang dari server (melewati cache
         // browser). Saat load, window.onload menjalankan syncFromGoogleSheets(),
         // sehingga data, konfigurasi, dan tampilan ikut tersinkron.
+        function hardReload() {
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('_rtcache', Date.now().toString());
+                window.location.replace(url.toString());
+            } catch (e) {
+                window.location.reload();
+            }
+        }
+
         function refreshData() {
             const btns = [document.getElementById('desktop-refresh-btn'), document.getElementById('mobile-refresh-btn')];
 
@@ -1052,15 +1083,32 @@
 
             showToast('Menyegarkan aplikasi (hard refresh)...', 'info');
 
-            setTimeout(() => {
-                try {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('_rtcache', Date.now().toString());
-                    window.location.replace(url.toString());
-                } catch (e) {
-                    window.location.reload();
-                }
-            }, 400);
+            setTimeout(hardReload, 400);
+        }
+
+        // Jalankan callback setelah config.js selesai dimuat (atau langsung bila sudah).
+        function runWhenConfigReady(cb) {
+            if (window.RT_CONFIG || window.RT_CONFIG_READY) { cb(); return; }
+            window.__onConfigReady = cb;
+        }
+
+        // Gerbang versi config: bila RT_CONFIG.version berbeda dari yang diharapkan HTML ini,
+        // artinya HTML lama masih ter-cache -> lakukan hard refresh sekali agar ikut diperbarui.
+        // Guard sessionStorage mencegah reload berulang (bila versi memang belum disinkronkan).
+        function enforceConfigVersion() {
+            const v = (window.RT_CONFIG && window.RT_CONFIG.version) ? String(window.RT_CONFIG.version) : '';
+            if (!v || v === EXPECTED_CONFIG_VERSION) return false;
+            const key = 'rt_cfg_reload_' + v;
+            let done = false;
+            try { done = !!sessionStorage.getItem(key); } catch (e) { /* abaikan */ }
+            if (done) {
+                console.warn('Versi config berbeda (' + v + ' vs ' + EXPECTED_CONFIG_VERSION + '), reload dilewati (guard).');
+                return false;
+            }
+            try { sessionStorage.setItem(key, '1'); } catch (e) { /* abaikan */ }
+            showToast('Memuat versi terbaru...', 'info');
+            hardReload();
+            return true;
         }
 
         function updateLastUpdated() {
@@ -1886,12 +1934,22 @@
             showToast(enabled ? 'Portal Publik diaktifkan!' : 'Portal Publik dinonaktifkan.', enabled ? 'success' : 'info');
         }
 
+        // Tautan Portal Publik: bila config.js sudah mengisi publicApiUrl, cukup "public.html"
+        // (tanpa ?url=) sehingga URL Apps Script tidak tampil di address bar. Fallback ke ?url=
+        // hanya bila publicApiUrl masih kosong (kompatibilitas lama).
+        function getPublicPortalUrl() {
+            const cfgUrl = (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl) ? String(window.RT_CONFIG.publicApiUrl).trim() : '';
+            if (cfgUrl) return 'public.html';
+            if (appState.scriptUrl) return `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
+            return '';
+        }
+
         function openPublicPortal() {
-            if (!appState.scriptUrl) {
-                showToast('URL Google Apps Script belum disimpan!', 'error');
+            const publicUrl = getPublicPortalUrl();
+            if (!publicUrl) {
+                showToast('Isi publicApiUrl di config.js atau simpan URL Apps Script terlebih dahulu!', 'error');
                 return;
             }
-            const publicUrl = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
             window.open(publicUrl, '_blank');
         }
 
@@ -1914,14 +1972,16 @@
             if (onSection) onSection.classList.toggle('hidden', !enabled);
             if (offSection) offSection.classList.toggle('hidden', enabled);
 
-            // Update public.html link with Web App URL
-            if (urlDisplay && appState.scriptUrl) {
-                const publicUrl = `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
-                urlDisplay.href = publicUrl;
-                urlDisplay.textContent = publicUrl;
-            } else if (urlDisplay) {
-                urlDisplay.href = 'public.html';
-                urlDisplay.textContent = 'Belum dikonfigurasi';
+            // Update public.html link (bersih bila publicApiUrl sudah diisi di config.js)
+            if (urlDisplay) {
+                const publicUrl = getPublicPortalUrl();
+                if (publicUrl) {
+                    urlDisplay.href = publicUrl;
+                    urlDisplay.textContent = publicUrl;
+                } else {
+                    urlDisplay.href = 'public.html';
+                    urlDisplay.textContent = 'Belum dikonfigurasi';
+                }
             }
         }
 

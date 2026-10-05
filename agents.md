@@ -9,7 +9,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
 - **Frontend Architecture:** Dua halaman HTML5 statis:
   - `index.html` — SPA admin (semua modul + integrasi), Tailwind CSS CDN + FontAwesome CDN.
   - `public.html` — portal publik warga (read-only, hanya Pengumuman & Kegiatan `Publik=Ya`).
-- **Public Portal Config:** `public.html` menerima URL backend **hanya** via query param `?url=<WebAppURL>` (dibuat otomatis oleh `openPublicPortal()` di admin). Tidak ada input URL manual/localStorage di sisi publik; bila `?url=` kosong, `showConfigNeeded()` menampilkan instruksi menghubungi admin.
+- **Public Portal Config:** URL backend `public.html` diambil dari `config.js` (`RT_CONFIG.publicApiUrl`) sehingga tautan publik cukup `public.html`; query param `?url=<WebAppURL>` (dibuat otomatis oleh `openPublicPortal()` di admin) tetap didukung sebagai fallback. Tidak ada input URL manual/localStorage di sisi publik; bila keduanya kosong, `showConfigNeeded()` menampilkan instruksi menghubungi admin.
 - **Backend Architecture:** Serverless Function via Google Apps Script (`doGet` + `doPost` HTTP Endpoints).
 - **Database Layer:** Google Sheets (Relational-like Tabular Spreadsheet Storage).
 - **State Persistence Layer:** Dual Storage Mode:
@@ -275,11 +275,14 @@ Tombol refresh di:
 
 9. **Public Portal Scope:**
    - `public.html` read-only, sumber data hanya `action=readPublic`.
-   - URL backend hanya dari `?url=` (tanpa input manual/localStorage).
+   - URL backend diambil dari `config.js` (`RT_CONFIG.publicApiUrl`) sehingga tautan publik cukup `public.html`; `?url=` hanya fallback kompatibilitas (tanpa input manual/localStorage).
+   - Inisialisasi `public.html` menunggu config siap (`whenConfigReady` + `window.RT_CONFIG_READY`) agar tidak ada race async / kedipan "belum dikonfigurasi".
+   - Tombol "Muat Ulang" `public.html` = hard refresh (`?_rtcache`), sama seperti `index.html`.
    - Jangan pernah menambahkan operasi tulis atau mengirim token admin ke `public.html`.
 
 10. **Version Gate:**
-    - Setiap perubahan `code.gs` (termasuk alur token) wajib menaikkan `CODE_VERSION` di `code.gs` **dan** `EXPECTED_BACKEND_VERSION` di `index.html`, lalu redeploy sebagai **New version**.
+    - *Backend:* Setiap perubahan `code.gs` (termasuk alur token) wajib menaikkan `CODE_VERSION` di `code.gs` **dan** `EXPECTED_BACKEND_VERSION` di `index.html`, lalu redeploy sebagai **New version**.
+    - *Config:* Setiap perubahan `config.js` sebaiknya menaikkan `RT_CONFIG.version` **dan** `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila `RT_CONFIG.version` ≠ `EXPECTED_CONFIG_VERSION` (HTML lama ter-cache), halaman melakukan **hard refresh sekali** via `enforceConfigVersion()`; guard `sessionStorage` key `rt_cfg_reload_<versi>` mencegah reload berulang bila versi memang belum disinkronkan.
 
 11. **Identitas RT (No Hardcode):**
     - Semua teks identitas RT wajib berasal dari `config.js` (`RT_CONFIG`).
@@ -337,6 +340,8 @@ Tombol refresh di:
 - ✅ **Datalist Nama Warga** (`warga-nama-list`) pada input Kas (modal & inline) diisi dari `Data_Warga` via `renderWargaNameList()`
 - ✅ **Perbaikan bug pencarian (`Data_Warga` & `Iuran_Kas`)** — filter kini menormalkan semua field ke string (`v == null ? '' : String(v)`) sebelum `indexOf`, sehingga sel kosong (`null`/`undefined`) tidak lagi memicu `TypeError` yang menghentikan render (gejala: pencarian seolah tidak berfungsi)
 - ✅ **Kolom `Usia` di tabel `Data_Warga`** — ditampilkan setelah `Nama Lengkap`, dihitung dari `Tanggal Lahir` via `hitungUsia()` (tahun penuh, format `X th`). **Tidak disimpan** ke `appState`/Sheets; baris kosong inline memperbarui usia secara live saat tanggal diisi.
+- ✅ **Portal Publik tanpa URL panjang (config-based)** — `RT_CONFIG.publicApiUrl` di `config.js`; `public.html` memakai URL itu (fallback `?url=` tetap didukung); tautan admin cukup `public.html` via `getPublicPortalUrl()`; init `public.html` menunggu config siap (`window.RT_CONFIG_READY` + `whenConfigReady`) sehingga tidak ada race async/kedipan "belum dikonfigurasi"; tombol **Muat Ulang** `public.html` kini hard refresh (`?_rtcache`) dan `_rtcache` dibersihkan via `history.replaceState()`. Toggle Portal Publik tetap ditegakkan server-side.
+- ✅ **Gerbang versi config (auto hard refresh)** — `RT_CONFIG.version` di `config.js` dibandingkan dengan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html` via `enforceConfigVersion()`. Bila berbeda (HTML lama ter-cache), halaman auto hard refresh sekali (`?_rtcache`) agar HTML & config sinkron; guard `sessionStorage` `rt_cfg_reload_<versi>` mencegah loop. Fungsi `hardReload()` dipakai ulang oleh tombol "Muat Ulang" kedua halaman.
 
 ## 🔧 Recent Changes (2026-10-03)
 
