@@ -14,6 +14,8 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 - **🔄 Refresh Data Manual:** Tombol refresh di header desktop/mobile untuk memuat ulang data dari Google Sheets kapan saja.
 - **🔗 Integrasi Google Apps Script:** Pengiriman data form langsung terhubung ke Google Sheets, **sync delete**, dengan *fallback* **localStorage** jika dijalankan tanpa internet/koneksi backend.
 - **⚠️ Delete Persistence:** Sistem melacak record yang dihapus agar tidak muncul kembali setelah reload/sync.
+- **🔐 Token Admin:** Semua operasi tulis (tambah/edit/hapus) dan baca lengkap wajib menyertakan token rahasia (`ADMIN_TOKEN` di Script Properties). Tanpa token, server menolak permintaan sehingga orang yang hanya tahu URL tidak bisa mengubah data.
+- **🕵️ Portal Publik Terisolasi:** `public.html` memakai endpoint `readPublic` yang hanya mengembalikan Pengumuman & Kegiatan ber-`Publik=Ya`; data warga & kas tidak pernah dikirim ke portal publik.
 
 ---
 
@@ -22,6 +24,8 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 Buat file baru di **Google Sheets**, buat 4 tab/sheet dengan nama exact di bawah ini, lalu salin (*copy*) teks TSV di dalam kotak dan tempel (*paste*) langsung pada sel **A1** di masing-masing tab:
 
 > Kolom **Timestamp** (kolom A) otomatis berformat `dd-mm-yyyy hh:mm` dan mengikuti zona waktu **GMT+7 (Asia/Jakarta)**. Script juga menambahkan satu kolom bantu **`ID`** di ujung kanan secara otomatis (dipakai untuk edit/hapus yang aman, tidak perlu dibuat manual).
+>
+> Kolom **`Publik`** (khusus Pengumuman & Kegiatan_Warga) menentukan apakah record tampil di Portal Publik: isi `Ya` untuk tampil, `Tidak` untuk sembunyikan. Bisa di-toggle dari aplikasi; baris lama otomatis diisi `Ya`.
 
 ### 1. Tab `Data_Warga`
 ```tsv
@@ -35,12 +39,12 @@ Timestamp	Tanggal	Nama Warga	No Rumah	Jenis Transaksi	Jumlah (Rp)	Keterangan
 
 ### 3. Tab `Pengumuman`
 ```tsv
-Timestamp	Tanggal	Judul Pengumuman	Isi Pengumuman	Kategori	Penanggung Jawab
+Timestamp	Tanggal	Judul Pengumuman	Isi Pengumuman	Kategori	Penanggung Jawab	Publik
 ```
 
 ### 4. Tab `Kegiatan_Warga`
 ```tsv
-Timestamp	Nama Kegiatan	Tanggal Pelaksanaan	Waktu	Lokasi	Penanggung Jawab	Keterangan
+Timestamp	Nama Kegiatan	Tanggal Pelaksanaan	Waktu	Lokasi	Penanggung Jawab	Keterangan	Publik
 ```
 
 ---
@@ -74,7 +78,10 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ `action=version` + `CODE_VERSION` untuk memverifikasi Web App sudah redeploy (tombol **Cek Versi Backend**)
 - ✅ Kolom `Timestamp` otomatis berformat `dd-mm-yyyy hh:mm` (GMT+7) untuk semua sheet
 - ✅ Kolom bantu `ID` otomatis dibuat & di-backfill untuk baris lama
+- ✅ Kolom `Publik` pada Pengumuman & Kegiatan + toggle ON/OFF dari aplikasi (Portal Publik)
 - ✅ Format tanggal otomatis saat read dari Sheets
+- ✅ **Token admin** (`ADMIN_TOKEN` di Script Properties) untuk melindungi semua operasi tulis & baca lengkap
+- ✅ **Endpoint `readPublic`** untuk portal publik (hanya Pengumuman & Kegiatan `Publik=Ya`, tanpa data warga/kas)
 </details>
 
 ### Langkah Deployment Web App:
@@ -83,7 +90,8 @@ Lihat `Apps Script/readme.md` untuk:
 3. Atur *Execute as*: **Me** (Email Anda).
 4. Atur *Who has access*: **Anyone** (Siapa saja).
 5. Klik **Deploy**, lalu salin **Web App URL** yang didapat.
-6. Buka aplikasi web RT, masuk ke tab **Koneksi App Script**, lalu tempelkan URL tersebut dan klik **Simpan**.
+6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda.
+7. Buka aplikasi web RT, masuk ke tab **Koneksi App Script**, tempelkan URL tersebut, isi **Token Admin** dengan nilai `ADMIN_TOKEN` yang sama, lalu klik **Simpan Token** (dan **Simpan URL Koneksi**).
 
 > **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
 
@@ -100,7 +108,9 @@ Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit**
 
 ## 🌐 Publikasi ke GitHub Pages
 
-1. Upload file `index.html`, `README.md`, dan `AGENTS.md` ke repository GitHub Anda.
+1. Upload file `index.html`, `public.html`, `README.md`, dan `AGENTS.md` ke repository GitHub Anda.
 2. Buka menu **Settings** > **Pages** di repository.
 3. Pada bagian **Branch**, pilih `main` / `master` lalu klik **Save**.
 4. Website akan aktif secara publik dalam beberapa menit.
+
+> **Catatan keamanan:** `index.html` adalah halaman **admin** dan tidak memiliki layar login — proteksi ada di token backend. Jangan bagikan link admin (`index.html`) ke warga; bagikan hanya link portal publik (`public.html?url=...`). Data warga/kas tidak akan terkirim ke portal publik berkat endpoint `readPublic`, dan tanpa token `ADMIN_TOKEN` siapa pun tetap tidak bisa mengubah data.

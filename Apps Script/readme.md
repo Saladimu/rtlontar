@@ -14,6 +14,24 @@ File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode
    - `Kegiatan_Warga`
 3. Buka **Ekstensi > Apps Script** di Google Sheets
 4. Salin isi `code.gs` ke editor Apps Script
+5. Buka **Project Settings > Script Properties**, tambahkan properti:
+   - **Nama:** `ADMIN_TOKEN`
+   - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
+
+---
+
+## 🔐 Keamanan (Token Admin)
+
+Karena Web App di-deploy sebagai **Anyone**, tanpa proteksi siapa pun yang tahu URL dapat menulis data. Karena itu `code.gs` mewajibkan **token admin**:
+
+- Semua operasi **tulis** (`add` / `update` / `delete`) dan **baca lengkap** (`action=read`) wajib menyertakan parameter/field `token`.
+- Token disimpan di **Script Properties** dengan key `ADMIN_TOKEN` dan **tidak** ditulis di dalam kode.
+- Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi otomatis **ditolak** (`code:"unauthorized"`).
+- Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga` dan `Iuran_Kas` tidak pernah dikirim keluar.
+
+Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google Sheets* lalu klik **Simpan Token**. Token disimpan di `localStorage` (`rt_admin_token`) pada perangkat admin dan hanya itu yang mengirimkannya.
+
+> Catatan: token dikirim sebagai query param pada JSONP (GET), sehingga idealnya gunakan koneksi HTTPS (default Apps Script) dan jangan bagikan URL admin lengkap berisi token.
 
 ---
 
@@ -53,6 +71,7 @@ File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode
 | Isi Pengumuman | String | Diberitahukan kepada seluruh warga... |
 | Kategori | String | Informasi Umum / Penting / Keuangan / Kegiatan |
 | Penanggung Jawab | String | Ketua RT 005 |
+| Publik | String | Ya / Tidak (tampil di Portal Publik) |
 
 ### 4. Tab `Kegiatan_Warga`
 | Kolom | Tipe | Contoh |
@@ -64,6 +83,7 @@ File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode
 | Lokasi | String | Lap. Bulutangkis RT 005 |
 | Penanggung Jawab | String | Sekretaris RT |
 | Keterangan | String | Membawa cangkul dan sapu lidi |
+| Publik | String | Ya / Tidak (tampil di Portal Publik) |
 
 ---
 
@@ -97,35 +117,43 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read` | Baca semua data dari 4 sheet (JSONP) |
-| `delete` | `action=delete&sheetName=X&id=Y` | Hapus baris dengan ID `Y` di sheet X (JSONP) |
+| `read` | `action=read&token=T` | Baca semua data dari 4 sheet. **Butuh token admin** (JSONP) |
+| `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token** (untuk `public.html`) |
+| `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
 | (default) | — | Health check: `{result:"success", message:"Web App aktif"}` |
 
-**Contoh Read:**
+**Contoh Read (admin):**
 ```
-GET https://script.google.com/macros/s/XXXX/exec?action=read&callback=myCallback
+GET https://script.google.com/macros/s/XXXX/exec?action=read&token=TOKEN_RAHASIA&callback=myCallback
+```
+
+**Contoh Read publik:**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=readPublic&callback=myCallback
 ```
 
 **Contoh Delete:**
 ```
-GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&id=id-1728...&callback=myCallback
+GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&id=id-1728...&token=TOKEN_RAHASIA&callback=myCallback
 ```
 
 > Semua GET mendukung **JSONP** via parameter `callback` untuk menghindari masalah CORS.
+
+> Tanpa token yang benar, `read` dan `delete` mengembalikan `{result:"error", code:"unauthorized"}`.
 
 ### POST Requests
 
 Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request).
 
-`action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris.
+`action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris. **Semua POST wajib menyertakan `token` admin** (field `token` di body).
 
 | Sheet | Payload Fields |
 |-------|----------------|
-| `Data_Warga` | `sheetName`, `id` (opsional saat add), `nama`, `nik`, `noHp`, `statusTinggal`, `alamat` |
-| `Iuran_Kas` | `sheetName`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
-| `Pengumuman` | `sheetName`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj` |
-| `Kegiatan_Warga` | `sheetName`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan` |
+| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nama`, `nik`, `noHp`, `statusTinggal`, `alamat` |
+| `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
+| `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
+| `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
 
 **Contoh payload (Tambah Warga):**
 ```json
@@ -169,19 +197,22 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 ## 🔄 Flow Data
 
 ```
-Frontend (index.html)                    Google Apps Script                    Google Sheets
-─────────────────────                    ──────────────────                    ──────────────
+Frontend (index.html / public.html)      Google Apps Script                    Google Sheets
+────────────────────────────────         ──────────────────                    ──────────────
                                     ┌────────────────────────┐
                                     │  doGet(e)              │
-                                    │  ├── action=read       │──▶ readAllSheets() ──▶ Baca 4 sheet
-                                    │  └── action=delete     │──▶ handleDelete() ──▶ deleteRow()
+                                    │  ├── action=read  [T]  │──▶ readAllSheets() ──▶ Baca 4 sheet
+                                    │  ├── action=readPublic │──▶ readPublicSheets()▶ Pengumuman+Kegiatan Ya
+                                    │  └── action=delete [T] │──▶ handleDelete() ───▶ deleteRow()
                                     └────────────────────────┘
                                             ▲
                                             │ JSONP callback
                                             │
-        POST {sheetName, ...} ─────────────┘
-        GET ?action=delete&... ────────────▶
+        POST {sheetName, token, ...} ───────┘
+        GET ?action=...&token=T ───────────▶
 ```
+
+> `[T]` = wajib token admin. `readPublic` tanpa token.
 
 ---
 
@@ -189,10 +220,12 @@ Frontend (index.html)                    Google Apps Script                    G
 
 | Fungsi | Deskripsi |
 |--------|-----------|
-| `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `handleDelete()`, atau `version` |
-| `handleDelete(params)` | Hapus baris berdasarkan `id` (kolom bantu ID) via `findRowById()` |
-| `readAllSheets()` | Baca 4 sheet, pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, data}` |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) |
+| `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `readPublicSheets()`, `handleDelete()`, atau `version`. `read`/`delete` diverifikasi token |
+| `handleDelete(params)` | Hapus baris berdasarkan `id` (kolom bantu ID) via `findRowById()`; verifikasi token |
+| `readAllSheets()` | Baca 4 sheet lengkap, pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, data}` |
+| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas` |
+| `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`); wajib token |
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
 | `ensureSpreadsheetFormat(ss, sheet, name)` | Set timezone Asia/Jakarta + format `dd-mm-yyyy hh:mm` + header ID |
@@ -223,7 +256,11 @@ Frontend (index.html)                    Google Apps Script                    G
 
 4. **Format Tanggal**: `readAllSheets()` memformat kolom tanggal jadi `yyyy-MM-dd` dan waktu jadi `HH:mm` sebelum dikirim ke frontend.
 
-5. **Migrasi**: Saat pertama kali `read`, header `ID` dibuat dan semua baris lama otomatis diberi ID. Tidak ada langkah manual.
+5. **Migrasi**: Saat pertama kali `read`, header `ID` dibuat, kolom `Publik` disisipkan (Pengumuman & Kegiatan_Warga), dan semua baris lama otomatis diberi ID + `Publik=Ya`. Tidak ada langkah manual.
+
+6. **Publik**: Kolom `Publik` bernilai `Ya`/`Tidak`. Hanya record `Ya` yang tampil di `public.html`. Di sisi admin, gunakan tombol toggle (ikon mata) pada kartu Pengumuman/Kegiatan untuk mengubahnya.
+
+7. **Token Admin**: `ADMIN_TOKEN` disimpan di Script Properties (bukan di kode). Semua tulis & baca lengkap diverifikasi. Ganti token kapan saja dengan mengubah Script Property; admin perlu memperbarui Token Admin di `index.html`.
 
 ---
 

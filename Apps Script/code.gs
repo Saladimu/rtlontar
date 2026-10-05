@@ -1,4 +1,4 @@
-var CODE_VERSION = "id-v3-2026-10-04";
+var CODE_VERSION = "publik-v5-2026-10-05";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 var TZ = "Asia/Jakarta";
@@ -8,9 +8,75 @@ var TS_FORMAT = "dd-mm-yyyy hh:mm";
 var EXPECTED_FIELDS = {
   "Data_Warga": 6,      // A Timestamp + 5 field
   "Iuran_Kas": 7,       // A Timestamp + 6 field
-  "Pengumuman": 6,      // A Timestamp + 5 field
-  "Kegiatan_Warga": 7   // A Timestamp + 6 field
+  "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
+  "Kegiatan_Warga": 8   // A Timestamp + 7 field (termasuk Publik)
 };
+
+// Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
+var DESIRED_HEADERS = {
+  "Data_Warga": ["Timestamp", "Nama Lengkap", "NIK", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "ID"],
+  "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "ID"],
+  "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
+  "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"]
+};
+
+// Nilai default kolom Publik untuk baris lama saat migrasi.
+var PUBLIK_DEFAULT = "Ya";
+
+// 0-based index kolom "Publik" di dalam array baris (sebelum kolom bantu ID).
+var PUBLIK_INDEX = {
+  "Pengumuman": 6,
+  "Kegiatan_Warga": 7
+};
+
+// ================= KEAMANAN / TOKEN ADMIN =================
+// Token admin disimpan di Script Properties: Project Settings > Script Properties,
+// key "ADMIN_TOKEN". Semua operasi tulis (add/update/delete) dan baca lengkap
+// WAJIB menyertakan token ini. Portal publik memakai action=readPublic (tanpa token)
+// yang hanya mengembalikan Pengumuman & Kegiatan ber-Publik "Ya".
+function getAdminToken() {
+  return PropertiesService.getScriptProperties().getProperty('ADMIN_TOKEN') || '';
+}
+
+// Perbandingan string konstan (tidak membocorkan panjang/posisi karakter).
+function safeEqual(a, b) {
+  a = String(a === undefined || a === null ? '' : a);
+  b = String(b === undefined || b === null ? '' : b);
+  if (a.length !== b.length) return false;
+  var diff = 0;
+  for (var i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// True bila token yang dikirim cocok dengan ADMIN_TOKEN yang tersimpan.
+// Bila ADMIN_TOKEN belum diatur, SEMUA operasi terproteksi ditolak.
+function isAuthorized(token) {
+  var expected = getAdminToken();
+  if (!expected) return false;
+  return safeEqual(token, expected);
+}
+
+function unauthorized() {
+  return {
+    "result": "error",
+    "code": "unauthorized",
+    "message": "Token admin tidak valid atau belum diatur (Script Properties: ADMIN_TOKEN)."
+  };
+}
+
+// True bila nilai Publik berarti tampil di portal publik.
+function isPublik(v) {
+  if (v === true) return true;
+  if (v === false || v === null || v === undefined) return false;
+  var s = String(v).trim().toLowerCase();
+  return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'publik';
+}
+
+// Normalisasi nilai Publik ke "Ya" / "Tidak". Default "Ya" bila kosong.
+function normalizePublik(v) {
+  if (v === undefined || v === null || v === '') return PUBLIK_DEFAULT;
+  return isPublik(v) ? 'Ya' : 'Tidak';
+}
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -20,7 +86,11 @@ function doGet(e) {
   if (params.action === 'delete') {
     payload = handleDelete(params);
   } else if (params.action === 'read') {
-    payload = readAllSheets();
+    // Baca LENGKAP (Data_Warga, Iuran_Kas, dst.) -> hanya untuk admin (butuh token).
+    payload = isAuthorized(params.token) ? readAllSheets() : unauthorized();
+  } else if (params.action === 'readPublic') {
+    // Baca publik: hanya Pengumuman & Kegiatan ber-Publik "Ya", tanpa token.
+    payload = readPublicSheets();
   } else if (params.action === 'version') {
     payload = { "result": "success", "version": CODE_VERSION };
   } else {
@@ -46,6 +116,10 @@ function handleDelete(params) {
     return { "result": "error", "message": "Parameter tidak valid" };
   }
 
+  if (!isAuthorized(params.token)) {
+    return unauthorized();
+  }
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(sheetName);
 
@@ -63,12 +137,47 @@ function handleDelete(params) {
   return { "result": "success", "message": "Row deleted from " + sheetName };
 }
 
+// Migrasi layout: sisipkan kolom "Publik" bila sheet pernah pakai layout lama
+// (ID sudah ada, tapi kolom Publik belum). Aman dijalankan berulang.
+function migrateLayout(sheet, name) {
+  var desired = DESIRED_HEADERS[name];
+  if (!desired) return;
+
+  var publIndex = desired.indexOf('Publik'); // 0-based, -1 jika sheet ini tidak punya Publik
+  if (publIndex === -1) return;
+
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) lastCol = 1;
+  var width = Math.max(lastCol, desired.length);
+  var header = sheet.getRange(1, 1, 1, width).getValues()[0];
+  if (header.indexOf('Publik') !== -1) return; // sudah dimigrasi
+
+  if (header.join('').trim() === '') return; // sheet kosong, header diurus pemanggil
+  if (header.indexOf('ID') === -1) {
+    // Belum ada kolom ID (layout awal) -> cukup tulis header Publik.
+    sheet.getRange(1, publIndex + 1).setValue('Publik');
+    return;
+  }
+
+  // Legacy: kolom ID sudah ada tepat setelah field terakhir -> sisipkan Publik sebelum ID.
+  sheet.insertColumnBefore(publIndex + 1);
+  sheet.getRange(1, publIndex + 1).setValue('Publik');
+
+  var dataRows = sheet.getLastRow() - 1;
+  if (dataRows > 0) {
+    var fill = [];
+    for (var i = 0; i < dataRows; i++) fill.push([PUBLIK_DEFAULT]);
+    sheet.getRange(2, publIndex + 1, dataRows, 1).setValues(fill);
+  }
+}
+
 // Pastikan timezone spreadsheet = GMT+7, kolom Timestamp berformat dd-mm-yyyy hh:mm,
-// dan header kolom bantu "ID" sudah ada.
+// header kolom bantu "ID" sudah ada, dan kolom "Publik" termigrasi.
 function ensureSpreadsheetFormat(ss, sheet, name) {
   if (ss.getSpreadsheetTimeZone() !== TZ) {
     ss.setSpreadsheetTimeZone(TZ);
   }
+  migrateLayout(sheet, name);
   var expected = EXPECTED_FIELDS[name];
   if (expected) {
     var h = sheet.getRange(1, expected + 1).getValue();
@@ -172,6 +281,24 @@ function readAllSheets() {
   return { "result": "success", "version": CODE_VERSION, "data": data };
 }
 
+// Baca hanya data yang boleh tampil di portal publik:
+// Pengumuman & Kegiatan_Warga yang kolom Publik-nya "Ya".
+// Data_Warga & Iuran_Kas TIDAK pernah dikembalikan, sehingga data privat tidak bocor.
+function readPublicSheets() {
+  var full = readAllSheets();
+  var data = { "Pengumuman": [], "Kegiatan_Warga": [] };
+
+  ["Pengumuman", "Kegiatan_Warga"].forEach(function (name) {
+    var rows = (full.data && full.data[name]) || [];
+    var idx = PUBLIK_INDEX[name];
+    data[name] = rows.filter(function (row) {
+      return isPublik(row[idx]);
+    });
+  });
+
+  return { "result": "success", "version": CODE_VERSION, "data": data };
+}
+
 function doPost(e) {
   try {
     var raw = null;
@@ -189,6 +316,11 @@ function doPost(e) {
     var sheetName = data.sheetName;
     if (!EXPECTED_FIELDS[sheetName]) {
       return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });
+    }
+
+    // Semua operasi tulis (add/update/delete) wajib menyertakan token admin.
+    if (!isAuthorized(data.token)) {
+      return respond(unauthorized());
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -245,9 +377,9 @@ function buildRowData(sheetName, data, timestamp, id) {
   } else if (sheetName === "Iuran_Kas") {
     rowData.push(data.tanggal, data.nama, data.noRumah, data.jenis, data.jumlah, data.keterangan);
   } else if (sheetName === "Pengumuman") {
-    rowData.push(data.tanggal, data.judul, data.isi, data.kategori, data.pj);
+    rowData.push(data.tanggal, data.judul, data.isi, data.kategori, data.pj, normalizePublik(data.publik));
   } else if (sheetName === "Kegiatan_Warga") {
-    rowData.push(data.namaKegiatan, data.tanggal, data.waktu, data.lokasi, data.pj, data.keterangan);
+    rowData.push(data.namaKegiatan, data.tanggal, data.waktu, data.lokasi, data.pj, data.keterangan, normalizePublik(data.publik));
   } else {
     return null;
   }

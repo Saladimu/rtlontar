@@ -425,6 +425,17 @@
                     <p class="text-xs text-slate-500">Masukkan Web App URL yang telah Anda dapatkan setelah melakukan <i>Deploy as Web App</i> di Google Apps Script.</p>
                 </div>
 
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700">Token Admin (ADMIN_TOKEN)</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="password" id="admin-token-input" autocomplete="off" placeholder="Token rahasia yang sama dengan Script Properties" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="saveAdminToken()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm whitespace-nowrap">
+                            Simpan Token
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-500">Wajib untuk menyimpan, mengubah, dan menghapus data. Harus sama dengan <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> di <i>Project Settings &gt; Script Properties</i> pada Apps Script. Tanpa token ini, operasi tulis akan ditolak oleh server.</p>
+                </div>
+
                 <div class="flex items-center space-x-3">
                     <button onclick="saveScriptUrl()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
                         Simpan URL Koneksi
@@ -479,7 +490,9 @@
                         <li>Tempelkan kode Apps Script standar <code class="bg-slate-100 px-1 py-0.5 rounded">doPost(e)</code> yang menangani pengiriman JSON.</li>
                         <li>Klik <b>Deploy > New Deployment</b>. Pilih tipe <b>Web app</b>.</li>
                         <li>Atur <i>Who has access</i> menjadi <b>Anyone</b> (Siapa saja).</li>
-                        <li>Salin Web App URL hasil deployment dan tempelkan pada kolom di atas.</li>
+                        <li>Di Apps Script buka <b>Project Settings &gt; Script Properties</b>, tambahkan properti <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">ADMIN_TOKEN</code> dengan nilai rahasia pilihan Anda (mis. <code class="bg-slate-100 px-1 py-0.5 rounded">rt-rahasia-2026</code>).</li>
+                        <li>Salin Web App URL hasil deployment ke kolom di atas, lalu isi <b>Token Admin</b> dengan nilai <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> yang sama, dan klik <b>Simpan Token</b>.</li>
+                        <li>Deploy ulang sebagai <b>New version</b> setiap kali kode <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> diubah.</li>
                     </ol>
                 </div>
             </div>
@@ -560,6 +573,10 @@
                         </ul>
                     </div>
                 </div>
+                <p class="text-[11px] text-slate-500 mt-4">
+                    <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>
+                    Hanya Pengumuman & Kegiatan yang ditandai <b>Publik</b> yang akan tampil. Gunakan tombol ikon mata pada tiap kartu untuk menampilkan/menyembunyikan.
+                </p>
             </div>
         </section>
 
@@ -682,6 +699,10 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Penanggung Jawab / Pengurus *</label>
                     <input type="text" id="pengumuman-pj" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ketua RT 005">
                 </div>
+                <div class="flex items-center space-x-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <input type="checkbox" id="pengumuman-publik" checked class="w-4 h-4 text-purple-600 rounded focus:ring-purple-500">
+                    <label for="pengumuman-publik" class="text-xs text-slate-600">Tampilkan di Portal Publik (bisa dilihat warga)</label>
+                </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-pengumuman')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
                     <button type="submit" id="btn-save-pengumuman" class="px-4 py-2 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-sm">Terbitkan</button>
@@ -724,6 +745,10 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan / Perlengkapan</label>
                     <input type="text" id="kegiatan-keterangan" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none" placeholder="Membawa cangkul dan sapu lidi">
                 </div>
+                <div class="flex items-center space-x-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                    <input type="checkbox" id="kegiatan-publik" checked class="w-4 h-4 text-rose-600 rounded focus:ring-rose-500">
+                    <label for="kegiatan-publik" class="text-xs text-slate-600">Tampilkan di Portal Publik (bisa dilihat warga)</label>
+                </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-kegiatan')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
                     <button type="submit" id="btn-save-kegiatan" class="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm">Simpan Agenda</button>
@@ -761,7 +786,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'id-v3-2026-10-04';
+        const EXPECTED_BACKEND_VERSION = 'publik-v5-2026-10-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -772,6 +797,16 @@
         function findIndexById(arr, id) {
             return arr.findIndex(function (item) { return item && item._id === id; });
         }
+
+        // Apakah record boleh tampil di portal publik. Default: tampil.
+        function isPublikVal(v) {
+            if (v === true) return true;
+            if (v === false || v === null || v === undefined) return true;
+            const s = String(v).trim().toLowerCase();
+            return !(s === 'tidak' || s === 'no' || s === 'false' || s === '0' || s === 'draft');
+        }
+
+        function publikLabel(v) { return isPublikVal(v) ? 'Ya' : 'Tidak'; }
 
         function getSignature(type, item) {
             if (!item) return '';
@@ -811,7 +846,8 @@
             kas: JSON.parse(localStorage.getItem('rt_kas')) || initialKas,
             pengumuman: JSON.parse(localStorage.getItem('rt_pengumuman')) || initialPengumuman,
             kegiatan: JSON.parse(localStorage.getItem('rt_kegiatan')) || initialKegiatan,
-            scriptUrl: localStorage.getItem('rt_script_url') || ''
+            scriptUrl: localStorage.getItem('rt_script_url') || '',
+            adminToken: localStorage.getItem('rt_admin_token') || ''
         };
 
         // Application Init
@@ -834,6 +870,7 @@
             if (document.getElementById('pengumuman-tanggal')) document.getElementById('pengumuman-tanggal').value = today;
             if (document.getElementById('kegiatan-tanggal')) document.getElementById('kegiatan-tanggal').value = today;
             if (document.getElementById('script-url-input')) document.getElementById('script-url-input').value = appState.scriptUrl;
+            if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
 
             // Load public portal toggle state
             const portalEnabled = localStorage.getItem('rt_public_portal_enabled') === 'true';
@@ -1079,13 +1116,19 @@
             }
 
             appState.pengumuman.forEach((item, index) => {
+                const pub = isPublikVal(item.publik);
                 const card = document.createElement('div');
-                card.className = 'bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between space-y-3';
+                card.className = 'bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between space-y-3' + (pub ? '' : ' opacity-60');
                 card.innerHTML = `
                     <div>
-                        <div class="flex justify-between items-start mb-2">
+                        <div class="flex justify-between items-start mb-2 gap-2">
                             <span class="text-xs px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">${item.kategori}</span>
-                            <span class="text-xs text-slate-400">${item.tanggal}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${pub ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
+                                    <i class="fa-solid ${pub ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${pub ? 'Publik' : 'Disembunyikan'}
+                                </span>
+                                <span class="text-xs text-slate-400">${item.tanggal}</span>
+                            </div>
                         </div>
                         <h3 class="font-bold text-slate-800 text-base mb-2">${item.judul}</h3>
                         <p class="text-sm text-slate-600 whitespace-pre-line">${item.isi}</p>
@@ -1093,6 +1136,7 @@
                     <div class="pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
                         <span><i class="fa-regular fa-circle-user mr-1"></i>${item.pj}</span>
                         <div class="flex space-x-2">
+                            <button onclick="togglePublikPengumuman(${index})" class="${pub ? 'text-amber-500 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-800'}"><i class="fa-solid ${pub ? 'fa-eye-slash' : 'fa-eye'}"></i> ${pub ? 'Sembunyikan' : 'Tampilkan'}</button>
                             <button onclick="editPengumuman(${index})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i> Edit</button>
                             <button onclick="deletePengumuman(${index})" class="text-rose-500 hover:text-rose-700"><i class="fa-solid fa-trash-can"></i> Hapus</button>
                         </div>
@@ -1113,11 +1157,12 @@
             }
 
             appState.kegiatan.forEach((item, index) => {
+                const pub = isPublikVal(item.publik);
                 const card = document.createElement('div');
-                card.className = 'bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-3 flex flex-col justify-between';
+                card.className = 'bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 space-y-3 flex flex-col justify-between' + (pub ? '' : ' opacity-60');
                 card.innerHTML = `
                     <div>
-                        <div class="flex items-center justify-between border-b pb-2 mb-3">
+                        <div class="flex items-center justify-between border-b pb-2 mb-3 gap-2">
                             <span class="font-bold text-slate-800 text-base">${item.namaKegiatan}</span>
                             <span class="text-xs px-2 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg"><i class="fa-regular fa-clock mr-1"></i>${item.waktu}</span>
                         </div>
@@ -1128,9 +1173,15 @@
                             ${item.keterangan ? `<p class="mt-2 text-slate-500 italic bg-slate-50 p-2 rounded-lg">"${item.keterangan}"</p>` : ''}
                         </div>
                     </div>
-                    <div class="pt-2 flex justify-end space-x-2">
-                        <button onclick="editKegiatan(${index})" class="text-xs text-blue-500 hover:text-blue-700 flex items-center space-x-1"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
-                        <button onclick="deleteKegiatan(${index})" class="text-xs text-rose-500 hover:text-rose-700 flex items-center space-x-1"><i class="fa-solid fa-trash-can"></i><span>Hapus</span></button>
+                    <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${pub ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
+                            <i class="fa-solid ${pub ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${pub ? 'Publik' : 'Disembunyikan'}
+                        </span>
+                        <div class="flex space-x-3">
+                            <button onclick="togglePublikKegiatan(${index})" class="text-xs ${pub ? 'text-amber-500 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-800'} flex items-center space-x-1"><i class="fa-solid ${pub ? 'fa-eye-slash' : 'fa-eye'}"></i><span>${pub ? 'Sembunyikan' : 'Tampilkan'}</span></button>
+                            <button onclick="editKegiatan(${index})" class="text-xs text-blue-500 hover:text-blue-700 flex items-center space-x-1"><i class="fa-solid fa-pen"></i><span>Edit</span></button>
+                            <button onclick="deleteKegiatan(${index})" class="text-xs text-rose-500 hover:text-rose-700 flex items-center space-x-1"><i class="fa-solid fa-trash-can"></i><span>Hapus</span></button>
+                        </div>
                     </div>
                 `;
                 container.appendChild(card);
@@ -1144,8 +1195,8 @@
             // Reset edit mode and modal UI
             if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; }
             else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
-            else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; }
-            else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; }
+            else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
+            else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
         }
 
         // Form Submit Handlers
@@ -1227,7 +1278,8 @@
                 judul: document.getElementById('pengumuman-judul').value,
                 isi: document.getElementById('pengumuman-isi').value,
                 kategori: document.getElementById('pengumuman-kategori').value,
-                pj: document.getElementById('pengumuman-pj').value
+                pj: document.getElementById('pengumuman-pj').value,
+                publik: document.getElementById('pengumuman-publik').checked ? 'Ya' : 'Tidak'
             };
 
             if (editMode.pengumuman !== null) {
@@ -1262,7 +1314,8 @@
                 waktu: document.getElementById('kegiatan-waktu').value,
                 lokasi: document.getElementById('kegiatan-lokasi').value,
                 pj: document.getElementById('kegiatan-pj').value,
-                keterangan: document.getElementById('kegiatan-keterangan').value
+                keterangan: document.getElementById('kegiatan-keterangan').value,
+                publik: document.getElementById('kegiatan-publik').checked ? 'Ya' : 'Tidak'
             };
 
             if (editMode.kegiatan !== null) {
@@ -1334,6 +1387,7 @@
             document.getElementById('pengumuman-kategori').value = item.kategori || 'Informasi Umum';
             document.getElementById('pengumuman-isi').value = item.isi || '';
             document.getElementById('pengumuman-pj').value = item.pj || '';
+            document.getElementById('pengumuman-publik').checked = isPublikVal(item.publik);
             document.getElementById('btn-save-pengumuman').textContent = 'Perbarui Pengumuman';
             openModal('modal-pengumuman');
         }
@@ -1351,8 +1405,42 @@
             document.getElementById('kegiatan-lokasi').value = item.lokasi || '';
             document.getElementById('kegiatan-pj').value = item.pj || '';
             document.getElementById('kegiatan-keterangan').value = item.keterangan || '';
+            document.getElementById('kegiatan-publik').checked = isPublikVal(item.publik);
             document.getElementById('btn-save-kegiatan').textContent = 'Perbarui Agenda';
             openModal('modal-kegiatan');
+        }
+
+        // Toggle keterlihatan publik (Portal Publik) untuk Pengumuman & Kegiatan
+        function togglePublikPengumuman(index) {
+            const item = appState.pengumuman[index];
+            if (!item) return;
+            if (!item._id) { item._id = newId(); }
+            const newVal = isPublikVal(item.publik) ? 'Tidak' : 'Ya';
+            item.publik = newVal;
+            saveLocalState();
+            renderPengumumanCards();
+            sendToGoogleSheets({
+                action: 'update', sheetName: 'Pengumuman', id: item._id,
+                tanggal: item.tanggal, judul: item.judul, isi: item.isi,
+                kategori: item.kategori, pj: item.pj, publik: newVal
+            });
+            showToast(newVal === 'Ya' ? 'Pengumuman ditampilkan ke publik' : 'Pengumuman disembunyikan dari publik', newVal === 'Ya' ? 'success' : 'info');
+        }
+
+        function togglePublikKegiatan(index) {
+            const item = appState.kegiatan[index];
+            if (!item) return;
+            if (!item._id) { item._id = newId(); }
+            const newVal = isPublikVal(item.publik) ? 'Tidak' : 'Ya';
+            item.publik = newVal;
+            saveLocalState();
+            renderKegiatanCards();
+            sendToGoogleSheets({
+                action: 'update', sheetName: 'Kegiatan_Warga', id: item._id,
+                namaKegiatan: item.namaKegiatan, tanggal: item.tanggal, waktu: item.waktu,
+                lokasi: item.lokasi, pj: item.pj, keterangan: item.keterangan, publik: newVal
+            });
+            showToast(newVal === 'Ya' ? 'Kegiatan ditampilkan ke publik' : 'Kegiatan disembunyikan dari publik', newVal === 'Ya' ? 'success' : 'info');
         }
 
         // Deletion Functions
@@ -1435,6 +1523,8 @@
                     saveLocalState();
                     renderFn();
                     showToast('Dihapus dari Google Sheets', 'success');
+                } else if (res && res.code === 'unauthorized') {
+                    promptForAdminToken('Hapus ditolak: token admin tidak valid atau belum diatur.');
                 } else {
                     const msg = res?.message || 'Gagal menghapus';
                     showToast('Gagal: ' + msg, 'error');
@@ -1447,8 +1537,8 @@
                 showToast('Gagal terhubung ke Google Sheets', 'error');
             };
 
-            // Send as JSONP: action=delete&sheetName=...&id=...&callback=...
-            script.src = appState.scriptUrl + sep + 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&id=' + encodeURIComponent(id) + '&callback=' + callbackName;
+            // Send as JSONP: action=delete&sheetName=...&id=...&token=...&callback=...
+            script.src = appState.scriptUrl + sep + 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName;
             document.body.appendChild(script);
         }
 
@@ -1460,6 +1550,23 @@
             updateConnectionUI();
             showToast('URL Google Apps Script berhasil disimpan!', 'success');
             if (url) syncFromGoogleSheets();
+        }
+
+        // Simpan token admin (dikirim ke backend untuk otorisasi tulis/baca lengkap).
+        function saveAdminToken() {
+            const token = document.getElementById('admin-token-input').value.trim();
+            appState.adminToken = token;
+            localStorage.setItem('rt_admin_token', token);
+            showToast(token ? 'Token admin berhasil disimpan!' : 'Token admin dikosongkan.', token ? 'success' : 'info');
+            if (token && appState.scriptUrl) syncFromGoogleSheets();
+        }
+
+        // Arahkan admin ke tab Pengaturan untuk mengisi token yang valid.
+        function promptForAdminToken(message) {
+            showToast(message || 'Token admin belum diatur/tidak valid. Buka Pengaturan > Token Admin.', 'error');
+            switchTab('settings');
+            const input = document.getElementById('admin-token-input');
+            if (input) { input.value = appState.adminToken; input.focus(); }
         }
 
         function updateConnectionUI() {
@@ -1551,6 +1658,14 @@
                 return;
             }
 
+            // Operasi tulis ke Sheets wajib menyertakan token admin.
+            if (payload && payload.sheetName && !appState.adminToken) {
+                promptForAdminToken('Token admin belum diatur. Simpan token di Pengaturan sebelum menyimpan data.');
+                return;
+            }
+
+            const body = Object.assign({}, payload, { token: appState.adminToken });
+
             // Send async POST request to Google Apps Script Web App.
             // Use text/plain so this stays a CORS "simple request" (no preflight).
             // The Apps Script doPost still reads the raw JSON via e.postData.contents.
@@ -1558,7 +1673,7 @@
                 method: 'POST',
                 mode: 'no-cors', // Required because Apps Script does not return CORS headers
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify(body)
             })
             .then(() => {
                 showToast('Data tersinkronkan ke Google Sheets!', 'success');
@@ -1611,7 +1726,7 @@
                 showToast('Gagal memuat data dari Google Sheets', 'error');
             };
 
-            script.src = appState.scriptUrl + sep + 'action=read&callback=' + callbackName;
+            script.src = appState.scriptUrl + sep + 'action=read&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName;
             document.body.appendChild(script);
         }
 
@@ -1657,6 +1772,10 @@
         }
 
         function applySheetsData(res) {
+            if (res && res.code === 'unauthorized') {
+                promptForAdminToken('Gagal memuat data: token admin tidak valid atau belum diatur di Pengaturan.');
+                return;
+            }
             if (!res || res.result !== 'success' || !res.data) {
                 showToast('Gagal memuat data dari Google Sheets', 'error');
                 return;
@@ -1669,19 +1788,10 @@
                 _id: r[r.length - 1], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
             })));
             appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
-                _id: r[r.length - 1], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+                _id: r[r.length - 1], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]
             })));
             appState.kegiatan = applyLocalDeletes('kegiatan', (d.Kegiatan_Warga || []).map(r => ({
-                _id: r[r.length - 1], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
-            })));
-            appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
-                _id: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
-            })));
-            appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
-                _id: r[0], tanggal: fmtDateFormatted(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
-            })));
-            appState.kegiatan = applyLocalDeletes('kegiatan', (d.Kegiatan_Warga || []).map(r => ({
-                _id: r[0], namaKegiatan: r[1], tanggal: fmtDateFormatted(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
+                _id: r[r.length - 1], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7]
             })));
             saveLocalState();
             renderWargaTable();
@@ -1705,30 +1815,6 @@
             const s = String(v);
             const match = s.match(/^\d{4}-\d{2}-\d{2}/);
             return match ? match[0] : s;
-        }
-
-        // Format date: dd-Mmm-YYYY (consistent with public.html)
-        function fmtDateFormatted(v) {
-            if (!v) return '';
-            const str = String(v);
-            const parts = str.split('-');
-
-            // Case 1: Already formatted string "yyyy-MM-dd" from Apps Script
-            if (parts.length === 3 && /^\d{4}-\d{2}-\d{2}$/.test(str)) {
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-                const year = parts[0];
-                const monthIndex = parseInt(parts[1]) - 1;
-                const day = parts[2];
-                return day + '-' + months[monthIndex] + '-' + year;
-            }
-
-            // Case 2: If it's already in dd-Mmm-YYYY format, return as-is
-            if (/^\d{2}-\w{3}-\d{4}$/.test(str)) {
-                return str;
-            }
-
-            // Case 3: Fallback
-            return str;
         }
 
         function fmtTime(v) {

@@ -13,6 +13,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
   - *Primary:* Dynamic asynchronous HTTP request ke Google Apps Script Web App.
   - *Fallback / Local State:* `localStorage` browser untuk akses offline dan *instant rendering*.
 - **Delete Sync:** Operasi hapus menggunakan **GET dengan JSONP** untuk memastikan sinkronisasi ke Google Sheets sebelum pembaruan lokal.
+- **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
 
 ---
 
@@ -24,6 +25,7 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 ```json
 {
   "sheetName": "Data_Warga",
+  "token": "String (Required - harus sama dengan ADMIN_TOKEN)",
   "nama": "String (Required)",
   "nik": "String (Optional)",
   "noHp": "String (Required)",
@@ -36,6 +38,7 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 ```json
 {
   "sheetName": "Iuran_Kas",
+  "token": "String (Required - harus sama dengan ADMIN_TOKEN)",
   "tanggal": "YYYY-MM-DD",
   "nama": "String (Required)",
   "noRumah": "String (Optional)",
@@ -49,11 +52,13 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 ```json
 {
   "sheetName": "Pengumuman",
+  "token": "String (Required - harus sama dengan ADMIN_TOKEN)",
   "tanggal": "YYYY-MM-DD",
   "judul": "String (Required)",
   "isi": "String (Required)",
   "kategori": "String [Informasi Umum | Penting/Mendesak | Keuangan | Kegiatan]",
-  "pj": "String (Required)"
+  "pj": "String (Required)",
+  "publik": "String [Ya | Tidak] (default Ya)"
 }
 ```
 
@@ -61,12 +66,14 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 ```json
 {
   "sheetName": "Kegiatan_Warga",
+  "token": "String (Required - harus sama dengan ADMIN_TOKEN)",
   "namaKegiatan": "String (Required)",
   "tanggal": "YYYY-MM-DD",
   "waktu": "HH:MM",
   "lokasi": "String (Required)",
   "pj": "String (Required)",
-  "keterangan": "String (Optional)"
+  "keterangan": "String (Optional)",
+  "publik": "String [Ya | Tidak] (default Ya)"
 }
 ```
 
@@ -78,16 +85,20 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read` | Baca semua data dari 4 sheet |
-| `delete` | `action=delete&sheetName=X&id=Y` | Hapus baris di sheet X (JSONP callback) |
+| `read` | `action=read&token=T` | Baca semua data dari 4 sheet. **Butuh token** |
+| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya`. **Tanpa token** (portal publik) |
+| `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris di sheet X (JSONP callback). **Butuh token** |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
 
 **Contoh:**
 ```
-GET https://script.google.com/macros/s/XXXX/exec?action=read&callback=fn
-GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&id=id-1728...&callback=fn
+GET https://script.google.com/macros/s/XXXX/exec?action=read&token=T&callback=fn
+GET https://script.google.com/macros/s/XXXX/exec?action=readPublic&callback=fn
+GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&id=id-1728...&token=T&callback=fn
 GET https://script.google.com/macros/s/XXXX/exec?action=version&callback=fn
 ```
+
+> **Otorisasi:** bila token salah/kosong (atau `ADMIN_TOKEN` belum diatur di Script Properties), `read` & `delete` mengembalikan `{result:"error", code:"unauthorized"}`. Frontend menangkap `code:"unauthorized"` (`applySheetsData` / callback delete) lalu memanggil `promptForAdminToken()` untuk mengarahkan admin mengisi token di tab Pengaturan.
 
 > **Verifikasi deployment:** `CODE_VERSION` di `code.gs` harus sama dengan `EXPECTED_BACKEND_VERSION` di `index.html`. `read` mengembalikan `version`, jadi frontend akan memunculkan peringatan jika Web App masih menjalankan versi lama. Tombol **Cek Versi Backend** juga tersedia di UI.
 
@@ -97,13 +108,31 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 | `action` | Parameter | Deskripsi |
 |----------|-----------|-----------|
-| `add` (default) | `{ sheetName, id, ...field }` | Tambah baris baru (`id` opsional; dibuat otomatis bila kosong) |
-| `update` | `{ action:"update", sheetName, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
-| `delete` | `{ action:"delete", sheetName, id }` | Hapus baris dengan `id` tersebut |
+| `add` (default) | `{ sheetName, token, id, ...field }` | Tambah baris baru (`id` opsional; dibuat otomatis bila kosong) |
+| `update` | `{ action:"update", sheetName, token, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
+| `delete` | `{ action:"delete", sheetName, token, id }` | Hapus baris dengan `id` tersebut |
+
+> **Token wajib:** semua POST ditolak (`code:"unauthorized"`) bila `token` tidak cocok dengan `ADMIN_TOKEN`. Karena request POST memakai `mode:'no-cors'` (respons tidak terbaca), frontend mencegah pengiriman bila token kosong via `sendToGoogleSheets()` (memanggil `promptForAdminToken()`).
 
 > **Identitas baris:** setiap baris punya **ID stabil** di kolom bantu `ID` (kolom terakhir sheet, tepat setelah field terakhir). Kolom A tetap `Timestamp` asli (Date) yang ditampilkan `dd-mm-yyyy hh:mm` (GMT+7). `doPost`/`doGet` mencari baris lewat ID ini, bukan nomor baris, sehingga urutan/penyisipan baris tidak menyebabkan salah edit/hapus.
 
 > **Penting:** Operasi `update` **wajib** menyertakan `action:"update"`. Tanpa itu `doPost` menganggapnya `add` dan menambahkan baris duplikat.
+
+> **Field per sheet:**
+> - `Data_Warga`: `nama, nik, noHp, statusTinggal, alamat`
+> - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan`
+> - `Pengumuman`: `tanggal, judul, isi, kategori, pj, publik` (`Ya`/`Tidak`)
+> - `Kegiatan_Warga`: `namaKegiatan, tanggal, waktu, lokasi, pj, keterangan, publik` (`Ya`/`Tidak`)
+
+> **Publik (Portal Publik):** kolom `Publik` pada `Pengumuman` & `Kegiatan_Warga` menentukan apakah record tampil di `public.html` (`Ya` = tampil). Di admin, tombol toggle ikon mata (`togglePublikPengumuman` / `togglePublikKegiatan`) membalik nilainya lalu mengirim `action:"update"`. Nilai kosong dinormalisasi menjadi `Ya` oleh `normalizePublik()`.
+
+### 🔐 Keamanan & Otorisasi (Token Admin)
+
+- `ADMIN_TOKEN` disimpan di **Script Properties** (Project Settings > Script Properties), **bukan** di `code.gs`.
+- `getAdminToken()` membaca properti tersebut; `isAuthorized(token)` membandingkan dengan `safeEqual()` (perbandingan waktu-konstan).
+- Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi ditolak (fail-closed).
+- `readPublicSheets()` memakai `PUBLIK_INDEX` (`Pengumuman`: 6, `Kegiatan_Warga`: 7) untuk memfilter, dan sengaja **tidak** mengembalikan `Data_Warga`/`Iuran_Kas`.
+- Frontend admin: input token (`#admin-token-input`) + `saveAdminToken()`, disimpan di `localStorage` `rt_admin_token`; helper `promptForAdminToken()` membuka tab Pengaturan saat token hilang/tidak valid.
 
 ---
 
@@ -209,13 +238,22 @@ Tombol refresh di:
 
 | File | Deskripsi |
 |------|-----------|
-| `index.html` | Frontend SPA utama |
-| `Apps Script/code.gs` | Backend Apps Script (doGet + doPost) |
+| `index.html` | Frontend SPA admin |
+| `public.html` | Portal publik warga (memakai `action=readPublic`) |
+| `Apps Script/code.gs` | Backend Apps Script (doGet + doPost + token auth) |
 | `Apps Script/readme.md` | Dokumentasi lengkap API & Deployment |
 | `readme.md` | Dokumentasi proyek utama |
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 
 ---
+
+## 🔧 Recent Changes (2026-10-05)
+
+- ✅ **Token admin (`ADMIN_TOKEN`)** — proteksi server-side untuk semua operasi tulis & baca lengkap (`isAuthorized`, `safeEqual`, `unauthorized`)
+- ✅ **Endpoint `readPublic`** — portal publik hanya menerima Pengumuman & Kegiatan `Publik=Ya`; `Data_Warga`/`Iuran_Kas` tidak lagi terkirim keluar
+- ✅ **Frontend token** — input Token Admin di panel Integrasi, `saveAdminToken()`, simpan di `localStorage` `rt_admin_token`, `promptForAdminToken()` saat `code:"unauthorized"`
+- ✅ `index.html` `EXPECTED_BACKEND_VERSION` = `publik-v5-2026-10-05`; `CODE_VERSION` di `code.gs` disamakan
+- ✅ Perbaikan bug: blok mapping duplikat di `applySheetsData()` dihapus (mengakibatkan `_id` salah & tanggal edit kosong)
 
 ## 🔧 Recent Changes (2026-10-03)
 
