@@ -310,6 +310,7 @@
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
                                 <th class="p-4">Nama Lengkap</th>
+                                <th class="p-4">Usia</th>
                                 <th class="p-4">NIK</th>
                                 <th class="p-4">Tempat Lahir</th>
                                 <th class="p-4">Tanggal Lahir</th>
@@ -597,7 +598,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Lahir</label>
-                        <input type="date" id="warga-tanggallahir" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="warga-tanggallahir" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                 </div>
                 <div>
@@ -633,7 +634,7 @@
             <form id="form-kas" onsubmit="submitKas(event)" class="space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Transaksi *</label>
-                    <input type="date" id="kas-tanggal" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
+                    <input type="text" id="kas-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Transaksi *</label>
@@ -644,7 +645,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Warga / Pembayar *</label>
-                    <input type="text" id="kas-nama" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Nama atau Keterangan Pengeluaran">
+                    <input type="text" id="kas-nama" list="warga-nama-list" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Nama atau Keterangan Pengeluaran">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">No. Rumah</label>
@@ -666,6 +667,9 @@
         </div>
     </div>
 
+    <!-- Datalist Nama Warga (untuk lookup pada Iuran & Kas) -->
+    <datalist id="warga-nama-list"></datalist>
+
     <!-- Modal 3: Input Pengumuman -->
     <div id="modal-pengumuman" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4">
@@ -676,7 +680,7 @@
             <form id="form-pengumuman" onsubmit="submitPengumuman(event)" class="space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal *</label>
-                    <input type="date" id="pengumuman-tanggal" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
+                    <input type="text" id="pengumuman-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Judul Pengumuman *</label>
@@ -726,7 +730,7 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal *</label>
-                        <input type="date" id="kegiatan-tanggal" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none">
+                        <input type="text" id="kegiatan-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Waktu *</label>
@@ -796,6 +800,128 @@
 
         function findIndexById(arr, id) {
             return arr.findIndex(function (item) { return item && item._id === id; });
+        }
+
+        // ===== Format tanggal global dd-mm-yyyy =====
+        // Semua input tanggal (add & edit) memakai text field dengan tampilan dd-mm-yyyy.
+        // Nilai kanonik yang disimpan/dikirim ke Sheets tetap yyyy-MM-dd (ISO).
+        function maskDDMMYYYY(raw) {
+            const digits = String(raw == null ? '' : raw).replace(/\D/g, '').slice(0, 8);
+            let out = digits;
+            if (digits.length > 4) out = digits.slice(0, 2) + '-' + digits.slice(2, 4) + '-' + digits.slice(4);
+            else if (digits.length > 2) out = digits.slice(0, 2) + '-' + digits.slice(2);
+            return out;
+        }
+
+        function maskDateField(el) {
+            if (!el) return;
+            el.value = maskDDMMYYYY(el.value);
+            try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) { /* abaikan */ }
+        }
+
+        function ddmmyyyyToISO(v) {
+            const m = String(v == null ? '' : v).trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+            if (!m) return '';
+            const d = parseInt(m[1], 10), mo = parseInt(m[2], 10);
+            if (mo < 1 || mo > 12 || d < 1 || d > 31) return '';
+            return m[3] + '-' + m[2] + '-' + m[1];
+        }
+
+        function isoToDDMMYYYY(v) {
+            const m = String(v == null ? '' : v).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+            return m ? (m[3] + '-' + m[2] + '-' + m[1]) : (v == null ? '' : String(v));
+        }
+
+        function setDateInput(id, iso) {
+            const el = document.getElementById(id);
+            if (el) el.value = isoToDDMMYYYY(iso);
+        }
+
+        function readDateInput(id) {
+            const el = document.getElementById(id);
+            return el ? ddmmyyyyToISO(el.value) : '';
+        }
+
+        function todayLocalISO() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // Hitung usia (tahun penuh) dari tanggal lahir. Tidak disimpan ke database.
+        function hitungUsia(tanggalLahir) {
+            if (tanggalLahir == null || tanggalLahir === '') return '';
+            const iso = fmtDate(tanggalLahir);
+            const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return '';
+            const y = parseInt(m[1], 10), mo = parseInt(m[2], 10) - 1, d = parseInt(m[3], 10);
+            if (mo < 0 || mo > 11 || d < 1 || d > 31) return '';
+            const now = new Date();
+            let age = now.getFullYear() - y;
+            const hadBirthday = (now.getMonth() > mo) || (now.getMonth() === mo && now.getDate() >= d);
+            if (!hadBirthday) age--;
+            if (age < 0 || age > 150) return '';
+            return age + ' th';
+        }
+
+        // ===== Baris kosong (inline draft) untuk input langsung =====
+        let draftWarga = {};
+        let draftKas = {};
+
+        function escAttr(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function captureDraft(fields, store) {
+            fields.forEach(function (f) {
+                const el = document.getElementById(f.id);
+                if (el) store[f.key] = el.value;
+            });
+        }
+
+        function clearDraftFields(fields) {
+            fields.forEach(function (f) {
+                const el = document.getElementById(f.id);
+                if (el) el.value = '';
+            });
+        }
+
+        // Perbarui tampilan usia pada baris kosong secara live (tidak disimpan).
+        function updateDraftWargaUsia() {
+            const out = document.getElementById('draft-warga-usia');
+            if (!out) return;
+            const t = document.getElementById('draft-warga-tanggal');
+            const usia = t ? hitungUsia(ddmmyyyyToISO(t.value)) : '';
+            out.textContent = usia || '-';
+        }
+
+        const WARGA_DRAFT_FIELDS = [
+            { id: 'draft-warga-nama', key: 'nama' },
+            { id: 'draft-warga-nik', key: 'nik' },
+            { id: 'draft-warga-tempat', key: 'tempat' },
+            { id: 'draft-warga-tanggal', key: 'tanggalLahir' },
+            { id: 'draft-warga-hp', key: 'hp' },
+            { id: 'draft-warga-status', key: 'statusTinggal' },
+            { id: 'draft-warga-alamat', key: 'alamat' }
+        ];
+
+        const KAS_DRAFT_FIELDS = [
+            { id: 'draft-kas-tanggal', key: 'tanggal' },
+            { id: 'draft-kas-nama', key: 'nama' },
+            { id: 'draft-kas-norumah', key: 'noRumah' },
+            { id: 'draft-kas-jenis', key: 'jenis' },
+            { id: 'draft-kas-jumlah', key: 'jumlah' },
+            { id: 'draft-kas-keterangan', key: 'keterangan' }
+        ];
+
+        // Isi datalist nama warga dari Data_Warga (lookup pada Iuran & Kas).
+        function renderWargaNameList() {
+            const dl = document.getElementById('warga-nama-list');
+            if (!dl) return;
+            const names = Array.from(new Set(appState.warga.map(w => (w && w.nama ? String(w.nama).trim() : '')).filter(Boolean)));
+            names.sort((a, b) => a.localeCompare(b, 'id'));
+            dl.innerHTML = names.map(n => `<option value="${escAttr(n)}"></option>`).join('');
         }
 
         // Apakah record boleh tampil di portal publik. Default: tampil.
@@ -874,11 +1000,10 @@
             // Jika URL tersimpan, muat data langsung dari Google Sheets.
             if (appState.scriptUrl) syncFromGoogleSheets();
 
-            // Default dates in forms
-            const today = new Date().toISOString().split('T')[0];
-            if (document.getElementById('kas-tanggal')) document.getElementById('kas-tanggal').value = today;
-            if (document.getElementById('pengumuman-tanggal')) document.getElementById('pengumuman-tanggal').value = today;
-            if (document.getElementById('kegiatan-tanggal')) document.getElementById('kegiatan-tanggal').value = today;
+            // Default dates in forms (format dd-mm-yyyy)
+            setDateInput('kas-tanggal', todayLocalISO());
+            setDateInput('pengumuman-tanggal', todayLocalISO());
+            setDateInput('kegiatan-tanggal', todayLocalISO());
             if (document.getElementById('script-url-input')) document.getElementById('script-url-input').value = appState.scriptUrl;
             if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
 
@@ -1010,18 +1135,46 @@
 
             tbody.innerHTML = '';
 
+            renderWargaNameList();
+
+            // Baris kosong untuk input langsung (inline)
+            captureDraft(WARGA_DRAFT_FIELDS, draftWarga);
+            const draftWargaUsia = hitungUsia(ddmmyyyyToISO(draftWarga.tanggalLahir || ''));
+            const draftRow = document.createElement('tr');
+            draftRow.className = 'bg-blue-50/50';
+            draftRow.innerHTML = `
+                <td class="p-2"><input id="draft-warga-nama" type="text" value="${escAttr(draftWarga.nama)}" placeholder="Nama lengkap" class="w-full min-w-[9rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2 text-xs text-slate-500 text-center" id="draft-warga-usia">${draftWargaUsia || '-'}</td>
+                <td class="p-2"><input id="draft-warga-nik" type="text" value="${escAttr(draftWarga.nik)}" placeholder="NIK" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2"><input id="draft-warga-tempat" type="text" value="${escAttr(draftWarga.tempat)}" placeholder="Tempat lahir" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2"><input id="draft-warga-tanggal" type="text" inputmode="numeric" maxlength="10" value="${escAttr(draftWarga.tanggalLahir)}" oninput="maskDateField(this); updateDraftWargaUsia()" placeholder="dd-mm-yyyy" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2"><input id="draft-warga-hp" type="tel" value="${escAttr(draftWarga.hp)}" placeholder="08..." class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2">
+                    <select id="draft-warga-status" class="w-full min-w-[6rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="Tetap"${draftWarga.statusTinggal === 'Kontrak' ? '' : ' selected'}>Tetap</option>
+                        <option value="Kontrak"${draftWarga.statusTinggal === 'Kontrak' ? ' selected' : ''}>Kontrak</option>
+                    </select>
+                </td>
+                <td class="p-2"><input id="draft-warga-alamat" type="text" value="${escAttr(draftWarga.alamat)}" placeholder="Alamat / No. rumah" class="w-full min-w-[9rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2 text-center whitespace-nowrap">
+                    <button onclick="saveDraftWarga()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg mr-1" title="Simpan baris baru"><i class="fa-solid fa-check"></i></button>
+                    <button onclick="clearDraftWarga()" class="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg" title="Bersihkan baris"><i class="fa-solid fa-eraser"></i></button>
+                </td>
+            `;
+            tbody.appendChild(draftRow);
+
             const filtered = appState.warga.filter(item => {
-                const matchSearch = item.nama.toLowerCase().includes(search) || 
-                                    (item.nik && item.nik.includes(search)) || 
-                                    (item.tempat && item.tempat.toLowerCase().includes(search)) ||
-                                    (item.tanggalLahir && item.tanggalLahir.includes(search)) ||
-                                    item.alamat.toLowerCase().includes(search);
+                const haystack = [item.nama, item.nik, item.tempat, item.tanggalLahir, item.hp, item.statusTinggal, item.alamat]
+                    .map(v => (v == null ? '' : String(v).toLowerCase()));
+                const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
                 return matchSearch && matchStatus;
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-slate-400">Tidak ada data warga ditemukan.</td></tr>`;
+                const empty = document.createElement('tr');
+                empty.innerHTML = `<td colspan="9" class="p-4 text-center text-slate-400">Belum ada data warga. Isi baris kosong di atas lalu klik simpan.</td>`;
+                tbody.appendChild(empty);
                 return;
             }
 
@@ -1035,6 +1188,7 @@
                 tr.className = 'hover:bg-slate-50 transition';
                 tr.innerHTML = `
                     <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
+                    <td class="p-4 text-slate-600 text-xs">${hitungUsia(item.tanggalLahir) || '-'}</td>
                     <td class="p-4 text-slate-500 text-xs">${item.nik || '-'}</td>
                     <td class="p-4 text-slate-600">${item.tempat || '-'}</td>
                     <td class="p-4 text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</td>
@@ -1057,13 +1211,36 @@
 
             tbody.innerHTML = '';
 
+            // Baris kosong untuk input langsung (inline)
+            captureDraft(KAS_DRAFT_FIELDS, draftKas);
+            const draftRow = document.createElement('tr');
+            draftRow.className = 'bg-emerald-50/50';
+            draftRow.innerHTML = `
+                <td class="p-2"><input id="draft-kas-tanggal" type="text" inputmode="numeric" maxlength="10" value="${escAttr(draftKas.tanggal || isoToDDMMYYYY(todayLocalISO()))}" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
+                <td class="p-2"><input id="draft-kas-nama" list="warga-nama-list" type="text" value="${escAttr(draftKas.nama)}" placeholder="Nama warga / keterangan" class="w-full min-w-[10rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
+                <td class="p-2"><input id="draft-kas-norumah" type="text" value="${escAttr(draftKas.noRumah)}" placeholder="No. rumah" class="w-full min-w-[6rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
+                <td class="p-2">
+                    <select id="draft-kas-jenis" class="w-full min-w-[8rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                        <option value="Pemasukan"${draftKas.jenis === 'Pengeluaran' ? '' : ' selected'}>Pemasukan</option>
+                        <option value="Pengeluaran"${draftKas.jenis === 'Pengeluaran' ? ' selected' : ''}>Pengeluaran</option>
+                    </select>
+                </td>
+                <td class="p-2"><input id="draft-kas-jumlah" type="number" min="0" step="5000" value="${escAttr(draftKas.jumlah)}" placeholder="0" class="w-full min-w-[7rem] px-2 py-1.5 text-xs text-right border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
+                <td class="p-2"><input id="draft-kas-keterangan" type="text" value="${escAttr(draftKas.keterangan)}" placeholder="Catatan" class="w-full min-w-[10rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
+                <td class="p-2 text-center whitespace-nowrap">
+                    <button onclick="saveDraftKas()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg mr-1" title="Simpan baris baru"><i class="fa-solid fa-check"></i></button>
+                    <button onclick="clearDraftKas()" class="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg" title="Bersihkan baris"><i class="fa-solid fa-eraser"></i></button>
+                </td>
+            `;
+            tbody.appendChild(draftRow);
+
             let totalMasuk = 0;
             let totalKeluar = 0;
 
             const filtered = appState.kas.filter(item => {
-                return item.nama.toLowerCase().includes(search) || 
-                       item.keterangan.toLowerCase().includes(search) ||
-                       item.noRumah.toLowerCase().includes(search);
+                const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
+                    .map(v => (v == null ? '' : String(v).toLowerCase()));
+                return search === '' || haystack.some(v => v.indexOf(search) !== -1);
             });
 
             appState.kas.forEach(item => {
@@ -1076,7 +1253,9 @@
             document.getElementById('saldo-kas-total').innerText = formatRupiah(totalMasuk - totalKeluar);
 
             if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ada riwayat transaksi ditemukan.</td></tr>`;
+                const empty = document.createElement('tr');
+                empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">Belum ada riwayat transaksi. Isi baris kosong di atas lalu klik simpan.</td>`;
+                tbody.appendChild(empty);
                 return;
             }
 
@@ -1190,7 +1369,13 @@
         }
 
         // Modal Control Helpers
-        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function openModal(id) {
+            // Default tanggal hari ini (dd-mm-yyyy) saat menambah record baru.
+            if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
+            if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
+            if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
+            document.getElementById(id).classList.remove('hidden');
+        }
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
             // Reset edit mode and modal UI
@@ -1208,7 +1393,7 @@
                 nama: document.getElementById('warga-nama').value,
                 nik: document.getElementById('warga-nik').value,
                 tempat: document.getElementById('warga-tempat').value,
-                tanggalLahir: document.getElementById('warga-tanggallahir').value,
+                tanggalLahir: readDateInput('warga-tanggallahir'),
                 noHp: document.getElementById('warga-hp').value,
                 statusTinggal: document.getElementById('warga-status').value,
                 alamat: document.getElementById('warga-alamat').value
@@ -1242,7 +1427,7 @@
             e.preventDefault();
             const data = {
                 sheetName: "Iuran_Kas",
-                tanggal: document.getElementById('kas-tanggal').value,
+                tanggal: readDateInput('kas-tanggal'),
                 nama: document.getElementById('kas-nama').value,
                 noRumah: document.getElementById('kas-norumah').value,
                 jenis: document.getElementById('kas-jenis').value,
@@ -1273,11 +1458,88 @@
             document.getElementById('form-kas').reset();
         }
 
+        // Simpan/batalkan baris kosong inline (Data_Warga & Iuran_Kas)
+        function saveDraftWarga() {
+            captureDraft(WARGA_DRAFT_FIELDS, draftWarga);
+            const nama = (draftWarga.nama || '').trim();
+            const noHp = (draftWarga.hp || '').trim();
+            const alamat = (draftWarga.alamat || '').trim();
+            if (!nama || !noHp || !alamat) {
+                showToast('Nama, No. HP, dan Alamat wajib diisi.', 'error');
+                return;
+            }
+            const rawTanggal = (draftWarga.tanggalLahir || '').trim();
+            const tanggalLahir = ddmmyyyyToISO(rawTanggal);
+            if (rawTanggal && !tanggalLahir) {
+                showToast('Format Tanggal Lahir harus dd-mm-yyyy.', 'error');
+                return;
+            }
+            const id = newId();
+            const data = {
+                sheetName: 'Data_Warga',
+                nama: nama,
+                nik: (draftWarga.nik || '').trim(),
+                tempat: (draftWarga.tempat || '').trim(),
+                tanggalLahir: tanggalLahir,
+                noHp: noHp,
+                statusTinggal: draftWarga.statusTinggal || 'Tetap',
+                alamat: alamat,
+                id: id
+            };
+            appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
+            draftWarga = {};
+            clearDraftFields(WARGA_DRAFT_FIELDS);
+            saveLocalState();
+            renderWargaTable();
+            sendToGoogleSheets(data);
+            showToast('Data warga berhasil ditambahkan!', 'success');
+        }
+
+        function clearDraftWarga() {
+            draftWarga = {};
+            clearDraftFields(WARGA_DRAFT_FIELDS);
+            renderWargaTable();
+        }
+
+        function saveDraftKas() {
+            captureDraft(KAS_DRAFT_FIELDS, draftKas);
+            const tanggal = ddmmyyyyToISO(draftKas.tanggal || '');
+            const nama = (draftKas.nama || '').trim();
+            const jumlah = Number(draftKas.jumlah || 0);
+            if (!tanggal) { showToast('Tanggal wajib diisi dengan format dd-mm-yyyy.', 'error'); return; }
+            if (!nama) { showToast('Nama warga / keterangan wajib diisi.', 'error'); return; }
+            if (!jumlah || jumlah <= 0) { showToast('Jumlah nominal harus lebih dari 0.', 'error'); return; }
+            const id = newId();
+            const data = {
+                sheetName: 'Iuran_Kas',
+                tanggal: tanggal,
+                nama: nama,
+                noRumah: (draftKas.noRumah || '').trim(),
+                jenis: draftKas.jenis || 'Pemasukan',
+                jumlah: jumlah,
+                keterangan: (draftKas.keterangan || '').trim(),
+                id: id
+            };
+            appState.kas.push({ _id: id, tanggal: data.tanggal, nama: data.nama, noRumah: data.noRumah, jenis: data.jenis, jumlah: data.jumlah, keterangan: data.keterangan });
+            draftKas = {};
+            clearDraftFields(KAS_DRAFT_FIELDS);
+            saveLocalState();
+            renderKasTable();
+            sendToGoogleSheets(data);
+            showToast('Catatan kas berhasil ditambahkan!', 'success');
+        }
+
+        function clearDraftKas() {
+            draftKas = {};
+            clearDraftFields(KAS_DRAFT_FIELDS);
+            renderKasTable();
+        }
+
         function submitPengumuman(e) {
             e.preventDefault();
             const data = {
                 sheetName: "Pengumuman",
-                tanggal: document.getElementById('pengumuman-tanggal').value,
+                tanggal: readDateInput('pengumuman-tanggal'),
                 judul: document.getElementById('pengumuman-judul').value,
                 isi: document.getElementById('pengumuman-isi').value,
                 kategori: document.getElementById('pengumuman-kategori').value,
@@ -1313,7 +1575,7 @@
             const data = {
                 sheetName: "Kegiatan_Warga",
                 namaKegiatan: document.getElementById('kegiatan-nama').value,
-                tanggal: document.getElementById('kegiatan-tanggal').value,
+                tanggal: readDateInput('kegiatan-tanggal'),
                 waktu: document.getElementById('kegiatan-waktu').value,
                 lokasi: document.getElementById('kegiatan-lokasi').value,
                 pj: document.getElementById('kegiatan-pj').value,
@@ -1355,7 +1617,7 @@
             document.getElementById('warga-nama').value = item.nama || '';
             document.getElementById('warga-nik').value = item.nik || '';
             document.getElementById('warga-tempat').value = item.tempat || '';
-            document.getElementById('warga-tanggallahir').value = item.tanggalLahir || '';
+            setDateInput('warga-tanggallahir', item.tanggalLahir);
             document.getElementById('warga-hp').value = item.hp || '';
             document.getElementById('warga-status').value = item.statusTinggal || 'Tetap';
             document.getElementById('warga-alamat').value = item.alamat || '';
@@ -1370,7 +1632,7 @@
             
             editMode.kas = item._id;
             document.getElementById('modal-kas-title').textContent = 'Edit Transaksi Kas';
-            document.getElementById('kas-tanggal').value = item.tanggal || '';
+            setDateInput('kas-tanggal', item.tanggal);
             document.getElementById('kas-jenis').value = item.jenis || 'Pemasukan';
             document.getElementById('kas-nama').value = item.nama || '';
             document.getElementById('kas-norumah').value = item.noRumah || '';
@@ -1387,7 +1649,7 @@
             
             editMode.pengumuman = item._id;
             document.getElementById('modal-pengumuman-title').textContent = 'Edit Pengumuman';
-            document.getElementById('pengumuman-tanggal').value = item.tanggal || '';
+            setDateInput('pengumuman-tanggal', item.tanggal);
             document.getElementById('pengumuman-judul').value = item.judul || '';
             document.getElementById('pengumuman-kategori').value = item.kategori || 'Informasi Umum';
             document.getElementById('pengumuman-isi').value = item.isi || '';
@@ -1405,7 +1667,7 @@
             editMode.kegiatan = item._id;
             document.getElementById('modal-kegiatan-title').textContent = 'Edit Agenda Kegiatan';
             document.getElementById('kegiatan-nama').value = item.namaKegiatan || '';
-            document.getElementById('kegiatan-tanggal').value = item.tanggal || '';
+            setDateInput('kegiatan-tanggal', item.tanggal);
             document.getElementById('kegiatan-waktu').value = item.waktu || '';
             document.getElementById('kegiatan-lokasi').value = item.lokasi || '';
             document.getElementById('kegiatan-pj').value = item.pj || '';

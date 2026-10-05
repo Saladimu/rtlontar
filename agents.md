@@ -267,11 +267,11 @@ Tombol refresh di:
    - Tampilkan loading state selama proses delete berlangsung
    - Handle timeout dan error dengan toast notification
 
-8. **Date Display Formatting:**
-   - Simpan tanggal sebagai string `yyyy-MM-dd` (`fmtDate`) di `appState`.
+8. **Date Input & Display Formatting:**
+   - Simpan tanggal sebagai string `yyyy-MM-dd` (`fmtDate`) di `appState` sebagai format kanonik.
+   - **Input add/edit** memakai text field berformat **`dd-mm-yyyy`** dengan auto-mask `maskDateField()`. Konversi memakai `ddmmyyyyToISO()` / `isoToDDMMYYYY()` dan helper `setDateInput()` / `readDateInput()`. Berlaku untuk semua modul (Warga, Kas, Pengumuman, Kegiatan).
    - Untuk **tampilan** (kartu, tabel, dashboard) gunakan `fmtDateDisplay()` → `dd-Mmm-yyyy` (bulan Indonesia).
-   - Untuk **form edit** (`<input type="date">`) prefill dengan nilai mentah `item.tanggal` (`yyyy-MM-dd`), JANGAN yang terformat.
-   - Portal publik memakai `formatDateDDMMMYYYY()` dengan aturan yang sama.
+   - Portal publik memakai aturan tampilan yang sama.
 
 9. **Public Portal Scope:**
    - `public.html` read-only, sumber data hanya `action=readPublic`.
@@ -293,6 +293,12 @@ Tombol refresh di:
     - Karena `window.onload` memanggil `syncFromGoogleSheets()` (bila `scriptUrl` tersimpan), hard refresh otomatis menyinkronkan **data + konfigurasi + tampilan** sekaligus.
     - Parameter `_rtcache` dibersihkan setelah load via `history.replaceState()` agar URL tetap rapi.
     - Jangan mengganti perilaku ini menjadi `location.reload()` biasa, karena reload biasa tidak menjamin melewati cache di semua browser.
+
+13. **Baris Kosong Inline (`Data_Warga` & `Iuran_Kas`):**
+    - Tabel `Data_Warga` & `Iuran_Kas` selalu menampilkan satu **baris kosong** di bagian atas untuk input langsung tanpa membuka modal.
+    - Nilai disimpan di `draftWarga` / `draftKas`; `saveDraftWarga()` / `saveDraftKas()` menambah record, `clearDraftWarga()` / `clearDraftKas()` membersihkan baris.
+    - Kolom tanggal inline memakai format `dd-mm-yyyy` dan dikonversi ke ISO saat disimpan.
+    - Field **Nama Warga** pada Kas memakai `<datalist id="warga-nama-list">` yang diisi dari `Data_Warga` (`renderWargaNameList()`).
 
 ---
 
@@ -326,6 +332,11 @@ Tombol refresh di:
 - ✅ **Hard refresh tombol "Muat Ulang"** di menu utama `index.html` — `refreshData()` menambahkan `?_rtcache=<ts>` lalu `location.replace()`, sehingga HTML & `config.js` terbaru diambil ulang (melewati cache) dan data ikut tersinkron saat `onload`; `_rtcache` dibersihkan via `history.replaceState()`
 - ✅ **`config.js` cache-busting** — dimuat via `config.js?v=<timestamp>` di kedua halaman; fallback `data-rt` di HTML diperbarui ke nilai saat ini; `appName` double-space diperbaiki
 - ✅ **Favicon & logo `rt-icon.png`** — dipasang sebagai `rel="icon"` / `apple-touch-icon` dan sebagai logo header (desktop/mobile admin & portal publik)
+- ✅ **Format tanggal global `dd-mm-yyyy`** untuk semua input add/edit (Warga, Kas, Pengumuman, Kegiatan) memakai text field bermasker (`maskDateField`, `ddmmyyyyToISO`, `isoToDDMMYYYY`, `setDateInput`, `readDateInput`); nilai kanonik tetap `yyyy-MM-dd`
+- ✅ **Baris kosong inline** di tabel `Data_Warga` & `Iuran_Kas` untuk input langsung tanpa modal (`saveDraftWarga`/`saveDraftKas`, `clearDraftWarga`/`clearDraftKas`); nilai bertahan saat tabel di-render ulang
+- ✅ **Datalist Nama Warga** (`warga-nama-list`) pada input Kas (modal & inline) diisi dari `Data_Warga` via `renderWargaNameList()`
+- ✅ **Perbaikan bug pencarian (`Data_Warga` & `Iuran_Kas`)** — filter kini menormalkan semua field ke string (`v == null ? '' : String(v)`) sebelum `indexOf`, sehingga sel kosong (`null`/`undefined`) tidak lagi memicu `TypeError` yang menghentikan render (gejala: pencarian seolah tidak berfungsi)
+- ✅ **Kolom `Usia` di tabel `Data_Warga`** — ditampilkan setelah `Nama Lengkap`, dihitung dari `Tanggal Lahir` via `hitungUsia()` (tahun penuh, format `X th`). **Tidak disimpan** ke `appState`/Sheets; baris kosong inline memperbarui usia secara live saat tanggal diisi.
 
 ## 🔧 Recent Changes (2026-10-03)
 

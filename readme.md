@@ -7,11 +7,13 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 ## 🚀 Fitur Utama
 
 - **📊 Ringkasan / Dashboard:** Menampilkan statistik total warga, saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
-- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, Tempat & Tanggal Lahir, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
+- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, Tempat & Tanggal Lahir, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database), fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
 - **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Hapus** tersedia.
 - **📢 Pengumuman RT:** Papan informasi digital resmi untuk menyebarkan imbauan dan berita penting. **Edit & Hapus** tersedia.
 - **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT. **Edit & Hapus** tersedia.
 - **🔄 Refresh Data Manual:** Tombol refresh di header desktop/mobile untuk memuat ulang data dari Google Sheets kapan saja.
+- **📝 Format Tanggal `dd-mm-yyyy`:** Semua kolom tanggal pada form tambah/edit (Warga, Kas, Pengumuman, Kegiatan) memakai format `dd-mm-yyyy` dengan mask otomatis; nilai kanonik tetap disimpan sebagai `yyyy-MM-dd` di Sheets.
+- **➕ Input Cepat (Baris Kosong):** Tabel Data Warga & Iuran/Kas menampilkan satu baris kosong di paling atas untuk input langsung tanpa membuka modal. Kolom Nama Warga pada Kas menampilkan saran dari Data_Warga (datalist).
 - **🔗 Integrasi Google Apps Script:** Pengiriman data form langsung terhubung ke Google Sheets, **sync delete**, dengan *fallback* **localStorage** jika dijalankan tanpa internet/koneksi backend.
 - **⚠️ Delete Persistence:** Sistem melacak record yang dihapus agar tidak muncul kembali setelah reload/sync.
 - **🔐 Token Admin:** Semua operasi tulis (tambah/edit/hapus) dan baca lengkap wajib menyertakan token rahasia (`ADMIN_TOKEN` di Script Properties). Tanpa token, server menolak permintaan sehingga orang yang hanya tahu URL tidak bisa mengubah data.
@@ -106,6 +108,9 @@ Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit**
 - **Hapus**: Data warga akan menampilkan warning dialog detail sebelum dihapus.
 - **Edit**: Modal akan terbuka dengan data yang sudah terisi, klik simpan untuk menyimpan perubahan.
 - **Delete Sync**: Penghapusan dilakukan di Google Sheets dulu, jika gagal data lokal tidak berubah.
+
+### Tambah Data Cepat (Inline)
+Tabel **Data Warga** dan **Iuran & Kas RT** memiliki satu baris kosong di bagian atas. Isi kolomnya langsung, lalu klik tombol centang (simpan) pada kolom Aksi untuk menambah record tanpa membuka modal. Tanggal pada baris ini memakai format `dd-mm-yyyy`.
 
 ---
 
