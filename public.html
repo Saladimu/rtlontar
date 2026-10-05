@@ -287,6 +287,8 @@
 
                     renderPengumuman(pengumuman);
                     renderKegiatan(kegiatan);
+                } else if (res && res.code === 'portal_disabled') {
+                    showPortalDisabled();
                 } else {
                     showLoadError();
                 }
@@ -375,6 +377,20 @@
                 'Kegiatan': 'bg-purple-100 text-purple-700'
             };
             return map[kategori] || 'bg-slate-100 text-slate-700';
+        }
+
+        function showPortalDisabled() {
+            const html = `
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+                    <i class="fa-solid fa-lock text-4xl text-amber-400 mb-3"></i>
+                    <h3 class="font-bold text-amber-900 text-lg mb-2">Portal publik dinonaktifkan</h3>
+                    <p class="text-sm text-amber-700">Admin RT sedang menonaktifkan akses portal publik. Silakan coba lagi nanti.</p>
+                </div>
+            `;
+            document.getElementById('pengumuman-container').innerHTML = html;
+            document.getElementById('kegiatan-container').innerHTML = '';
+            document.getElementById('count-pengumuman').textContent = '-';
+            document.getElementById('count-kegiatan').textContent = '-';
         }
 
         function showLoadError() {

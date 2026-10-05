@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v6-2026-10-05";
+var CODE_VERSION = "publik-v7-2026-10-05";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 var TZ = "Asia/Jakarta";
@@ -62,6 +62,23 @@ function unauthorized() {
     "code": "unauthorized",
     "message": "Token admin tidak valid atau belum diatur (Script Properties: ADMIN_TOKEN)."
   };
+}
+
+// ================= STATUS PORTAL PUBLIK =================
+// Flag ON/OFF portal publik disimpan di Script Properties: key "PUBLIC_PORTAL_ENABLED".
+// Bila "false", action=readPublic ditolak sehingga data tidak bisa diakses publik.
+// Bila properti belum diatur, portal dianggap AKTIF (default).
+var PORTAL_PROP = 'PUBLIC_PORTAL_ENABLED';
+
+function isPortalEnabled() {
+  var v = PropertiesService.getScriptProperties().getProperty(PORTAL_PROP);
+  if (v === null || v === undefined || v === '') return true;
+  return String(v).trim().toLowerCase() !== 'false';
+}
+
+function setPortalEnabled(enabled) {
+  PropertiesService.getScriptProperties().setProperty(PORTAL_PROP, enabled ? 'true' : 'false');
+  return isPortalEnabled();
 }
 
 // True bila nilai Publik berarti tampil di portal publik.
@@ -300,13 +317,23 @@ function readAllSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "data": data };
 }
 
 // Baca hanya data yang boleh tampil di portal publik:
 // Pengumuman & Kegiatan_Warga yang kolom Publik-nya "Ya".
 // Data_Warga & Iuran_Kas TIDAK pernah dikembalikan, sehingga data privat tidak bocor.
+// Bila portal dinonaktifkan admin, tidak ada data yang dikembalikan.
 function readPublicSheets() {
+  if (!isPortalEnabled()) {
+    return {
+      "result": "error",
+      "code": "portal_disabled",
+      "version": CODE_VERSION,
+      "message": "Portal publik sedang dinonaktifkan oleh admin."
+    };
+  }
+
   var full = readAllSheets();
   var data = { "Pengumuman": [], "Kegiatan_Warga": [] };
 
@@ -318,7 +345,7 @@ function readPublicSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": true, "data": data };
 }
 
 function doPost(e) {
@@ -335,6 +362,16 @@ function doPost(e) {
     }
 
     var data = JSON.parse(raw);
+
+    // Aksi khusus: mengubah status ON/OFF portal publik (butuh token admin).
+    if (data.action === 'setPortalStatus') {
+      if (!isAuthorized(data.token)) {
+        return respond(unauthorized());
+      }
+      var enabled = setPortalEnabled(data.enabled === true || String(data.enabled) === 'true');
+      return respond({ "result": "success", "portalEnabled": enabled });
+    }
+
     var sheetName = data.sheetName;
     if (!EXPECTED_FIELDS[sheetName]) {
       return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });

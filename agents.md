@@ -16,7 +16,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
   - *Primary:* Dynamic asynchronous HTTP request ke Google Apps Script Web App.
   - *Fallback / Local State:* `localStorage` browser untuk akses offline dan *instant rendering*.
 - **Delete Sync:** Operasi hapus menggunakan **GET dengan JSONP** untuk memastikan sinkronisasi ke Google Sheets sebelum pembaruan lokal.
-- **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
+- **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`/`setPortalStatus`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`, dan bisa dimatikan total via `PUBLIC_PORTAL_ENABLED`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
 
 ---
 
@@ -117,8 +117,8 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 4 sheet. **Butuh token** |
-| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya`. **Tanpa token** (portal publik) |
+| `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token** |
+| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya`. **Tanpa token**. Bila portal OFF → `{result:"error", code:"portal_disabled"}` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris di sheet X (JSONP callback). **Butuh token** |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
 
@@ -143,6 +143,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 | `add` (default) | `{ sheetName, token, id, ...field }` | Tambah baris baru (`id` opsional; dibuat otomatis bila kosong) |
 | `update` | `{ action:"update", sheetName, token, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
 | `delete` | `{ action:"delete", sheetName, token, id }` | Hapus baris dengan `id` tersebut |
+| `setPortalStatus` | `{ action:"setPortalStatus", enabled:true/false, token }` | Nyalakan/matikan portal publik (Script Property `PUBLIC_PORTAL_ENABLED`). Bukan operasi per-sheet |
 
 > **Token wajib:** semua POST ditolak (`code:"unauthorized"`) bila `token` tidak cocok dengan `ADMIN_TOKEN`. Karena request POST memakai `mode:'no-cors'` (respons tidak terbaca), frontend mencegah pengiriman bila token kosong via `sendToGoogleSheets()` (memanggil `promptForAdminToken()`).
 
@@ -158,12 +159,14 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 > **Publik (Portal Publik):** kolom `Publik` pada `Pengumuman` & `Kegiatan_Warga` menentukan apakah record tampil di `public.html` (`Ya` = tampil). Di admin, tombol toggle ikon mata (`togglePublikPengumuman` / `togglePublikKegiatan`) membalik nilainya lalu mengirim `action:"update"`. Nilai kosong dinormalisasi menjadi `Ya` oleh `normalizePublik()`.
 
+> **ON/OFF Portal Publik:** toggle di tab **Portal Publik** (`#toggle-public-portal`, handler `togglePublicPortal()`) mengirim `setPortalStatus` dan menyimpan status server-side di Script Property `PUBLIC_PORTAL_ENABLED` (`isPortalEnabled()` / `setPortalEnabled()`). Saat OFF, `readPublicSheets()` mengembalikan `code:"portal_disabled"` dan `public.html` menampilkan pesan non-aktif — jadi blokir ini nyata (bukan sekadar menyembunyikan tautan). Status juga disertakan pada respons `read` (`portalEnabled`) untuk menyinkronkan UI admin.
+
 ### 🔐 Keamanan & Otorisasi (Token Admin)
 
 - `ADMIN_TOKEN` disimpan di **Script Properties** (Project Settings > Script Properties), **bukan** di `code.gs`.
 - `getAdminToken()` membaca properti tersebut; `isAuthorized(token)` membandingkan dengan `safeEqual()` (perbandingan waktu-konstan).
 - Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi ditolak (fail-closed).
-- `readPublicSheets()` memakai `PUBLIK_INDEX` (`Pengumuman`: 6, `Kegiatan_Warga`: 7) untuk memfilter, dan sengaja **tidak** mengembalikan `Data_Warga`/`Iuran_Kas`.
+- `readPublicSheets()` memakai `PUBLIK_INDEX` (`Pengumuman`: 6, `Kegiatan_Warga`: 7) untuk memfilter, sengaja **tidak** mengembalikan `Data_Warga`/`Iuran_Kas`, dan menolak akses (`portal_disabled`) bila `PUBLIC_PORTAL_ENABLED` bernilai `false`.
 - Frontend admin: input token (`#admin-token-input`) + `saveAdminToken()`, disimpan di `localStorage` `rt_admin_token`; helper `promptForAdminToken()` membuka tab Pengaturan saat token hilang/tidak valid.
 
 ---
@@ -304,7 +307,9 @@ Tombol refresh di:
 - ✅ **Token admin (`ADMIN_TOKEN`)** — proteksi server-side untuk semua operasi tulis & baca lengkap (`isAuthorized`, `safeEqual`, `unauthorized`)
 - ✅ **Endpoint `readPublic`** — portal publik hanya menerima Pengumuman & Kegiatan `Publik=Ya`; `Data_Warga`/`Iuran_Kas` tidak lagi terkirim keluar
 - ✅ **Frontend token** — input Token Admin di panel Integrasi, `saveAdminToken()`, simpan di `localStorage` `rt_admin_token`, `promptForAdminToken()` saat `code:"unauthorized"`
-- ✅ `index.html` `EXPECTED_BACKEND_VERSION` = `publik-v6-2026-10-05`; `CODE_VERSION` di `code.gs` disamakan
+- ✅ `index.html` `EXPECTED_BACKEND_VERSION` = `publik-v7-2026-10-05`; `CODE_VERSION` di `code.gs` disamakan
+- ✅ **ON/OFF Portal Publik (backend-enforced)** — toggle di tab Portal Publik, aksi `setPortalStatus`, flag `PUBLIC_PORTAL_ENABLED` di Script Properties; saat OFF `readPublic` mengembalikan `code:"portal_disabled"` dan `public.html` menampilkan pesan non-aktif; respons `read` menyertakan `portalEnabled`; tombol **Buka Portal** difokuskan ke tautan aktif
+- ✅ **Tombol "Muat Ulang" di `public.html`** — `refreshPublicData()` + `loadPublicData(onComplete)`; fungsi `showLoadError()` yang sebelumnya hilang kini ditambahkan
 - ✅ **Kolom baru `Data_Warga`**: `Tempat Lahir` + `Tanggal Lahir` (setelah `NIK`); `migrateDataWargaLayout()` menyisipkan otomatis 2 kolom (`insertColumnsBefore(4,2)`) untuk sheet lama, `EXPECTED_FIELDS.Data_Warga = 8`, payload `tempat`/`tanggalLahir`, tabel & form warga diperbarui
 - ✅ Perbaikan bug: blok mapping duplikat di `applySheetsData()` dihapus (mengakibatkan `_id` salah & tanggal edit kosong)
 - ✅ Perbaikan bug: tanggal di kartu Pengumuman/Kegiatan admin kini diformat `dd-Mmm-yyyy` lewat `fmtDateDisplay()` (sebelumnya menampilkan `yyyy-MM-dd` mentah); diterapkan juga ke widget dashboard & tabel Kas

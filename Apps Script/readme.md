@@ -17,6 +17,7 @@ File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode
 5. Buka **Project Settings > Script Properties**, tambahkan properti:
    - **Nama:** `ADMIN_TOKEN`
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
+   - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
 
 ---
 
@@ -28,6 +29,10 @@ Karena Web App di-deploy sebagai **Anyone**, tanpa proteksi siapa pun yang tahu 
 - Token disimpan di **Script Properties** dengan key `ADMIN_TOKEN` dan **tidak** ditulis di dalam kode.
 - Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi otomatis **ditolak** (`code:"unauthorized"`).
 - Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga` dan `Iuran_Kas` tidak pernah dikirim keluar.
+
+### ON/OFF Portal Publik
+
+Admin dapat menyalakan/mematikan akses portal publik dari toggle di tab **Portal Publik** (`index.html`). Status disimpan di Script Property `PUBLIC_PORTAL_ENABLED` lewat aksi `setPortalStatus` (butuh token). Saat **OFF**, `action=readPublic` mengembalikan `{result:"error", code:"portal_disabled"}` sehingga `public.html` menampilkan pesan "Portal publik dinonaktifkan" dan tidak ada data yang bocor. Saat properti belum diatur, portal dianggap **aktif** (default).
 
 Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google Sheets* lalu klik **Simpan Token**. Token disimpan di `localStorage` (`rt_admin_token`) pada perangkat admin dan hanya itu yang mengirimkannya.
 
@@ -119,8 +124,8 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 4 sheet. **Butuh token admin** (JSONP) |
-| `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token** (untuk `public.html`) |
+| `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token admin** (JSONP) |
+| `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
 | (default) | — | Health check: `{result:"success", message:"Web App aktif"}` |
@@ -156,6 +161,12 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
+
+**Aksi khusus (bukan per-sheet):**
+
+| Aksi | Payload | Deskripsi |
+|------|---------|-----------|
+| `setPortalStatus` | `{action:"setPortalStatus", enabled:true/false, token:T}` | Menyalakan/mematikan portal publik. Butuh token admin. Disimpan di Script Property `PUBLIC_PORTAL_ENABLED` |
 
 **Contoh payload (Tambah Warga):**
 ```json
@@ -228,10 +239,11 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 |--------|-----------|
 | `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `readPublicSheets()`, `handleDelete()`, atau `version`. `read`/`delete` diverifikasi token |
 | `handleDelete(params)` | Hapus baris berdasarkan `id` (kolom bantu ID) via `findRowById()`; verifikasi token |
-| `readAllSheets()` | Baca 4 sheet lengkap, pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, data}` |
-| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas` |
+| `readAllSheets()` | Baca 4 sheet lengkap, pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, data}` |
+| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`; ditolak (`portal_disabled`) bila portal OFF |
+| `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`); wajib token |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus`; wajib token |
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
 | `ensureSpreadsheetFormat(ss, sheet, name)` | Set timezone Asia/Jakarta + format `dd-mm-yyyy hh:mm` + header ID |
@@ -269,6 +281,8 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 6. **Publik**: Kolom `Publik` bernilai `Ya`/`Tidak`. Hanya record `Ya` yang tampil di `public.html`. Di sisi admin, gunakan tombol toggle (ikon mata) pada kartu Pengumuman/Kegiatan untuk mengubahnya.
 
 7. **Token Admin**: `ADMIN_TOKEN` disimpan di Script Properties (bukan di kode). Semua tulis & baca lengkap diverifikasi. Ganti token kapan saja dengan mengubah Script Property; admin perlu memperbarui Token Admin di `index.html`.
+
+8. **Status Portal Publik**: `PUBLIC_PORTAL_ENABLED` disimpan di Script Properties. Toggle di `index.html` mengirim `setPortalStatus`; bila `false`, `readPublic` ditolak (`code:"portal_disabled"`). Properti ini sengaja terpisah dari `ADMIN_TOKEN`.
 
 ---
 
