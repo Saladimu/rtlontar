@@ -10,7 +10,7 @@
    atribut data-rt / data-rt-placeholder.
    ============================================================ */
 window.RT_CONFIG = {
-    appName: 'Sistem RT',
+    appName: 'Sistem ',
     rt: '017',
     rw: '06',
     kelurahan: 'Tanjung Duren Utara',
