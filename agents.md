@@ -79,13 +79,13 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
 | `read` | `action=read` | Baca semua data dari 4 sheet |
-| `delete` | `action=delete&sheetName=X&rowIndex=Y` | Hapus baris di sheet X (JSONP callback) |
+| `delete` | `action=delete&sheetName=X&id=Y` | Hapus baris di sheet X (JSONP callback) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
 
 **Contoh:**
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=read&callback=fn
-GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&rowIndex=0&callback=fn
+GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&id=id-1728...&callback=fn
 GET https://script.google.com/macros/s/XXXX/exec?action=version&callback=fn
 ```
 
@@ -97,9 +97,11 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 | `action` | Parameter | Deskripsi |
 |----------|-----------|-----------|
-| `add` (default) | `{ sheetName, ...field }` | Tambah baris baru |
-| `update` | `{ action:"update", sheetName, rowIndex, ...field }` | Perbarui baris ke-`rowIndex` (0-based di luar header). Timestamp asli dipertahankan, **tidak** menambah baris baru |
-| `delete` | `{ action:"delete", sheetName, rowIndex }` | Hapus baris ke-`rowIndex` (0-based di luar header) |
+| `add` (default) | `{ sheetName, id, ...field }` | Tambah baris baru (`id` opsional; dibuat otomatis bila kosong) |
+| `update` | `{ action:"update", sheetName, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
+| `delete` | `{ action:"delete", sheetName, id }` | Hapus baris dengan `id` tersebut |
+
+> **Identitas baris:** setiap baris punya **ID stabil** di kolom bantu `ID` (kolom terakhir sheet, tepat setelah field terakhir). Kolom A tetap `Timestamp` asli (Date) yang ditampilkan `dd-mm-yyyy hh:mm` (GMT+7). `doPost`/`doGet` mencari baris lewat ID ini, bukan nomor baris, sehingga urutan/penyisipan baris tidak menyebabkan salah edit/hapus.
 
 > **Penting:** Operasi `update` **wajib** menyertakan `action:"update"`. Tanpa itu `doPost` menganggapnya `add` dan menambahkan baris duplikat.
 
@@ -111,9 +113,9 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 Semua modul memiliki tombol **Edit** ✏️ yang membuka modal dengan data terisi otomatis.
 
 **Cara kerja:**
-- `editMode` object melacak index yang sedang diedit: `{ warga: null, kas: null, pengumuman: null, kegiatan: null }`
+- `editMode` object melacak ID record yang sedang diedit: `{ warga: null, kas: null, pengumuman: null, kegiatan: null }`
 - Saat tombol Edit diklik, isi form diisi dengan data record, tombol submit berubah menjadi "Perbarui"
-- `submitXxx()` memeriksa `editMode` — jika bukan null, kirim `{ action:'update', rowIndex, ...fields }`; jika null, lakukan insert (`add`)
+- `submitXxx()` memeriksa `editMode` — jika bukan null, kirim `{ action:'update', id, ...fields }`; jika null, lakukan insert (`add`) dengan `id` baru dari `newId()`
 
 **Fungsi edit tersedia:**
 - `editWarga(index)`
@@ -178,19 +180,24 @@ Tombol refresh di:
 
 3. **Data Integrity:**
    - Pastikan sinkronisasi antara kunci properti JSON pada skrip *frontend* selaras dengan urutan indeks `rowData.push()` pada backend Google Apps Script.
-   - Untuk delete: `rowIndex` di frontend adalah 0-based array index. Di Apps Script, konversi ke row spreadsheet: `rowIndex + 2` (row 1 = header, row 2 = data pertama).
+   - Setiap baris punya **ID stabil** di kolom bantu terakhir (header `ID`). Frontend menyimpan `_id` (elemen terakhir hasil `read`) dan mengirim `id` pada update/delete. Backend mencari lewat `findRowById()`, jadi tidak ada konversi nomor baris dan tidak terpengaruh pergeseran index.
+   - Kolom A `Timestamp` ditulis sebagai `Date` asli dengan format angka `dd-mm-yyyy hh:mm`; timezone spreadsheet dipaksa `Asia/Jakarta` (GMT+7) via `ensureSpreadsheetFormat()`.
 
-4. **Offline Resilience:**
+4. **Timestamp Formatting (GMT+7):**
+   - Timezone spreadsheet di-set ke `Asia/Jakarta` dan kolom A diberi nomor format `dd-mm-yyyy hh:mm` untuk semua sheet.
+   - Berlaku otomatis saat `read` maupun saat `add`/`update` (setelah baris ditulis).
+
+5. **Offline Resilience:**
    - Selalu simpan state terbaru ke `localStorage` sebelum meluncurkan perintah `fetch()` ke jaringan external.
    - Implementasikan `localDeletes` tracking untuk mencegah record yang dihapus muncul kembali setelah reload.
 
-5. **Edit Flow Best Practices:**
+6. **Edit Flow Best Practices:**
    - Gunakan `editMode` object untuk membedakan mode tambah vs edit
    - Reset `editMode` ke null saat modal ditutup
    - Ubah teks tombol submit secara dinamis ("Simpan" vs "Perbarui")
    - Ubah judul modal secara dinamis
 
-6. **Delete Flow Best Practices:**
+7. **Delete Flow Best Practices:**
    - SELALU hapus dari Sheets dulu, baru update lokal
    - Gunakan JSONP GET untuk operasi delete (bukan POST)
    - Tampilkan loading state selama proses delete berlangsung

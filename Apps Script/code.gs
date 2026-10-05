@@ -1,28 +1,16 @@
-var CODE_VERSION = "id-v2-2026-10-04";
+var CODE_VERSION = "id-v3-2026-10-04";
 
-// Nilai kolom A (Timestamp) dijadikan ID stabil untuk update/delete.
-// - Baris lama berisi Date  -> "t" + epoch millis (absolut, bebas zona waktu).
-// - Baris baru berisi string ID dari frontend (mis. "t1728...ab12").
-//   toId() untuk string mengembalikannya apa adanya, sehingga cocok dua arah.
-function toId(v) {
-  if (v === null || v === undefined || v === '') return '';
-  if (v instanceof Date) return 't' + v.getTime();
-  return String(v);
-}
+// Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
+var TZ = "Asia/Jakarta";
+var TS_FORMAT = "dd-mm-yyyy hh:mm";
 
-// Cari nomor baris spreadsheet (1-based, termasuk header) berdasarkan ID.
-// Mengembalikan -1 jika tidak ditemukan.
-function findRowById(sheet, id) {
-  var target = toId(id);
-  if (!target) return -1;
-  var last = sheet.getLastRow();
-  if (last < 2) return -1;
-  var ids = sheet.getRange(2, 1, last - 1, 1).getValues();
-  for (var i = 0; i < ids.length; i++) {
-    if (toId(ids[i][0]) === target) return i + 2;
-  }
-  return -1;
-}
+// Jumlah kolom data (termasuk kolom A Timestamp), TIDAK termasuk kolom bantu "ID".
+var EXPECTED_FIELDS = {
+  "Data_Warga": 6,      // A Timestamp + 5 field
+  "Iuran_Kas": 7,       // A Timestamp + 6 field
+  "Pengumuman": 6,      // A Timestamp + 5 field
+  "Kegiatan_Warga": 7   // A Timestamp + 6 field
+};
 
 function doGet(e) {
   var params = (e && e.parameter) ? e.parameter : {};
@@ -49,12 +37,12 @@ function doGet(e) {
   return respond(payload);
 }
 
-// Handle delete request
+// Handle delete request (JSONP / GET)
 function handleDelete(params) {
   var sheetName = params.sheetName;
   var id = params.id;
 
-  if (!sheetName || id === undefined || id === null || id === '') {
+  if (!sheetName || !EXPECTED_FIELDS[sheetName] || id === undefined || id === null || id === '') {
     return { "result": "error", "message": "Parameter tidak valid" };
   }
 
@@ -65,7 +53,7 @@ function handleDelete(params) {
     return { "result": "error", "message": "Sheet tidak ditemukan: " + sheetName };
   }
 
-  var row = findRowById(sheet, id);
+  var row = findRowById(sheet, sheetName, id);
   if (row === -1) {
     return { "result": "error", "message": "ID tidak ditemukan: " + id };
   }
@@ -75,9 +63,83 @@ function handleDelete(params) {
   return { "result": "success", "message": "Row deleted from " + sheetName };
 }
 
+// Pastikan timezone spreadsheet = GMT+7, kolom Timestamp berformat dd-mm-yyyy hh:mm,
+// dan header kolom bantu "ID" sudah ada.
+function ensureSpreadsheetFormat(ss, sheet, name) {
+  if (ss.getSpreadsheetTimeZone() !== TZ) {
+    ss.setSpreadsheetTimeZone(TZ);
+  }
+  var expected = EXPECTED_FIELDS[name];
+  if (expected) {
+    var h = sheet.getRange(1, expected + 1).getValue();
+    if (String(h) !== 'ID') sheet.getRange(1, expected + 1).setValue('ID');
+  }
+  var last = sheet.getLastRow();
+  if (last >= 2) {
+    if (sheet.getRange(2, 1).getNumberFormat() !== TS_FORMAT) {
+      sheet.getRange(2, 1, last - 1, 1).setNumberFormat(TS_FORMAT);
+    }
+  }
+}
+
+// Pastikan setiap baris punya ID stabil di kolom bantu terakhir.
+// Mengembalikan array data rows (tanpa header), dengan ID di elemen terakhir.
+function ensureIds(sheet, name) {
+  var expected = EXPECTED_FIELDS[name];
+  if (!expected) return [];
+
+  var last = sheet.getLastRow();
+  if (last < 1) return [];
+
+  var values = sheet.getDataRange().getValues();
+  var idCol = expected; // 0-based index kolom ID (tepat setelah field terakhir)
+  var header = values[0] || [];
+
+  if (String(header[idCol] === undefined ? '' : header[idCol]) !== 'ID') {
+    sheet.getRange(1, idCol + 1).setValue('ID');
+  }
+
+  var rows = values.slice(1);
+  var ids = [];
+  var changed = false;
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var cur = row[idCol];
+    if (cur === undefined || cur === null || cur === '') {
+      cur = 'id-' + Date.now() + '-' + (i + 1) + '-' + Math.random().toString(36).slice(2, 7);
+      row[idCol] = cur;
+      changed = true;
+    }
+    ids.push([String(cur)]);
+  }
+
+  if (changed && rows.length > 0) {
+    sheet.getRange(2, idCol + 1, rows.length, 1).setValues(ids);
+  }
+
+  return rows;
+}
+
+// Cari nomor baris spreadsheet (1-based, termasuk header) berdasarkan ID stabil.
+// Mengembalikan -1 jika tidak ditemukan.
+function findRowById(sheet, name, id) {
+  var expected = EXPECTED_FIELDS[name];
+  if (!expected || id === undefined || id === null || id === '') return -1;
+
+  var last = sheet.getLastRow();
+  if (last < 2) return -1;
+
+  var ids = sheet.getRange(2, expected + 1, last - 1, 1).getValues();
+  var target = String(id);
+  for (var i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === target) return i + 2;
+  }
+  return -1;
+}
+
 function readAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var tz = ss.getSpreadsheetTimeZone();
   var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga"];
   var formats = {
     "Iuran_Kas": { 1: "yyyy-MM-dd" },
@@ -92,19 +154,15 @@ function readAllSheets() {
       data[name] = [];
       return;
     }
-    var values = sheet.getDataRange().getValues();
-    if (values.length > 0) {
-      values = values.slice(1); // buang baris header (tanpa mengubah array asli)
-    }
+
+    ensureSpreadsheetFormat(ss, sheet, name);
+    var rows = ensureIds(sheet, name);
     var fmt = formats[name] || {};
-    data[name] = values.map(function (row) {
+
+    data[name] = rows.map(function (row) {
       return row.map(function (cell, col) {
-        if (col === 0) return toId(cell); // kolom A = ID stabil
         if (cell instanceof Date && fmt[col]) {
-          var formatted = Utilities.formatDate(cell, tz, fmt[col]);
-          // DEBUG: Log the formatting
-          console.log('DEBUG ' + name + ' col ' + col + ': raw=' + cell + ' (type=' + typeof cell + ') -> formatted=' + formatted);
-          return formatted;
+          return Utilities.formatDate(cell, TZ, fmt[col]);
         }
         return cell;
       });
@@ -129,6 +187,10 @@ function doPost(e) {
 
     var data = JSON.parse(raw);
     var sheetName = data.sheetName;
+    if (!EXPECTED_FIELDS[sheetName]) {
+      return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(sheetName);
 
@@ -136,24 +198,25 @@ function doPost(e) {
       return respond({ "result": "error", "message": "Sheet tidak ditemukan" });
     }
 
+    ensureSpreadsheetFormat(ss, sheet, sheetName);
+
     // UPDATE: perbarui baris yang sudah ada berdasarkan ID stabil (JANGAN tambah baris baru).
     if (data.action === "update") {
-      var updRow = findRowById(sheet, data.id);
+      var updRow = findRowById(sheet, sheetName, data.id);
       if (updRow === -1) {
         return respond({ "result": "error", "message": "ID tidak ditemukan: " + data.id });
       }
-      var existingTs = sheet.getRange(updRow, 1).getValue(); // pertahankan Timestamp/ID asli
-      var updRowData = buildRowData(sheetName, data, existingTs);
-      if (!updRowData) {
-        return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });
-      }
+      var existingTs = sheet.getRange(updRow, 1).getValue(); // pertahankan Timestamp asli
+      var existingId = sheet.getRange(updRow, EXPECTED_FIELDS[sheetName] + 1).getValue(); // pertahankan ID
+      var updRowData = buildRowData(sheetName, data, existingTs, existingId);
       sheet.getRange(updRow, 1, 1, updRowData.length).setValues([updRowData]);
+      sheet.getRange(updRow, 1).setNumberFormat(TS_FORMAT);
       return respond({ "result": "success", "message": "Row updated" });
     }
 
     // DELETE: hapus baris berdasarkan ID stabil.
     if (data.action === "delete") {
-      var delRow = findRowById(sheet, data.id);
+      var delRow = findRowById(sheet, sheetName, data.id);
       if (delRow === -1) {
         return respond({ "result": "error", "message": "ID tidak ditemukan: " + data.id });
       }
@@ -161,23 +224,20 @@ function doPost(e) {
       return respond({ "result": "success", "message": "Row deleted" });
     }
 
-    // ADD: tambahkan baris baru. ID diambil dari data.timestamp bila ada.
-    var addTs = data.timestamp ? data.timestamp : new Date();
-    var rowData = buildRowData(sheetName, data, addTs);
-    if (!rowData) {
-      return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });
-    }
-
+    // ADD: tambahkan baris baru. Timestamp = waktu server (GMT+7), ID dari frontend bila ada.
+    var addId = data.id ? String(data.id) : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+    var rowData = buildRowData(sheetName, data, new Date(), addId);
     sheet.appendRow(rowData);
+    sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);
 
-    return respond({ "result": "success", "id": toId(rowData[0]) });
+    return respond({ "result": "success", "id": addId });
 
   } catch (error) {
     return respond({ "result": "error", "message": error.toString() });
   }
 }
 
-function buildRowData(sheetName, data, timestamp) {
+function buildRowData(sheetName, data, timestamp, id) {
   var rowData = [timestamp || new Date()];
 
   if (sheetName === "Data_Warga") {
@@ -192,6 +252,7 @@ function buildRowData(sheetName, data, timestamp) {
     return null;
   }
 
+  rowData.push(id || ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
   return rowData;
 }
 

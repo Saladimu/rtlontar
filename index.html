@@ -761,12 +761,12 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'id-v2-2026-10-04';
+        const EXPECTED_BACKEND_VERSION = 'id-v3-2026-10-04';
 
-        // ID stabil untuk tiap baris. Dikirim ke Sheets sebagai kolom A (Timestamp)
+        // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
         function newId() {
-            return 't' + Date.now() + Math.random().toString(36).slice(2, 8);
+            return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
         }
 
         function findIndexById(arr, id) {
@@ -1172,7 +1172,7 @@
                 showToast('Data warga diperbarui!', 'success');
             } else {
                 const id = newId();
-                data.timestamp = id;
+                data.id = id;
                 appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
                 saveLocalState();
                 renderWargaTable();
@@ -1207,7 +1207,7 @@
                 showToast('Transaksi kas diperbarui!', 'success');
             } else {
                 const id = newId();
-                data.timestamp = id;
+                data.id = id;
                 appState.kas.push(Object.assign({ _id: id }, data));
                 saveLocalState();
                 renderKasTable();
@@ -1241,7 +1241,7 @@
                 showToast('Pengumuman diperbarui!', 'success');
             } else {
                 const id = newId();
-                data.timestamp = id;
+                data.id = id;
                 appState.pengumuman.push(Object.assign({ _id: id }, data));
                 saveLocalState();
                 renderPengumumanCards();
@@ -1276,7 +1276,7 @@
                 showToast('Agenda kegiatan diperbarui!', 'success');
             } else {
                 const id = newId();
-                data.timestamp = id;
+                data.id = id;
                 appState.kegiatan.push(Object.assign({ _id: id }, data));
                 saveLocalState();
                 renderKegiatanCards();
@@ -1663,7 +1663,16 @@
             }
             const d = res.data;
             appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
-                _id: r[0], nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
+                _id: r[r.length - 1], nama: r[1], nik: r[2], hp: r[3], statusTinggal: r[4], alamat: r[5]
+            })));
+            appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
+                _id: r[r.length - 1], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
+            })));
+            appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
+                _id: r[r.length - 1], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5]
+            })));
+            appState.kegiatan = applyLocalDeletes('kegiatan', (d.Kegiatan_Warga || []).map(r => ({
+                _id: r[r.length - 1], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
                 _id: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]

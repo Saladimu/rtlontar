@@ -21,6 +21,8 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 
 Buat file baru di **Google Sheets**, buat 4 tab/sheet dengan nama exact di bawah ini, lalu salin (*copy*) teks TSV di dalam kotak dan tempel (*paste*) langsung pada sel **A1** di masing-masing tab:
 
+> Kolom **Timestamp** (kolom A) otomatis berformat `dd-mm-yyyy hh:mm` dan mengikuti zona waktu **GMT+7 (Asia/Jakarta)**. Script juga menambahkan satu kolom bantu **`ID`** di ujung kanan secara otomatis (dipakai untuk edit/hapus yang aman, tidak perlu dibuat manual).
+
 ### 1. Tab `Data_Warga`
 ```tsv
 Timestamp	Nama Lengkap	NIK	No HP	Status Tempat Tinggal	Alamat/No Rumah
@@ -68,8 +70,10 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ `doGet` mendukung `action=delete` + JSONP callback
 - ✅ `handleDelete()` untuk hapus baris dengan validasi
 - ✅ `doPost` mendukung `action=add` / `action=update` / `action=delete`
-- ✅ `action=update` memperbarui baris (mempertahankan Timestamp) tanpa menambah baris duplikat
+- ✅ `action=update` memperbarui baris berdasarkan **ID stabil** (mempertahankan Timestamp) tanpa menambah baris duplikat
 - ✅ `action=version` + `CODE_VERSION` untuk memverifikasi Web App sudah redeploy (tombol **Cek Versi Backend**)
+- ✅ Kolom `Timestamp` otomatis berformat `dd-mm-yyyy hh:mm` (GMT+7) untuk semua sheet
+- ✅ Kolom bantu `ID` otomatis dibuat & di-backfill untuk baris lama
 - ✅ Format tanggal otomatis saat read dari Sheets
 </details>
 
