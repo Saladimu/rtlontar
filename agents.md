@@ -6,7 +6,10 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
 
 ## 🏗️ System Architecture Overview
 
-- **Frontend Architecture:** Single Page Application (SPA) berbasis HTML5, diselaraskan dengan Tailwind CSS CDN untuk *utility styling*, dan FontAwesome CDN untuk ikonografi.
+- **Frontend Architecture:** Dua halaman HTML5 statis:
+  - `index.html` — SPA admin (semua modul + integrasi), Tailwind CSS CDN + FontAwesome CDN.
+  - `public.html` — portal publik warga (read-only, hanya Pengumuman & Kegiatan `Publik=Ya`).
+- **Public Portal Config:** `public.html` menerima URL backend **hanya** via query param `?url=<WebAppURL>` (dibuat otomatis oleh `openPublicPortal()` di admin). Tidak ada input URL manual/localStorage di sisi publik; bila `?url=` kosong, `showConfigNeeded()` menampilkan instruksi menghubungi admin.
 - **Backend Architecture:** Serverless Function via Google Apps Script (`doGet` + `doPost` HTTP Endpoints).
 - **Database Layer:** Google Sheets (Relational-like Tabular Spreadsheet Storage).
 - **State Persistence Layer:** Dual Storage Mode:
@@ -16,6 +19,33 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
 - **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
 
 ---
+
+## 🧩 Parameterisasi Identitas RT (`config.js`)
+
+Seluruh teks identitas RT (judul halaman, header, footer, sub-judul, placeholder form) **tidak** lagi hardcoded. Sumber tunggalnya ada di `config.js`:
+
+```js
+window.RT_CONFIG = {
+    appName: 'Sistem RT',
+    rt: '005',
+    rw: '02',
+    kelurahan: 'Tanjung Duren Utara',
+    kecamatan: 'Grogol Petamburan',
+    kota: 'Jakarta Barat',
+    provinsi: 'DKI Jakarta',
+    tahun: new Date().getFullYear(),
+    alamatContoh: 'Jl. Tanjung Duren Utara No. 12',
+    lokasiContoh: 'Lap. Bulutangkis RT'
+};
+```
+
+- `index.html` & `public.html` memuat `<script src="config.js"></script>`; helper `window.RT.apply()` mengisi elemen ber-atribut `data-rt="<key>"` dan `data-rt-placeholder="<key>"`.
+- Teks di dalam HTML tetap ada sebagai **fallback** (bila `config.js` gagal dimuat), lalu ditimpa oleh JS saat halaman dimuat.
+- Derived values (mis. `appNameRt`, `headerName`, `footerAdmin`, `titlePublic`, `wilayah`) dibentuk otomatis dari field dasar; mengubah `rt`/`rw`/`kelurahan`/`kecamatan`/`tahun` cukup di satu tempat.
+- **Jangan** menambahkan teks identitas RT baru langsung di HTML — tambahkan `data-rt` + key di `config.js`.
+- Bila `config.js` ikut di-deploy/GitHub Pages, pastikan file ini ikut diunggah.
+
+
 
 ## 📦 Data Schema & Agent Payload Contracts
 
@@ -232,12 +262,32 @@ Tombol refresh di:
    - Tampilkan loading state selama proses delete berlangsung
    - Handle timeout dan error dengan toast notification
 
+8. **Date Display Formatting:**
+   - Simpan tanggal sebagai string `yyyy-MM-dd` (`fmtDate`) di `appState`.
+   - Untuk **tampilan** (kartu, tabel, dashboard) gunakan `fmtDateDisplay()` → `dd-Mmm-yyyy` (bulan Indonesia).
+   - Untuk **form edit** (`<input type="date">`) prefill dengan nilai mentah `item.tanggal` (`yyyy-MM-dd`), JANGAN yang terformat.
+   - Portal publik memakai `formatDateDDMMMYYYY()` dengan aturan yang sama.
+
+9. **Public Portal Scope:**
+   - `public.html` read-only, sumber data hanya `action=readPublic`.
+   - URL backend hanya dari `?url=` (tanpa input manual/localStorage).
+   - Jangan pernah menambahkan operasi tulis atau mengirim token admin ke `public.html`.
+
+10. **Version Gate:**
+    - Setiap perubahan `code.gs` (termasuk alur token) wajib menaikkan `CODE_VERSION` di `code.gs` **dan** `EXPECTED_BACKEND_VERSION` di `index.html`, lalu redeploy sebagai **New version**.
+
+11. **Identitas RT (No Hardcode):**
+    - Semua teks identitas RT wajib berasal dari `config.js` (`RT_CONFIG`).
+    - Tambah elemen baru dengan atribut `data-rt="<key>"` dan daftarkan key-nya di `config.js`.
+    - Jangan menulis nama RT/kelurahan/kecamatan langsung di `index.html` atau `public.html`.
+
 ---
 
 ## 📂 File Reference
 
 | File | Deskripsi |
 |------|-----------|
+| `config.js` | Konfigurasi identitas RT terpusat (`RT_CONFIG`) untuk `index.html` & `public.html` |
 | `index.html` | Frontend SPA admin |
 | `public.html` | Portal publik warga (memakai `action=readPublic`) |
 | `Apps Script/code.gs` | Backend Apps Script (doGet + doPost + token auth) |
@@ -254,6 +304,9 @@ Tombol refresh di:
 - ✅ **Frontend token** — input Token Admin di panel Integrasi, `saveAdminToken()`, simpan di `localStorage` `rt_admin_token`, `promptForAdminToken()` saat `code:"unauthorized"`
 - ✅ `index.html` `EXPECTED_BACKEND_VERSION` = `publik-v5-2026-10-05`; `CODE_VERSION` di `code.gs` disamakan
 - ✅ Perbaikan bug: blok mapping duplikat di `applySheetsData()` dihapus (mengakibatkan `_id` salah & tanggal edit kosong)
+- ✅ Perbaikan bug: tanggal di kartu Pengumuman/Kegiatan admin kini diformat `dd-Mmm-yyyy` lewat `fmtDateDisplay()` (sebelumnya menampilkan `yyyy-MM-dd` mentah); diterapkan juga ke widget dashboard & tabel Kas
+- ✅ `public.html` disederhanakan: fitur "Atur URL" (input manual + fallback `localStorage` `rt_public_webapp_url`) dihapus; URL hanya dari `?url=`
+- ✅ **Parameterisasi identitas RT** lewat `config.js` (`RT_CONFIG`) + helper `window.RT.apply()`; teks di `index.html`/`public.html` memakai atribut `data-rt` / `data-rt-placeholder`
 
 ## 🔧 Recent Changes (2026-10-03)
 
@@ -289,16 +342,20 @@ Apps Script (code.gs)
         ▼
 Frontend (index.html, public.html)
   - fmtDate() / formatDateDDMMMYYYY(): reformat STRING, TIDAK konversi timezone
+  - fmtDateDisplay() (admin): "yyyy-MM-dd" -> "dd-Mmm-yyyy" untuk tampilan kartu/tabel
   - fmtTime() / formatTimeOnly(): reformat STRING, TIDAK konversi timezone
 ```
 
 ### Fungsi Format (Frontend)
-| Fungsi | Input | Output |
-|--------|-------|--------|
-| `fmtDate(v)` | `"2026-10-03"` | `"2026-10-03"` |
-| `fmtTime(v)` | `"07:00"` | `"07:00"` |
-| `formatDateDDMMMYYYY(v)` | `"2026-10-03"` | `"03-Oct-2026"` |
-| `formatTimeOnly(v)` | `"07:00"` | `"07:00 am"` |
+| Fungsi | File | Input | Output |
+|--------|------|-------|--------|
+| `fmtDate(v)` | index.html | `"2026-10-03"` | `"2026-10-03"` (untuk `<input type="date">`) |
+| `fmtDateDisplay(v)` | index.html | `"2026-10-03"` | `"03-Okt-2026"` (tampilan kartu/tabel) |
+| `fmtTime(v)` | index.html | `"07:00"` | `"07:00"` |
+| `formatDateDDMMMYYYY(v)` | public.html | `"2026-10-03"` | `"03-Okt-2026"` |
+| `formatTimeOnly(v)` | public.html | `"07:00"` | `"07:00 am"` |
+
+> **Penting:** nilai mentah `item.tanggal` (format `yyyy-MM-dd`) HANYA dipakai untuk prefill `<input type="date">` (form edit). Semua **tampilan** tanggal harus melewati `fmtDateDisplay()` (admin) / `formatDateDDMMMYYYY()` (publik), yang memakai singkatan bulan Indonesia (`Okt`, bukan `Oct`).
 
 ### Larangan
 ❌ **JANGAN** lakukan konversi timezone di frontend

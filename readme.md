@@ -82,6 +82,7 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ Format tanggal otomatis saat read dari Sheets
 - ✅ **Token admin** (`ADMIN_TOKEN` di Script Properties) untuk melindungi semua operasi tulis & baca lengkap
 - ✅ **Endpoint `readPublic`** untuk portal publik (hanya Pengumuman & Kegiatan `Publik=Ya`, tanpa data warga/kas)
+- ✅ **Identitas RT terpusat** di `config.js` (ubah info RT di satu tempat)
 </details>
 
 ### Langkah Deployment Web App:
@@ -106,9 +107,32 @@ Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit**
 
 ---
 
+## 🧩 Mengubah Informasi RT
+
+Semua identitas RT (nama, nomor RT/RW, kelurahan, kecamatan, kota, tahun footer, contoh alamat) diatur di satu file: **`config.js`**. Ubah nilai di dalam objek `RT_CONFIG`, lalu simpan — perubahan otomatis berlaku di `index.html` dan `public.html`.
+
+```js
+window.RT_CONFIG = {
+    appName: 'Sistem RT',
+    rt: '005',
+    rw: '02',
+    kelurahan: 'Tanjung Duren Utara',
+    kecamatan: 'Grogol Petamburan',
+    kota: 'Jakarta Barat',
+    provinsi: 'DKI Jakarta',
+    tahun: new Date().getFullYear(),
+    alamatContoh: 'Jl. Tanjung Duren Utara No. 12',
+    lokasiContoh: 'Lap. Bulutangkis RT'
+};
+```
+
+> Pastikan file `config.js` ikut diunggah saat publikasi.
+
+---
+
 ## 🌐 Publikasi ke GitHub Pages
 
-1. Upload file `index.html`, `public.html`, `README.md`, dan `AGENTS.md` ke repository GitHub Anda.
+1. Upload file `index.html`, `public.html`, `config.js`, `README.md`, dan `AGENTS.md` ke repository GitHub Anda.
 2. Buka menu **Settings** > **Pages** di repository.
 3. Pada bagian **Branch**, pilih `main` / `master` lalu klik **Save**.
 4. Website akan aktif secara publik dalam beberapa menit.

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard RT - Tanjung Duren Utara</title>
+    <title data-rt="titleAdmin">Dashboard RT - Tanjung Duren Utara</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -52,6 +52,8 @@
             background: #94a3b8;
         }
     </style>
+    <!-- Konfigurasi identitas RT (ubah di config.js) -->
+    <script src="config.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row">
 
@@ -63,8 +65,8 @@
                     <i class="fa-solid font-bold fa-building-user text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="font-bold text-base leading-tight">Sistem RT 005/RW 02</h1>
-                    <p class="text-xs text-slate-400">Tanjung Duren Utara</p>
+                    <h1 class="font-bold text-base leading-tight" data-rt="appNameRt">Sistem RT 005/RW 02</h1>
+                    <p class="text-xs text-slate-400" data-rt="kelurahan">Tanjung Duren Utara</p>
                 </div>
             </div>
             <button onclick="refreshData()" id="desktop-refresh-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Muat Ulang Data">
@@ -112,7 +114,7 @@
         </nav>
 
         <div class="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-            &copy; 2026 RT Tanjung Duren Utara
+            <span data-rt="footerAdmin">&copy; 2026 RT Tanjung Duren Utara</span>
         </div>
     </aside>
 
@@ -123,7 +125,7 @@
                 <i class="fa-solid fa-building-user text-lg"></i>
             </div>
             <div>
-                <h1 class="font-bold text-sm leading-tight">RT Tanjung Duren Utara</h1>
+                <h1 class="font-bold text-sm leading-tight" data-rt="headerName">RT Tanjung Duren Utara</h1>
                 <p id="mob-status-pill" class="text-[10px] text-amber-300">Mode Local Storage</p>
             </div>
         </div>
@@ -176,8 +178,8 @@
         <section id="panel-dashboard" class="tab-panel space-y-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-slate-800">Ringkasan Sistem RT</h2>
-                    <p class="text-sm text-slate-500">Kelurahan Tanjung Duren Utara, Kec. Grogol Petamburan</p>
+                    <h2 class="text-2xl font-bold text-slate-800" data-rt="dashboardTitle">Ringkasan Sistem RT</h2>
+                    <p class="text-sm text-slate-500" data-rt="wilayah">Kelurahan Tanjung Duren Utara, Kec. Grogol Petamburan</p>
                 </div>
                 <div class="text-xs text-slate-500 bg-white px-3 py-1.5 rounded-lg shadow-sm border border-slate-200 self-start md:self-auto">
                     <i class="fa-regular fa-clock mr-1"></i> Terakhir diperbarui: <span id="last-update-time">Hari ini</span>
@@ -268,7 +270,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800">Data Penduduk Warga RT</h2>
-                    <p class="text-sm text-slate-500">Pendataan warga Tanjung Duren Utara</p>
+                    <p class="text-sm text-slate-500" data-rt="wargaSubtitle">Pendataan warga Tanjung Duren Utara</p>
                 </div>
                 <button onclick="openModal('modal-warga')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-user-plus"></i>
@@ -378,7 +380,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div>
                     <h2 class="text-2xl font-bold text-slate-800">Pengumuman & Imbauan</h2>
-                    <p class="text-sm text-slate-500">Papan informasi resmi RT Tanjung Duren Utara</p>
+                    <p class="text-sm text-slate-500" data-rt="pengumumanSubtitle">Papan informasi resmi RT Tanjung Duren Utara</p>
                 </div>
                 <button onclick="openModal('modal-pengumuman')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-bullhorn"></i>
@@ -613,7 +615,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat / No. Rumah *</label>
-                    <input type="text" id="warga-alamat" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jl. Tanjung Duren Utara No. 12">
+                    <input type="text" id="warga-alamat" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" data-rt-placeholder="alamat" placeholder="Jl. Tanjung Duren Utara No. 12">
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-warga')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl">Batal</button>
@@ -697,7 +699,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Penanggung Jawab / Pengurus *</label>
-                    <input type="text" id="pengumuman-pj" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ketua RT 005">
+                    <input type="text" id="pengumuman-pj" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-purple-500 outline-none" data-rt-placeholder="pj" placeholder="Ketua RT 005">
                 </div>
                 <div class="flex items-center space-x-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
                     <input type="checkbox" id="pengumuman-publik" checked class="w-4 h-4 text-purple-600 rounded focus:ring-purple-500">
@@ -735,7 +737,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Lokasi *</label>
-                    <input type="text" id="kegiatan-lokasi" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none" placeholder="Lap. Bulutangkis RT 005">
+                    <input type="text" id="kegiatan-lokasi" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-rose-500 outline-none" data-rt-placeholder="lokasi" placeholder="Lap. Bulutangkis RT 005">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Penanggung Jawab *</label>
@@ -983,7 +985,7 @@
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">${latestAnn.kategori}</span>
                     </div>
                     <p class="text-xs text-slate-600 line-clamp-2">${latestAnn.isi}</p>
-                    <p class="text-[10px] text-slate-400 mt-2"><i class="fa-regular fa-user mr-1"></i>${latestAnn.pj} &bull; ${latestAnn.tanggal}</p>
+                    <p class="text-[10px] text-slate-400 mt-2"><i class="fa-regular fa-user mr-1"></i>${latestAnn.pj} &bull; ${fmtDateDisplay(latestAnn.tanggal)}</p>
                 `;
             } else {
                 dashAnnContainer.innerText = 'Belum ada pengumuman terbaru.';
@@ -998,7 +1000,7 @@
                         <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-medium"><i class="fa-regular fa-clock mr-1"></i>${nextAct.waktu}</span>
                     </div>
                     <p class="text-xs text-slate-600"><i class="fa-solid fa-location-dot mr-1 text-slate-400"></i>${nextAct.lokasi}</p>
-                    <p class="text-[10px] text-slate-400 mt-2"><i class="fa-regular fa-calendar mr-1"></i>${nextAct.tanggal} &bull; PJ: ${nextAct.pj}</p>
+                    <p class="text-[10px] text-slate-400 mt-2"><i class="fa-regular fa-calendar mr-1"></i>${fmtDateDisplay(nextAct.tanggal)} &bull; PJ: ${nextAct.pj}</p>
                 `;
             } else {
                 dashActContainer.innerText = 'Belum ada agenda kegiatan mendatang.';
@@ -1090,7 +1092,7 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
                 tr.innerHTML = `
-                    <td class="p-4 text-slate-500 text-xs">${item.tanggal}</td>
+                    <td class="p-4 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
                     <td class="p-4 font-medium text-slate-800">${item.nama}</td>
                     <td class="p-4 text-slate-600 text-xs">${item.noRumah || '-'}</td>
                     <td class="p-4">${jenisBadge}</td>
@@ -1127,7 +1129,7 @@
                                 <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${pub ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
                                     <i class="fa-solid ${pub ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${pub ? 'Publik' : 'Disembunyikan'}
                                 </span>
-                                <span class="text-xs text-slate-400">${item.tanggal}</span>
+                                <span class="text-xs text-slate-400">${fmtDateDisplay(item.tanggal)}</span>
                             </div>
                         </div>
                         <h3 class="font-bold text-slate-800 text-base mb-2">${item.judul}</h3>
@@ -1167,7 +1169,7 @@
                             <span class="text-xs px-2 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg"><i class="fa-regular fa-clock mr-1"></i>${item.waktu}</span>
                         </div>
                         <div class="space-y-1.5 text-xs text-slate-600">
-                            <p><i class="fa-regular fa-calendar w-4 text-slate-400"></i> <span class="font-medium">${item.tanggal}</span></p>
+                            <p><i class="fa-regular fa-calendar w-4 text-slate-400"></i> <span class="font-medium">${fmtDateDisplay(item.tanggal)}</span></p>
                             <p><i class="fa-solid fa-location-dot w-4 text-slate-400"></i> ${item.lokasi}</p>
                             <p><i class="fa-solid fa-user-gear w-4 text-slate-400"></i> PJ: ${item.pj}</p>
                             ${item.keterangan ? `<p class="mt-2 text-slate-500 italic bg-slate-50 p-2 rounded-lg">"${item.keterangan}"</p>` : ''}
@@ -1815,6 +1817,19 @@
             const s = String(v);
             const match = s.match(/^\d{4}-\d{2}-\d{2}/);
             return match ? match[0] : s;
+        }
+
+        // Format tanggal untuk tampilan kartu/tabel: "yyyy-MM-dd" -> "dd-Mmm-yyyy" (bulan Indonesia).
+        function fmtDateDisplay(v) {
+            if (v === null || v === undefined || v === '') return '';
+            const s = String(v);
+            const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (m) {
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                const mi = parseInt(m[2], 10) - 1;
+                if (mi >= 0 && mi < 12) return m[3] + '-' + months[mi] + '-' + m[1];
+            }
+            return s;
         }
 
         function fmtTime(v) {
