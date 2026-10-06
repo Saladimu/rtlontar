@@ -17,6 +17,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 - **🔗 Integrasi Google Apps Script:** Pengiriman data form langsung terhubung ke Google Sheets, **sync delete**, dengan *fallback* **localStorage** jika dijalankan tanpa internet/koneksi backend.
 - **⚠️ Delete Persistence:** Sistem melacak record yang dihapus agar tidak muncul kembali setelah reload/sync.
 - **🔐 Token Admin:** Semua operasi tulis (tambah/edit/hapus) dan baca lengkap wajib menyertakan token rahasia (`ADMIN_TOKEN` di Script Properties). Tanpa token, server menolak permintaan sehingga orang yang hanya tahu URL tidak bisa mengubah data.
+- **🛡️ Halaman Admin Terlindungi (Cloudflare Access):** halaman admin (`/` & `/index.html`) hanya bisa dibuka oleh email yang diizinkan melalui login Cloudflare Zero Trust; portal publik tetap terbuka tanpa login. Lihat bagian **Publikasi & Kontrol Akses**.
 - **🕵️ Portal Publik Terisolasi:** `public.html` memakai endpoint `readPublic` yang hanya mengembalikan Pengumuman & Kegiatan ber-`Publik=Ya`; data warga & kas tidak pernah dikirim ke portal publik.
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🔒 ON/OFF Portal Publik:** Toggle di tab Portal Publik untuk mengaktifkan/menonaktifkan akses warga. Saat OFF, server menolak `readPublic` sehingga data benar-benar tidak bisa diakses (bukan sekadar menyembunyikan tautan).
@@ -155,11 +156,51 @@ window.RT_CONFIG = {
 
 ---
 
-## 🌐 Publikasi ke GitHub Pages
+## 🌐 Publikasi & Kontrol Akses (Cloudflare Pages + Access)
 
-1. Upload file `index.html`, `public.html`, `config.js`, `README.md`, dan `AGENTS.md` ke repository GitHub Anda.
-2. Buka menu **Settings** > **Pages** di repository.
-3. Pada bagian **Branch**, pilih `main` / `master` lalu klik **Save**.
-4. Website akan aktif secara publik dalam beberapa menit.
+Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository ini), mis. `https://rtlontar.pages.dev`:
 
-> **Catatan keamanan:** `index.html` adalah halaman **admin** dan tidak memiliki layar login — proteksi ada di token backend. Jangan bagikan link admin (`index.html`) ke warga; bagikan hanya link portal publik (**`public.html`**). Data warga/kas tidak akan terkirim ke portal publik berkat endpoint `readPublic`, dan tanpa token `ADMIN_TOKEN` siapa pun tetap tidak bisa mengubah data. Toggle **Portal Publik ON/OFF** ditegakkan di sisi server, bukan sekadar menyembunyikan tampilan.
+| URL | Konten | Akses |
+|-----|--------|-------|
+| `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
+| `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
+| `/config.js`, `/rt-icon.png` | Aset pendukung | Terbuka (tanpa login) |
+
+> **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Bagikan portal publik hanya lewat `https://rtlontar.pages.dev/public` (tanpa ekstensi `.html`). Wrapper `rt017.pages.dev` mengarah ke URL tersebut.
+
+### Menyiapkan Cloudflare Zero Trust (sekali saja)
+
+1. Buka `one.dash.cloudflare.com`, buat *team name* bila belum ada.
+2. **Settings → Authentication → Login methods**: aktifkan **One-time PIN** (kode dikirim ke email, tanpa setup) dan/atau **Google**.
+3. **Access → Applications → Add an application → Self-hosted**, buat **dua** aplikasi:
+
+   **a. `RT Admin`** (melindungi admin)
+   - Public hostname: `rtlontar.pages.dev` — Path `/`
+   - Tambah hostname kedua: `rtlontar.pages.dev` — Path `/index.html`
+   - Policy: Action **Allow**, Include → **Emails** → email admin. Session duration mis. `24 hours`.
+
+   **b. `RT Public Assets`** (mengecualikan aset publik)
+   - Public hostname: `rtlontar.pages.dev` — Path `/public`
+   - Tambah hostname: Path `/public.html`, `/config.js`, `/rt-icon.png`
+   - Policy: Action **Bypass**, Include → **Everyone**.
+
+4. **Simpan.** Perubahan berlaku langsung, tanpa redeploy.
+
+> **Penting:** Cloudflare Pages mengalihkan `/public.html` → `/public` (HTTP 308). Karena itu path **`/public`** wajib ikut di-bypass, bukan hanya `/public.html`. Namun **jangan** bypass path `/` atau `/index.html`.
+
+### Menambah pengguna yang boleh mengakses admin
+
+1. Zero Trust → **Access → Applications → `RT Admin` → Edit** (bagian *Policies*).
+2. Buka policy **RT Admins** → **Include → Add a rule**.
+3. Pilih selector:
+   - **Emails** → tulis email pengguna (beberapa email dipisah koma) — harus sama dengan email yang dipakai untuk login.
+   - **Emails ending in** → `@domain.com` untuk seluruh domain (mis. Google Workspace).
+   - **Access Groups** → grup reusable yang dibuat di **Access → Groups**.
+4. **Save** — akses berlaku seketika.
+5. Pengguna membuka `https://rtlontar.pages.dev/` di jendela *incognito* → masukkan email → masukkan kode PIN (atau login Google) → dashboard admin terbuka.
+
+**Mencabut akses:** hapus email dari policy, atau Zero Trust → **Access → Active sessions** → *Revoke* untuk sesi yang masih aktif.
+
+> **Jika `public.html` kembali meminta login:** pastikan path **`/public`** sudah terdaftar di aplikasi *Bypass* **`RT Public Assets`**.
+
+> **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server.

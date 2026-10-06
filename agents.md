@@ -334,6 +334,7 @@ Tombol refresh di:
 - ✅ **`CODE_VERSION`** di `code.gs` = `publik-v8-2026-10-06` (wajib redeploy sebagai **New version**, lalu klik **Cek Versi Backend**).
 - ✅ **Perbaikan scroll modal** — container modal `index.html` (keempat modal) diubah ke `items-start ... overflow-y-auto` + panel `my-auto`, sehingga form tinggi (Warga setelah penambahan field) bisa di-scroll di dalam modal dan tidak lagi menggeser halaman di belakang / terpotong di atas.
 - ✅ **Quick edit + zebra baris** — baris `Data_Warga` & `Iuran_Kas` kini bisa diklik/di-tap langsung untuk membuka modal edit (`tr.onclick = () => editWarga/editKas(originalIndex)`, `cursor-pointer`); tombol Edit/Hapus memakai `event.stopPropagation()` agar tidak memicu edit baris. Baris diberi warna selang-seling **putih / hijau** (`bg-white` / `bg-emerald-50`, hover `bg-emerald-100`) untuk keterbacaan.
+- ✅ **Kontrol akses admin (Cloudflare Zero Trust / Access)** — halaman admin (`/` & `/index.html`) diproteksi login Cloudflare Access (allowlist email); portal publik di `/public` + aset `/config.js` & `/rt-icon.png` dibuka via aplikasi **Bypass** (`Everyone`). GitHub Pages dimatikan agar admin tidak bocor lewat `saladimu.github.io`. Panduan lengkap (setup + cara menambah/mencabut pengguna) ada di `readme.md` bagian **Publikasi & Kontrol Akses**.
 
 ## 🔧 Recent Changes (2026-10-05)
 
