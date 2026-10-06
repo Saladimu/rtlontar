@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v8-2026-10-06";
+var CODE_VERSION = "publik-v9-2026-10-06";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 var TZ = "Asia/Jakarta";
@@ -9,7 +9,8 @@ var EXPECTED_FIELDS = {
   "Data_Warga": 13,     // A Timestamp + 12 field (Nomor KK, Status, Jenis Kelamin, Pendidikan, Pekerjaan, dst.)
   "Iuran_Kas": 7,       // A Timestamp + 6 field
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
-  "Kegiatan_Warga": 8   // A Timestamp + 7 field (termasuk Publik)
+  "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
+  "Pengajuan_Surat": 9  // A Timestamp + 8 field (termasuk Status Pengurusan & Catatan Pengurus)
 };
 
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
@@ -17,7 +18,8 @@ var DESIRED_HEADERS = {
   "Data_Warga": ["Timestamp", "Nomor KK", "Nama Lengkap", "Status", "Jenis Kelamin", "NIK", "Tempat Lahir", "Tanggal Lahir", "Pendidikan", "Pekerjaan", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "ID"],
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
-  "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"]
+  "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
+  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "Catatan Pengurus", "ID"]
 };
 
 // Nilai default kolom Publik untuk baris lama saat migrasi.
@@ -108,6 +110,9 @@ function doGet(e) {
   } else if (params.action === 'readPublic') {
     // Baca publik: hanya Pengumuman & Kegiatan ber-Publik "Ya", tanpa token.
     payload = readPublicSheets();
+  } else if (params.action === 'checkSurat') {
+    // Cek status pengajuan surat oleh warga: cocokkan NIK + No. HP. Tanpa token.
+    payload = handleCheckSurat(params);
   } else if (params.action === 'version') {
     payload = { "result": "success", "version": CODE_VERSION };
   } else {
@@ -315,19 +320,37 @@ function findRowById(sheet, name, id) {
   return -1;
 }
 
+// Ambil sheet berdasarkan nama; bila belum ada tetapi termasuk skema yang
+// dikenal (DESIRED_HEADERS), buat otomatis beserta baris header-nya.
+// Mengembalikan null untuk nama sheet yang tidak dikenal.
+function getOrCreateSheet(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (sheet) return sheet;
+
+  var headers = DESIRED_HEADERS[name];
+  if (!headers) return null;
+
+  if (typeof ss.insertSheet !== 'function') return null; // lingkungan tanpa insertSheet (mis. uji)
+
+  sheet = ss.insertSheet(name);
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  return sheet;
+}
+
 function readAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga"];
+  var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga", "Pengajuan_Surat"];
   var formats = {
     "Data_Warga": { 7: "yyyy-MM-dd" },
     "Iuran_Kas": { 1: "yyyy-MM-dd" },
     "Pengumuman": { 1: "yyyy-MM-dd" },
-    "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" }
+    "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" },
+    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm" }
   };
   var data = {};
 
   names.forEach(function (name) {
-    var sheet = ss.getSheetByName(name);
+    var sheet = getOrCreateSheet(ss, name);
     if (!sheet) {
       data[name] = [];
       return;
@@ -352,7 +375,8 @@ function readAllSheets() {
 
 // Baca hanya data yang boleh tampil di portal publik:
 // Pengumuman & Kegiatan_Warga yang kolom Publik-nya "Ya".
-// Data_Warga & Iuran_Kas TIDAK pernah dikembalikan, sehingga data privat tidak bocor.
+// Data_Warga, Iuran_Kas, & Pengajuan_Surat TIDAK pernah dikembalikan,
+// sehingga data privat tidak bocor.
 // Bila portal dinonaktifkan admin, tidak ada data yang dikembalikan.
 function readPublicSheets() {
   if (!isPortalEnabled()) {
@@ -402,6 +426,11 @@ function doPost(e) {
       return respond({ "result": "success", "portalEnabled": enabled });
     }
 
+    // Aksi publik: kirim pengajuan surat (TANPA token, hanya menambah baris baru).
+    if (data.action === 'submitSurat') {
+      return respond(handleSubmitSurat(data));
+    }
+
     var sheetName = data.sheetName;
     if (!EXPECTED_FIELDS[sheetName]) {
       return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });
@@ -413,7 +442,7 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName(sheetName);
+    var sheet = getOrCreateSheet(ss, sheetName);
 
     if (!sheet) {
       return respond({ "result": "error", "message": "Sheet tidak ditemukan" });
@@ -473,12 +502,277 @@ function buildRowData(sheetName, data, timestamp, id) {
     rowData.push(data.tanggal, data.judul, data.isi, data.kategori, data.pj, normalizePublik(data.publik));
   } else if (sheetName === "Kegiatan_Warga") {
     rowData.push(data.namaKegiatan, data.tanggal, data.waktu, data.lokasi, data.pj, data.keterangan, normalizePublik(data.publik));
+  } else if (sheetName === "Pengajuan_Surat") {
+    rowData.push(
+      data.nama, data.nik, data.noHp, data.alamat,
+      data.jenisSurat, data.keperluan,
+      data.status || "Pending", data.catatan || ""
+    );
   } else {
     return null;
   }
 
   rowData.push(id || ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
   return rowData;
+}
+
+// ===== Pengajuan Surat (intake publik) =====================================
+
+// Batas ringan anti-abuse: maksimum per-NIK & global per jam.
+var SURAT_RATE_WINDOW_MS = 60 * 60 * 1000;
+var SURAT_RATE_MAX_PER_NIK = 5;
+var SURAT_RATE_MAX_GLOBAL = 60;
+
+// Rapikan string: paksa ke String, buang spasi berlebih, batasi panjang.
+function cleanStr(value, maxLen) {
+  var s = (value === undefined || value === null) ? '' : String(value);
+  s = s.replace(/\s+/g, ' ').trim();
+  if (maxLen && s.length > maxLen) s = s.slice(0, maxLen);
+  return s;
+}
+
+function suratError(code, message) {
+  return { "result": "error", "code": code, "version": CODE_VERSION, "message": message };
+}
+
+// Terima ref dari warga hanya bila formatnya aman, agar tidak merusak kolom ID.
+function sanitizeSuratRef(value) {
+  var s = cleanStr(value, 40);
+  if (!s) return null;
+  return /^[A-Za-z0-9-]{6,40}$/.test(s) ? s : null;
+}
+
+function randomCode4() {
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var out = '';
+  for (var i = 0; i < 4; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
+  return out;
+}
+
+// Rate limit sederhana berbasis Script Property (tanpa IP, jadi per-NIK + global).
+function checkAndRecordSuratRate(nik) {
+  var props = PropertiesService.getScriptProperties();
+  var now = Date.now();
+  var data;
+  try {
+    var raw = props.getProperty('SURAT_RATE');
+    data = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    data = {};
+  }
+  if (!data || typeof data !== 'object') data = {};
+
+  function prune(arr) {
+    var out = [];
+    for (var i = 0; i < (arr || []).length; i++) {
+      if (now - arr[i] < SURAT_RATE_WINDOW_MS) out.push(arr[i]);
+    }
+    return out;
+  }
+
+  var global = prune(data._global);
+  if (global.length >= SURAT_RATE_MAX_GLOBAL) return false;
+
+  var key = 'nik:' + nik;
+  var list = prune(data[key]);
+  if (list.length >= SURAT_RATE_MAX_PER_NIK) return false;
+
+  list.push(now);
+  global.push(now);
+  data[key] = list;
+  data._global = global;
+  props.setProperty('SURAT_RATE', JSON.stringify(data));
+  return true;
+}
+
+// Kirim email notifikasi ke admin. TIDAK pernah menggagalkan penyimpanan.
+function notifyAdminNewSurat(r) {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var to = props.getProperty('ADMIN_EMAIL');
+    if (!to) return;
+    var ts = Utilities.formatDate(new Date(), TZ, 'dd-mm-yyyy HH:mm');
+    var subject = '[RT] Pengajuan Surat Baru: ' + r.jenisSurat + ' - ' + r.nama;
+    var lines = [
+      'Pengajuan surat baru masuk melalui Portal Publik.',
+      '',
+      'Waktu       : ' + ts,
+      'Nama        : ' + r.nama,
+      'NIK         : ' + r.nik,
+      'No. HP/WA   : ' + r.noHp,
+      'Alamat      : ' + r.alamat,
+      'Jenis Surat : ' + r.jenisSurat,
+      'Keperluan   : ' + r.keperluan,
+      '',
+      'Buka panel "Pengajuan Surat" di dashboard admin untuk memproses.'
+    ];
+    MailApp.sendEmail({
+      to: to,
+      subject: subject,
+      body: lines.join('\n')
+    });
+  } catch (err) {
+    // sengaja diabaikan: kegagalan email tidak boleh membatalkan pengajuan
+    console.log('notifyAdminNewSurat gagal: ' + err);
+  }
+}
+
+// Format nilai Timestamp sheet menjadi "dd-mm-yyyy HH:mm" untuk respons publik.
+function formatTimestampCell(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd-mm-yyyy HH:mm');
+  return (v === undefined || v === null) ? '' : String(v);
+}
+
+// Rate limit khusus pencarian status surat (anti-enumerasi).
+var SURAT_CHECK_MAX_PER_KEY = 30;
+var SURAT_CHECK_MAX_GLOBAL = 300;
+
+function checkAndRecordSuratCheckRate(key) {
+  var props = PropertiesService.getScriptProperties();
+  var now = Date.now();
+  var data;
+  try {
+    var raw = props.getProperty('SURAT_CHECK_RATE');
+    data = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    data = {};
+  }
+  if (!data || typeof data !== 'object') data = {};
+
+  function prune(arr) {
+    var out = [];
+    for (var i = 0; i < (arr || []).length; i++) {
+      if (now - arr[i] < SURAT_RATE_WINDOW_MS) out.push(arr[i]);
+    }
+    return out;
+  }
+
+  var global = prune(data._global);
+  if (global.length >= SURAT_CHECK_MAX_GLOBAL) return false;
+
+  var k = 'key:' + key;
+  var list = prune(data[k]);
+  if (list.length >= SURAT_CHECK_MAX_PER_KEY) return false;
+
+  list.push(now);
+  global.push(now);
+  data[k] = list;
+  data._global = global;
+  props.setProperty('SURAT_CHECK_RATE', JSON.stringify(data));
+  return true;
+}
+
+// Handler aksi publik `checkSurat`: warga cek status dengan NIK + No. HP.
+// Hanya mengembalikan pengajuan yang NIK & HP-nya SAMA PERSIS dengan input.
+function handleCheckSurat(params) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+
+  var nik = cleanStr(params.nik, 40).replace(/\D/g, '');
+  var hpRaw = (params.hp !== undefined && params.hp !== null) ? params.hp : params.noHp;
+  var hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
+
+  if (!/^\d{16}$/.test(nik) || hp.length < 9) {
+    return suratError('invalid', 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.');
+  }
+
+  if (!checkAndRecordSuratCheckRate(nik + '|' + hp)) {
+    return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Pengajuan_Surat');
+  var results = [];
+
+  if (sheet) {
+    ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
+    var rows = ensureIds(sheet, 'Pengajuan_Surat');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
+      var rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
+      if (rNik === nik && rHp === hp) {
+        results.push({
+          "ref": String(row[9] === undefined || row[9] === null ? '' : row[9]),
+          "tanggal": formatTimestampCell(row[0]),
+          "jenisSurat": cleanStr(row[5], 120),
+          "status": cleanStr(row[7], 20) || 'Pending',
+          "catatan": cleanStr(row[8], 500)
+        });
+      }
+    }
+  }
+
+  results.reverse(); // terbaru lebih dahulu
+
+  return { "result": "success", "version": CODE_VERSION, "count": results.length, "data": results };
+}
+
+// Handler aksi publik `submitSurat`: validasi, rate limit, simpan, notifikasi.
+function handleSubmitSurat(data) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+
+  // Honeypot: field tersembunyi yang hanya diisi bot. Pura-pura sukses.
+  if (cleanStr(data.website, 100)) {
+    return { "result": "success", "id": 'ok', "message": 'Pengajuan terkirim.' };
+  }
+
+  var nama = cleanStr(data.nama, 100);
+  var nik = cleanStr(data.nik, 40).replace(/\D/g, '');
+  var noHpRaw = cleanStr(data.noHp, 30);
+  var noHp = noHpRaw.replace(/[^\d+]/g, '');
+  var alamat = cleanStr(data.alamat, 200);
+  var jenisSurat = cleanStr(data.jenisSurat, 120);
+  var keperluan = cleanStr(data.keperluan, 800);
+
+  if (nama.length < 3) return suratError('invalid', 'Nama lengkap wajib diisi (minimal 3 karakter).');
+  if (!/^\d{16}$/.test(nik)) return suratError('invalid', 'NIK harus 16 digit angka.');
+  var hpDigits = noHp.replace(/\D/g, '');
+  if (hpDigits.length < 9 || hpDigits.length > 15) {
+    return suratError('invalid', 'Nomor HP/WhatsApp tidak valid.');
+  }
+  if (!alamat) return suratError('invalid', 'Alamat / No. Rumah wajib diisi.');
+  if (!jenisSurat) return suratError('invalid', 'Jenis Surat wajib dipilih.');
+  if (keperluan.length < 3) return suratError('invalid', 'Keperluan / alasan pengajuan wajib diisi (minimal 3 karakter).');
+
+  if (!checkAndRecordSuratRate(nik)) {
+    return suratError('rate_limited', 'Terlalu banyak pengajuan. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrCreateSheet(ss, 'Pengajuan_Surat');
+  if (!sheet) return suratError('server', 'Sheet Pengajuan_Surat tidak tersedia.');
+
+  ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
+
+  // ID: pakai ref warga bila aman & belum terpakai; jika tidak, buat otomatis.
+  var id = sanitizeSuratRef(data.ref);
+  if (!id || findRowById(sheet, 'Pengajuan_Surat', id) !== -1) {
+    var suffix = Utilities.formatDate(new Date(), TZ, 'yyMMdd');
+    var tries = 0;
+    do {
+      id = 'SRT-' + suffix + '-' + randomCode4();
+      tries++;
+    } while (findRowById(sheet, 'Pengajuan_Surat', id) !== -1 && tries < 6);
+  }
+
+  var rowData = buildRowData('Pengajuan_Surat', {
+    nama: nama, nik: nik, noHp: noHp, alamat: alamat,
+    jenisSurat: jenisSurat, keperluan: keperluan,
+    status: 'Pending', catatan: ''
+  }, new Date(), id);
+  sheet.appendRow(rowData);
+  sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);
+
+  notifyAdminNewSurat({
+    nama: nama, nik: nik, noHp: noHp, alamat: alamat,
+    jenisSurat: jenisSurat, keperluan: keperluan
+  });
+
+  return { "result": "success", "id": id, "message": 'Pengajuan surat berhasil dikirim.' };
 }
 
 function respond(obj) {

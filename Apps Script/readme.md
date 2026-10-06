@@ -12,12 +12,14 @@ File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode
    - `Iuran_Kas`
    - `Pengumuman`
    - `Kegiatan_Warga`
+   - (Tab `Pengajuan_Surat` **dibuat otomatis** oleh script saat pertama dibaca/ditulis — opsional dibuat manual)
 3. Buka **Ekstensi > Apps Script** di Google Sheets
 4. Salin isi `code.gs` ke editor Apps Script
 5. Buka **Project Settings > Script Properties**, tambahkan properti:
    - **Nama:** `ADMIN_TOKEN`
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
+   - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan.
 
 ---
 
@@ -28,7 +30,7 @@ Karena Web App di-deploy sebagai **Anyone**, tanpa proteksi siapa pun yang tahu 
 - Semua operasi **tulis** (`add` / `update` / `delete`) dan **baca lengkap** (`action=read`) wajib menyertakan parameter/field `token`.
 - Token disimpan di **Script Properties** dengan key `ADMIN_TOKEN` dan **tidak** ditulis di dalam kode.
 - Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi otomatis **ditolak** (`code:"unauthorized"`).
-- Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga` dan `Iuran_Kas` tidak pernah dikirim keluar.
+- Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga`, `Iuran_Kas`, dan `Pengajuan_Surat` tidak pernah dikirim keluar.
 
 ### ON/OFF Portal Publik
 
@@ -97,6 +99,27 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | Keterangan | String | Membawa cangkul dan sapu lidi |
 | Publik | String | Ya / Tidak (tampil di Portal Publik) |
 
+### 5. Tab `Pengajuan_Surat`
+
+Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dibuat otomatis** oleh script beserta header-nya bila belum ada — tidak perlu dibuat manual. Data tab ini bersifat **privat**: tidak pernah ikut pada `action=readPublic`.
+
+| Kolom | Tipe | Contoh |
+|-------|------|--------|
+| Timestamp | DateTime | 2026-10-03 10:30:00 |
+| Nama Lengkap Pemohon | String | Budi Santoso |
+| NIK | String | 3173012304567890 |
+| No. HP / WhatsApp | String | 081234567890 |
+| Alamat / No. Rumah | String | Jl. Tanjung Duren No. 12 |
+| Jenis Surat | String | Surat Pengantar KTP-el (lihat `jenisSurat` di `config.js`) |
+| Keperluan / Alasan Pengajuan | String | Perpanjang KTP-el |
+| Status Pengurusan | String | Pending / Diproses / Selesai / Ditolak |
+| Catatan Pengurus | String | (opsional, diisi pengurus) |
+
+> Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan.
+>
+> Saat dibaca (`readAllSheets`), kolom `Timestamp` tab ini diformat menjadi `yyyy-MM-dd HH:mm` (GMT+7) sebelum dikirim ke frontend, sehingga panel admin dapat menampilkannya sebagai `dd-Mmm-yyyy HH:mm`.
+
+
 ---
 
 ## 🚀 Deployment Web App
@@ -131,6 +154,7 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 |--------|-----------|-----------|
 | `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
+| `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
 | (default) | — | Health check: `{result:"success", message:"Web App aktif"}` |
@@ -145,6 +169,12 @@ GET https://script.google.com/macros/s/XXXX/exec?action=read&token=TOKEN_RAHASIA
 GET https://script.google.com/macros/s/XXXX/exec?action=readPublic&callback=myCallback
 ```
 
+**Contoh Cek Status Pengajuan Surat (warga):**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=checkSurat&nik=3173012304567890&hp=081234567890&callback=myCallback
+```
+Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tanggal":"06-10-2026 13:00","jenisSurat":"Surat Pengantar KTP-el","status":"Diproses","catatan":"Menunggu tanda tangan"}]}`
+
 **Contoh Delete:**
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Warga&id=id-1728...&token=TOKEN_RAHASIA&callback=myCallback
@@ -158,7 +188,7 @@ GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Wa
 
 Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request).
 
-`action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris. **Semua POST wajib menyertakan `token` admin** (field `token` di body).
+`action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris. **Semua POST admin wajib menyertakan `token` admin** (field `token` di body) — kecuali aksi publik `submitSurat` (lihat di bawah).
 
 | Sheet | Payload Fields |
 |-------|----------------|
@@ -166,12 +196,16 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
+| `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `catatan` |
 
 **Aksi khusus (bukan per-sheet):**
 
 | Aksi | Payload | Deskripsi |
 |------|---------|-----------|
 | `setPortalStatus` | `{action:"setPortalStatus", enabled:true/false, token:T}` | Menyalakan/mematikan portal publik. Butuh token admin. Disimpan di Script Property `PUBLIC_PORTAL_ENABLED` |
+| `submitSurat` | `{action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan, ref?, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Pengajuan_Surat`. Server memaksa `Status="Pending"`, mengisi Timestamp & ID. NIK wajib 16 digit; `website` adalah honeypot; dibatasi ≤ 5 pengajuan/jam per NIK (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF. Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", id}` |
+
+> **Catatan `submitSurat`:** dipakai halaman `public.html`. ID bisa berasal dari `ref` yang dikirim warga (bila formatnya aman & belum terpakai), atau dibuat otomatis dengan format `SRT-yyMMdd-XXXX`.
 
 **Contoh payload (Tambah Warga):**
 ```json
@@ -214,6 +248,22 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 }
 ```
 
+**Contoh payload (Submit Pengajuan Surat — publik, tanpa token):**
+```json
+{
+  "action": "submitSurat",
+  "nama": "Budi Santoso",
+  "nik": "3173012304567890",
+  "noHp": "081234567890",
+  "alamat": "Jl. Tanjung Duren No. 12",
+  "jenisSurat": "Surat Pengantar KTP-el",
+  "keperluan": "Perpanjang KTP-el",
+  "ref": "SRT-261006-AB12",
+  "website": ""
+}
+```
+Respons: `{"result":"success","id":"SRT-261006-AB12","message":"Pengajuan surat berhasil dikirim."}`
+
 **Response sukses:**
 ```json
 { "result": "success", "id": "id-1728031200000-ab12cd" }
@@ -254,11 +304,17 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 |--------|-----------|
 | `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `readPublicSheets()`, `handleDelete()`, atau `version`. `read`/`delete` diverifikasi token |
 | `handleDelete(params)` | Hapus baris berdasarkan `id` (kolom bantu ID) via `findRowById()`; verifikasi token |
-| `readAllSheets()` | Baca 4 sheet lengkap, pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, data}` |
-| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`; ditolak (`portal_disabled`) bila portal OFF |
+| `readAllSheets()` | Baca 5 sheet lengkap (termasuk `Pengajuan_Surat`), pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, data}` |
+| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`/`Pengajuan_Surat`; ditolak (`portal_disabled`) bila portal OFF |
+| `getOrCreateSheet(ss, name)` | Ambil sheet; **buat otomatis** (beserta header) bila belum ada & termasuk skema dikenal |
 | `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus`; wajib token |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` (token) + `submitSurat` (publik) |
+| `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending`, email admin |
+| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, catatan}` |
+| `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
+| `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |
+| `notifyAdminNewSurat(row)` | Kirim email notifikasi ke `ADMIN_EMAIL` (bila diatur); gagal email tidak membatalkan penyimpanan |
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
 | `ensureSpreadsheetFormat(ss, sheet, name)` | Set timezone Asia/Jakarta + format `dd-mm-yyyy hh:mm` + header ID |

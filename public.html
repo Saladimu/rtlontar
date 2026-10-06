@@ -162,6 +162,86 @@
             </div>
         </section>
 
+        <!-- ================= PENGAJUAN SURAT ================= -->
+        <section id="surat-section">
+            <div class="flex items-center space-x-2 mb-4">
+                <i class="fa-solid fa-envelope-open-text text-emerald-600 dark:text-emerald-400 text-xl"></i>
+                <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Layanan Surat</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Form pengajuan -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-1">Ajukan Surat Baru</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Isi data dengan benar. Setelah terkirim, simpan nomor pengajuan untuk ditanyakan kepada pengurus.</p>
+                    <form id="surat-form" class="space-y-3" onsubmit="return submitSuratWarga(event)">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
+                            <input id="surat-nama" type="text" required maxlength="100" autocomplete="name"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
+                            <input id="surat-nik" type="text" required inputmode="numeric" maxlength="16" autocomplete="off"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
+                            <input id="surat-hp" type="tel" required inputmode="tel" maxlength="20" autocomplete="tel"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Alamat / No. Rumah</label>
+                            <input id="surat-alamat" type="text" required maxlength="200"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jenis Surat</label>
+                            <select id="surat-jenis" required
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                <option value="">-- Pilih jenis surat --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Keperluan / Alasan Pengajuan</label>
+                            <textarea id="surat-keperluan" required maxlength="800" rows="3"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"></textarea>
+                        </div>
+                        <!-- Honeypot anti-bot: disembunyikan dari manusia -->
+                        <input id="surat-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">
+                        <button id="surat-submit-btn" type="submit"
+                            class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim Pengajuan
+                        </button>
+                    </form>
+                    <div id="surat-result" class="hidden mt-3"></div>
+                </div>
+
+                <!-- Cek status -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+                    <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-1">Cek Status Pengajuan</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Masukkan NIK dan No. HP/WhatsApp yang sama seperti saat mengajukan.</p>
+                    <form id="surat-check-form" class="space-y-3" onsubmit="return cekStatusSurat(event)">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
+                            <input id="cek-nik" type="text" required inputmode="numeric" maxlength="16" autocomplete="off"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
+                            <input id="cek-hp" type="tel" required inputmode="tel" maxlength="20" autocomplete="tel"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <button id="cek-submit-btn" type="submit"
+                            class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Status
+                        </button>
+                    </form>
+                    <div id="cek-result" class="mt-3"></div>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer class="text-center text-xs text-slate-400 dark:text-slate-500 py-4 border-t border-slate-200 dark:border-slate-700">
             <p data-rt="footerPublic">&copy; 2026 RT 017 / RW 06 Tanjung Duren Utara - Portal Publik</p>
@@ -194,7 +274,7 @@
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '3';
+        const EXPECTED_CONFIG_VERSION = '4';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -280,6 +360,7 @@
                 if (enforceConfigVersion()) return;
                 WEB_APP_URL = getWebAppUrl();
                 updateLastUpdated();
+                initSuratForm();
 
                 if (WEB_APP_URL) {
                     showPublicLoading();
@@ -512,6 +593,194 @@
             return map[kategori] || 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
         }
 
+        // ===== Pengajuan Surat (portal publik) =====
+
+        // Escape nilai dari server sebelum disisipkan ke innerHTML (anti-XSS).
+        function escapeHtml(s) {
+            return String(s === undefined || s === null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function suratStatusBadge(status) {
+            const map = {
+                'Pending': 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+                'Diproses': 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+                'Selesai': 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300',
+                'Ditolak': 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300'
+            };
+            return map[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
+        }
+
+        // Nomor pengajuan (referensi) yang dibuat di sisi warga; dipakai sebagai ID baris.
+        function makeSuratRef() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let s = '';
+            for (let i = 0; i < 4; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+            const d = new Date();
+            const yy = String(d.getFullYear()).slice(2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            return 'SRT-' + yy + mm + dd + '-' + s;
+        }
+
+        // Isi dropdown "Jenis Surat" dari RT_CONFIG.jenisSurat (config.js).
+        function initSuratForm() {
+            const sel = document.getElementById('surat-jenis');
+            if (!sel) return;
+            const list = (window.RT_CONFIG && Array.isArray(window.RT_CONFIG.jenisSurat)) ? window.RT_CONFIG.jenisSurat : [];
+            let html = '<option value="">-- Pilih jenis surat --</option>';
+            for (let i = 0; i < list.length; i++) {
+                const v = escapeHtml(list[i]);
+                html += '<option value="' + v + '">' + v + '</option>';
+            }
+            sel.innerHTML = html;
+        }
+
+        function hideSuratSection() {
+            const s = document.getElementById('surat-section');
+            if (s) s.classList.add('hidden');
+        }
+
+        function setSuratBusy(busy) {
+            const btn = document.getElementById('surat-submit-btn');
+            if (!btn) return;
+            btn.disabled = busy;
+            btn.innerHTML = busy
+                ? '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mengirim...'
+                : '<i class="fa-solid fa-paper-plane mr-1"></i> Kirim Pengajuan';
+        }
+
+        function showSuratMessage(kind, html) {
+            const box = document.getElementById('surat-result');
+            if (!box) return;
+            const styles = {
+                success: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200',
+                error: 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200',
+                info: 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
+            };
+            box.className = 'mt-3 border rounded-xl p-3 text-sm ' + (styles[kind] || styles.info);
+            box.innerHTML = html;
+            box.classList.remove('hidden');
+        }
+
+        // Kirim pengajuan via POST no-cors (respons opaque, jadi optimistis).
+        function submitSuratWarga(e) {
+            e.preventDefault();
+            if (!WEB_APP_URL) {
+                showSuratMessage('error', 'Portal belum dikonfigurasi. Hubungi admin RT.');
+                return false;
+            }
+
+            const nama = (document.getElementById('surat-nama').value || '').trim();
+            const nik = (document.getElementById('surat-nik').value || '').replace(/\D/g, '');
+            const noHp = (document.getElementById('surat-hp').value || '').trim();
+            const alamat = (document.getElementById('surat-alamat').value || '').trim();
+            const jenisSurat = (document.getElementById('surat-jenis').value || '').trim();
+            const keperluan = (document.getElementById('surat-keperluan').value || '').trim();
+            const website = (document.getElementById('surat-website').value || '').trim();
+
+            if (nik.length !== 16) { showSuratMessage('error', 'NIK harus 16 digit angka.'); return false; }
+            if (noHp.replace(/\D/g, '').length < 9) { showSuratMessage('error', 'Nomor HP/WhatsApp tidak valid.'); return false; }
+            if (!jenisSurat) { showSuratMessage('error', 'Pilih jenis surat terlebih dahulu.'); return false; }
+            if (keperluan.length < 3) { showSuratMessage('error', 'Isi keperluan/alasan pengajuan.'); return false; }
+
+            const ref = makeSuratRef();
+            const payload = {
+                action: 'submitSurat', nama: nama, nik: nik, noHp: noHp,
+                alamat: alamat, jenisSurat: jenisSurat, keperluan: keperluan,
+                ref: ref, website: website
+            };
+
+            setSuratBusy(true);
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            })
+            .then(function () {
+                setSuratBusy(false);
+                document.getElementById('surat-form').reset();
+                showSuratMessage('success',
+                    '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
+                    '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');
+            })
+            .catch(function (err) {
+                console.error('submitSurat gagal:', err);
+                setSuratBusy(false);
+                showSuratMessage('error', 'Gagal mengirim pengajuan. Periksa koneksi lalu coba lagi.');
+            });
+            return false;
+        }
+
+        // Cek status via JSONP GET (action=checkSurat).
+        function cekStatusSurat(e) {
+            e.preventDefault();
+            const box = document.getElementById('cek-result');
+            if (!WEB_APP_URL) {
+                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Portal belum dikonfigurasi.</div>';
+                return false;
+            }
+            const nik = (document.getElementById('cek-nik').value || '').replace(/\D/g, '');
+            const hp = (document.getElementById('cek-hp').value || '').trim();
+            if (nik.length !== 16) {
+                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">NIK harus 16 digit angka.</div>';
+                return false;
+            }
+            if (hp.replace(/\D/g, '').length < 9) {
+                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Nomor HP/WhatsApp tidak valid.</div>';
+                return false;
+            }
+
+            box.innerHTML = '<div class="flex justify-center py-4"><i class="fa-solid fa-circle-notch fa-spin text-slate-300 dark:text-slate-600"></i></div>';
+            const callbackName = '__cekSurat_' + Date.now();
+            const script = document.createElement('script');
+            window[callbackName] = function (res) {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                renderCekResult(res, box);
+            };
+            script.onerror = function () {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Gagal menghubungi server. Coba lagi.</div>';
+            };
+            const sep = WEB_APP_URL.indexOf('?') === -1 ? '?' : '&';
+            script.src = WEB_APP_URL + sep + 'action=checkSurat&nik=' + encodeURIComponent(nik) +
+                '&hp=' + encodeURIComponent(hp) + '&callback=' + callbackName;
+            document.body.appendChild(script);
+            return false;
+        }
+
+        function renderCekResult(res, box) {
+            if (!res || res.result !== 'success') {
+                const msg = (res && res.code === 'portal_disabled') ? 'Portal publik sedang dinonaktifkan.'
+                    : (res && res.message) ? res.message : 'Gagal memeriksa status.';
+                box.innerHTML = '<div class="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 text-rose-700 dark:text-rose-300 rounded-xl p-3 text-sm">' + escapeHtml(msg) + '</div>';
+                return;
+            }
+            const items = res.data || [];
+            if (items.length === 0) {
+                box.innerHTML = '<div class="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl p-3 text-sm">Tidak ada pengajuan yang cocok dengan NIK & No. HP tersebut.</div>';
+                return;
+            }
+            box.innerHTML = items.map(function (it) {
+                return '' +
+                    '<div class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 mb-2">' +
+                        '<div class="flex items-center justify-between mb-1 gap-2">' +
+                            '<span class="text-xs font-medium text-slate-700 dark:text-slate-200">' + escapeHtml(it.jenisSurat) + '</span>' +
+                            '<span class="text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ' + suratStatusBadge(it.status) + '">' + escapeHtml(it.status) + '</span>' +
+                        '</div>' +
+                        '<div class="text-[11px] text-slate-400 dark:text-slate-500">' +
+                            '<i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal) +
+                            (it.ref ? ' &middot; ' + escapeHtml(it.ref) : '') +
+                        '</div>' +
+                        (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
+                    '</div>';
+            }).join('');
+        }
+
         function showPortalDisabled() {
             const html = `
                 <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-2xl p-6 text-center">
@@ -524,6 +793,7 @@
             document.getElementById('kegiatan-container').innerHTML = '';
             document.getElementById('count-pengumuman').textContent = '-';
             document.getElementById('count-kegiatan').textContent = '-';
+            hideSuratSection();
         }
 
         function showLoadError() {
@@ -559,6 +829,7 @@
             document.getElementById('kegiatan-container').innerHTML = '';
             document.getElementById('count-pengumuman').textContent = '-';
             document.getElementById('count-kegiatan').textContent = '-';
+            hideSuratSection();
         }
     </script>
 </body>

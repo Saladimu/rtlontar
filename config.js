@@ -14,7 +14,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '3',
+    version: '4',
     appName: 'Sistem',
     rt: '017',
     rw: '06',
@@ -36,7 +36,30 @@ window.RT_CONFIG = {
     // tautan & tombol "Buka Portal" pada menu Portal Publik memakai URL ini
     // (mis. domain kustom Cloudflare Pages yang menyembunyikan public.html).
     // Kosongkan ('') untuk memakai public.html lokal (atau ?url=... bila publicApiUrl kosong).
-    publicPortalUrl: 'https://rt017.pages.dev/'
+    publicPortalUrl: 'https://rt017.pages.dev/',
+
+    // Daftar pilihan "Jenis Surat" pada fitur Pengajuan Surat. Dipakai oleh
+    // index.html (admin) & public.html (form warga) agar seragam. Backend
+    // (code.gs) menyimpan teksnya apa adanya; ubah daftar ini kapan saja lalu
+    // naikkan `version` agar halaman lama ter-refresh otomatis.
+    jenisSurat: [
+        'Surat Pengantar KTP-el',
+        'Surat Pengantar Kartu Keluarga (KK)',
+        'Surat Pengantar Pindah Keluar',
+        'Surat Pengantar Kedatangan Warga',
+        'Surat Pengantar Akta Kelahiran',
+        'Surat Keterangan Kematian',
+        'Surat Keterangan Tidak Mampu (SKTM)',
+        'Surat Keterangan Domisili (Perorangan)',
+        'Surat Keterangan Domisili Usaha',
+        'Surat Keterangan Belum Menikah / Pengantar Nikah',
+        'Surat Pengantar SKCK',
+        'Surat Keterangan Izin Keramaian / Acara Warga',
+        'Lainnya'
+    ],
+
+    // Daftar status pengurusan surat (diubah oleh pengurus di halaman admin).
+    statusSurat: ['Pending', 'Diproses', 'Selesai', 'Ditolak']
 };
 
 (function () {

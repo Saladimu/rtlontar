@@ -90,6 +90,7 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ **Endpoint `readPublic`** untuk portal publik (hanya Pengumuman & Kegiatan `Publik=Ya`, tanpa data warga/kas)
 - ✅ **ON/OFF Portal Publik** server-side (`PUBLIC_PORTAL_ENABLED` di Script Properties + aksi `setPortalStatus`); saat OFF `readPublic` ditolak
 - ✅ **Identitas RT terpusat** di `config.js` (ubah info RT di satu tempat)
+- ✅ **Fitur Pengajuan Surat (backend v9)** — tab `Pengajuan_Surat` (dibuat otomatis), aksi publik `submitSurat` (tanpa token; validasi NIK 16 digit, honeypot, rate limit 5/jam per NIK), notifikasi email admin (Script Property `ADMIN_EMAIL`), `Status` default `Pending`, serta **panel admin** untuk melihat/mencatat/mengubah status/menghapus & memfilter pengajuan
 - ✅ **Kolom baru `Data_Warga`**: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` (urutan: Nomor KK → Nama Lengkap → Status → Jenis Kelamin → NIK → Tempat/Tanggal Lahir → Pendidikan → Pekerjaan → No HP → Status Tinggal → Alamat); migrasi otomatis berbasis **nama header** (`migrateDataWargaLayout()`), aman dijalankan berulang
 </details>
 
@@ -99,7 +100,7 @@ Lihat `Apps Script/readme.md` untuk:
 3. Atur *Execute as*: **Me** (Email Anda).
 4. Atur *Who has access*: **Anyone** (Siapa saja).
 5. Klik **Deploy**, lalu salin **Web App URL** yang didapat.
-6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda.
+6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda. (Opsional) tambahkan **`ADMIN_EMAIL`** berisi email admin — bila diisi, setiap pengajuan surat baru dari portal publik akan dikirimkan notifikasi email.
 7. Buka aplikasi web RT, masuk ke tab **Koneksi App Script**, tempelkan URL tersebut, isi **Token Admin** dengan nilai `ADMIN_TOKEN` yang sama, lalu klik **Simpan Token** (dan **Simpan URL Koneksi**).
 
 > **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
@@ -116,6 +117,29 @@ Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit**
 ### Tambah Data Cepat (Inline)
 Tabel **Data Warga** dan **Iuran & Kas RT** memiliki satu baris kosong di bagian atas. Isi kolomnya langsung, lalu klik tombol centang (simpan) pada kolom Aksi untuk menambah record tanpa membuka modal. Tanggal pada baris ini memakai format `dd-mm-yyyy`.
 
+### Pengajuan Surat (Portal Publik & Admin)
+
+Warga dapat mengajukan surat keterangan/pengantar langsung dari **Portal Publik** (bagian **Layanan Surat**):
+
+- **Ajukan Surat Baru:** warga mengisi Nama Lengkap, NIK (16 digit), No. HP/WhatsApp, Alamat/No. Rumah, Jenis Surat (daftar dari `RT_CONFIG.jenisSurat` di `config.js`), dan Keperluan. Setelah terkirim, warga menerima **nomor pengajuan** (contoh `SRT-261006-AB12`) untuk disimpan.
+- **Cek Status Pengajuan:** warga memasukkan **NIK + No. HP/WhatsApp** yang sama seperti saat mengajukan untuk melihat status (`Pending` / `Diproses` / `Selesai` / `Ditolak`) beserta catatan pengurus.
+
+Pengamanan server-side: hanya menerima **tambah data** (tidak bisa mengubah/menghapus), memaksa status awal `Pending`, memvalidasi NIK/HP, menyaring bot lewat *honeypot*, dan membatasi **maksimal 5 pengajuan per NIK per jam**. Data tab `Pengajuan_Surat` **tidak pernah** ikut terkirim pada `readPublic`.
+
+Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengajuan baru akan dikirimi **notifikasi email** ke admin. Bila Portal Publik dimatikan (toggle di halaman admin), form pengajuan & cek status otomatis disembunyikan dan ditolak oleh server.
+
+#### Mengelola Pengajuan di Halaman Admin
+
+Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (terbaru di atas) beserta kartu ringkasan jumlah per status:
+
+- **Catat Pengajuan**: menambah pengajuan secara manual (mis. permohonan langsung/lisan) dengan tombol **Catat Pengajuan**.
+- **Edit**: klik baris (atau ikon pensil) untuk membuka modal dan mengubah data, **Status Pengurusan** (`RT_CONFIG.statusSurat`), dan **Catatan Pengurus**.
+- **Ubah Status cepat**: ikon putar menggilir status `Pending → Diproses → Selesai → Ditolak → Pending`.
+- **Hapus**: ikon tempat sampah (dengan konfirmasi).
+- **Filter & cari**: saring berdasarkan status dan cari berdasarkan nama / NIK / jenis surat. NIK disamarkan pada tabel (contoh `3173••••••01`).
+
+Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti modul lain.
+
 ---
 
 ## 🧩 Mengubah Informasi RT
@@ -126,7 +150,7 @@ Semua identitas RT (nama, nomor RT/RW, kelurahan, kecamatan, kota, tahun footer,
 window.RT_CONFIG = {
     // Naikkan versi ini setiap kali mengubah config.js (mis. '2', '3', ...).
     // Halaman akan membandingkannya dan hard-refresh otomatis bila berbeda.
-    version: '3',
+    version: '4',
     appName: 'Sistem RT',
     rt: '005',
     rw: '02',
@@ -145,7 +169,29 @@ window.RT_CONFIG = {
     // URL halaman Portal Publik yang dibagikan ke warga (opsional).
     // Isi dengan domain kustom (mis. Cloudflare Pages) agar tautan menu
     // Portal Publik di admin memakai URL ini. Kosongkan ('') untuk memakai public.html.
-    publicPortalUrl: 'https://rt017.pages.dev/'
+    publicPortalUrl: 'https://rt017.pages.dev/',
+
+    // Daftar pilihan "Jenis Surat" untuk fitur Pengajuan Surat (dipakai
+    // form warga di public.html & panel admin di index.html). Ubah sesuai
+    // kebutuhan, lalu naikkan `version` di atas.
+    jenisSurat: [
+        'Surat Pengantar KTP-el',
+        'Surat Pengantar Kartu Keluarga (KK)',
+        'Surat Pengantar Pindah Keluar',
+        'Surat Pengantar Kedatangan Warga',
+        'Surat Pengantar Akta Kelahiran',
+        'Surat Keterangan Kematian',
+        'Surat Keterangan Tidak Mampu (SKTM)',
+        'Surat Keterangan Domisili (Perorangan)',
+        'Surat Keterangan Domisili Usaha',
+        'Surat Keterangan Belum Menikah / Pengantar Nikah',
+        'Surat Pengantar SKCK',
+        'Surat Keterangan Izin Keramaian / Acara Warga',
+        'Lainnya'
+    ],
+
+    // Status pengurusan surat (diubah pengurus di halaman admin).
+    statusSurat: ['Pending', 'Diproses', 'Selesai', 'Ditolak']
 };
 ```
 
