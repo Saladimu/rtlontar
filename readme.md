@@ -171,8 +171,10 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 ### Menyiapkan Cloudflare Zero Trust (sekali saja)
 
 1. Buka `one.dash.cloudflare.com`, buat *team name* bila belum ada.
-2. **Settings → Authentication → Login methods**: aktifkan **One-time PIN** (kode dikirim ke email, tanpa setup) dan/atau **Google**.
-3. **Access → Applications → Add an application → Self-hosted**, buat **dua** aplikasi:
+2. **Integrations → Identity providers → Add new identity provider → One-time PIN** (kode dikirim ke email, tanpa setup). Tambahkan juga **Google** bila perlu.
+
+   > **Penting:** organisasi Zero Trust **baru** hanya punya *identity provider* **Cloudflare** secara default, dan **One-time PIN tidak lagi aktif otomatis**. Halaman lama **Settings → Authentication → Login methods** sudah tidak ada. Jika One-time PIN belum ditambahkan di sini, halaman login hanya menampilkan tombol **"Sign in with: Cloudflare"** (tanpa kolom email), sehingga menambahkan email ke policy tidak akan berpengaruh.
+3. **Access controls → Applications → Add an application → Self-hosted**, buat **dua** aplikasi (biarkan **Accept all available identity providers** tetap aktif di tab *Authentication*):
 
    **a. `RT Admin`** (melindungi admin)
    - Public hostname: `rtlontar.pages.dev` — Path `/`
@@ -190,16 +192,16 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 
 ### Menambah pengguna yang boleh mengakses admin
 
-1. Zero Trust → **Access → Applications → `RT Admin` → Edit** (bagian *Policies*).
+1. Zero Trust → **Access controls → Applications → `RT Admin` → Edit** (bagian *Policies*).
 2. Buka policy **RT Admins** → **Include → Add a rule**.
 3. Pilih selector:
    - **Emails** → tulis email pengguna (beberapa email dipisah koma) — harus sama dengan email yang dipakai untuk login.
    - **Emails ending in** → `@domain.com` untuk seluruh domain (mis. Google Workspace).
-   - **Access Groups** → grup reusable yang dibuat di **Access → Groups**.
+   - **Access Groups** → grup reusable yang dibuat di **Access controls → Access groups**.
 4. **Save** — akses berlaku seketika.
-5. Pengguna membuka `https://rtlontar.pages.dev/` di jendela *incognito* → masukkan email → masukkan kode PIN (atau login Google) → dashboard admin terbuka.
+5. Pengguna membuka `https://rtlontar.pages.dev/` di jendela *incognito* → masukkan email → klik **Send login code** → masukkan kode PIN dari email → dashboard admin terbuka.
 
-**Mencabut akses:** hapus email dari policy, atau Zero Trust → **Access → Active sessions** → *Revoke* untuk sesi yang masih aktif.
+**Mencabut akses:** hapus email dari policy, atau Zero Trust → **Access controls → Active sessions** → *Revoke* untuk sesi yang masih aktif.
 
 > **Jika `public.html` kembali meminta login:** pastikan path **`/public`** sudah terdaftar di aplikasi *Bypass* **`RT Public Assets`**.
 
