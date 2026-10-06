@@ -201,7 +201,19 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 4. **Save** — akses berlaku seketika.
 5. Pengguna membuka `https://rtlontar.pages.dev/` di jendela *incognito* → masukkan email → klik **Send login code** → masukkan kode PIN dari email → dashboard admin terbuka.
 
-**Mencabut akses:** hapus email dari policy, atau Zero Trust → **Access controls → Active sessions** → *Revoke* untuk sesi yang masih aktif.
+### Masa berlaku sesi & mencabut akses
+
+Login **bukan sekali pakai**. Setelah PIN dimasukkan, Cloudflare Access menerbitkan *session cookie* yang berlaku selama **Session Duration** aplikasi:
+
+- Selama sesi masih aktif, membuka `https://rtlontar.pages.dev/` kembali akan **langsung masuk tanpa email/PIN** (SSO).
+- Setelah sesi kedaluwarsa, pengguna diminta email + PIN lagi. (PIN-nya sendiri tetap sekali pakai; yang berulang adalah sesinya.)
+- **Session Duration** diatur di Zero Trust → **Access controls → Applications → `RT Admin` → Edit → Details → Session Duration** (default umumnya `24 hours`).
+- Terpisah dari itu, **token admin** (`ADMIN_TOKEN`) disimpan di `localStorage` browser dan tetap ada sampai dibersihkan — jadi dashboard tidak meminta token setiap kali.
+
+**Mencabut akses pengguna:**
+
+1. Hapus email dari policy **RT Admins** → **Save**. Ini mencegah login **baru**, tetapi pengguna yang sedang login **tetap bisa masuk sampai sesinya kedaluwarsa**.
+2. Untuk memblokir **seketika**, buka Zero Trust → **Access controls → Active sessions** → cari sesi pengguna → **Revoke**.
 
 > **Jika `public.html` kembali meminta login:** pastikan path **`/public`** sudah terdaftar di aplikasi *Bypass* **`RT Public Assets`**.
 
