@@ -332,6 +332,8 @@ Tombol refresh di:
 - ✅ **Migrasi berbasis nama header** — `migrateDataWargaLayout()` diubah dari `insertColumnsBefore(4,2)` (posisional) menjadi pemetaan **berdasarkan nama header**: bangun peta `nama → indeks kolom` lama, susun ulang baris mengikuti header baru, kolom baru diisi kosong, lalu `clearContents()` + tulis ulang. Aman & idempoten untuk berbagai layout lama.
 - ✅ **Frontend `index.html`** — tabel 14 kolom, modal & baris kosong inline memakai field baru (`warga-nomorkk`, `warga-statuskeluarga`, `warga-jeniskelamin`, `warga-pendidikan`, `warga-pekerjaan`); konstanta `WARGA_STATUS_KK`, `WARGA_JENIS_KELAMIN`, helper `selectOptions(list, selected)`; `applySheetsData` memetakan indeks baru; `submitWarga`/`saveDraftWarga`/`editWarga`/`deleteWarga` disesuaikan; `EXPECTED_BACKEND_VERSION = 'publik-v8-2026-10-06'`.
 - ✅ **`CODE_VERSION`** di `code.gs` = `publik-v8-2026-10-06` (wajib redeploy sebagai **New version**, lalu klik **Cek Versi Backend**).
+- ✅ **Perbaikan scroll modal** — container modal `index.html` (keempat modal) diubah ke `items-start ... overflow-y-auto` + panel `my-auto`, sehingga form tinggi (Warga setelah penambahan field) bisa di-scroll di dalam modal dan tidak lagi menggeser halaman di belakang / terpotong di atas.
+- ✅ **Quick edit + zebra baris** — baris `Data_Warga` & `Iuran_Kas` kini bisa diklik/di-tap langsung untuk membuka modal edit (`tr.onclick = () => editWarga/editKas(originalIndex)`, `cursor-pointer`); tombol Edit/Hapus memakai `event.stopPropagation()` agar tidak memicu edit baris. Baris diberi warna selang-seling **putih / hijau** (`bg-white` / `bg-emerald-50`, hover `bg-emerald-100`) untuk keterbacaan.
 
 ## 🔧 Recent Changes (2026-10-05)
 
