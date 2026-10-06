@@ -171,9 +171,21 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Form pengajuan -->
-                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-1">Ajukan Surat Baru</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Isi data dengan benar. Setelah terkirim, simpan nomor pengajuan untuk ditanyakan kepada pengurus.</p>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button type="button" id="surat-toggle-ajukan" onclick="toggleSuratCard('ajukan')" aria-expanded="true" aria-controls="surat-panel-ajukan"
+                        class="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                        <span class="flex items-start space-x-3">
+                            <span class="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-file-pen"></i>
+                            </span>
+                            <span>
+                                <span class="block font-bold text-slate-800 dark:text-slate-100">Ajukan Surat Baru</span>
+                                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Isi data dengan benar. Setelah terkirim, simpan nomor pengajuan untuk ditanyakan kepada pengurus.</span>
+                            </span>
+                        </span>
+                        <i id="surat-chevron-ajukan" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0"></i>
+                    </button>
+                    <div id="surat-panel-ajukan" class="px-5 pb-5">
                     <form id="surat-form" class="space-y-3" onsubmit="return submitSuratWarga(event)">
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
@@ -215,12 +227,25 @@
                         </button>
                     </form>
                     <div id="surat-result" class="hidden mt-3"></div>
+                    </div>
                 </div>
 
                 <!-- Cek status -->
-                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
-                    <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-1">Cek Status Pengajuan</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Masukkan NIK dan No. HP/WhatsApp yang sama seperti saat mengajukan.</p>
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button type="button" id="surat-toggle-cek" onclick="toggleSuratCard('cek')" aria-expanded="true" aria-controls="surat-panel-cek"
+                        class="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                        <span class="flex items-start space-x-3">
+                            <span class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <span>
+                                <span class="block font-bold text-slate-800 dark:text-slate-100">Cek Status Pengajuan</span>
+                                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masukkan NIK dan No. HP/WhatsApp yang sama seperti saat mengajukan.</span>
+                            </span>
+                        </span>
+                        <i id="surat-chevron-cek" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0"></i>
+                    </button>
+                    <div id="surat-panel-cek" class="px-5 pb-5">
                     <form id="surat-check-form" class="space-y-3" onsubmit="return cekStatusSurat(event)">
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
@@ -238,6 +263,7 @@
                         </button>
                     </form>
                     <div id="cek-result" class="mt-3"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -640,6 +666,26 @@
         function hideSuratSection() {
             const s = document.getElementById('surat-section');
             if (s) s.classList.add('hidden');
+        }
+
+        // Buka/tutup (collapse) kartu "Ajukan Surat Baru" & "Cek Status Pengajuan".
+        // which: 'ajukan' | 'cek'. Default terbuka; klik header untuk menyembunyikan
+        // isinya. Chevron ikut berputar dan aria-expanded diperbarui.
+        function toggleSuratCard(which) {
+            const panel = document.getElementById('surat-panel-' + which);
+            const chevron = document.getElementById('surat-chevron-' + which);
+            const button = document.getElementById('surat-toggle-' + which);
+            if (!panel) return;
+            const willHide = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', willHide);
+            if (chevron) chevron.classList.toggle('rotate-180', willHide);
+            if (button) button.setAttribute('aria-expanded', willHide ? 'false' : 'true');
+        }
+
+        // State collapsed ditulis di classList panel (dipakai toggleSuratCard).
+        function isSuratCardCollapsed(which) {
+            const panel = document.getElementById('surat-panel-' + which);
+            return !!(panel && panel.classList.contains('hidden'));
         }
 
         function setSuratBusy(busy) {

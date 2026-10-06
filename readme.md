@@ -124,6 +124,8 @@ Warga dapat mengajukan surat keterangan/pengantar langsung dari **Portal Publik*
 - **Ajukan Surat Baru:** warga mengisi Nama Lengkap, NIK (16 digit), No. HP/WhatsApp, Alamat/No. Rumah, Jenis Surat (daftar dari `RT_CONFIG.jenisSurat` di `config.js`), dan Keperluan. Setelah terkirim, warga menerima **nomor pengajuan** (contoh `SRT-261006-AB12`) untuk disimpan.
 - **Cek Status Pengajuan:** warga memasukkan **NIK + No. HP/WhatsApp** yang sama seperti saat mengajukan untuk melihat status (`Pending` / `Diproses` / `Selesai` / `Ditolak`) beserta catatan pengurus.
 
+Kedua kartu (**Ajukan Surat Baru** & **Cek Status Pengajuan**) dapat dibuka/ditutup (*collapse/toggle*) dengan mengeklik judulnya, sehingga tampilan lebih ringkas di layar kecil.
+
 Pengamanan server-side: hanya menerima **tambah data** (tidak bisa mengubah/menghapus), memaksa status awal `Pending`, memvalidasi NIK/HP, menyaring bot lewat *honeypot*, dan membatasi **maksimal 5 pengajuan per NIK per jam**. Data tab `Pengajuan_Surat` **tidak pernah** ikut terkirim pada `readPublic`.
 
 Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengajuan baru akan dikirimi **notifikasi email** ke admin. Bila Portal Publik dimatikan (toggle di halaman admin), form pengajuan & cek status otomatis disembunyikan dan ditolak oleh server.
