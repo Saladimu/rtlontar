@@ -14,7 +14,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '2',
+    version: '3',
     appName: 'Sistem',
     rt: '017',
     rw: '06',
@@ -30,7 +30,13 @@ window.RT_CONFIG = {
     // Salin URL Web App (yang berakhiran /exec) di sini agar public.html dapat
     // diakses cukup lewat "public.html" tanpa parameter ?url=...
     // Kosongkan ('') untuk memakai parameter ?url=... (kompatibilitas lama).
-    publicApiUrl: 'https://script.google.com/macros/s/AKfycbwOHCJ8GT8FUhWFx5yQ9YvAp9_EqVnIbihyl-n1MUl7yb0YBwX6OUQS4osfrFS7L9cE/exec'
+    publicApiUrl: 'https://script.google.com/macros/s/AKfycbwOHCJ8GT8FUhWFx5yQ9YvAp9_EqVnIbihyl-n1MUl7yb0YBwX6OUQS4osfrFS7L9cE/exec',
+
+    // URL halaman Portal Publik yang dibagikan ke warga (opsional). Bila diisi,
+    // tautan & tombol "Buka Portal" pada menu Portal Publik memakai URL ini
+    // (mis. domain kustom Cloudflare Pages yang menyembunyikan public.html).
+    // Kosongkan ('') untuk memakai public.html lokal (atau ?url=... bila publicApiUrl kosong).
+    publicPortalUrl: 'https://rt017.pages.dev/'
 };
 
 (function () {

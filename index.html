@@ -803,7 +803,7 @@
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '2';
+        const EXPECTED_CONFIG_VERSION = '3';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1934,10 +1934,13 @@
             showToast(enabled ? 'Portal Publik diaktifkan!' : 'Portal Publik dinonaktifkan.', enabled ? 'success' : 'info');
         }
 
-        // Tautan Portal Publik: bila config.js sudah mengisi publicApiUrl, cukup "public.html"
-        // (tanpa ?url=) sehingga URL Apps Script tidak tampil di address bar. Fallback ke ?url=
-        // hanya bila publicApiUrl masih kosong (kompatibilitas lama).
+        // Tautan Portal Publik: bila config.js mengisi publicPortalUrl, pakai URL itu
+        // (mis. domain kustom). Bila tidak, cukup "public.html" saat publicApiUrl terisi
+        // (tanpa ?url=) agar URL Apps Script tidak tampil di address bar. Fallback ke ?url=
+        // hanya bila keduanya kosong (kompatibilitas lama).
         function getPublicPortalUrl() {
+            const portalUrl = (window.RT_CONFIG && window.RT_CONFIG.publicPortalUrl) ? String(window.RT_CONFIG.publicPortalUrl).trim() : '';
+            if (portalUrl) return portalUrl;
             const cfgUrl = (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl) ? String(window.RT_CONFIG.publicApiUrl).trim() : '';
             if (cfgUrl) return 'public.html';
             if (appState.scriptUrl) return `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;

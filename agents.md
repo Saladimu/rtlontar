@@ -9,7 +9,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
 - **Frontend Architecture:** Dua halaman HTML5 statis:
   - `index.html` — SPA admin (semua modul + integrasi), Tailwind CSS CDN + FontAwesome CDN.
   - `public.html` — portal publik warga (read-only, hanya Pengumuman & Kegiatan `Publik=Ya`).
-- **Public Portal Config:** URL backend `public.html` diambil dari `config.js` (`RT_CONFIG.publicApiUrl`) sehingga tautan publik cukup `public.html`; query param `?url=<WebAppURL>` (dibuat otomatis oleh `openPublicPortal()` di admin) tetap didukung sebagai fallback. Tidak ada input URL manual/localStorage di sisi publik; bila keduanya kosong, `showConfigNeeded()` menampilkan instruksi menghubungi admin.
+- **Public Portal Config:** URL backend `public.html` diambil dari `config.js` (`RT_CONFIG.publicApiUrl`) sehingga tautan publik cukup `public.html`; query param `?url=<WebAppURL>` (dibuat otomatis oleh `openPublicPortal()` di admin) tetap didukung sebagai fallback. Tautan yang ditampilkan/dibuka di menu Portal Publik dapat diarahkan ke domain kustom via `RT_CONFIG.publicPortalUrl` (mis. Cloudflare Pages). Tidak ada input URL manual/localStorage di sisi publik; bila semuanya kosong, `showConfigNeeded()` menampilkan instruksi menghubungi admin.
 - **Backend Architecture:** Serverless Function via Google Apps Script (`doGet` + `doPost` HTTP Endpoints).
 - **Database Layer:** Google Sheets (Relational-like Tabular Spreadsheet Storage).
 - **State Persistence Layer:** Dual Storage Mode:
@@ -276,8 +276,10 @@ Tombol refresh di:
 9. **Public Portal Scope:**
    - `public.html` read-only, sumber data hanya `action=readPublic`.
    - URL backend diambil dari `config.js` (`RT_CONFIG.publicApiUrl`) sehingga tautan publik cukup `public.html`; `?url=` hanya fallback kompatibilitas (tanpa input manual/localStorage).
+   - Tautan yang ditampilkan & dibuka di menu Portal Publik mengikuti `RT_CONFIG.publicPortalUrl` bila diisi (mis. domain kustom Cloudflare Pages); bila kosong fallback ke `public.html` / `?url=`.
    - Inisialisasi `public.html` menunggu config siap (`whenConfigReady` + `window.RT_CONFIG_READY`) agar tidak ada race async / kedipan "belum dikonfigurasi".
    - Tombol "Muat Ulang" `public.html` = hard refresh (`?_rtcache`), sama seperti `index.html`.
+   - Tema terang/gelap: tombol `#theme-toggle` (`toggleTheme()` / `applyTheme()` / `currentTheme()`) men-toggle kelas `dark` pada `<html>` (Tailwind `darkMode: 'class'`), disimpan di `localStorage` `rt_theme`, default ikut `prefers-color-scheme`; skrip anti-FOUC di `<head>` menerapkan tema sebelum render. Semua elemen memakai varian `dark:`.
    - Jangan pernah menambahkan operasi tulis atau mengirim token admin ke `public.html`.
 
 10. **Version Gate:**
@@ -342,6 +344,8 @@ Tombol refresh di:
 - ✅ **Kolom `Usia` di tabel `Data_Warga`** — ditampilkan setelah `Nama Lengkap`, dihitung dari `Tanggal Lahir` via `hitungUsia()` (tahun penuh, format `X th`). **Tidak disimpan** ke `appState`/Sheets; baris kosong inline memperbarui usia secara live saat tanggal diisi.
 - ✅ **Portal Publik tanpa URL panjang (config-based)** — `RT_CONFIG.publicApiUrl` di `config.js`; `public.html` memakai URL itu (fallback `?url=` tetap didukung); tautan admin cukup `public.html` via `getPublicPortalUrl()`; init `public.html` menunggu config siap (`window.RT_CONFIG_READY` + `whenConfigReady`) sehingga tidak ada race async/kedipan "belum dikonfigurasi"; tombol **Muat Ulang** `public.html` kini hard refresh (`?_rtcache`) dan `_rtcache` dibersihkan via `history.replaceState()`. Toggle Portal Publik tetap ditegakkan server-side.
 - ✅ **Gerbang versi config (auto hard refresh)** — `RT_CONFIG.version` di `config.js` dibandingkan dengan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html` via `enforceConfigVersion()`. Bila berbeda (HTML lama ter-cache), halaman auto hard refresh sekali (`?_rtcache`) agar HTML & config sinkron; guard `sessionStorage` `rt_cfg_reload_<versi>` mencegah loop. Fungsi `hardReload()` dipakai ulang oleh tombol "Muat Ulang" kedua halaman.
+- ✅ **Domain kustom Portal Publik** — `RT_CONFIG.publicPortalUrl` di `config.js` (mis. `https://rt017.pages.dev/`) membuat tautan & tombol "Buka Portal" di menu admin memakai domain itu; `getPublicPortalUrl()` memprioritaskan `publicPortalUrl` → lalu `public.html` (bila `publicApiUrl` terisi) → lalu `public.html?url=...`.
+- ✅ **Tema terang/gelap di `public.html`** — tombol ikon matahari/bulan di header, `applyTheme()`/`toggleTheme()` men-toggle `dark` pada `<html>` (Tailwind `darkMode: 'class'`), persist di `localStorage` `rt_theme`, default `prefers-color-scheme`, plus skrip anti-FOUC; seluruh kartu, badge, empty-state, alert, dan footer memakai varian `dark:`.
 
 ## 🔧 Recent Changes (2026-10-03)
 

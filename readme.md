@@ -18,6 +18,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 - **⚠️ Delete Persistence:** Sistem melacak record yang dihapus agar tidak muncul kembali setelah reload/sync.
 - **🔐 Token Admin:** Semua operasi tulis (tambah/edit/hapus) dan baca lengkap wajib menyertakan token rahasia (`ADMIN_TOKEN` di Script Properties). Tanpa token, server menolak permintaan sehingga orang yang hanya tahu URL tidak bisa mengubah data.
 - **🕵️ Portal Publik Terisolasi:** `public.html` memakai endpoint `readPublic` yang hanya mengembalikan Pengumuman & Kegiatan ber-`Publik=Ya`; data warga & kas tidak pernah dikirim ke portal publik.
+- **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🔒 ON/OFF Portal Publik:** Toggle di tab Portal Publik untuk mengaktifkan/menonaktifkan akses warga. Saat OFF, server menolak `readPublic` sehingga data benar-benar tidak bisa diakses (bukan sekadar menyembunyikan tautan).
 
 ---
@@ -122,7 +123,7 @@ Semua identitas RT (nama, nomor RT/RW, kelurahan, kecamatan, kota, tahun footer,
 window.RT_CONFIG = {
     // Naikkan versi ini setiap kali mengubah config.js (mis. '2', '3', ...).
     // Halaman akan membandingkannya dan hard-refresh otomatis bila berbeda.
-    version: '1',
+    version: '3',
     appName: 'Sistem RT',
     rt: '005',
     rw: '02',
@@ -136,11 +137,16 @@ window.RT_CONFIG = {
 
     // URL Web App Google Apps Script (berakhiran /exec) untuk Portal Publik.
     // Isi agar public.html dapat diakses cukup lewat "public.html" tanpa ?url=...
-    publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec'
+    publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec',
+
+    // URL halaman Portal Publik yang dibagikan ke warga (opsional).
+    // Isi dengan domain kustom (mis. Cloudflare Pages) agar tautan menu
+    // Portal Publik di admin memakai URL ini. Kosongkan ('') untuk memakai public.html.
+    publicPortalUrl: 'https://rt017.pages.dev/'
 };
 ```
 
-> **Portal Publik tanpa URL panjang:** isi `publicApiUrl` dengan URL Web App Anda. Setelah itu tautan yang dibagikan ke warga cukup **`public.html`** (URL Apps Script tidak tampil di address bar). `public.html` tetap mendukung `?url=...` sebagai fallback bila `publicApiUrl` masih kosong. `config.js` dimuat dengan cache-bust dan tombol **Muat Ulang** melakukan *hard refresh*, sehingga perubahan config selalu terbaru. Pemuatan config juga menunggu (*readiness gate*) agar tidak ada kedipan "belum dikonfigurasi".
+> **Portal Publik tanpa URL panjang:** isi `publicApiUrl` dengan URL Web App Anda. Setelah itu tautan yang dibagikan ke warga cukup **`public.html`** (URL Apps Script tidak tampil di address bar). Bila Anda memakai domain kustom (mis. Cloudflare Pages), isi juga `publicPortalUrl` dengan URL tersebut agar tautan & tombol "Buka Portal" di menu admin mengarah ke sana. `public.html` tetap mendukung `?url=...` sebagai fallback bila `publicApiUrl` masih kosong. `config.js` dimuat dengan cache-bust dan tombol **Muat Ulang** melakukan *hard refresh*, sehingga perubahan config selalu terbaru. Pemuatan config juga menunggu (*readiness gate*) agar tidak ada kedipan "belum dikonfigurasi".
 
 > **Auto hard refresh (versi config):** setiap kali mengubah `config.js`, naikkan `version` **dan** samakan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila browser masih memegang HTML lama (versi tak cocok), halaman otomatis melakukan *hard refresh* sekali agar HTML & config sinkron; ada pengaman anti-loop, jadi tidak akan reload berulang.
 
