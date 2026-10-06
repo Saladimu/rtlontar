@@ -20,6 +20,7 @@ File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
    - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan.
+   - Setelah `ADMIN_EMAIL` diisi, jalankan fungsi **`authorizeMail`** sekali dari editor Apps Script (dropdown fungsi > Run > Review permissions > Allow) agar scope `script.send_mail` diberikan, lalu deploy ulang sebagai **New version**. Tanpa langkah ini, pengiriman email gagal dengan pesan *"You do not have permission to call MailApp.sendEmail"*.
 
 ---
 
@@ -155,6 +156,7 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 | `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
 | `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
+| `sendTestEmail` | `action=sendTestEmail&token=T` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; bila scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
 | (default) | — | Health check: `{result:"success", message:"Web App aktif"}` |
@@ -315,6 +317,8 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |
 | `notifyAdminNewSurat(row)` | Kirim email notifikasi ke `ADMIN_EMAIL` (bila diatur); gagal email tidak membatalkan penyimpanan |
+| `handleSendTestEmail()` | Aksi admin `sendTestEmail`: kirim email uji ke `ADMIN_EMAIL`; kembalikan `no_admin_email` / `email_failed` / `mail_scope_denied` bila gagal |
+| `authorizeMail()` | Jalankan **sekali** dari editor (Run) untuk memicu izin scope `script.send_mail`. Wajib sebelum email dapat dikirim; tanpa ini `MailApp.sendEmail` error "You do not have permission..." |
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
 | `ensureSpreadsheetFormat(ss, sheet, name)` | Set timezone Asia/Jakarta + format `dd-mm-yyyy hh:mm` + header ID |
@@ -334,6 +338,8 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | CORS error | `mode: 'no-cors'` tapi butuh response | Frontend pakai JSONP GET untuk delete |
 | Empty rows di Sheets | Delete pakai POST lama | Gunakan GET delete di code.gs terbaru |
 | "Script function not found" | Nama fungsi typo | Pastikan `doGet` & `doPost` exact |
+| Email gagal: **"You do not have permission to call MailApp.sendEmail. Required permissions: .../auth/script.send_mail"** | Scope kirim email belum diizinkan pada akun pemilik skrip | Di editor Apps Script: simpan (Ctrl+S) > pilih fungsi **`authorizeMail`** > **Run** > **Review permissions** > pilih akun pemilik > **Allow**. Lalu **Manage deployments > Edit > Version: New version > Deploy**. Di UI, error ini tampil sebagai kode `mail_scope_denied`. Akun yang meng-Allow harus **sama** dengan pemilik/pendeploy (Web App *Execute as: Me*) |
+| Email tidak terkirim tapi tidak ada error | `ADMIN_EMAIL` belum diisi | Tambahkan Script Property **`ADMIN_EMAIL`**, lalu jalankan **`authorizeMail`** dan redeploy |
 
 ---
 

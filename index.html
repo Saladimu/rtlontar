@@ -465,10 +465,16 @@
                     <h2 class="text-2xl font-bold text-slate-800">Pengajuan Surat</h2>
                     <p class="text-sm text-slate-500">Permohonan surat pengantar / keterangan dari warga via Portal Publik</p>
                 </div>
-                <button onclick="openAddSurat()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-plus-circle"></i>
-                    <span>Catat Pengajuan</span>
-                </button>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button onclick="testAdminEmail()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2" title="Kirim email uji ke ADMIN_EMAIL">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                        <span>Tes Email Admin</span>
+                    </button>
+                    <button onclick="openAddSurat()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-plus-circle"></i>
+                        <span>Catat Pengajuan</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Ringkasan jumlah per status -->
@@ -517,6 +523,7 @@
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
                                 <th class="p-4 whitespace-nowrap">Tanggal</th>
+                                <th class="p-4 whitespace-nowrap">No. Pengajuan</th>
                                 <th class="p-4">Nama Pemohon</th>
                                 <th class="p-4 whitespace-nowrap">NIK</th>
                                 <th class="p-4 whitespace-nowrap">No. HP</th>
@@ -918,9 +925,16 @@
                 <button onclick="closeModal('modal-surat')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <form id="form-surat" onsubmit="submitSurat(event)" class="space-y-3">
-                <div id="surat-tanggal-wrap" class="hidden">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pengajuan</label>
-                    <input type="text" id="surat-tanggal-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
+                <div id="surat-form-error" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></div>
+                <div id="surat-tanggal-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. Pengajuan</label>
+                        <input type="text" id="surat-ref-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pengajuan</label>
+                        <input type="text" id="surat-tanggal-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Pemohon *</label>
@@ -2189,6 +2203,7 @@
             editMode.surat = null;
             const form = document.getElementById('form-surat');
             if (form) form.reset();
+            clearSuratFormError();
             document.getElementById('modal-surat-title').textContent = 'Catat Pengajuan Surat';
             const wrap = document.getElementById('surat-tanggal-wrap');
             if (wrap) wrap.classList.add('hidden');
@@ -2205,9 +2220,11 @@
             if (!item._id) { item._id = newId(); saveLocalState(); }
 
             editMode.surat = item._id;
+            clearSuratFormError();
             document.getElementById('modal-surat-title').textContent = 'Edit Pengajuan Surat';
             const wrap = document.getElementById('surat-tanggal-wrap');
             if (wrap) wrap.classList.remove('hidden');
+            document.getElementById('surat-ref-info').value = item._id || '-';
             document.getElementById('surat-tanggal-info').value = item.waktu || '-';
             document.getElementById('surat-nama').value = item.nama || '';
             document.getElementById('surat-nik').value = item.nik || '';
@@ -2222,21 +2239,55 @@
             openModal('modal-surat');
         }
 
+        // Tampilkan pesan error di dalam modal (agar terlihat, tidak terhalang),
+        // fokuskan field yang bermasalah, dan tetap munculkan toast.
+        function showSuratFormError(msg, fieldId) {
+            const box = document.getElementById('surat-form-error');
+            if (box) { box.textContent = msg; box.classList.remove('hidden'); }
+            if (fieldId) {
+                const f = document.getElementById(fieldId);
+                if (f && f.focus) f.focus();
+            }
+            showToast(msg, 'error');
+        }
+
+        function clearSuratFormError() {
+            const box = document.getElementById('surat-form-error');
+            if (box) { box.textContent = ''; box.classList.add('hidden'); }
+        }
+
         function submitSurat(e) {
             e.preventDefault();
+            clearSuratFormError();
+            const nama = document.getElementById('surat-nama').value.trim();
             const nik = document.getElementById('surat-nik').value.replace(/\D/g, '');
-            if (!/^\d{16}$/.test(nik)) {
-                showToast('NIK harus 16 digit angka.', 'error');
+            const noHp = document.getElementById('surat-hp').value.trim();
+            const alamat = document.getElementById('surat-alamat').value.trim();
+            const jenisSurat = document.getElementById('surat-jenis').value;
+            const keperluan = document.getElementById('surat-keperluan').value.trim();
+
+            if (nama.length < 3) { showSuratFormError('Nama lengkap wajib diisi (minimal 3 karakter).', 'surat-nama'); return; }
+            if (nik.length !== 16) {
+                showSuratFormError('NIK harus 16 digit angka (saat ini ' + nik.length + ' digit).', 'surat-nik');
                 return;
             }
+            const hpDigits = noHp.replace(/\D/g, '');
+            if (hpDigits.length < 9 || hpDigits.length > 15) {
+                showSuratFormError('Nomor HP/WhatsApp tidak valid (harus 9-15 digit angka).', 'surat-hp');
+                return;
+            }
+            if (!alamat) { showSuratFormError('Alamat / No. Rumah wajib diisi.', 'surat-alamat'); return; }
+            if (!jenisSurat) { showSuratFormError('Jenis Surat wajib dipilih.', 'surat-jenis'); return; }
+            if (keperluan.length < 3) { showSuratFormError('Keperluan / alasan pengajuan wajib diisi (minimal 3 karakter).', 'surat-keperluan'); return; }
+
             const data = {
                 sheetName: 'Pengajuan_Surat',
-                nama: document.getElementById('surat-nama').value.trim(),
+                nama: nama,
                 nik: nik,
-                noHp: document.getElementById('surat-hp').value.trim(),
-                alamat: document.getElementById('surat-alamat').value.trim(),
-                jenisSurat: document.getElementById('surat-jenis').value,
-                keperluan: document.getElementById('surat-keperluan').value.trim(),
+                noHp: noHp,
+                alamat: alamat,
+                jenisSurat: jenisSurat,
+                keperluan: keperluan,
                 status: document.getElementById('surat-status').value || 'Pending',
                 catatan: document.getElementById('surat-catatan').value.trim()
             };
@@ -2309,7 +2360,7 @@
 
             const list = appState.surat.slice().reverse(); // terbaru dahulu
             const filtered = list.filter(function (item) {
-                const haystack = [item.nama, item.nik, item.noHp, item.alamat, item.jenisSurat, item.keperluan, item.status, item.catatan]
+                const haystack = [item._id, item.nama, item.nik, item.noHp, item.alamat, item.jenisSurat, item.keperluan, item.status, item.catatan]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || (item.status || 'Pending') === filterStatus;
@@ -2321,7 +2372,7 @@
 
             if (filtered.length === 0) {
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="8" class="p-4 text-center text-slate-400">Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.</td>`;
+                empty.innerHTML = `<td colspan="9" class="p-4 text-center text-slate-400">Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.</td>`;
                 tbody.appendChild(empty);
                 return;
             }
@@ -2335,6 +2386,7 @@
                 tr.onclick = () => editSurat(originalIndex);
                 tr.innerHTML = `
                     <td class="p-4 text-slate-600 text-xs whitespace-nowrap">${fmtTimestamp(item.waktu) || '-'}</td>
+                    <td class="p-4 text-slate-700 text-xs font-semibold whitespace-nowrap">${escAttr(item._id || '-')}</td>
                     <td class="p-4 font-semibold text-slate-800">${escAttr(item.nama || '-')}</td>
                     <td class="p-4 text-slate-500 text-xs whitespace-nowrap" title="${escAttr(item.nik || '')}">${escAttr(maskNik(item.nik))}</td>
                     <td class="p-4 text-slate-600 whitespace-nowrap">${escAttr(item.noHp || '-')}</td>
@@ -2349,6 +2401,56 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Kirim email uji ke ADMIN_EMAIL (Script Property) untuk memverifikasi
+        // notifikasi pengajuan. Memakai JSONP agar bisa menampilkan hasilnya.
+        function testAdminEmail() {
+            if (!appState.scriptUrl) {
+                showToast('Simpan Web App URL terlebih dahulu di Pengaturan.', 'error');
+                return;
+            }
+            if (!appState.adminToken) {
+                promptForAdminToken('Token admin belum diatur. Simpan token di Pengaturan sebelum mengirim email uji.');
+                return;
+            }
+
+            showToast('Mengirim email uji ke admin...', 'info');
+
+            const callbackName = '__rtTestEmail_' + Date.now();
+            const script = document.createElement('script');
+            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
+
+            const cleanup = () => {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+
+            const timer = setTimeout(() => {
+                cleanup();
+                showToast('Timeout saat mengirim email uji.', 'error');
+            }, 15000);
+
+            window[callbackName] = function (res) {
+                clearTimeout(timer);
+                cleanup();
+                if (res && res.result === 'success') {
+                    showToast(res.message || 'Email uji terkirim.', 'success');
+                } else if (res && res.code === 'unauthorized') {
+                    promptForAdminToken('Email uji ditolak: token admin tidak valid atau belum diatur di pengaturan.');
+                } else {
+                    showToast((res && res.message) || 'Gagal mengirim email uji.', 'error');
+                }
+            };
+
+            script.onerror = function () {
+                clearTimeout(timer);
+                cleanup();
+                showToast('Gagal terhubung ke Google Apps Script.', 'error');
+            };
+
+            script.src = appState.scriptUrl + sep + 'action=sendTestEmail&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName;
+            document.body.appendChild(script);
         }
 
         // Generic delete: send to Sheets FIRST, then update local if successful

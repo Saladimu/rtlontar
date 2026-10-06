@@ -113,6 +113,9 @@ function doGet(e) {
   } else if (params.action === 'checkSurat') {
     // Cek status pengajuan surat oleh warga: cocokkan NIK + No. HP. Tanpa token.
     payload = handleCheckSurat(params);
+  } else if (params.action === 'sendTestEmail') {
+    // Kirim email uji notifikasi (butuh token admin).
+    payload = isAuthorized(params.token) ? handleSendTestEmail() : unauthorized();
   } else if (params.action === 'version') {
     payload = { "result": "success", "version": CODE_VERSION };
   } else {
@@ -615,6 +618,47 @@ function notifyAdminNewSurat(r) {
     // sengaja diabaikan: kegagalan email tidak boleh membatalkan pengajuan
     console.log('notifyAdminNewSurat gagal: ' + err);
   }
+}
+
+// Aksi admin (token): kirim email uji ke ADMIN_EMAIL untuk memverifikasi
+// konfigurasi notifikasi. Mengembalikan error yang jelas bila belum diatur.
+function handleSendTestEmail() {
+  var props = PropertiesService.getScriptProperties();
+  var to = props.getProperty('ADMIN_EMAIL');
+  if (!to) {
+    return {
+      "result": "error",
+      "code": "no_admin_email",
+      "message": "Script Property ADMIN_EMAIL belum diatur. Buka Project Settings > Script Properties, tambahkan ADMIN_EMAIL berisi alamat email admin, lalu coba lagi."
+    };
+  }
+  try {
+    var ts = Utilities.formatDate(new Date(), TZ, 'dd-mm-yyyy HH:mm');
+    MailApp.sendEmail({
+      to: to,
+      subject: '[RT] Tes Notifikasi Email Pengajuan Surat',
+      body: 'Ini email uji dari dashboard RT.\n\nBila Anda menerima email ini, notifikasi pengajuan surat sudah aktif.\nWaktu: ' + ts
+    });
+    return { "result": "success", "to": to, "message": 'Email uji terkirim ke ' + to + '.' };
+  } catch (err) {
+    var detail = String(err);
+    if (/permission to call MailApp|script\.send_mail|authorization is required|not have permission/i.test(detail)) {
+      return {
+        "result": "error",
+        "code": "mail_scope_denied",
+        "message": 'Izin kirim email belum diberikan ke skrip. Buka editor Apps Script, pilih fungsi authorizeMail lalu klik Run > Review permissions > Allow, kemudian deploy ulang sebagai New version. Detail: ' + detail
+      };
+    }
+    return { "result": "error", "code": "email_failed", "message": 'Gagal mengirim email: ' + detail };
+  }
+}
+
+// Jalankan SEKALI dari editor Apps Script (pilih fungsi ini di dropdown lalu
+// klik Run) untuk memicu dialog izin scope "script.send_mail" pada akun pemilik.
+// Diperlukan sebelum web app dapat mengirim email.
+function authorizeMail() {
+  var quota = MailApp.getRemainingDailyQuota();
+  Logger.log('Izin email OK. Sisa kuota email hari ini: ' + quota);
 }
 
 // Format nilai Timestamp sheet menjadi "dd-mm-yyyy HH:mm" untuk respons publik.

@@ -100,7 +100,7 @@ Lihat `Apps Script/readme.md` untuk:
 3. Atur *Execute as*: **Me** (Email Anda).
 4. Atur *Who has access*: **Anyone** (Siapa saja).
 5. Klik **Deploy**, lalu salin **Web App URL** yang didapat.
-6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda. (Opsional) tambahkan **`ADMIN_EMAIL`** berisi email admin — bila diisi, setiap pengajuan surat baru dari portal publik akan dikirimkan notifikasi email.
+6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda. (Opsional) tambahkan **`ADMIN_EMAIL`** berisi email admin — bila diisi, setiap pengajuan surat baru dari portal publik akan dikirimkan notifikasi email. Bila mengisi `ADMIN_EMAIL`, jalankan fungsi **`authorizeMail`** sekali dari editor (Run > Review permissions > Allow) lalu deploy **New version** agar izin email aktif (lihat bagian **Notifikasi Email ke Admin**).
 7. Buka aplikasi web RT, masuk ke tab **Koneksi App Script**, tempelkan URL tersebut, isi **Token Admin** dengan nilai `ADMIN_TOKEN` yang sama, lalu klik **Simpan Token** (dan **Simpan URL Koneksi**).
 
 > **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
@@ -134,13 +134,34 @@ Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengajuan baru akan dikirim
 
 Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (terbaru di atas) beserta kartu ringkasan jumlah per status:
 
-- **Catat Pengajuan**: menambah pengajuan secara manual (mis. permohonan langsung/lisan) dengan tombol **Catat Pengajuan**.
-- **Edit**: klik baris (atau ikon pensil) untuk membuka modal dan mengubah data, **Status Pengurusan** (`RT_CONFIG.statusSurat`), dan **Catatan Pengurus**.
+- **Catat Pengajuan**: menambah pengajuan secara manual (mis. permohonan langsung/lisan) dengan tombol **Catat Pengajuan**. Bila ada isian yang salah (mis. NIK kurang dari 16 digit), pesan error muncul **di dalam modal** dan field yang bermasalah disorot.
+- **No. Pengajuan**: setiap baris menampilkan nomor pengajuan (kolom `ID`, mis. `SRT-261006-AB12`) — nomor yang sama yang diterima warga saat mengajukan, sehingga mudah dicocokkan.
+- **Edit**: klik baris (atau ikon pensil) untuk membuka modal dan mengubah data, **Status Pengurusan** (`RT_CONFIG.statusSurat`), dan **Catatan Pengurus**. Modal juga menampilkan No. Pengajuan & tanggal pengajuan.
 - **Ubah Status cepat**: ikon putar menggilir status `Pending → Diproses → Selesai → Ditolak → Pending`.
 - **Hapus**: ikon tempat sampah (dengan konfirmasi).
-- **Filter & cari**: saring berdasarkan status dan cari berdasarkan nama / NIK / jenis surat. NIK disamarkan pada tabel (contoh `3173••••••01`).
+- **Filter & cari**: saring berdasarkan status dan cari berdasarkan no. pengajuan / nama / NIK / jenis surat. NIK disamarkan pada tabel (contoh `3173••••••01`).
 
 Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti modul lain.
+
+#### Notifikasi Email ke Admin
+
+Email otomatis dikirim **hanya untuk pengajuan yang masuk dari Portal Publik** (bukan untuk entri manual admin). Cara mengaktifkan:
+
+1. Buka **Project Settings > Script Properties** pada Apps Script, tambahkan properti **`ADMIN_EMAIL`** berisi alamat email admin. (Jangan ditulis di dalam `code.gs` — nilainya dibaca dari Script Properties saat runtime.)
+2. Buka editor **Apps Script**, pilih fungsi **`authorizeMail`** pada dropdown lalu klik **Run** > **Review permissions** > **Allow**. Langkah ini memberi izin scope `script.send_mail` (kirim email) pada akun pemilik; tanpa ini, email gagal dengan error *"You do not have permission to call MailApp.sendEmail"*. Setelah itu deploy ulang sebagai **New version**.
+3. Uji dari dashboard: buka menu **Pengajuan Surat** lalu klik **Tes Email Admin**. Bila berhasil, email uji terkirim; bila `ADMIN_EMAIL` belum diatur, muncul pesan error yang menjelaskan.
+
+Untuk menguji alur lengkap, kirim pengajuan dari Portal Publik menggunakan NIK & No. HP asli; email notifikasi akan dikirim ke `ADMIN_EMAIL`.
+
+> **Catatan penting:** Web App dijalankan **sebagai pemilik skrip** (*Execute as: Me*). Karena itu, akun yang menekan **Allow** saat langkah 2 harus **akun yang sama** dengan pemilik/pendeploy Apps Script. Bila berbeda, pengiriman email tetap gagal meski sudah diizinkan.
+>
+> **Mengatasi error "You do not have permission to call MailApp.sendEmail":**
+> 1. Pastikan perubahan terbaru sudah disimpan (**Ctrl+S**).
+> 2. Pilih fungsi **`authorizeMail`** pada dropdown di editor Apps Script, klik **Run**, lalu **Review permissions > pilih akun > Allow**.
+> 3. **Manage deployments > ikon pensil (Edit) > Version: New version > Deploy**.
+> 4. Ulangi **Tes Email Admin** di dashboard.
+>
+> Pesan ini juga muncul langsung di dashboard sebagai kode `mail_scope_denied` bila tombol **Tes Email Admin** diklik sebelum izin diberikan.
 
 ---
 
