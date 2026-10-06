@@ -50,10 +50,15 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | Kolom | Tipe | Contoh |
 |-------|------|--------|
 | Timestamp | DateTime | 2026-10-03 10:30:00 |
+| Nomor KK | String | 3173012304567890 |
 | Nama Lengkap | String | Budi Santoso |
+| Status | String | Kepala Keluarga / Suami/Istri / Anak / Menantu / Cucu / Orang tua / Mertua / Family lain / Pembantu / Lainnya |
+| Jenis Kelamin | String | Laki-laki / Perempuan |
 | NIK | String | 3173012304567890 |
 | Tempat Lahir | String | Jakarta |
 | Tanggal Lahir | Date | 1990-05-17 |
+| Pendidikan | String | Tidak/Belum Sekolah / SD / SMP / SMA/SMK / D1-D3 / S1 / S2 / S3 |
+| Pekerjaan | String | Karyawan Swasta / PNS / Wiraswasta / Pelajar/Mahasiswa / Tidak Bekerja / Lainnya |
 | No HP | String | 081234567890 |
 | Status Tempat Tinggal | String | Tetap / Kontrak |
 | Alamat/No Rumah | String | Jl. Tanjung Duren No. 12 |
@@ -157,7 +162,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 
 | Sheet | Payload Fields |
 |-------|----------------|
-| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nama`, `nik`, `tempat`, `tanggalLahir`, `noHp`, `statusTinggal`, `alamat` |
+| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nomorKK`, `nama`, `status`, `jenisKelamin`, `nik`, `tempat`, `tanggalLahir`, `pendidikan`, `pekerjaan`, `noHp`, `statusTinggal`, `alamat` |
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
@@ -173,10 +178,15 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 {
   "sheetName": "Data_Warga",
   "id": "id-1728031200000-ab12cd",
+  "nomorKK": "3173012304567890",
   "nama": "Budi Santoso",
+  "status": "Kepala Keluarga",
+  "jenisKelamin": "Laki-laki",
   "nik": "3173012304567890",
   "tempat": "Jakarta",
   "tanggalLahir": "1990-05-17",
+  "pendidikan": "S1",
+  "pekerjaan": "Karyawan Swasta",
   "noHp": "081234567890",
   "statusTinggal": "Tetap",
   "alamat": "Jl. Tanjung Duren No. 12"
@@ -189,10 +199,15 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
   "action": "update",
   "sheetName": "Data_Warga",
   "id": "id-1728031200000-ab12cd",
+  "nomorKK": "3173012304567890",
   "nama": "Budi Santoso (revisi)",
+  "status": "Kepala Keluarga",
+  "jenisKelamin": "Laki-laki",
   "nik": "3173012304567890",
   "tempat": "Bandung",
   "tanggalLahir": "1990-05-17",
+  "pendidikan": "S1",
+  "pekerjaan": "Karyawan Swasta",
   "noHp": "081234567890",
   "statusTinggal": "Kontrak",
   "alamat": "Jl. Tanjung Duren No. 15"
@@ -248,7 +263,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
 | `ensureSpreadsheetFormat(ss, sheet, name)` | Set timezone Asia/Jakarta + format `dd-mm-yyyy hh:mm` + header ID |
 | `migrateLayout(sheet, name)` | Migrasi header: sisipkan `Publik` (Pengumuman/Kegiatan_Warga) & delegasi `Data_Warga` |
-| `migrateDataWargaLayout(sheet, desired)` | Sisipkan kolom `Tempat Lahir` & `Tanggal Lahir` (setelah `NIK`) bila belum ada; idempoten |
+| `migrateDataWargaLayout(sheet, desired)` | Susun ulang `Data_Warga` ke urutan terbaru (Nomor KK, Status, Jenis Kelamin, Pendidikan, Pekerjaan) berbasis **nama header**; kolom baru yang belum ada diisi kosong; idempoten |
 | `buildRowData(sheetName, data, timestamp, id)` | Susun array baris (Timestamp, field, ID) |
 | `respond(obj)` | Helper: return JSON dengan MIME type benar |
 
@@ -276,7 +291,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 
 4. **Format Tanggal**: `readAllSheets()` memformat kolom tanggal jadi `yyyy-MM-dd` (termasuk `Tanggal Lahir` pada `Data_Warga`) dan waktu jadi `HH:mm` sebelum dikirim ke frontend.
 
-5. **Migrasi**: Saat pertama kali `read`, header `ID` dibuat, kolom `Publik` disisipkan (Pengumuman & Kegiatan_Warga), kolom `Tempat Lahir` & `Tanggal Lahir` disisipkan pada `Data_Warga` (setelah `NIK`), dan semua baris lama otomatis diberi ID + `Publik=Ya`. Tidak ada langkah manual.
+5. **Migrasi**: Saat pertama kali `read`, header `ID` dibuat, kolom `Publik` disisipkan (Pengumuman & Kegiatan_Warga), layout `Data_Warga` disusun ulang berbasis nama header (menambahkan `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` bila belum ada), dan semua baris lama otomatis diberi ID + `Publik=Ya`. Tidak ada langkah manual.
 
 6. **Publik**: Kolom `Publik` bernilai `Ya`/`Tidak`. Hanya record `Ya` yang tampil di `public.html`. Di sisi admin, gunakan tombol toggle (ikon mata) pada kartu Pengumuman/Kegiatan untuk mengubahnya.
 

@@ -56,10 +56,15 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 {
   "sheetName": "Data_Warga",
   "token": "String (Required - harus sama dengan ADMIN_TOKEN)",
-  "nama": "String (Required)",
+  "nomorKK": "String (Optional - Nomor Kartu Keluarga)",
+  "nama": "String (Required - Nama Lengkap)",
+  "status": "String [Kepala Keluarga | Suami/Istri | Anak | Menantu | Cucu | Orang tua | Mertua | Family lain | Pembantu | Lainnya]",
+  "jenisKelamin": "String [Laki-laki | Perempuan]",
   "nik": "String (Optional)",
   "tempat": "String (Optional - Tempat Lahir)",
   "tanggalLahir": "YYYY-MM-DD (Optional - Tanggal Lahir)",
+  "pendidikan": "String (Optional)",
+  "pekerjaan": "String (Optional)",
   "noHp": "String (Required)",
   "statusTinggal": "String [Tetap | Kontrak]",
   "alamat": "String (Required)"
@@ -152,7 +157,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 > **Penting:** Operasi `update` **wajib** menyertakan `action:"update"`. Tanpa itu `doPost` menganggapnya `add` dan menambahkan baris duplikat.
 
 > **Field per sheet:**
-> - `Data_Warga`: `nama, nik, tempat, tanggalLahir, noHp, statusTinggal, alamat`
+> - `Data_Warga`: `nomorKK, nama, status, jenisKelamin, nik, tempat, tanggalLahir, pendidikan, pekerjaan, noHp, statusTinggal, alamat`
 > - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan`
 > - `Pengumuman`: `tanggal, judul, isi, kategori, pj, publik` (`Ya`/`Tidak`)
 > - `Kegiatan_Warga`: `namaKegiatan, tanggal, waktu, lokasi, pj, keterangan, publik` (`Ya`/`Tidak`)
@@ -320,6 +325,13 @@ Tombol refresh di:
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 
 ---
+
+## 🔧 Recent Changes (2026-10-06)
+
+- ✅ **Skema `Data_Warga` diperluas (v8)** — 5 kolom baru: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan`. Urutan final: `Timestamp, Nomor KK, Nama Lengkap, Status, Jenis Kelamin, NIK, Tempat Lahir, Tanggal Lahir, Pendidikan, Pekerjaan, No HP, Status Tempat Tinggal, Alamat/No Rumah, ID`. `EXPECTED_FIELDS.Data_Warga = 13`, `DESIRED_HEADERS.Data_Warga` diperbarui, `formats.Data_Warga = {7:"yyyy-MM-dd"}` (Tanggal Lahir kini di kolom ke-8/0-based 7).
+- ✅ **Migrasi berbasis nama header** — `migrateDataWargaLayout()` diubah dari `insertColumnsBefore(4,2)` (posisional) menjadi pemetaan **berdasarkan nama header**: bangun peta `nama → indeks kolom` lama, susun ulang baris mengikuti header baru, kolom baru diisi kosong, lalu `clearContents()` + tulis ulang. Aman & idempoten untuk berbagai layout lama.
+- ✅ **Frontend `index.html`** — tabel 14 kolom, modal & baris kosong inline memakai field baru (`warga-nomorkk`, `warga-statuskeluarga`, `warga-jeniskelamin`, `warga-pendidikan`, `warga-pekerjaan`); konstanta `WARGA_STATUS_KK`, `WARGA_JENIS_KELAMIN`, helper `selectOptions(list, selected)`; `applySheetsData` memetakan indeks baru; `submitWarga`/`saveDraftWarga`/`editWarga`/`deleteWarga` disesuaikan; `EXPECTED_BACKEND_VERSION = 'publik-v8-2026-10-06'`.
+- ✅ **`CODE_VERSION`** di `code.gs` = `publik-v8-2026-10-06` (wajib redeploy sebagai **New version**, lalu klik **Cek Versi Backend**).
 
 ## 🔧 Recent Changes (2026-10-05)
 

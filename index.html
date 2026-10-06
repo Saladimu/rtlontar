@@ -318,11 +318,16 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
+                                <th class="p-4">No. KK</th>
                                 <th class="p-4">Nama Lengkap</th>
                                 <th class="p-4">Usia</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Jenis Kelamin</th>
                                 <th class="p-4">NIK</th>
                                 <th class="p-4">Tempat Lahir</th>
                                 <th class="p-4">Tanggal Lahir</th>
+                                <th class="p-4">Pendidikan</th>
+                                <th class="p-4">Pekerjaan</th>
                                 <th class="p-4">No. HP</th>
                                 <th class="p-4">Status Tinggal</th>
                                 <th class="p-4">Alamat / No. Rumah</th>
@@ -593,8 +598,38 @@
             </div>
             <form id="form-warga" onsubmit="submitWarga(event)" class="space-y-3">
                 <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor KK (Kartu Keluarga)</label>
+                    <input type="text" id="warga-nomorkk" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="31730...">
+                </div>
+                <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap *</label>
                     <input type="text" id="warga-nama" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Budi Santoso">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Status dalam Keluarga</label>
+                        <select id="warga-statuskeluarga" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Pilih...</option>
+                            <option value="Kepala Keluarga">Kepala Keluarga</option>
+                            <option value="Suami/Istri">Suami/Istri</option>
+                            <option value="Anak">Anak</option>
+                            <option value="Menantu">Menantu</option>
+                            <option value="Cucu">Cucu</option>
+                            <option value="Orang tua">Orang tua</option>
+                            <option value="Mertua">Mertua</option>
+                            <option value="Family lain">Family lain</option>
+                            <option value="Pembantu">Pembantu</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Kelamin</label>
+                        <select id="warga-jeniskelamin" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">Pilih...</option>
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">NIK (Nomor Induk Kependudukan)</label>
@@ -608,6 +643,16 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Lahir</label>
                         <input type="text" id="warga-tanggallahir" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Pendidikan</label>
+                        <input type="text" id="warga-pendidikan" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="SLTA / S1">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Pekerjaan</label>
+                        <input type="text" id="warga-pekerjaan" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Karyawan Swasta">
                     </div>
                 </div>
                 <div>
@@ -799,7 +844,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v7-2026-10-05';
+        const EXPECTED_BACKEND_VERSION = 'publik-v8-2026-10-06';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -910,12 +955,17 @@
         }
 
         const WARGA_DRAFT_FIELDS = [
+            { id: 'draft-warga-nomorkk', key: 'nomorKK' },
             { id: 'draft-warga-nama', key: 'nama' },
+            { id: 'draft-warga-statuskeluarga', key: 'status' },
+            { id: 'draft-warga-jeniskelamin', key: 'jenisKelamin' },
             { id: 'draft-warga-nik', key: 'nik' },
             { id: 'draft-warga-tempat', key: 'tempat' },
             { id: 'draft-warga-tanggal', key: 'tanggalLahir' },
+            { id: 'draft-warga-pendidikan', key: 'pendidikan' },
+            { id: 'draft-warga-pekerjaan', key: 'pekerjaan' },
             { id: 'draft-warga-hp', key: 'hp' },
-            { id: 'draft-warga-status', key: 'statusTinggal' },
+            { id: 'draft-warga-statustinggal', key: 'statusTinggal' },
             { id: 'draft-warga-alamat', key: 'alamat' }
         ];
 
@@ -927,6 +977,17 @@
             { id: 'draft-kas-jumlah', key: 'jumlah' },
             { id: 'draft-kas-keterangan', key: 'keterangan' }
         ];
+
+        // Pilihan dropdown untuk Data_Warga
+        const WARGA_STATUS_KK = ['Kepala Keluarga', 'Suami/Istri', 'Anak', 'Menantu', 'Cucu', 'Orang tua', 'Mertua', 'Family lain', 'Pembantu', 'Lainnya'];
+        const WARGA_JENIS_KELAMIN = ['Laki-laki', 'Perempuan'];
+
+        // Bangun <option> dari daftar, tandai yang terpilih.
+        function selectOptions(list, selected) {
+            return list.map(function (v) {
+                return `<option value="${escAttr(v)}"${v === selected ? ' selected' : ''}>${v}</option>`;
+            }).join('');
+        }
 
         // Isi datalist nama warga dari Data_Warga (lookup pada Iuran & Kas).
         function renderWargaNameList() {
@@ -949,7 +1010,7 @@
 
         function getSignature(type, item) {
             if (!item) return '';
-            if (type === 'warga') return [item.nik || '', item.nama || '', item.tempat || '', item.tanggalLahir || '', item.hp || '', item.alamat || ''].join('|');
+            if (type === 'warga') return [item.nomorKK || '', item.nama || '', item.status || '', item.jenisKelamin || '', item.nik || '', item.tempat || '', item.tanggalLahir || '', item.pendidikan || '', item.pekerjaan || '', item.hp || '', item.statusTinggal || '', item.alamat || ''].join('|');
             if (type === 'kas') return [item.tanggal || '', item.nama || '', item.noRumah || '', item.jenis || '', item.jumlah || '', item.keterangan || ''].join('|');
             if (type === 'pengumuman') return [item.tanggal || '', item.judul || '', item.isi || '', item.kategori || '', item.pj || ''].join('|');
             if (type === 'kegiatan') return [item.namaKegiatan || '', item.tanggal || '', item.waktu || '', item.lokasi || '', item.pj || '', item.keterangan || ''].join('|');
@@ -1191,14 +1252,27 @@
             const draftRow = document.createElement('tr');
             draftRow.className = 'bg-blue-50/50';
             draftRow.innerHTML = `
+                <td class="p-2"><input id="draft-warga-nomorkk" type="text" inputmode="numeric" value="${escAttr(draftWarga.nomorKK)}" placeholder="No. KK" class="w-full min-w-[8rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
                 <td class="p-2"><input id="draft-warga-nama" type="text" value="${escAttr(draftWarga.nama)}" placeholder="Nama lengkap" class="w-full min-w-[9rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
                 <td class="p-2 text-xs text-slate-500 text-center" id="draft-warga-usia">${draftWargaUsia || '-'}</td>
+                <td class="p-2">
+                    <select id="draft-warga-statuskeluarga" class="w-full min-w-[8rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="">-</option>${selectOptions(WARGA_STATUS_KK, draftWarga.status)}
+                    </select>
+                </td>
+                <td class="p-2">
+                    <select id="draft-warga-jeniskelamin" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <option value="">-</option>${selectOptions(WARGA_JENIS_KELAMIN, draftWarga.jenisKelamin)}
+                    </select>
+                </td>
                 <td class="p-2"><input id="draft-warga-nik" type="text" value="${escAttr(draftWarga.nik)}" placeholder="NIK" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
                 <td class="p-2"><input id="draft-warga-tempat" type="text" value="${escAttr(draftWarga.tempat)}" placeholder="Tempat lahir" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
                 <td class="p-2"><input id="draft-warga-tanggal" type="text" inputmode="numeric" maxlength="10" value="${escAttr(draftWarga.tanggalLahir)}" oninput="maskDateField(this); updateDraftWargaUsia()" placeholder="dd-mm-yyyy" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2"><input id="draft-warga-pendidikan" type="text" value="${escAttr(draftWarga.pendidikan)}" placeholder="Pendidikan" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
+                <td class="p-2"><input id="draft-warga-pekerjaan" type="text" value="${escAttr(draftWarga.pekerjaan)}" placeholder="Pekerjaan" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
                 <td class="p-2"><input id="draft-warga-hp" type="tel" value="${escAttr(draftWarga.hp)}" placeholder="08..." class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
                 <td class="p-2">
-                    <select id="draft-warga-status" class="w-full min-w-[6rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                    <select id="draft-warga-statustinggal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option value="Tetap"${draftWarga.statusTinggal === 'Kontrak' ? '' : ' selected'}>Tetap</option>
                         <option value="Kontrak"${draftWarga.statusTinggal === 'Kontrak' ? ' selected' : ''}>Kontrak</option>
                     </select>
@@ -1212,7 +1286,7 @@
             tbody.appendChild(draftRow);
 
             const filtered = appState.warga.filter(item => {
-                const haystack = [item.nama, item.nik, item.tempat, item.tanggalLahir, item.hp, item.statusTinggal, item.alamat]
+                const haystack = [item.nomorKK, item.nama, item.status, item.jenisKelamin, item.nik, item.tempat, item.tanggalLahir, item.pendidikan, item.pekerjaan, item.hp, item.statusTinggal, item.alamat]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
@@ -1221,7 +1295,7 @@
 
             if (filtered.length === 0) {
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="9" class="p-4 text-center text-slate-400">Belum ada data warga. Isi baris kosong di atas lalu klik simpan.</td>`;
+                empty.innerHTML = `<td colspan="14" class="p-4 text-center text-slate-400">Belum ada data warga. Isi baris kosong di atas lalu klik simpan.</td>`;
                 tbody.appendChild(empty);
                 return;
             }
@@ -1235,12 +1309,17 @@
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-slate-50 transition';
                 tr.innerHTML = `
+                    <td class="p-4 text-slate-600 text-xs">${item.nomorKK || '-'}</td>
                     <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
                     <td class="p-4 text-slate-600 text-xs">${hitungUsia(item.tanggalLahir) || '-'}</td>
+                    <td class="p-4 text-slate-600 text-xs">${item.status || '-'}</td>
+                    <td class="p-4 text-slate-600 text-xs">${item.jenisKelamin || '-'}</td>
                     <td class="p-4 text-slate-500 text-xs">${item.nik || '-'}</td>
                     <td class="p-4 text-slate-600">${item.tempat || '-'}</td>
                     <td class="p-4 text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</td>
-                    <td class="p-4 text-slate-600">${item.hp}</td>
+                    <td class="p-4 text-slate-600 text-xs">${item.pendidikan || '-'}</td>
+                    <td class="p-4 text-slate-600 text-xs">${item.pekerjaan || '-'}</td>
+                    <td class="p-4 text-slate-600">${item.hp || '-'}</td>
                     <td class="p-4">${statusBadge}</td>
                     <td class="p-4 text-slate-600">${item.alamat}</td>
                     <td class="p-4 text-center">
@@ -1438,10 +1517,15 @@
             e.preventDefault();
             const data = {
                 sheetName: "Data_Warga",
+                nomorKK: document.getElementById('warga-nomorkk').value,
                 nama: document.getElementById('warga-nama').value,
+                status: document.getElementById('warga-statuskeluarga').value,
+                jenisKelamin: document.getElementById('warga-jeniskelamin').value,
                 nik: document.getElementById('warga-nik').value,
                 tempat: document.getElementById('warga-tempat').value,
                 tanggalLahir: readDateInput('warga-tanggallahir'),
+                pendidikan: document.getElementById('warga-pendidikan').value,
+                pekerjaan: document.getElementById('warga-pekerjaan').value,
                 noHp: document.getElementById('warga-hp').value,
                 statusTinggal: document.getElementById('warga-status').value,
                 alamat: document.getElementById('warga-alamat').value
@@ -1450,7 +1534,7 @@
             if (editMode.warga !== null) {
                 const editId = editMode.warga;
                 const idx = findIndexById(appState.warga, editId);
-                const updated = { _id: editId, nama: data.nama, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
+                const updated = { _id: editId, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
                 if (idx !== -1) appState.warga[idx] = updated;
                 editMode.warga = null;
                 saveLocalState();
@@ -1460,7 +1544,7 @@
             } else {
                 const id = newId();
                 data.id = id;
-                appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
+                appState.warga.push({ _id: id, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
                 saveLocalState();
                 renderWargaTable();
                 sendToGoogleSheets(data);
@@ -1525,16 +1609,21 @@
             const id = newId();
             const data = {
                 sheetName: 'Data_Warga',
+                nomorKK: (draftWarga.nomorKK || '').trim(),
                 nama: nama,
+                status: (draftWarga.status || '').trim(),
+                jenisKelamin: (draftWarga.jenisKelamin || '').trim(),
                 nik: (draftWarga.nik || '').trim(),
                 tempat: (draftWarga.tempat || '').trim(),
                 tanggalLahir: tanggalLahir,
+                pendidikan: (draftWarga.pendidikan || '').trim(),
+                pekerjaan: (draftWarga.pekerjaan || '').trim(),
                 noHp: noHp,
                 statusTinggal: draftWarga.statusTinggal || 'Tetap',
                 alamat: alamat,
                 id: id
             };
-            appState.warga.push({ _id: id, nama: data.nama, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
+            appState.warga.push({ _id: id, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
             draftWarga = {};
             clearDraftFields(WARGA_DRAFT_FIELDS);
             saveLocalState();
@@ -1662,10 +1751,15 @@
             
             editMode.warga = item._id;
             document.getElementById('modal-warga-title').textContent = 'Edit Data Warga';
+            document.getElementById('warga-nomorkk').value = item.nomorKK || '';
             document.getElementById('warga-nama').value = item.nama || '';
+            document.getElementById('warga-statuskeluarga').value = item.status || '';
+            document.getElementById('warga-jeniskelamin').value = item.jenisKelamin || '';
             document.getElementById('warga-nik').value = item.nik || '';
             document.getElementById('warga-tempat').value = item.tempat || '';
             setDateInput('warga-tanggallahir', item.tanggalLahir);
+            document.getElementById('warga-pendidikan').value = item.pendidikan || '';
+            document.getElementById('warga-pekerjaan').value = item.pekerjaan || '';
             document.getElementById('warga-hp').value = item.hp || '';
             document.getElementById('warga-status').value = item.statusTinggal || 'Tetap';
             document.getElementById('warga-alamat').value = item.alamat || '';
@@ -1764,6 +1858,8 @@
             const warningMsg = `⚠️ PERHATIAN!`;
             const detailMsg = `Anda akan menghapus data warga:
 • Nama: ${item?.nama || 'Tidak diketahui'}
+• Nomor KK: ${item?.nomorKK || '-'}
+• Status: ${item?.status || '-'}
 • NIK: ${item?.nik || '-'}
 • Tempat Lahir: ${item?.tempat || '-'}
 • Tanggal Lahir: ${fmtDateDisplay(item?.tanggalLahir) || '-'}
@@ -2118,7 +2214,7 @@
             }
             const d = res.data;
             appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
-                _id: r[r.length - 1], nama: r[1], nik: r[2], tempat: r[3], tanggalLahir: fmtDate(r[4]), hp: r[5], statusTinggal: r[6], alamat: r[7]
+                _id: r[r.length - 1], nomorKK: r[1], nama: r[2], status: r[3], jenisKelamin: r[4], nik: r[5], tempat: r[6], tanggalLahir: fmtDate(r[7]), pendidikan: r[8], pekerjaan: r[9], hp: r[10], statusTinggal: r[11], alamat: r[12]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
                 _id: r[r.length - 1], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]

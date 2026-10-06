@@ -7,7 +7,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 ## 🚀 Fitur Utama
 
 - **📊 Ringkasan / Dashboard:** Menampilkan statistik total warga, saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
-- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nama, NIK, Tempat & Tanggal Lahir, No. HP, Alamat, dan Status Tempat Tinggal) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database), fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
+- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nomor KK, Nama Lengkap, Status dalam Keluarga, Jenis Kelamin, NIK, Tempat & Tanggal Lahir, Pendidikan, Pekerjaan, No. HP, Status Tempat Tinggal, Alamat/No Rumah) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database), fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
 - **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Hapus** tersedia.
 - **📢 Pengumuman RT:** Papan informasi digital resmi untuk menyebarkan imbauan dan berita penting. **Edit & Hapus** tersedia.
 - **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT. **Edit & Hapus** tersedia.
@@ -33,7 +33,7 @@ Buat file baru di **Google Sheets**, buat 4 tab/sheet dengan nama exact di bawah
 
 ### 1. Tab `Data_Warga`
 ```tsv
-Timestamp	Nama Lengkap	NIK	Tempat Lahir	Tanggal Lahir	No HP	Status Tempat Tinggal	Alamat/No Rumah
+Timestamp	Nomor KK	Nama Lengkap	Status	Jenis Kelamin	NIK	Tempat Lahir	Tanggal Lahir	Pendidikan	Pekerjaan	No HP	Status Tempat Tinggal	Alamat/No Rumah
 ```
 
 ### 2. Tab `Iuran_Kas`
@@ -88,6 +88,7 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ **Endpoint `readPublic`** untuk portal publik (hanya Pengumuman & Kegiatan `Publik=Ya`, tanpa data warga/kas)
 - ✅ **ON/OFF Portal Publik** server-side (`PUBLIC_PORTAL_ENABLED` di Script Properties + aksi `setPortalStatus`); saat OFF `readPublic` ditolak
 - ✅ **Identitas RT terpusat** di `config.js` (ubah info RT di satu tempat)
+- ✅ **Kolom baru `Data_Warga`**: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` (urutan: Nomor KK → Nama Lengkap → Status → Jenis Kelamin → NIK → Tempat/Tanggal Lahir → Pendidikan → Pekerjaan → No HP → Status Tinggal → Alamat); migrasi otomatis berbasis **nama header** (`migrateDataWargaLayout()`), aman dijalankan berulang
 </details>
 
 ### Langkah Deployment Web App:

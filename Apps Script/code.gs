@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v7-2026-10-05";
+var CODE_VERSION = "publik-v8-2026-10-06";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 var TZ = "Asia/Jakarta";
@@ -6,7 +6,7 @@ var TS_FORMAT = "dd-mm-yyyy hh:mm";
 
 // Jumlah kolom data (termasuk kolom A Timestamp), TIDAK termasuk kolom bantu "ID".
 var EXPECTED_FIELDS = {
-  "Data_Warga": 8,      // A Timestamp + 7 field (termasuk Tempat Lahir & Tanggal Lahir)
+  "Data_Warga": 13,     // A Timestamp + 12 field (Nomor KK, Status, Jenis Kelamin, Pendidikan, Pekerjaan, dst.)
   "Iuran_Kas": 7,       // A Timestamp + 6 field
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8   // A Timestamp + 7 field (termasuk Publik)
@@ -14,7 +14,7 @@ var EXPECTED_FIELDS = {
 
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
 var DESIRED_HEADERS = {
-  "Data_Warga": ["Timestamp", "Nama Lengkap", "NIK", "Tempat Lahir", "Tanggal Lahir", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "ID"],
+  "Data_Warga": ["Timestamp", "Nomor KK", "Nama Lengkap", "Status", "Jenis Kelamin", "NIK", "Tempat Lahir", "Tanggal Lahir", "Pendidikan", "Pekerjaan", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "ID"],
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"]
@@ -193,20 +193,50 @@ function migrateLayout(sheet, name) {
   }
 }
 
-// Migrasi Data_Warga: sisipkan kolom "Tempat Lahir" & "Tanggal Lahir" setelah NIK
-// (kolom 4 & 5) bila belum ada. Aman dijalankan berulang.
+// Migrasi Data_Warga ke layout terbaru (Nomor KK, Status, Jenis Kelamin,
+// Pendidikan, Pekerjaan). Pemetaan dilakukan BERDASARKAN NAMA HEADER, bukan
+// posisi, sehingga aman untuk berbagai layout lama. Aman dijalankan berulang:
+// bila header sudah sesuai, fungsi langsung keluar tanpa menulis apa pun.
 function migrateDataWargaLayout(sheet, desired) {
   var lastCol = sheet.getLastColumn();
   if (lastCol < 1) lastCol = 1;
+  var lastRow = sheet.getLastRow();
   var width = Math.max(lastCol, desired.length);
-  var header = sheet.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h); });
-  if (header.join('').trim() === '') return; // sheet kosong, header diurus pemanggil
-  if (header.indexOf('Tempat Lahir') !== -1 && header.indexOf('Tanggal Lahir') !== -1) return; // sudah migrasi
 
-  // Sisipkan 2 kolom baru tepat setelah NIK (sebelum kolom ke-4 layout lama).
-  sheet.insertColumnsBefore(4, 2);
-  sheet.getRange(1, 4).setValue('Tempat Lahir');
-  sheet.getRange(1, 5).setValue('Tanggal Lahir');
+  var header = sheet.getRange(1, 1, 1, width).getValues()[0].map(function (h) {
+    return String(h === null || h === undefined ? '' : h).trim();
+  });
+  if (header.join('').trim() === '') return; // sheet kosong, header diurus pemanggil
+
+  // Cek apakah header (kolom data) sudah sama persis dengan yang diharapkan.
+  var same = true;
+  for (var i = 0; i < desired.length; i++) {
+    if (String(header[i] || '') !== String(desired[i])) { same = false; break; }
+  }
+  if (same) return; // sudah layout terbaru
+
+  // Peta nama header lama -> indeks kolom (0-based).
+  var indexOf = {};
+  for (var c = 0; c < header.length; c++) {
+    if (header[c] && indexOf[header[c]] === undefined) indexOf[header[c]] = c;
+  }
+
+  // Susun ulang data lama mengikuti urutan header baru.
+  var rows = [];
+  if (lastRow >= 2) {
+    var values = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+    rows = values.map(function (row) {
+      return desired.map(function (name) {
+        var idx = indexOf[name];
+        return (idx === undefined) ? '' : row[idx];
+      });
+    });
+  }
+
+  // Tulis ulang seluruh sheet agar urutan kolom konsisten.
+  var matrix = [desired.slice()].concat(rows);
+  sheet.clearContents();
+  sheet.getRange(1, 1, matrix.length, desired.length).setValues(matrix);
 }
 
 // Pastikan timezone spreadsheet = GMT+7, kolom Timestamp berformat dd-mm-yyyy hh:mm,
@@ -289,7 +319,7 @@ function readAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga"];
   var formats = {
-    "Data_Warga": { 4: "yyyy-MM-dd" },
+    "Data_Warga": { 7: "yyyy-MM-dd" },
     "Iuran_Kas": { 1: "yyyy-MM-dd" },
     "Pengumuman": { 1: "yyyy-MM-dd" },
     "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" }
@@ -432,7 +462,11 @@ function buildRowData(sheetName, data, timestamp, id) {
   var rowData = [timestamp || new Date()];
 
   if (sheetName === "Data_Warga") {
-    rowData.push(data.nama, data.nik, data.tempat, data.tanggalLahir, data.noHp, data.statusTinggal, data.alamat);
+    rowData.push(
+      data.nomorKK, data.nama, data.status, data.jenisKelamin, data.nik,
+      data.tempat, data.tanggalLahir, data.pendidikan, data.pekerjaan,
+      data.noHp, data.statusTinggal, data.alamat
+    );
   } else if (sheetName === "Iuran_Kas") {
     rowData.push(data.tanggal, data.nama, data.noRumah, data.jenis, data.jumlah, data.keterangan);
   } else if (sheetName === "Pengumuman") {
