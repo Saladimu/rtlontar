@@ -373,11 +373,23 @@
 
             <!-- Table Transaksi Kas -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
-                <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row gap-3 justify-between items-center">
-                    <h3 class="font-bold text-slate-800 text-base">Riwayat Transaksi</h3>
-                    <div class="relative w-full sm:w-64">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-kas" oninput="renderKasTable()" placeholder="Cari transaksi..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
+                <div class="p-4 border-b border-slate-200 flex flex-col lg:flex-row gap-3 justify-between lg:items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Riwayat Transaksi</h3>
+                        <p id="kas-period-label" class="text-xs text-slate-400 mt-0.5"></p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                        <select id="kas-view-mode" onchange="onKasViewModeChange()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <option value="month">Per Bulan</option>
+                            <option value="date">Per Tanggal</option>
+                            <option value="all">Semua Data</option>
+                        </select>
+                        <input type="month" id="kas-view-month" onchange="onKasViewPeriodChange()" class="hidden px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <input type="date" id="kas-view-date" onchange="onKasViewPeriodChange()" class="hidden px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <div class="relative w-full sm:w-56">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-kas" oninput="renderKasTable()" placeholder="Cari transaksi..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
+                        </div>
                     </div>
                 </div>
                 <div class="overflow-x-auto custom-scrollbar">
@@ -591,7 +603,7 @@
 
     <!-- Modal 1: Input Data Warga -->
     <div id="modal-warga" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modal-warga-title" class="font-bold text-lg text-slate-800">Tambah Data Warga</h3>
                 <button onclick="closeModal('modal-warga')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -680,7 +692,7 @@
 
     <!-- Modal 2: Input Kas / Iuran -->
     <div id="modal-kas" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modal-kas-title" class="font-bold text-lg text-slate-800">Catat Transaksi Kas</h3>
                 <button onclick="closeModal('modal-kas')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -726,7 +738,7 @@
 
     <!-- Modal 3: Input Pengumuman -->
     <div id="modal-pengumuman" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modal-pengumuman-title" class="font-bold text-lg text-slate-800">Buat Pengumuman Baru</h3>
                 <button onclick="closeModal('modal-pengumuman')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -771,7 +783,7 @@
 
     <!-- Modal 4: Input Agenda Kegiatan -->
     <div id="modal-kegiatan" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 id="modal-kegiatan-title" class="font-bold text-lg text-slate-800">Tambah Agenda Kegiatan</h3>
                 <button onclick="closeModal('modal-kegiatan')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -1065,6 +1077,7 @@
             updateLastUpdated();
             renderDashboardStats();
             renderWargaTable();
+            initKasView();
             renderKasTable();
             renderPengumumanCards();
             renderKegiatanCards();
@@ -1334,6 +1347,74 @@
             });
         }
 
+        // ===== Filter tampilan Iuran & Kas: per bulan / per tanggal / semua =====
+        let kasView = {
+            mode: localStorage.getItem('rt_kas_view_mode') || 'month',
+            month: localStorage.getItem('rt_kas_view_month') || '',
+            date: localStorage.getItem('rt_kas_view_date') || ''
+        };
+
+        function initKasView() {
+            const today = todayLocalISO();
+            if (!/^\d{4}-\d{2}$/.test(kasView.month)) kasView.month = today.slice(0, 7);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(kasView.date)) kasView.date = today;
+            if (['month', 'date', 'all'].indexOf(kasView.mode) === -1) kasView.mode = 'month';
+            const modeEl = document.getElementById('kas-view-mode');
+            const monthEl = document.getElementById('kas-view-month');
+            const dateEl = document.getElementById('kas-view-date');
+            if (modeEl) modeEl.value = kasView.mode;
+            if (monthEl) monthEl.value = kasView.month;
+            if (dateEl) dateEl.value = kasView.date;
+            updateKasViewControls();
+        }
+
+        function updateKasViewControls() {
+            const monthEl = document.getElementById('kas-view-month');
+            const dateEl = document.getElementById('kas-view-date');
+            if (monthEl) monthEl.classList.toggle('hidden', kasView.mode !== 'month');
+            if (dateEl) dateEl.classList.toggle('hidden', kasView.mode !== 'date');
+        }
+
+        function onKasViewModeChange() {
+            const el = document.getElementById('kas-view-mode');
+            kasView.mode = el ? el.value : 'all';
+            localStorage.setItem('rt_kas_view_mode', kasView.mode);
+            updateKasViewControls();
+            renderKasTable();
+        }
+
+        function onKasViewPeriodChange() {
+            const monthEl = document.getElementById('kas-view-month');
+            const dateEl = document.getElementById('kas-view-date');
+            if (monthEl && monthEl.value) { kasView.month = monthEl.value; localStorage.setItem('rt_kas_view_month', kasView.month); }
+            if (dateEl && dateEl.value) { kasView.date = dateEl.value; localStorage.setItem('rt_kas_view_date', kasView.date); }
+            renderKasTable();
+        }
+
+        // Apakah sebuah transaksi kas termasuk periode yang sedang dipilih.
+        function kasMatchesPeriod(item) {
+            if (kasView.mode === 'all') return true;
+            const iso = fmtDate(item && item.tanggal);
+            if (!iso) return false;
+            if (kasView.mode === 'month') return iso.slice(0, 7) === kasView.month;
+            if (kasView.mode === 'date') return iso === kasView.date;
+            return true;
+        }
+
+        // Label periode aktif yang tampil di atas tabel.
+        function kasPeriodLabel() {
+            if (kasView.mode === 'all') return 'Menampilkan semua transaksi';
+            if (kasView.mode === 'month') {
+                const m = String(kasView.month || '').match(/^(\d{4})-(\d{2})$/);
+                if (!m) return '';
+                const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                const mi = parseInt(m[2], 10) - 1;
+                return 'Periode: ' + ((mi >= 0 && mi < 12) ? names[mi] : m[2]) + ' ' + m[1];
+            }
+            if (kasView.mode === 'date') return 'Tanggal: ' + fmtDateDisplay(kasView.date);
+            return '';
+        }
+
         // Render Kas Table & Balances
         function renderKasTable() {
             const tbody = document.getElementById('table-kas-body');
@@ -1364,16 +1445,13 @@
             `;
             tbody.appendChild(draftRow);
 
+            // Ringkasan (kartu) mengikuti periode yang dipilih.
+            const periodItems = appState.kas.filter(kasMatchesPeriod);
+
             let totalMasuk = 0;
             let totalKeluar = 0;
 
-            const filtered = appState.kas.filter(item => {
-                const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
-                    .map(v => (v == null ? '' : String(v).toLowerCase()));
-                return search === '' || haystack.some(v => v.indexOf(search) !== -1);
-            });
-
-            appState.kas.forEach(item => {
+            periodItems.forEach(item => {
                 if (item.jenis === 'Pemasukan') totalMasuk += Number(item.jumlah);
                 else totalKeluar += Number(item.jumlah);
             });
@@ -1382,9 +1460,22 @@
             document.getElementById('total-pengeluaran').innerText = formatRupiah(totalKeluar);
             document.getElementById('saldo-kas-total').innerText = formatRupiah(totalMasuk - totalKeluar);
 
+            const periodLabelEl = document.getElementById('kas-period-label');
+            if (periodLabelEl) periodLabelEl.textContent = kasPeriodLabel();
+
+            const filtered = periodItems.filter(item => {
+                const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
+                    .map(v => (v == null ? '' : String(v).toLowerCase()));
+                return search === '' || haystack.some(v => v.indexOf(search) !== -1);
+            });
+
             if (filtered.length === 0) {
+                let msg;
+                if (appState.kas.length === 0) msg = 'Belum ada riwayat transaksi. Isi baris kosong di atas lalu klik simpan.';
+                else if (search !== '') msg = 'Tidak ada transaksi yang cocok dengan pencarian.';
+                else msg = 'Tidak ada transaksi pada periode ini.';
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">Belum ada riwayat transaksi. Isi baris kosong di atas lalu klik simpan.</td>`;
+                empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
                 return;
             }
