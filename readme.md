@@ -14,7 +14,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 - **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT. **Edit & Hapus** tersedia.
 - **🔄 Refresh Data Manual:** Tombol refresh di header desktop/mobile untuk memuat ulang data dari Google Sheets kapan saja.
 - **📝 Format Tanggal `dd-mm-yyyy`:** Semua kolom tanggal pada form tambah/edit (Warga, Kas, Pengumuman, Kegiatan) memakai format `dd-mm-yyyy` dengan mask otomatis; nilai kanonik tetap disimpan sebagai `yyyy-MM-dd` di Sheets.
-- **➕ Input Cepat (Baris Kosong):** Tabel Data Warga & Iuran/Kas menampilkan satu baris kosong di paling atas untuk input langsung tanpa membuka modal. Kolom Nama Warga pada Kas menampilkan saran dari Data_Warga (datalist).
+- **🔎 Filter per Kolom:** Tabel Data Warga & Iuran/Kas menampilkan satu baris filter tepat di bawah header tabel. Isi kata kunci pada kolom yang diinginkan (mis. Nama, NIK, Alamat, Jenis) untuk menyaring baris secara langsung; filter gabungan antar kolom dan dengan kotak pencarian di atas tabel. Tombol ikon corong pada kolom Aksi membersihkan semua filter.
 - **🔗 Integrasi Google Apps Script:** Pengiriman data form langsung terhubung ke Google Sheets, **sync delete**, dengan *fallback* **localStorage** jika dijalankan tanpa internet/koneksi backend.
 - **⚠️ Delete Persistence:** Sistem melacak record yang dihapus agar tidak muncul kembali setelah reload/sync.
 - **🔐 Token Admin:** Semua operasi tulis (tambah/edit/hapus) dan baca lengkap wajib menyertakan token rahasia (`ADMIN_TOKEN` di Script Properties). Tanpa token, server menolak permintaan sehingga orang yang hanya tahu URL tidak bisa mengubah data.
@@ -115,8 +115,8 @@ Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit**
 - **Edit**: Modal akan terbuka dengan data yang sudah terisi, klik simpan untuk menyimpan perubahan.
 - **Delete Sync**: Penghapusan dilakukan di Google Sheets dulu, jika gagal data lokal tidak berubah.
 
-### Tambah Data Cepat (Inline)
-Tabel **Data Warga** dan **Iuran & Kas RT** memiliki satu baris kosong di bagian atas. Isi kolomnya langsung, lalu klik tombol centang (simpan) pada kolom Aksi untuk menambah record tanpa membuka modal. Tanggal pada baris ini memakai format `dd-mm-yyyy`.
+### Filter per Kolom (Cari Data)
+Tabel **Data Warga** dan **Iuran & Kas RT** memiliki satu **baris filter** tepat di bawah header tabel. Ketik kata kunci pada kolom yang diinginkan (mis. Nama, NIK, Tempat Lahir, Status, Alamat untuk Warga; Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan untuk Kas) untuk menyaring baris secara langsung. Filter bersifat *contains* (mengandung kata kunci, tidak peduli huruf besar/kecil) dan dapat **digabung** antar kolom maupun dengan kotak pencarian di atas tabel. Klik ikon corong di kolom Aksi untuk **membersihkan semua filter**. Untuk **menambah** data, gunakan tombol **Tambah Data Warga** / **Catat Transaksi Kas** (membuka modal).
 
 ### Pengajuan Surat (Portal Publik & Admin)
 

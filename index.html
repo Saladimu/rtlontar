@@ -340,6 +340,22 @@
                                 <th class="p-4">Alamat / No. Rumah</th>
                                 <th class="p-4 text-center">Aksi</th>
                             </tr>
+                            <tr class="bg-white border-b border-slate-200 font-normal">
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-nomorkk" type="text" oninput="renderWargaTable()" placeholder="Cari No. KK" class="w-full min-w-[7rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-nama" type="text" oninput="renderWargaTable()" placeholder="Cari nama" class="w-full min-w-[8rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-usia" type="text" oninput="renderWargaTable()" placeholder="Usia" class="w-full min-w-[4rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-status" type="text" oninput="renderWargaTable()" placeholder="Cari status" class="w-full min-w-[7rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-jeniskelamin" type="text" oninput="renderWargaTable()" placeholder="Cari jenis" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-nik" type="text" oninput="renderWargaTable()" placeholder="Cari NIK" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-tempat" type="text" oninput="renderWargaTable()" placeholder="Cari tempat" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-tanggal" type="text" oninput="renderWargaTable()" placeholder="Cari tanggal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-pendidikan" type="text" oninput="renderWargaTable()" placeholder="Cari pendidikan" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-pekerjaan" type="text" oninput="renderWargaTable()" placeholder="Cari pekerjaan" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-hp" type="text" oninput="renderWargaTable()" placeholder="Cari HP" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-statustinggal" type="text" oninput="renderWargaTable()" placeholder="Tetap/Kontrak" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-alamat" type="text" oninput="renderWargaTable()" placeholder="Cari alamat" class="w-full min-w-[8rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0 text-center"><button type="button" onclick="clearWargaFilters()" title="Bersihkan semua filter" class="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg"><i class="fa-solid fa-filter-circle-xmark"></i></button></th>
+                            </tr>
                         </thead>
                         <tbody id="table-warga-body" class="divide-y divide-slate-100 text-slate-700">
                             <!-- Rows injected by JavaScript -->
@@ -410,6 +426,15 @@
                                 <th class="p-4 text-right">Jumlah (Rp)</th>
                                 <th class="p-4">Catatan</th>
                                 <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                            <tr class="bg-white border-b border-slate-200 font-normal">
+                                <th class="px-2 pb-2 pt-0"><input id="fw-kas-tanggal" type="text" oninput="renderKasTable()" placeholder="Cari tanggal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-kas-nama" type="text" oninput="renderKasTable()" placeholder="Cari nama / keterangan" class="w-full min-w-[9rem] px-2 py-1.5 text-xs font-normal border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-kas-norumah" type="text" oninput="renderKasTable()" placeholder="Cari No. rumah" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-kas-jenis" type="text" oninput="renderKasTable()" placeholder="Pemasukan/Pengeluaran" class="w-full min-w-[8rem] px-2 py-1.5 text-xs font-normal border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-kas-jumlah" type="text" oninput="renderKasTable()" placeholder="Cari nominal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal text-right border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0"><input id="fw-kas-keterangan" type="text" oninput="renderKasTable()" placeholder="Cari catatan" class="w-full min-w-[8rem] px-2 py-1.5 text-xs font-normal border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
+                                <th class="px-2 pb-2 pt-0 text-center"><button type="button" onclick="clearKasFilters()" title="Bersihkan semua filter" class="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg"><i class="fa-solid fa-filter-circle-xmark"></i></button></th>
                             </tr>
                         </thead>
                         <tbody id="table-kas-body" class="divide-y divide-slate-100 text-slate-700">
@@ -1096,72 +1121,52 @@
             return age + ' th';
         }
 
-        // ===== Baris kosong (inline draft) untuk input langsung =====
-        let draftWarga = {};
-        let draftKas = {};
-
+        // ===== Baris filter per kolom (di bawah header tabel) =====
         function escAttr(v) {
             return String(v == null ? '' : v)
                 .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
                 .replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
-        function captureDraft(fields, store) {
-            fields.forEach(function (f) {
-                const el = document.getElementById(f.id);
-                if (el) store[f.key] = el.value;
-            });
+        // Nilai filter sebuah kolom (huruf kecil, sudah di-trim). Kosong = tanpa filter.
+        function filterValue(id) {
+            const el = document.getElementById(id);
+            return el ? String(el.value == null ? '' : el.value).trim().toLowerCase() : '';
         }
 
-        function clearDraftFields(fields) {
-            fields.forEach(function (f) {
-                const el = document.getElementById(f.id);
+        // Cocokkan teks sel dengan kata kunci filter (substring, case-insensitive).
+        function matchFilter(value, needle) {
+            if (!needle) return true;
+            return String(value == null ? '' : value).toLowerCase().indexOf(needle) !== -1;
+        }
+
+        // Daftar id input filter agar mudah dibersihkan.
+        const WARGA_FILTER_IDS = ['fw-warga-nomorkk', 'fw-warga-nama', 'fw-warga-usia', 'fw-warga-status', 'fw-warga-jeniskelamin', 'fw-warga-nik', 'fw-warga-tempat', 'fw-warga-tanggal', 'fw-warga-pendidikan', 'fw-warga-pekerjaan', 'fw-warga-hp', 'fw-warga-statustinggal', 'fw-warga-alamat'];
+        const KAS_FILTER_IDS = ['fw-kas-tanggal', 'fw-kas-nama', 'fw-kas-norumah', 'fw-kas-jenis', 'fw-kas-jumlah', 'fw-kas-keterangan'];
+
+        function clearFilterIds(ids) {
+            ids.forEach(function (id) {
+                const el = document.getElementById(id);
                 if (el) el.value = '';
             });
         }
 
-        // Perbarui tampilan usia pada baris kosong secara live (tidak disimpan).
-        function updateDraftWargaUsia() {
-            const out = document.getElementById('draft-warga-usia');
-            if (!out) return;
-            const t = document.getElementById('draft-warga-tanggal');
-            const usia = t ? hitungUsia(ddmmyyyyToISO(t.value)) : '';
-            out.textContent = usia || '-';
+        // Bersihkan seluruh filter Data_Warga (kolom + toolbar).
+        function clearWargaFilters() {
+            clearFilterIds(WARGA_FILTER_IDS);
+            const s = document.getElementById('search-warga');
+            if (s) s.value = '';
+            const st = document.getElementById('filter-status-warga');
+            if (st) st.value = '';
+            renderWargaTable();
         }
 
-        const WARGA_DRAFT_FIELDS = [
-            { id: 'draft-warga-nomorkk', key: 'nomorKK' },
-            { id: 'draft-warga-nama', key: 'nama' },
-            { id: 'draft-warga-statuskeluarga', key: 'status' },
-            { id: 'draft-warga-jeniskelamin', key: 'jenisKelamin' },
-            { id: 'draft-warga-nik', key: 'nik' },
-            { id: 'draft-warga-tempat', key: 'tempat' },
-            { id: 'draft-warga-tanggal', key: 'tanggalLahir' },
-            { id: 'draft-warga-pendidikan', key: 'pendidikan' },
-            { id: 'draft-warga-pekerjaan', key: 'pekerjaan' },
-            { id: 'draft-warga-hp', key: 'hp' },
-            { id: 'draft-warga-statustinggal', key: 'statusTinggal' },
-            { id: 'draft-warga-alamat', key: 'alamat' }
-        ];
-
-        const KAS_DRAFT_FIELDS = [
-            { id: 'draft-kas-tanggal', key: 'tanggal' },
-            { id: 'draft-kas-nama', key: 'nama' },
-            { id: 'draft-kas-norumah', key: 'noRumah' },
-            { id: 'draft-kas-jenis', key: 'jenis' },
-            { id: 'draft-kas-jumlah', key: 'jumlah' },
-            { id: 'draft-kas-keterangan', key: 'keterangan' }
-        ];
-
-        // Pilihan dropdown untuk Data_Warga
-        const WARGA_STATUS_KK = ['Kepala Keluarga', 'Suami/Istri', 'Anak', 'Menantu', 'Cucu', 'Orang tua', 'Mertua', 'Family lain', 'Pembantu', 'Lainnya'];
-        const WARGA_JENIS_KELAMIN = ['Laki-laki', 'Perempuan'];
-
-        // Bangun <option> dari daftar, tandai yang terpilih.
-        function selectOptions(list, selected) {
-            return list.map(function (v) {
-                return `<option value="${escAttr(v)}"${v === selected ? ' selected' : ''}>${v}</option>`;
-            }).join('');
+        // Bersihkan seluruh filter Iuran & Kas (kolom + toolbar).
+        function clearKasFilters() {
+            clearFilterIds(KAS_FILTER_IDS);
+            const s = document.getElementById('search-kas');
+            if (s) s.value = '';
+            renderKasTable();
         }
 
         // Isi datalist nama warga dari Data_Warga (lookup pada Iuran & Kas).
@@ -1427,56 +1432,54 @@
 
             renderWargaNameList();
 
-            // Baris kosong untuk input langsung (inline)
-            captureDraft(WARGA_DRAFT_FIELDS, draftWarga);
-            const draftWargaUsia = hitungUsia(ddmmyyyyToISO(draftWarga.tanggalLahir || ''));
-            const draftRow = document.createElement('tr');
-            draftRow.className = 'bg-blue-50/50';
-            draftRow.innerHTML = `
-                <td class="p-2"><input id="draft-warga-nomorkk" type="text" inputmode="numeric" value="${escAttr(draftWarga.nomorKK)}" placeholder="No. KK" class="w-full min-w-[8rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2"><input id="draft-warga-nama" type="text" value="${escAttr(draftWarga.nama)}" placeholder="Nama lengkap" class="w-full min-w-[9rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2 text-xs text-slate-500 text-center" id="draft-warga-usia">${draftWargaUsia || '-'}</td>
-                <td class="p-2">
-                    <select id="draft-warga-statuskeluarga" class="w-full min-w-[8rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="">-</option>${selectOptions(WARGA_STATUS_KK, draftWarga.status)}
-                    </select>
-                </td>
-                <td class="p-2">
-                    <select id="draft-warga-jeniskelamin" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="">-</option>${selectOptions(WARGA_JENIS_KELAMIN, draftWarga.jenisKelamin)}
-                    </select>
-                </td>
-                <td class="p-2"><input id="draft-warga-nik" type="text" value="${escAttr(draftWarga.nik)}" placeholder="NIK" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2"><input id="draft-warga-tempat" type="text" value="${escAttr(draftWarga.tempat)}" placeholder="Tempat lahir" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2"><input id="draft-warga-tanggal" type="text" inputmode="numeric" maxlength="10" value="${escAttr(draftWarga.tanggalLahir)}" oninput="maskDateField(this); updateDraftWargaUsia()" placeholder="dd-mm-yyyy" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2"><input id="draft-warga-pendidikan" type="text" value="${escAttr(draftWarga.pendidikan)}" placeholder="Pendidikan" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2"><input id="draft-warga-pekerjaan" type="text" value="${escAttr(draftWarga.pekerjaan)}" placeholder="Pekerjaan" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2"><input id="draft-warga-hp" type="tel" value="${escAttr(draftWarga.hp)}" placeholder="08..." class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2">
-                    <select id="draft-warga-statustinggal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="Tetap"${draftWarga.statusTinggal === 'Kontrak' ? '' : ' selected'}>Tetap</option>
-                        <option value="Kontrak"${draftWarga.statusTinggal === 'Kontrak' ? ' selected' : ''}>Kontrak</option>
-                    </select>
-                </td>
-                <td class="p-2"><input id="draft-warga-alamat" type="text" value="${escAttr(draftWarga.alamat)}" placeholder="Alamat / No. rumah" class="w-full min-w-[9rem] px-2 py-1.5 text-xs border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></td>
-                <td class="p-2 text-center whitespace-nowrap">
-                    <button onclick="saveDraftWarga()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg mr-1" title="Simpan baris baru"><i class="fa-solid fa-check"></i></button>
-                    <button onclick="clearDraftWarga()" class="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg" title="Bersihkan baris"><i class="fa-solid fa-eraser"></i></button>
-                </td>
-            `;
-            tbody.appendChild(draftRow);
+            // Filter per kolom dari baris filter di bawah header.
+            const f = {
+                nomorKK: filterValue('fw-warga-nomorkk'),
+                nama: filterValue('fw-warga-nama'),
+                usia: filterValue('fw-warga-usia'),
+                status: filterValue('fw-warga-status'),
+                jenisKelamin: filterValue('fw-warga-jeniskelamin'),
+                nik: filterValue('fw-warga-nik'),
+                tempat: filterValue('fw-warga-tempat'),
+                tanggal: filterValue('fw-warga-tanggal'),
+                pendidikan: filterValue('fw-warga-pendidikan'),
+                pekerjaan: filterValue('fw-warga-pekerjaan'),
+                hp: filterValue('fw-warga-hp'),
+                statusTinggal: filterValue('fw-warga-statustinggal'),
+                alamat: filterValue('fw-warga-alamat')
+            };
 
             const filtered = appState.warga.filter(item => {
                 const haystack = [item.nomorKK, item.nama, item.status, item.jenisKelamin, item.nik, item.tempat, item.tanggalLahir, item.pendidikan, item.pekerjaan, item.hp, item.statusTinggal, item.alamat]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
-                return matchSearch && matchStatus;
+                const usia = hitungUsia(item.tanggalLahir);
+                const tanggal = (item.tanggalLahir || '') + ' ' + fmtDateDisplay(item.tanggalLahir);
+                const matchCols =
+                    matchFilter(item.nomorKK, f.nomorKK) &&
+                    matchFilter(item.nama, f.nama) &&
+                    matchFilter(usia, f.usia) &&
+                    matchFilter(item.status, f.status) &&
+                    matchFilter(item.jenisKelamin, f.jenisKelamin) &&
+                    matchFilter(item.nik, f.nik) &&
+                    matchFilter(item.tempat, f.tempat) &&
+                    matchFilter(tanggal, f.tanggal) &&
+                    matchFilter(item.pendidikan, f.pendidikan) &&
+                    matchFilter(item.pekerjaan, f.pekerjaan) &&
+                    matchFilter(item.hp, f.hp) &&
+                    matchFilter(item.statusTinggal, f.statusTinggal) &&
+                    matchFilter(item.alamat, f.alamat);
+                return matchSearch && matchStatus && matchCols;
             });
 
+            const anyFilter = search !== '' || filterStatus !== '' || Object.keys(f).some(k => f[k] !== '');
             if (filtered.length === 0) {
+                const msg = anyFilter
+                    ? 'Tidak ada data warga yang cocok dengan pencarian/filter.'
+                    : 'Belum ada data warga. Klik "Tambah Data Warga" untuk menambahkan.';
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="14" class="p-4 text-center text-slate-400">Belum ada data warga. Isi baris kosong di atas lalu klik simpan.</td>`;
+                empty.innerHTML = `<td colspan="14" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
                 return;
             }
@@ -1590,29 +1593,6 @@
 
             tbody.innerHTML = '';
 
-            // Baris kosong untuk input langsung (inline)
-            captureDraft(KAS_DRAFT_FIELDS, draftKas);
-            const draftRow = document.createElement('tr');
-            draftRow.className = 'bg-emerald-50/50';
-            draftRow.innerHTML = `
-                <td class="p-2"><input id="draft-kas-tanggal" type="text" inputmode="numeric" maxlength="10" value="${escAttr(draftKas.tanggal || isoToDDMMYYYY(todayLocalISO()))}" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="w-full min-w-[7rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
-                <td class="p-2"><input id="draft-kas-nama" list="warga-nama-list" type="text" value="${escAttr(draftKas.nama)}" placeholder="Nama warga / keterangan" class="w-full min-w-[10rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
-                <td class="p-2"><input id="draft-kas-norumah" type="text" value="${escAttr(draftKas.noRumah)}" placeholder="No. rumah" class="w-full min-w-[6rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
-                <td class="p-2">
-                    <select id="draft-kas-jenis" class="w-full min-w-[8rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
-                        <option value="Pemasukan"${draftKas.jenis === 'Pengeluaran' ? '' : ' selected'}>Pemasukan</option>
-                        <option value="Pengeluaran"${draftKas.jenis === 'Pengeluaran' ? ' selected' : ''}>Pengeluaran</option>
-                    </select>
-                </td>
-                <td class="p-2"><input id="draft-kas-jumlah" type="number" min="0" step="5000" value="${escAttr(draftKas.jumlah)}" placeholder="0" class="w-full min-w-[7rem] px-2 py-1.5 text-xs text-right border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
-                <td class="p-2"><input id="draft-kas-keterangan" type="text" value="${escAttr(draftKas.keterangan)}" placeholder="Catatan" class="w-full min-w-[10rem] px-2 py-1.5 text-xs border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></td>
-                <td class="p-2 text-center whitespace-nowrap">
-                    <button onclick="saveDraftKas()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1.5 rounded-lg mr-1" title="Simpan baris baru"><i class="fa-solid fa-check"></i></button>
-                    <button onclick="clearDraftKas()" class="text-xs text-slate-500 hover:text-slate-700 px-2 py-1.5 rounded-lg" title="Bersihkan baris"><i class="fa-solid fa-eraser"></i></button>
-                </td>
-            `;
-            tbody.appendChild(draftRow);
-
             // Ringkasan (kartu) mengikuti periode yang dipilih.
             const periodItems = appState.kas.filter(kasMatchesPeriod);
 
@@ -1634,13 +1614,25 @@
             const filtered = periodItems.filter(item => {
                 const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
-                return search === '' || haystack.some(v => v.indexOf(search) !== -1);
+                const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
+                const tanggal = (item.tanggal || '') + ' ' + fmtDateDisplay(item.tanggal);
+                const jumlah = String(item.jumlah == null ? '' : item.jumlah) + ' ' + formatRupiah(item.jumlah);
+                const matchCols =
+                    matchFilter(tanggal, filterValue('fw-kas-tanggal')) &&
+                    matchFilter(item.nama, filterValue('fw-kas-nama')) &&
+                    matchFilter(item.noRumah, filterValue('fw-kas-norumah')) &&
+                    matchFilter(item.jenis, filterValue('fw-kas-jenis')) &&
+                    matchFilter(jumlah, filterValue('fw-kas-jumlah')) &&
+                    matchFilter(item.keterangan, filterValue('fw-kas-keterangan'));
+                return matchSearch && matchCols;
             });
 
             if (filtered.length === 0) {
+                const searchEl = document.getElementById('search-kas');
+                const anyFilter = (searchEl ? searchEl.value : '') !== '' || KAS_FILTER_IDS.some(id => filterValue(id) !== '');
                 let msg;
-                if (appState.kas.length === 0) msg = 'Belum ada riwayat transaksi. Isi baris kosong di atas lalu klik simpan.';
-                else if (search !== '') msg = 'Tidak ada transaksi yang cocok dengan pencarian.';
+                if (appState.kas.length === 0) msg = 'Belum ada riwayat transaksi. Klik "Catat Transaksi Kas" untuk menambahkan.';
+                else if (anyFilter) msg = 'Tidak ada transaksi yang cocok dengan pencarian/filter.';
                 else msg = 'Tidak ada transaksi pada periode ini.';
                 const empty = document.createElement('tr');
                 empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
@@ -1853,88 +1845,6 @@
 
             closeModal('modal-kas');
             document.getElementById('form-kas').reset();
-        }
-
-        // Simpan/batalkan baris kosong inline (Data_Warga & Iuran_Kas)
-        function saveDraftWarga() {
-            captureDraft(WARGA_DRAFT_FIELDS, draftWarga);
-            const nama = (draftWarga.nama || '').trim();
-            const noHp = (draftWarga.hp || '').trim();
-            const alamat = (draftWarga.alamat || '').trim();
-            if (!nama || !noHp || !alamat) {
-                showToast('Nama, No. HP, dan Alamat wajib diisi.', 'error');
-                return;
-            }
-            const rawTanggal = (draftWarga.tanggalLahir || '').trim();
-            const tanggalLahir = ddmmyyyyToISO(rawTanggal);
-            if (rawTanggal && !tanggalLahir) {
-                showToast('Format Tanggal Lahir harus dd-mm-yyyy.', 'error');
-                return;
-            }
-            const id = newId();
-            const data = {
-                sheetName: 'Data_Warga',
-                nomorKK: (draftWarga.nomorKK || '').trim(),
-                nama: nama,
-                status: (draftWarga.status || '').trim(),
-                jenisKelamin: (draftWarga.jenisKelamin || '').trim(),
-                nik: (draftWarga.nik || '').trim(),
-                tempat: (draftWarga.tempat || '').trim(),
-                tanggalLahir: tanggalLahir,
-                pendidikan: (draftWarga.pendidikan || '').trim(),
-                pekerjaan: (draftWarga.pekerjaan || '').trim(),
-                noHp: noHp,
-                statusTinggal: draftWarga.statusTinggal || 'Tetap',
-                alamat: alamat,
-                id: id
-            };
-            appState.warga.push({ _id: id, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
-            draftWarga = {};
-            clearDraftFields(WARGA_DRAFT_FIELDS);
-            saveLocalState();
-            renderWargaTable();
-            sendToGoogleSheets(data);
-            showToast('Data warga berhasil ditambahkan!', 'success');
-        }
-
-        function clearDraftWarga() {
-            draftWarga = {};
-            clearDraftFields(WARGA_DRAFT_FIELDS);
-            renderWargaTable();
-        }
-
-        function saveDraftKas() {
-            captureDraft(KAS_DRAFT_FIELDS, draftKas);
-            const tanggal = ddmmyyyyToISO(draftKas.tanggal || '');
-            const nama = (draftKas.nama || '').trim();
-            const jumlah = Number(draftKas.jumlah || 0);
-            if (!tanggal) { showToast('Tanggal wajib diisi dengan format dd-mm-yyyy.', 'error'); return; }
-            if (!nama) { showToast('Nama warga / keterangan wajib diisi.', 'error'); return; }
-            if (!jumlah || jumlah <= 0) { showToast('Jumlah nominal harus lebih dari 0.', 'error'); return; }
-            const id = newId();
-            const data = {
-                sheetName: 'Iuran_Kas',
-                tanggal: tanggal,
-                nama: nama,
-                noRumah: (draftKas.noRumah || '').trim(),
-                jenis: draftKas.jenis || 'Pemasukan',
-                jumlah: jumlah,
-                keterangan: (draftKas.keterangan || '').trim(),
-                id: id
-            };
-            appState.kas.push({ _id: id, tanggal: data.tanggal, nama: data.nama, noRumah: data.noRumah, jenis: data.jenis, jumlah: data.jumlah, keterangan: data.keterangan });
-            draftKas = {};
-            clearDraftFields(KAS_DRAFT_FIELDS);
-            saveLocalState();
-            renderKasTable();
-            sendToGoogleSheets(data);
-            showToast('Catatan kas berhasil ditambahkan!', 'success');
-        }
-
-        function clearDraftKas() {
-            draftKas = {};
-            clearDraftFields(KAS_DRAFT_FIELDS);
-            renderKasTable();
         }
 
         function submitPengumuman(e) {
