@@ -325,7 +325,7 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
-                                <th class="p-4">No. KK</th>
+                                <th class="p-4">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span></th>
                                 <th class="p-4">Nama Lengkap</th>
                                 <th class="p-4">Usia</th>
                                 <th class="p-4">Status</th>
@@ -1474,6 +1474,11 @@
             });
 
             const anyFilter = search !== '' || filterStatus !== '' || Object.keys(f).some(k => f[k] !== '');
+
+            // Jumlah record yang ditemukan, tampil di samping header "No. KK".
+            const countEl = document.getElementById('warga-count');
+            if (countEl) countEl.textContent = '(' + filtered.length + ')';
+
             if (filtered.length === 0) {
                 const msg = anyFilter
                     ? 'Tidak ada data warga yang cocok dengan pencarian/filter.'
