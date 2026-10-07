@@ -1,6 +1,8 @@
 var CODE_VERSION = "publik-v10-2026-10-07";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
+// CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
+// number format Google Sheets bulan tetap 'mm' (dibedakan dari menit oleh posisi).
 var TZ = "Asia/Jakarta";
 var TS_FORMAT = "dd-mm-yyyy hh:mm";
 
@@ -617,7 +619,7 @@ function notifyAdminNewSurat(r) {
     var props = PropertiesService.getScriptProperties();
     var to = props.getProperty('ADMIN_EMAIL');
     if (!to) return;
-    var ts = Utilities.formatDate(new Date(), TZ, 'dd-mm-yyyy HH:mm');
+    var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
     var subject = '[RT] Pengajuan Surat Baru: ' + r.jenisSurat + ' - ' + r.nama;
     var lines = [
       'Pengajuan surat baru masuk melalui Portal Publik.',
@@ -656,7 +658,7 @@ function handleSendTestEmail() {
     };
   }
   try {
-    var ts = Utilities.formatDate(new Date(), TZ, 'dd-mm-yyyy HH:mm');
+    var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
     MailApp.sendEmail({
       to: to,
       subject: '[RT] Tes Notifikasi Email Pengajuan Surat',
@@ -685,8 +687,9 @@ function authorizeMail() {
 }
 
 // Format nilai Timestamp sheet menjadi "dd-mm-yyyy HH:mm" untuk respons publik.
+// Java SimpleDateFormat: 'MM' = bulan (bukan 'mm' yang berarti menit).
 function formatTimestampCell(v) {
-  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd-mm-yyyy HH:mm');
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'dd-MM-yyyy HH:mm');
   return (v === undefined || v === null) ? '' : String(v);
 }
 
