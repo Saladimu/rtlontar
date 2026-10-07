@@ -127,6 +127,8 @@ Warga dapat mengajukan surat keterangan/pengantar langsung dari **Portal Publik*
 
 Kedua kartu (**Ajukan Surat Baru** & **Cek Status Pengajuan**) dapat dibuka/ditutup (*collapse/toggle*) dengan mengeklik judulnya, sehingga tampilan lebih ringkas di layar kecil. Secara default keduanya **tertutup** saat halaman dibuka; warga mengeklik judul untuk menampilkan formulir.
 
+Di samping judul **Layanan Surat** terdapat **ikon panduan** (`fa-circle-info`). Mengeklik ikon ini membuka jendela **Panduan Layanan Surat** berisi langkah-langkah berurutan (dari mengisi formulir pengajuan, menyimpan nomor pengajuan, hingga cek status dan membaca No. Surat), lengkap dengan tips (NIK & No. HP harus sama persis, batas 5 pengajuan/jam, dan keamanan data pribadi). Jendela dapat ditutup lewat tombol X, tombol **Mengerti**, klik latar, atau tombol **Esc**.
+
 Pengamanan server-side: hanya menerima **tambah data** (tidak bisa mengubah/menghapus), memaksa status awal `Pending`, memvalidasi NIK/HP, menyaring bot lewat *honeypot*, dan membatasi **maksimal 5 pengajuan per NIK per jam**. Data tab `Pengajuan_Surat` **tidak pernah** ikut terkirim pada `readPublic`.
 
 Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengajuan baru akan dikirimi **notifikasi email** ke admin. Bila Portal Publik dimatikan (toggle di halaman admin), form pengajuan & cek status otomatis disembunyikan dan ditolak oleh server.

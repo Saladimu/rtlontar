@@ -171,6 +171,10 @@
             <div class="flex items-center space-x-2 mb-4">
                 <i class="fa-solid fa-envelope-open-text text-emerald-600 dark:text-emerald-400 text-xl"></i>
                 <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Layanan Surat</h2>
+                <button type="button" id="surat-guide-btn" onclick="openPanduanSurat()" title="Panduan / Cara Penggunaan" aria-label="Buka panduan Layanan Surat"
+                    class="w-8 h-8 flex items-center justify-center text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 rounded-full transition">
+                    <i class="fa-solid fa-circle-info"></i>
+                </button>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -364,6 +368,62 @@
         </div>
     </div>
 
+    <!-- ================= PANDUAN LAYANAN SURAT ================= -->
+    <div id="panduan-surat-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="panduan-surat-title">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closePanduanSurat()"></div>
+        <div class="relative bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 my-8 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 bg-emerald-600 text-white">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-book-open text-lg"></i>
+                    <h2 id="panduan-surat-title" class="font-bold">Panduan Layanan Surat</h2>
+                </div>
+                <button onclick="closePanduanSurat()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 sm:p-5 max-h-[72vh] overflow-y-auto custom-scrollbar">
+                <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">Panduan lengkap mulai dari mengajukan surat hingga memeriksa statusnya.</p>
+                <ol class="space-y-3">
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">1</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Pada bagian <b>Layanan Surat</b>, klik judul <b>"Ajukan Surat Baru"</b> untuk membuka formulir pengajuan.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">2</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Isi data dengan benar: <b>Nama Lengkap</b>, <b>NIK (16 digit)</b>, <b>No. HP/WhatsApp</b>, <b>Alamat / No. Rumah</b>, pilih <b>Jenis Surat</b>, dan tulis <b>Keperluan</b>.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">3</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Klik <b>"Kirim Pengajuan"</b>. Setelah berhasil, akan muncul <b>Nomor Pengajuan</b> (contoh <span class="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">SRT-261006-AB12</span>). <b>Catat/simpan nomor ini.</b></span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">4</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Status awal pengajuan adalah <b>Pending</b>. Pengurus RT akan memprosesnya menjadi <b>Diproses</b>, lalu <b>Selesai</b> atau <b>Ditolak</b>.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">5</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Untuk memeriksa status, buka kartu <b>"Cek Status Pengajuan"</b>, lalu masukkan <b>NIK</b> dan <b>No. HP/WhatsApp</b> yang <b>sama</b> seperti saat mengajukan, dan klik <b>"Cek Status"</b>.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">6</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Hasil akan menampilkan status dan catatan pengurus. Bila status <b>Selesai</b>, <b>No. Surat</b> resmi akan tampil (disorot kuning) — catat lalu ambil surat ke pengurus RT.</span>
+                    </li>
+                </ol>
+                <div class="mt-4 bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3">
+                    <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>Tips</p>
+                    <ul class="text-xs text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
+                        <li>NIK & No. HP saat cek status harus <b>sama persis</b> dengan saat mengajukan.</li>
+                        <li>Satu NIK dibatasi maksimal <b>5 pengajuan per jam</b>.</li>
+                        <li>Data pribadi aman: portal hanya menampilkan pengajuan yang cocok dengan NIK & No. HP Anda.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                <button onclick="closePanduanSurat()" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition">Mengerti</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT ================= -->
     <script>
         // ============================================================
@@ -469,9 +529,22 @@
             document.body.classList.remove('overflow-hidden');
         }
 
+        // ===== Panduan Layanan Surat =====
+        function openPanduanSurat() {
+            const m = document.getElementById('panduan-surat-modal');
+            if (m) m.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closePanduanSurat() {
+            const m = document.getElementById('panduan-surat-modal');
+            if (m) m.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
         // Tutup modal dengan tombol Escape.
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeSiaga();
+            if (e.key === 'Escape') { closeSiaga(); closePanduanSurat(); }
         });
 
         // Bersihkan parameter cache-buster hard-refresh agar URL tetap rapi.
