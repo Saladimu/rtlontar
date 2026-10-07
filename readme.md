@@ -23,6 +23,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🚨 Nomor Siaga Darurat (Portal Publik):** tombol ikon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama** (112, 110, 113, 118/119, 115, 117, 129, 123) lengkap dengan ikon per layanan. Setiap nomor dapat diketuk untuk langsung menelepon (`tel:`).
 - **🔒 ON/OFF Portal Publik:** Toggle di tab Portal Publik untuk mengaktifkan/menonaktifkan akses warga. Saat OFF, server menolak `readPublic` sehingga data benar-benar tidak bisa diakses (bukan sekadar menyembunyikan tautan).
+- **⚡ Loading Cepat:** CSS Tailwind dibangun statis (`tailwind.css`, ~35 KB) alih-alih memuat Play CDN yang berat, plus `preconnect` ke font/CDN/endpoint data. Lihat bagian **Performa (Tailwind CSS Statis)**.
 
 ---
 
@@ -248,6 +249,26 @@ window.RT_CONFIG = {
 
 ---
 
+## ⚡ Performa (Tailwind CSS Statis)
+
+Aplikasi **tidak lagi memakai Tailwind Play CDN** (`cdn.tailwindcss.com`). Dulu CDN tersebut mengunduh *engine* Tailwind (ratusan KB) secara *blocking* lalu men-*generate* CSS di browser saat halaman dibuka, sehingga terasa lambat. Sekarang CSS Tailwind sudah **dibangun lebih dulu** menjadi satu berkas statis kecil (`tailwind.css`, ~35 KB) yang langsung dipakai halaman admin & portal publik.
+
+Berkas terkait:
+
+- `tailwind.config.js` — konfigurasi (tema, warna, `darkMode: 'class'`).
+- `tailwind.input.css` — sumber (`@tailwind base/components/utilities`).
+- `tailwind.css` — **hasil build** yang di-*load* oleh `index.html` & `public.html`.
+
+> **Setelah menambah/mengubah kelas Tailwind** di `index.html` atau `public.html`, jalankan ulang build lalu unggah `tailwind.css`:
+
+```bash
+npx tailwindcss@3 -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify
+```
+
+Halaman juga memakai `preconnect` ke Google Fonts, cdnjs, dan `script.google.com`/`script.googleusercontent.com` (endpoint data) agar koneksi awal lebih cepat.
+
+---
+
 ## 🌐 Publikasi & Kontrol Akses (Cloudflare Pages + Access)
 
 Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository ini), mis. `https://rtlontar.pages.dev`:
@@ -256,7 +277,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 |-----|--------|-------|
 | `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
-| `/config.js`, `/rt-icon.png` | Aset pendukung | Terbuka (tanpa login) |
+| `/config.js`, `/rt-icon.png`, `/tailwind.css` | Aset pendukung | Terbuka (tanpa login) |
 
 > **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Bagikan portal publik hanya lewat `https://rtlontar.pages.dev/public` (tanpa ekstensi `.html`). Wrapper `rt017.pages.dev` mengarah ke URL tersebut.
 

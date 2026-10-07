@@ -6,33 +6,19 @@
     <title data-rt="titlePublic">Portal Publik - RT 017 / RW 06 Tanjung Duren Utara</title>
     <link rel="icon" type="image/png" href="rt-icon.png">
     <link rel="apple-touch-icon" href="rt-icon.png">
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Preconnect agar aset eksternal lebih cepat terhubung. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://script.google.com">
+    <link rel="preconnect" href="https://script.googleusercontent.com">
+    <!-- Tailwind CSS (hasil build statis; regenerate via tailwind.config.js).
+         Dulu memakai Play CDN yang harus mengunduh engine + generate CSS saat runtime. -->
+    <link rel="stylesheet" href="tailwind.css">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0284c7',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <!-- Terapkan tema sebelum render untuk mencegah kedipan (FOUC).
          Prioritas: pilihan tersimpan (localStorage) -> preferensi sistem. -->
     <script>
