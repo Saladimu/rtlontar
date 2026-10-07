@@ -277,7 +277,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 |-----|--------|-------|
 | `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
-| `/config.js`, `/rt-icon.png`, `/tailwind.css` | Aset pendukung | Terbuka (tanpa login) |
+| `/config.js`, `/rt-icon.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css` | Aset pendukung | Terbuka (tanpa login) |
 
 > **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Bagikan portal publik hanya lewat `https://rtlontar.pages.dev/public` (tanpa ekstensi `.html`). Wrapper `rt017.pages.dev` mengarah ke URL tersebut.
 
