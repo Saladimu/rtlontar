@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v10-2026-10-07";
+var CODE_VERSION = "publik-v11-2026-10-07";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -489,7 +489,8 @@ function doPost(e) {
     }
 
     // ADD: tambahkan baris baru. Timestamp = waktu server (GMT+7), ID dari frontend bila ada.
-    var addId = data.id ? String(data.id) : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+    // Untuk Pengajuan_Surat, bawaan ID memakai format No. Pengajuan (SRT-...).
+    var addId = data.id ? String(data.id) : (sheetName === "Pengajuan_Surat" ? makeSuratId() : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
     var rowData = buildRowData(sheetName, data, new Date(), addId);
     sheet.appendRow(rowData);
     sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);
@@ -526,7 +527,7 @@ function buildRowData(sheetName, data, timestamp, id) {
     return null;
   }
 
-  rowData.push(id || ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
+  rowData.push(id || (sheetName === 'Pengajuan_Surat' ? makeSuratId() : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7))));
   return rowData;
 }
 
@@ -575,6 +576,12 @@ function randomCode4() {
   var out = '';
   for (var i = 0; i < 4; i++) out += chars.charAt(Math.floor(Math.random() * chars.length));
   return out;
+}
+
+// Nomor pengajuan surat sekaligus ID baris Pengajuan_Surat: SRT-<yymmdd>-<4 karakter>.
+// Dipakai untuk SEMUA jalur pencatatan surat (publik & admin) agar format konsisten.
+function makeSuratId() {
+  return 'SRT-' + Utilities.formatDate(new Date(), TZ, 'yyMMdd') + '-' + randomCode4();
 }
 
 // Rate limit sederhana berbasis Script Property (tanpa IP, jadi per-NIK + global).
@@ -819,13 +826,12 @@ function handleSubmitSurat(data) {
 
   ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
 
-  // ID: pakai ref warga bila aman & belum terpakai; jika tidak, buat otomatis.
+  // ID: pakai ref warga bila aman & belum terpakai; jika tidak, buat otomatis (SRT-...).
   var id = sanitizeSuratRef(data.ref);
   if (!id || findRowById(sheet, 'Pengajuan_Surat', id) !== -1) {
-    var suffix = Utilities.formatDate(new Date(), TZ, 'yyMMdd');
     var tries = 0;
     do {
-      id = 'SRT-' + suffix + '-' + randomCode4();
+      id = makeSuratId();
       tries++;
     } while (findRowById(sheet, 'Pengajuan_Surat', id) !== -1 && tries < 6);
   }

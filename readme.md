@@ -6,7 +6,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 
 ## 🚀 Fitur Utama
 
-- **📊 Ringkasan / Dashboard:** Menampilkan statistik total warga, saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
+- **📊 Ringkasan / Dashboard:** Menampilkan statistik **Total Warga** dalam format `jiwa / No. KK unik (KK)` (mis. `12 / 4 (KK)`), saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
 - **👥 Pendataan Warga:** Pengelolaan data penduduk (Nomor KK, Nama Lengkap, Status dalam Keluarga, Jenis Kelamin, NIK, Tempat & Tanggal Lahir, Pendidikan, Pekerjaan, No. HP, Status Tempat Tinggal, Alamat/No Rumah) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database), fitur pencarian, filter, **Edit & Hapus** dengan warning dialog.
 - **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Hapus** tersedia.
 - **🗓️ Filter Periode Kas:** Riwayat transaksi dapat ditampilkan **per bulan** (default), **per tanggal**, atau **semua data**. Kartu ringkasan (Total Pemasukan, Total Pengeluaran, Saldo Akhir) mengikuti periode yang dipilih. Pilihan tersimpan di browser.
@@ -91,7 +91,7 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ **Endpoint `readPublic`** untuk portal publik (hanya Pengumuman & Kegiatan `Publik=Ya`, tanpa data warga/kas)
 - ✅ **ON/OFF Portal Publik** server-side (`PUBLIC_PORTAL_ENABLED` di Script Properties + aksi `setPortalStatus`); saat OFF `readPublic` ditolak
 - ✅ **Identitas RT terpusat** di `config.js` (ubah info RT di satu tempat)
-- ✅ **Fitur Pengajuan Surat (backend v9)** — tab `Pengajuan_Surat` (dibuat otomatis), aksi publik `submitSurat` (tanpa token; validasi NIK 16 digit, honeypot, rate limit 5/jam per NIK), notifikasi email admin (Script Property `ADMIN_EMAIL`), `Status` default `Pending`, serta **panel admin** untuk melihat/mencatat/mengubah status/menghapus & memfilter pengajuan
+- ✅ **Fitur Pengajuan Surat (backend v11)** — tab `Pengajuan_Surat` (dibuat otomatis), aksi publik `submitSurat` (tanpa token; validasi NIK 16 digit, honeypot, rate limit 5/jam per NIK), notifikasi email admin (Script Property `ADMIN_EMAIL`), `Status` default `Pending`, **No. Pengajuan konsisten `SRT-<yymmdd>-XXXX`** untuk semua jalur (publik & catat manual admin), serta **panel admin** untuk melihat/mencatat/mengubah status/menghapus & memfilter pengajuan
 - ✅ **Kolom baru `Data_Warga`**: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` (urutan: Nomor KK → Nama Lengkap → Status → Jenis Kelamin → NIK → Tempat/Tanggal Lahir → Pendidikan → Pekerjaan → No HP → Status Tinggal → Alamat); migrasi otomatis berbasis **nama header** (`migrateDataWargaLayout()`), aman dijalankan berulang
 </details>
 
@@ -138,7 +138,8 @@ Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengajuan baru akan dikirim
 Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (terbaru di atas) beserta kartu ringkasan jumlah per status:
 
 - **Catat Pengajuan**: menambah pengajuan secara manual (mis. permohonan langsung/lisan) dengan tombol **Catat Pengajuan**. Bila ada isian yang salah (mis. NIK kurang dari 16 digit), pesan error muncul **di dalam modal** dan field yang bermasalah disorot.
-- **No. Pengajuan**: setiap baris menampilkan nomor pengajuan (kolom `ID`, mis. `SRT-261006-AB12`) — nomor yang sama yang diterima warga saat mengajukan, sehingga mudah dicocokkan.
+- **No. Pengajuan**: setiap baris menampilkan nomor pengajuan (kolom `ID`, mis. `SRT-261006-AB12`). Nomor ini dibuat dengan format yang **sama** baik untuk pengajuan dari Portal Publik maupun **pencatatan manual admin** (`Catat Pengajuan`), sehingga konsisten dan mudah dicocokkan.
+- **No. HP / WhatsApp**: nomor HP pada tabel dapat **diklik untuk langsung chat WhatsApp** (`https://wa.me/...`). Nomor dinormalisasi otomatis ke format internasional (`08...` → `628...`, `+62`/spasi/tanda hubung dirapikan). Bila nomor tidak valid/kosong, ditampilkan sebagai teks biasa.
 - **No. Surat**: field baru **di bawah No. Pengajuan** pada modal edit untuk mencatat **nomor surat resmi** (mis. `474/017-RT/RW.06/X/2026`). Field ini **wajib diisi saat status diubah menjadi `Selesai`** — baik lewat modal maupun tombol ubah status cepat (yang akan otomatis membuka modal bila nomornya masih kosong). Server juga menolak simpan `Selesai` tanpa No. Surat. Nomor ini ikut tampil pada hasil **Cek Status** warga dengan sorotan warna terang (kuning/amber) agar mudah terlihat.
 - **Edit**: klik baris (atau ikon pensil) untuk membuka modal dan mengubah data, **Status Pengurusan** (`RT_CONFIG.statusSurat`), **No. Surat**, dan **Catatan Pengurus**. Modal juga menampilkan No. Pengajuan & tanggal pengajuan.
 - **Ubah Status cepat**: ikon putar menggilir status `Pending → Diproses → Selesai → Ditolak → Pending`.

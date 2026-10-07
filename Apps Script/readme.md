@@ -214,6 +214,8 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 
 > **Catatan `submitSurat`:** dipakai halaman `public.html`. ID bisa berasal dari `ref` yang dikirim warga (bila formatnya aman & belum terpakai), atau dibuat otomatis dengan format `SRT-yyMMdd-XXXX`.
 
+> **Catatan No. Pengajuan `Pengajuan_Surat`:** untuk menjaga konsistensi, jalur **ADD admin** (`sheetName:"Pengajuan_Surat"` tanpa `id`) juga memakai format `SRT-<yymmdd>-XXXX` lewat helper `makeSuratId()` — bukan lagi `id-...`. Fallback `buildRowData()` dan `handleSubmitSurat()` memakai helper yang sama, sehingga semua No. Pengajuan seragam.
+
 **Contoh payload (Tambah Warga):**
 ```json
 {
