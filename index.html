@@ -40,6 +40,14 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+        /* Kedipan untuk tombol "Muat Ulang" saat ada versi baru. */
+        @keyframes rt-update-flash {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+            50% { opacity: .55; box-shadow: 0 0 0 5px rgba(251, 191, 36, .45); }
+        }
+        .update-flash {
+            animation: rt-update-flash 1.1s ease-in-out infinite;
+        }
     </style>
     <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
          agar perubahan config.js langsung terlihat tanpa hard refresh. -->
@@ -86,6 +94,13 @@
                 <span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5"></span> Local Only
             </span>
         </div>
+
+        <!-- Tombol Muat Ulang (Hard Refresh) — HANYA muncul (berkedip) bila terdeteksi
+             ada versi/update baru pada aplikasi, agar pengurus bisa segera memuat ulang. -->
+        <button onclick="refreshData()" id="sidebar-refresh-btn" class="hidden update-flash mt-2 w-full flex items-center justify-center space-x-2 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold border border-amber-300/70 transition" title="Versi terbaru aplikasi tersedia — klik untuk muat ulang">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span>Versi Baru &mdash; Muat Ulang</span>
+        </button>
 
         <nav class="mt-6 flex-1 space-y-1">
             <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
@@ -1282,6 +1297,7 @@
                 if (enforceConfigVersion()) return;
                 initSuratForm();
                 updatePublicPortalUI();
+                startUpdateWatcher();
             });
         };
 
@@ -1325,7 +1341,11 @@
         }
 
         function refreshData() {
-            const btns = [document.getElementById('desktop-refresh-btn'), document.getElementById('mobile-refresh-btn')];
+            const btns = [
+                document.getElementById('desktop-refresh-btn'),
+                document.getElementById('mobile-refresh-btn'),
+                document.getElementById('sidebar-refresh-btn')
+            ];
 
             btns.forEach(btn => {
                 if (btn) {
@@ -1355,13 +1375,81 @@
             let done = false;
             try { done = !!sessionStorage.getItem(key); } catch (e) { /* abaikan */ }
             if (done) {
+                // Sudah pernah auto-reload tapi versi masih beda -> tawarkan tombol muat ulang manual.
                 console.warn('Versi config berbeda (' + v + ' vs ' + EXPECTED_CONFIG_VERSION + '), reload dilewati (guard).');
+                showUpdateAvailable('config ' + v);
                 return false;
             }
             try { sessionStorage.setItem(key, '1'); } catch (e) { /* abaikan */ }
             showToast('Memuat versi terbaru...', 'info');
             hardReload();
             return true;
+        }
+
+        // Tampilkan tombol "Muat Ulang" di sidebar (berkedip) saat terdeteksi ada versi baru.
+        // Tombol refresh di header mobile juga ikut berkedip agar update terlihat di ponsel.
+        function showUpdateAvailable(reason) {
+            const btn = document.getElementById('sidebar-refresh-btn');
+            if (btn) {
+                btn.classList.remove('hidden');
+                btn.classList.add('update-flash');
+                btn.title = 'Versi terbaru aplikasi tersedia' + (reason ? ' (' + reason + ')' : '') + ' — klik untuk muat ulang';
+            }
+            const mob = document.getElementById('mobile-refresh-btn');
+            if (mob) {
+                mob.classList.add('update-flash');
+                mob.title = 'Versi terbaru aplikasi tersedia — klik untuk muat ulang';
+            }
+            if (!window.__rtUpdateNotified) {
+                window.__rtUpdateNotified = true;
+                try { showToast('Versi terbaru aplikasi tersedia. Klik "Muat Ulang" untuk memperbarui.', 'info'); } catch (e) { /* abaikan */ }
+            }
+        }
+
+        function hideUpdateAvailable() {
+            const btn = document.getElementById('sidebar-refresh-btn');
+            if (btn) { btn.classList.add('hidden'); btn.classList.remove('update-flash'); }
+            const mob = document.getElementById('mobile-refresh-btn');
+            if (mob) { mob.classList.remove('update-flash'); }
+        }
+
+        // Versi config yang saat ini dipakai halaman (fallback ke versi yang diharapkan HTML).
+        function currentConfigVersion() {
+            const v = (window.RT_CONFIG && window.RT_CONFIG.version) ? String(window.RT_CONFIG.version) : '';
+            return v || EXPECTED_CONFIG_VERSION;
+        }
+
+        // Cek apakah sudah ada versi aplikasi/config yang lebih baru di server.
+        // Dipakai untuk memunculkan tombol "Muat Ulang" saat ada update (mis. versi config naik).
+        function checkForUpdate() {
+            try {
+                return fetch('config.js?v=' + Date.now(), { cache: 'no-store' })
+                    .then(function (r) { return r && r.text ? r.text() : ''; })
+                    .then(function (txt) {
+                        const m = String(txt || '').match(/version\s*[:=]\s*['"]([^'"]+)['"]/);
+                        if (!m) return false;
+                        if (m[1] !== currentConfigVersion()) {
+                            showUpdateAvailable('versi ' + m[1]);
+                            return true;
+                        }
+                        return false;
+                    })
+                    .catch(function () { return false; });
+            } catch (e) { return Promise.resolve(false); }
+        }
+
+        // Pantau versi secara berkala (dan saat tab kembali terlihat) selagi halaman terbuka.
+        function startUpdateWatcher() {
+            if (window.__rtUpdateWatcher) return;
+            window.__rtUpdateWatcher = true;
+            const tick = function () {
+                if (document.visibilityState === 'hidden') return;
+                checkForUpdate();
+            };
+            setInterval(tick, 60000);
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState !== 'hidden') checkForUpdate();
+            });
         }
 
         function updateLastUpdated() {
