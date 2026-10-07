@@ -114,11 +114,16 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 | Jenis Surat | String | Surat Pengantar KTP-el (lihat `jenisSurat` di `config.js`) |
 | Keperluan / Alasan Pengajuan | String | Perpanjang KTP-el |
 | Status Pengurusan | String | Pending / Diproses / Selesai / Ditolak |
+| No. Surat | String | 474/017-RT/RW.06/X/2026 (nomor surat resmi; **wajib** bila status `Selesai`) |
 | Catatan Pengurus | String | (opsional, diisi pengurus) |
 
 > Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan.
 >
+> **Aturan bisnis:** saat status diubah menjadi `Selesai`, server menolak simpan bila `No. Surat` kosong (`{result:"error", code:"invalid"}`). Warga dapat melihat `No. Surat` pada hasil `checkSurat` setelah surat selesai.
+>
 > Saat dibaca (`readAllSheets`), kolom `Timestamp` tab ini diformat menjadi `yyyy-MM-dd HH:mm` (GMT+7) sebelum dikirim ke frontend, sehingga panel admin dapat menampilkannya sebagai `dd-Mmm-yyyy HH:mm`.
+>
+> **Migrasi otomatis:** tab lama tanpa kolom `No. Surat` akan disusun ulang otomatis berdasarkan nama header saat pertama dibaca (data & ID lama tetap aman).
 
 
 ---
@@ -155,7 +160,7 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 |--------|-----------|-----------|
 | `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
-| `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
+| `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
 | `sendTestEmail` | `action=sendTestEmail&token=T` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; bila scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
@@ -312,8 +317,9 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
 | `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` (token) + `submitSurat` (publik) |
-| `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending`, email admin |
-| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, catatan}` |
+| `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
+| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}` |
+| `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |
 | `notifyAdminNewSurat(row)` | Kirim email notifikasi ke `ADMIN_EMAIL` (bila diatur); gagal email tidak membatalkan penyimpanan |

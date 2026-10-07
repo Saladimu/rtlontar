@@ -108,6 +108,10 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
+                    <button id="siaga-btn" onclick="openSiaga()" title="Nomor Siaga Darurat" aria-label="Nomor Siaga Darurat"
+                        class="w-9 h-9 flex items-center justify-center text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-sm">
+                        <i class="fa-solid fa-phone-volume"></i>
+                    </button>
                     <button id="theme-toggle" onclick="toggleTheme()" title="Ganti tema terang/gelap" aria-label="Ganti tema terang/gelap"
                         class="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
                         <i id="theme-icon" class="fa-solid fa-moon"></i>
@@ -172,7 +176,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <!-- Form pengajuan -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <button type="button" id="surat-toggle-ajukan" onclick="toggleSuratCard('ajukan')" aria-expanded="true" aria-controls="surat-panel-ajukan"
+                    <button type="button" id="surat-toggle-ajukan" onclick="toggleSuratCard('ajukan')" aria-expanded="false" aria-controls="surat-panel-ajukan"
                         class="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
                         <span class="flex items-start space-x-3">
                             <span class="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300 flex items-center justify-center flex-shrink-0">
@@ -183,9 +187,9 @@
                                 <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Isi data dengan benar. Setelah terkirim, simpan nomor pengajuan untuk ditanyakan kepada pengurus.</span>
                             </span>
                         </span>
-                        <i id="surat-chevron-ajukan" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0"></i>
+                        <i id="surat-chevron-ajukan" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0 rotate-180"></i>
                     </button>
-                    <div id="surat-panel-ajukan" class="px-5 pb-5">
+                    <div id="surat-panel-ajukan" class="px-5 pb-5 hidden">
                     <form id="surat-form" class="space-y-3" onsubmit="return submitSuratWarga(event)">
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
@@ -232,7 +236,7 @@
 
                 <!-- Cek status -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <button type="button" id="surat-toggle-cek" onclick="toggleSuratCard('cek')" aria-expanded="true" aria-controls="surat-panel-cek"
+                    <button type="button" id="surat-toggle-cek" onclick="toggleSuratCard('cek')" aria-expanded="false" aria-controls="surat-panel-cek"
                         class="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
                         <span class="flex items-start space-x-3">
                             <span class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center flex-shrink-0">
@@ -243,9 +247,9 @@
                                 <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masukkan NIK dan No. HP/WhatsApp yang sama seperti saat mengajukan.</span>
                             </span>
                         </span>
-                        <i id="surat-chevron-cek" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0"></i>
+                        <i id="surat-chevron-cek" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0 rotate-180"></i>
                     </button>
-                    <div id="surat-panel-cek" class="px-5 pb-5">
+                    <div id="surat-panel-cek" class="px-5 pb-5 hidden">
                     <form id="surat-check-form" class="space-y-3" onsubmit="return cekStatusSurat(event)">
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
@@ -274,6 +278,91 @@
         </footer>
 
     </main>
+
+    <!-- ================= NOMOR SIAGA DARURAT ================= -->
+    <div id="siaga-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="siaga-title">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeSiaga()"></div>
+        <div class="relative bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 my-8 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 bg-rose-600 text-white">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-phone-volume text-lg"></i>
+                    <h2 id="siaga-title" class="font-bold">Nomor Siaga Darurat Utama</h2>
+                </div>
+                <button onclick="closeSiaga()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-3 sm:p-4 space-y-2 max-h-[70vh] overflow-y-auto custom-scrollbar">
+                <a href="tel:112" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300"><i class="fa-solid fa-tower-broadcast"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">112</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Panggilan darurat terintegrasi (bebas pulsa)</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:110" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300"><i class="fa-solid fa-shield-halved"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">110</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Kepolisian (Polri)</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:113" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-300"><i class="fa-solid fa-fire-extinguisher"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">113</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Pemadam Kebakaran</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:119" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-300"><i class="fa-solid fa-truck-medical"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">118 / 119</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Ambulans dan darurat medis</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:115" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-300"><i class="fa-solid fa-life-ring"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">115</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Badan Nasional Pencarian dan Pertolongan (Basarnas / SAR)</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:117" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300"><i class="fa-solid fa-house-crack"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">117</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Badan Nasional Penanggulangan Bencana (BNPB)</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:129" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-lime-100 dark:bg-lime-900/40 text-lime-700 dark:text-lime-300"><i class="fa-solid fa-tent"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">129</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Posko Bencana Alam</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+                <a href="tel:123" class="flex items-center space-x-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 hover:bg-rose-50 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 transition">
+                    <span class="w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"><i class="fa-solid fa-bolt"></i></span>
+                    <span class="flex-1 min-w-0">
+                        <span class="block font-bold text-slate-800 dark:text-slate-100">123</span>
+                        <span class="block text-xs text-slate-500 dark:text-slate-400">Perusahaan Listrik Negara (PLN) - gangguan listrik</span>
+                    </span>
+                    <i class="fa-solid fa-phone text-slate-300 dark:text-slate-500"></i>
+                </a>
+            </div>
+            <div class="px-4 py-3 text-[11px] text-center text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700">
+                Ketuk nomor untuk langsung menelepon. Saat darurat, tetap tenang dan sebutkan lokasi dengan jelas.
+            </div>
+        </div>
+    </div>
 
     <!-- ================= JAVASCRIPT ================= -->
     <script>
@@ -366,6 +455,24 @@
         function toggleTheme() {
             applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
         }
+
+        // ===== Nomor Siaga Darurat =====
+        function openSiaga() {
+            const m = document.getElementById('siaga-modal');
+            if (m) m.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeSiaga() {
+            const m = document.getElementById('siaga-modal');
+            if (m) m.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Tutup modal dengan tombol Escape.
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeSiaga();
+        });
 
         // Bersihkan parameter cache-buster hard-refresh agar URL tetap rapi.
         (function stripCacheBuster() {
@@ -669,7 +776,7 @@
         }
 
         // Buka/tutup (collapse) kartu "Ajukan Surat Baru" & "Cek Status Pengajuan".
-        // which: 'ajukan' | 'cek'. Default terbuka; klik header untuk menyembunyikan
+        // which: 'ajukan' | 'cek'. Default tertutup; klik header untuk menampilkan
         // isinya. Chevron ikut berputar dan aria-expanded diperbarui.
         function toggleSuratCard(which) {
             const panel = document.getElementById('surat-panel-' + which);
@@ -822,6 +929,7 @@
                             '<i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal) +
                             (it.ref ? ' &middot; ' + escapeHtml(it.ref) : '') +
                         '</div>' +
+                        (it.noSurat ? '<div class="mt-2 flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-500/25 border border-amber-300 dark:border-amber-500 p-2.5 rounded-lg"><i class="fa-solid fa-file-signature text-amber-500 dark:text-amber-300"></i><span>No. Surat: <b class="font-bold">' + escapeHtml(it.noSurat) + '</b></span></div>' : '') +
                         (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
                     '</div>';
             }).join('');

@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v9-2026-10-06";
+var CODE_VERSION = "publik-v10-2026-10-07";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 var TZ = "Asia/Jakarta";
@@ -10,7 +10,7 @@ var EXPECTED_FIELDS = {
   "Iuran_Kas": 7,       // A Timestamp + 6 field
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
-  "Pengajuan_Surat": 9  // A Timestamp + 8 field (termasuk Status Pengurusan & Catatan Pengurus)
+  "Pengajuan_Surat": 10 // A Timestamp + 9 field (termasuk Status Pengurusan, No. Surat, & Catatan Pengurus)
 };
 
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
@@ -19,7 +19,7 @@ var DESIRED_HEADERS = {
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
-  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "Catatan Pengurus", "ID"]
+  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "ID"]
 };
 
 // Nilai default kolom Publik untuk baris lama saat migrasi.
@@ -168,8 +168,10 @@ function migrateLayout(sheet, name) {
   var desired = DESIRED_HEADERS[name];
   if (!desired) return;
 
-  if (name === 'Data_Warga') {
-    migrateDataWargaLayout(sheet, desired);
+  // Sheet yang layoutnya bisa berubah (mis. menyisipkan kolom baru di tengah):
+  // susun ulang berdasarkan NAMA header. Aman & idempoten.
+  if (name === 'Data_Warga' || name === 'Pengajuan_Surat') {
+    migrateLayoutByName(sheet, desired);
     return;
   }
 
@@ -201,11 +203,12 @@ function migrateLayout(sheet, name) {
   }
 }
 
-// Migrasi Data_Warga ke layout terbaru (Nomor KK, Status, Jenis Kelamin,
-// Pendidikan, Pekerjaan). Pemetaan dilakukan BERDASARKAN NAMA HEADER, bukan
-// posisi, sehingga aman untuk berbagai layout lama. Aman dijalankan berulang:
-// bila header sudah sesuai, fungsi langsung keluar tanpa menulis apa pun.
-function migrateDataWargaLayout(sheet, desired) {
+// Migrasi layout berbasis NAMA header (dipakai Data_Warga & Pengajuan_Surat).
+// Pemetaan dilakukan BERDASARKAN NAMA header, bukan posisi, sehingga aman untuk
+// berbagai layout lama (termasuk saat kolom baru disisipkan di tengah, mis.
+// "No. Surat"). Aman dijalankan berulang: bila header sudah sesuai, fungsi
+// langsung keluar tanpa menulis apa pun.
+function migrateLayoutByName(sheet, desired) {
   var lastCol = sheet.getLastColumn();
   if (lastCol < 1) lastCol = 1;
   var lastRow = sheet.getLastRow();
@@ -453,6 +456,12 @@ function doPost(e) {
 
     ensureSpreadsheetFormat(ss, sheet, sheetName);
 
+    // Aturan bisnis khusus Pengajuan_Surat: status "Selesai" wajib punya No. Surat.
+    var suratErrMsg = suratSaveError(sheetName, data);
+    if (suratErrMsg) {
+      return respond({ "result": "error", "code": "invalid", "message": suratErrMsg });
+    }
+
     // UPDATE: perbarui baris yang sudah ada berdasarkan ID stabil (JANGAN tambah baris baru).
     if (data.action === "update") {
       var updRow = findRowById(sheet, sheetName, data.id);
@@ -509,7 +518,7 @@ function buildRowData(sheetName, data, timestamp, id) {
     rowData.push(
       data.nama, data.nik, data.noHp, data.alamat,
       data.jenisSurat, data.keperluan,
-      data.status || "Pending", data.catatan || ""
+      data.status || "Pending", data.noSurat || "", data.catatan || ""
     );
   } else {
     return null;
@@ -520,6 +529,20 @@ function buildRowData(sheetName, data, timestamp, id) {
 }
 
 // ===== Pengajuan Surat (intake publik) =====================================
+
+// Aturan bisnis Pengajuan_Surat untuk jalur admin (add/update): bila status
+// "Selesai", No. Surat (nomor surat resmi) wajib diisi. Mengembalikan pesan
+// error atau null bila valid.
+function suratSaveError(sheetName, data) {
+  if (sheetName !== 'Pengajuan_Surat') return null;
+  var status = String(data.status === undefined || data.status === null || data.status === '' ? 'Pending' : data.status);
+  var noSurat = cleanStr(data.noSurat, 100);
+  if (status === 'Selesai' && !noSurat) {
+    return 'No. Surat resmi wajib diisi sebelum menandai status Selesai.';
+  }
+  return null;
+}
+
 
 // Batas ringan anti-abuse: maksimum per-NIK & global per jam.
 var SURAT_RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -738,11 +761,12 @@ function handleCheckSurat(params) {
       var rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
       if (rNik === nik && rHp === hp) {
         results.push({
-          "ref": String(row[9] === undefined || row[9] === null ? '' : row[9]),
+          "ref": String(row[10] === undefined || row[10] === null ? '' : row[10]),
           "tanggal": formatTimestampCell(row[0]),
           "jenisSurat": cleanStr(row[5], 120),
           "status": cleanStr(row[7], 20) || 'Pending',
-          "catatan": cleanStr(row[8], 500)
+          "noSurat": cleanStr(row[8], 100),
+          "catatan": cleanStr(row[9], 500)
         });
       }
     }
@@ -806,7 +830,7 @@ function handleSubmitSurat(data) {
   var rowData = buildRowData('Pengajuan_Surat', {
     nama: nama, nik: nik, noHp: noHp, alamat: alamat,
     jenisSurat: jenisSurat, keperluan: keperluan,
-    status: 'Pending', catatan: ''
+    status: 'Pending', noSurat: '', catatan: ''
   }, new Date(), id);
   sheet.appendRow(rowData);
   sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);

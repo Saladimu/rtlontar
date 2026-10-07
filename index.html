@@ -937,6 +937,11 @@
                     </div>
                 </div>
                 <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">No. Surat <span id="surat-nosurat-req" class="hidden text-rose-500">*</span></label>
+                    <input type="text" id="surat-nosurat" maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="mis. 474/017-RT/RW.06/X/2026">
+                    <p class="text-[11px] text-slate-400 mt-1">Nomor surat resmi. Wajib diisi bila status pengurusan <b>Selesai</b>.</p>
+                </div>
+                <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Pemohon *</label>
                     <input type="text" id="surat-nama" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Budi Santoso">
                 </div>
@@ -967,7 +972,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status Pengurusan</label>
-                        <select id="surat-status" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
+                        <select id="surat-status" onchange="updateSuratNoSuratReq()" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
                             <!-- Options diisi oleh JS dari config.js -->
                         </select>
                     </div>
@@ -1014,7 +1019,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v9-2026-10-06';
+        const EXPECTED_BACKEND_VERSION = 'publik-v10-2026-10-07';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -2180,6 +2185,13 @@
             }
         }
 
+        // Tandai field No. Surat sebagai wajib saat status pengurusan "Selesai".
+        function updateSuratNoSuratReq() {
+            const statusEl = document.getElementById('surat-status');
+            const mark = document.getElementById('surat-nosurat-req');
+            if (mark) mark.classList.toggle('hidden', !(statusEl && statusEl.value === 'Selesai'));
+        }
+
         // Tampilkan NIK tersamar pada daftar admin (mis. 3173••••••01).
         function maskNik(nik) {
             const s = String(nik == null ? '' : nik).replace(/\D/g, '');
@@ -2210,6 +2222,7 @@
             initSuratForm();
             const statusEl = document.getElementById('surat-status');
             if (statusEl) statusEl.value = 'Pending';
+            updateSuratNoSuratReq();
             document.getElementById('btn-save-surat').textContent = 'Simpan Pengajuan';
             openModal('modal-surat');
         }
@@ -2234,7 +2247,9 @@
             document.getElementById('surat-jenis').value = item.jenisSurat || '';
             document.getElementById('surat-keperluan').value = item.keperluan || '';
             document.getElementById('surat-status').value = item.status || 'Pending';
+            document.getElementById('surat-nosurat').value = item.noSurat || '';
             document.getElementById('surat-catatan').value = item.catatan || '';
+            updateSuratNoSuratReq();
             document.getElementById('btn-save-surat').textContent = 'Perbarui Pengajuan';
             openModal('modal-surat');
         }
@@ -2265,6 +2280,8 @@
             const alamat = document.getElementById('surat-alamat').value.trim();
             const jenisSurat = document.getElementById('surat-jenis').value;
             const keperluan = document.getElementById('surat-keperluan').value.trim();
+            const status = document.getElementById('surat-status').value || 'Pending';
+            const noSurat = document.getElementById('surat-nosurat').value.trim();
 
             if (nama.length < 3) { showSuratFormError('Nama lengkap wajib diisi (minimal 3 karakter).', 'surat-nama'); return; }
             if (nik.length !== 16) {
@@ -2279,6 +2296,10 @@
             if (!alamat) { showSuratFormError('Alamat / No. Rumah wajib diisi.', 'surat-alamat'); return; }
             if (!jenisSurat) { showSuratFormError('Jenis Surat wajib dipilih.', 'surat-jenis'); return; }
             if (keperluan.length < 3) { showSuratFormError('Keperluan / alasan pengajuan wajib diisi (minimal 3 karakter).', 'surat-keperluan'); return; }
+            if (status === 'Selesai' && !noSurat) {
+                showSuratFormError('No. Surat resmi wajib diisi sebelum menandai status Selesai.', 'surat-nosurat');
+                return;
+            }
 
             const data = {
                 sheetName: 'Pengajuan_Surat',
@@ -2288,7 +2309,8 @@
                 alamat: alamat,
                 jenisSurat: jenisSurat,
                 keperluan: keperluan,
-                status: document.getElementById('surat-status').value || 'Pending',
+                status: status,
+                noSurat: noSurat,
                 catatan: document.getElementById('surat-catatan').value.trim()
             };
 
@@ -2331,13 +2353,22 @@
             const list = suratStatusOptions();
             const cur = list.indexOf(item.status);
             const next = list[(cur + 1) % list.length];
+
+            // Menandai "Selesai" memerlukan nomor surat resmi -> buka modal edit.
+            if (next === 'Selesai' && !String(item.noSurat || '').trim()) {
+                editSurat(index);
+                showSuratFormError('Isi No. Surat resmi sebelum menandai status Selesai.', 'surat-nosurat');
+                return;
+            }
+
             item.status = next;
             saveLocalState();
             renderSuratTable();
             sendToGoogleSheets({
                 action: 'update', sheetName: 'Pengajuan_Surat', id: item._id,
                 nama: item.nama, nik: item.nik, noHp: item.noHp, alamat: item.alamat,
-                jenisSurat: item.jenisSurat, keperluan: item.keperluan, status: next, catatan: item.catatan
+                jenisSurat: item.jenisSurat, keperluan: item.keperluan, status: next,
+                noSurat: item.noSurat || '', catatan: item.catatan
             });
             showToast('Status diubah menjadi ' + next, 'success');
         }
@@ -2360,7 +2391,7 @@
 
             const list = appState.surat.slice().reverse(); // terbaru dahulu
             const filtered = list.filter(function (item) {
-                const haystack = [item._id, item.nama, item.nik, item.noHp, item.alamat, item.jenisSurat, item.keperluan, item.status, item.catatan]
+                const haystack = [item._id, item.nama, item.nik, item.noHp, item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || (item.status || 'Pending') === filterStatus;
@@ -2790,7 +2821,7 @@
                 _id: r[r.length - 1], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7]
             })));
             appState.surat = applyLocalDeletes('surat', (d.Pengajuan_Surat || []).map(r => ({
-                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', catatan: r[8]
+                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9]
             })));
             saveLocalState();
             appState.portalEnabled = res.portalEnabled !== false;

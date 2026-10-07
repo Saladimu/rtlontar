@@ -21,6 +21,7 @@ Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang re
 - **🛡️ Halaman Admin Terlindungi (Cloudflare Access):** halaman admin (`/` & `/index.html`) hanya bisa dibuka oleh email yang diizinkan melalui login Cloudflare Zero Trust; portal publik tetap terbuka tanpa login. Lihat bagian **Publikasi & Kontrol Akses**.
 - **🕵️ Portal Publik Terisolasi:** `public.html` memakai endpoint `readPublic` yang hanya mengembalikan Pengumuman & Kegiatan ber-`Publik=Ya`; data warga & kas tidak pernah dikirim ke portal publik.
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
+- **🚨 Nomor Siaga Darurat (Portal Publik):** tombol ikon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama** (112, 110, 113, 118/119, 115, 117, 129, 123) lengkap dengan ikon per layanan. Setiap nomor dapat diketuk untuk langsung menelepon (`tel:`).
 - **🔒 ON/OFF Portal Publik:** Toggle di tab Portal Publik untuk mengaktifkan/menonaktifkan akses warga. Saat OFF, server menolak `readPublic` sehingga data benar-benar tidak bisa diakses (bukan sekadar menyembunyikan tautan).
 
 ---
@@ -124,7 +125,7 @@ Warga dapat mengajukan surat keterangan/pengantar langsung dari **Portal Publik*
 - **Ajukan Surat Baru:** warga mengisi Nama Lengkap, NIK (16 digit), No. HP/WhatsApp, Alamat/No. Rumah, Jenis Surat (daftar dari `RT_CONFIG.jenisSurat` di `config.js`), dan Keperluan. Setelah terkirim, warga menerima **nomor pengajuan** (contoh `SRT-261006-AB12`) untuk disimpan.
 - **Cek Status Pengajuan:** warga memasukkan **NIK + No. HP/WhatsApp** yang sama seperti saat mengajukan untuk melihat status (`Pending` / `Diproses` / `Selesai` / `Ditolak`) beserta catatan pengurus.
 
-Kedua kartu (**Ajukan Surat Baru** & **Cek Status Pengajuan**) dapat dibuka/ditutup (*collapse/toggle*) dengan mengeklik judulnya, sehingga tampilan lebih ringkas di layar kecil.
+Kedua kartu (**Ajukan Surat Baru** & **Cek Status Pengajuan**) dapat dibuka/ditutup (*collapse/toggle*) dengan mengeklik judulnya, sehingga tampilan lebih ringkas di layar kecil. Secara default keduanya **tertutup** saat halaman dibuka; warga mengeklik judul untuk menampilkan formulir.
 
 Pengamanan server-side: hanya menerima **tambah data** (tidak bisa mengubah/menghapus), memaksa status awal `Pending`, memvalidasi NIK/HP, menyaring bot lewat *honeypot*, dan membatasi **maksimal 5 pengajuan per NIK per jam**. Data tab `Pengajuan_Surat` **tidak pernah** ikut terkirim pada `readPublic`.
 
@@ -136,10 +137,11 @@ Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (ter
 
 - **Catat Pengajuan**: menambah pengajuan secara manual (mis. permohonan langsung/lisan) dengan tombol **Catat Pengajuan**. Bila ada isian yang salah (mis. NIK kurang dari 16 digit), pesan error muncul **di dalam modal** dan field yang bermasalah disorot.
 - **No. Pengajuan**: setiap baris menampilkan nomor pengajuan (kolom `ID`, mis. `SRT-261006-AB12`) — nomor yang sama yang diterima warga saat mengajukan, sehingga mudah dicocokkan.
-- **Edit**: klik baris (atau ikon pensil) untuk membuka modal dan mengubah data, **Status Pengurusan** (`RT_CONFIG.statusSurat`), dan **Catatan Pengurus**. Modal juga menampilkan No. Pengajuan & tanggal pengajuan.
+- **No. Surat**: field baru **di bawah No. Pengajuan** pada modal edit untuk mencatat **nomor surat resmi** (mis. `474/017-RT/RW.06/X/2026`). Field ini **wajib diisi saat status diubah menjadi `Selesai`** — baik lewat modal maupun tombol ubah status cepat (yang akan otomatis membuka modal bila nomornya masih kosong). Server juga menolak simpan `Selesai` tanpa No. Surat. Nomor ini ikut tampil pada hasil **Cek Status** warga dengan sorotan warna terang (kuning/amber) agar mudah terlihat.
+- **Edit**: klik baris (atau ikon pensil) untuk membuka modal dan mengubah data, **Status Pengurusan** (`RT_CONFIG.statusSurat`), **No. Surat**, dan **Catatan Pengurus**. Modal juga menampilkan No. Pengajuan & tanggal pengajuan.
 - **Ubah Status cepat**: ikon putar menggilir status `Pending → Diproses → Selesai → Ditolak → Pending`.
 - **Hapus**: ikon tempat sampah (dengan konfirmasi).
-- **Filter & cari**: saring berdasarkan status dan cari berdasarkan no. pengajuan / nama / NIK / jenis surat. NIK disamarkan pada tabel (contoh `3173••••••01`).
+- **Filter & cari**: saring berdasarkan status dan cari berdasarkan no. pengajuan / No. Surat / nama / NIK / jenis surat. NIK disamarkan pada tabel (contoh `3173••••••01`).
 
 Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti modul lain.
 
@@ -162,6 +164,23 @@ Untuk menguji alur lengkap, kirim pengajuan dari Portal Publik menggunakan NIK &
 > 4. Ulangi **Tes Email Admin** di dashboard.
 >
 > Pesan ini juga muncul langsung di dashboard sebagai kode `mail_scope_denied` bila tombol **Tes Email Admin** diklik sebelum izin diberikan.
+
+### Nomor Siaga Darurat (Portal Publik)
+
+Tombol ikon telepon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama**. Setiap entri punya ikon sesuai layanan dan dapat diketuk untuk langsung menelepon (`tel:`):
+
+| Nomor | Layanan | Ikon |
+|-------|---------|------|
+| 112 | Panggilan darurat terintegrasi (bebas pulsa) | `fa-tower-broadcast` |
+| 110 | Kepolisian (Polri) | `fa-shield-halved` |
+| 113 | Pemadam Kebakaran | `fa-fire-extinguisher` |
+| 118 / 119 | Ambulans dan darurat medis | `fa-truck-medical` |
+| 115 | Basarnas / SAR | `fa-life-ring` |
+| 117 | Badan Nasional Penanggulangan Bencana (BNPB) | `fa-house-crack` |
+| 129 | Posko Bencana Alam | `fa-tent` |
+| 123 | Perusahaan Listrik Negara (PLN) - gangguan listrik | `fa-bolt` |
+
+Modal ditutup lewat tombol silang, klik area latar, atau tombol `Esc`. Data ini statis di `public.html` (tidak bergantung backend) sehingga tetap tersedia meski koneksi bermasalah.
 
 ---
 
