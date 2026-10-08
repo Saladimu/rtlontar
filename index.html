@@ -82,9 +82,14 @@
                     <p class="text-xs text-slate-400" data-rt="appLongName">Sistem Administrasi &amp; Pelayanan Antarwarga</p>
                 </div>
             </div>
-            <button onclick="refreshData()" id="desktop-refresh-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Muat Ulang Aplikasi (Hard Refresh)">
-                <i class="fa-solid fa-arrows-rotate"></i>
-            </button>
+            <div class="flex flex-col items-center space-y-1">
+                <button onclick="openAbout()" id="about-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-cyan-300 transition" title="Tentang SAPA RT">
+                    <i class="fa-solid fa-circle-info"></i>
+                </button>
+                <button onclick="refreshData()" id="desktop-refresh-btn" class="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition" title="Muat Ulang Aplikasi (Hard Refresh)">
+                    <i class="fa-solid fa-arrows-rotate"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Connection Status Pill -->
@@ -134,6 +139,10 @@
             <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-gear w-5"></i>
                 <span class="font-medium text-sm">Koneksi App Script</span>
+            </button>
+            <button onclick="openAbout()" class="w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i class="fa-solid fa-circle-info w-5"></i>
+                <span class="font-medium text-sm">Tentang Aplikasi</span>
             </button>
         </nav>
 
@@ -186,6 +195,9 @@
         </button>
         <button onclick="switchTab('settings'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-gear w-5 text-slate-400"></i><span>Koneksi Google Sheets</span>
+        </button>
+        <button onclick="openAbout(); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+            <i class="fa-solid fa-circle-info w-5 text-cyan-300"></i><span>Tentang Aplikasi</span>
         </button>
     </div>
 
@@ -540,6 +552,7 @@
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                             <input type="text" id="search-surat" oninput="renderSuratTable()" placeholder="Cari nama / NIK / jenis surat..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
                         </div>
+                        <button type="button" onclick="clearSuratFilters()" title="Bersihkan pencarian & filter" class="py-1.5 px-3 text-slate-400 hover:text-rose-500 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"><i class="fa-solid fa-filter-circle-xmark"></i></button>
                     </div>
                 </div>
                 <div class="overflow-x-auto custom-scrollbar">
@@ -1013,6 +1026,89 @@
         </div>
     </div>
 
+    <!-- ================= MODAL: TENTANG APLIKASI ================= -->
+    <div id="modal-about" onclick="if(event.target===this)closeAbout()" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
+            <!-- Header brand -->
+            <div class="relative bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-900 text-white rounded-t-2xl p-6 overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-cyan-500/10"></div>
+                <div class="absolute -right-4 top-16 w-24 h-24 rounded-full bg-cyan-400/10"></div>
+                <button onclick="closeAbout()" aria-label="Tutup" class="absolute top-4 right-4 z-10 text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+                <div class="relative flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-white shadow-lg overflow-hidden flex-shrink-0">
+                        <img src="rt-icon.png" alt="Logo SAPA RT" class="w-full h-full object-cover">
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="text-2xl font-bold leading-tight" data-rt="appName">SAPA RT</h2>
+                        <p class="text-sm text-cyan-200" data-rt="appLongName">Sistem Administrasi &amp; Pelayanan Antarwarga</p>
+                    </div>
+                </div>
+                <p class="relative mt-4 inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 bg-white/10 border border-white/15 rounded-full px-3 py-1.5">
+                    <i class="fa-solid fa-heart text-rose-300"></i>
+                    Melayani Warga, Menghubungkan Tetangga
+                </p>
+            </div>
+
+            <!-- Isi: Visi & Misi -->
+            <div class="p-6 space-y-6">
+                <p class="text-sm text-slate-600 leading-relaxed">
+                    <span data-rt="appName">SAPA RT</span> adalah satu platform administrasi &amp; pelayanan warga
+                    untuk <span data-rt="wilayah">Lontar Barat, Tanjung Duren Utara, Grogol Petamburan</span>.
+                </p>
+
+                <!-- Visi -->
+                <section>
+                    <h3 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+                        <i class="fa-solid fa-bullseye text-cyan-600"></i> Visi
+                    </h3>
+                    <blockquote class="border-l-4 border-cyan-500 bg-cyan-50/60 rounded-r-xl px-4 py-3 text-sm text-slate-700 italic leading-relaxed">
+                        Mewujudkan lingkungan RT yang tertib, terhubung, transparan, dan harmonis melalui pelayanan warga yang efektif serta pemanfaatan teknologi digital.
+                    </blockquote>
+                </section>
+
+                <!-- Misi -->
+                <section>
+                    <h3 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-500 mb-3">
+                        <i class="fa-solid fa-list-check text-cyan-600"></i> Misi
+                    </h3>
+                    <ol class="space-y-2.5">
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                            <span class="text-sm text-slate-700 leading-relaxed"><b>Meningkatkan kualitas pelayanan</b> administrasi dan kebutuhan warga secara mudah, cepat, dan transparan.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                            <span class="text-sm text-slate-700 leading-relaxed"><b>Membangun komunikasi yang efektif</b> antara pengurus RT dan seluruh warga.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                            <span class="text-sm text-slate-700 leading-relaxed"><b>Mendorong keterlibatan warga</b> dalam kegiatan dan pembangunan lingkungan.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">4</span>
+                            <span class="text-sm text-slate-700 leading-relaxed"><b>Mewujudkan administrasi RT yang tertib, akurat, dan terdokumentasi.</b></span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">5</span>
+                            <span class="text-sm text-slate-700 leading-relaxed"><b>Memanfaatkan teknologi digital</b> untuk menciptakan pengelolaan RT yang lebih efisien dan modern.</span>
+                        </li>
+                        <li class="flex gap-3">
+                            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">6</span>
+                            <span class="text-sm text-slate-700 leading-relaxed"><b>Membangun lingkungan yang rukun, aman, nyaman, dan peduli</b> melalui semangat kebersamaan.</span>
+                        </li>
+                    </ol>
+                </section>
+
+                <div class="pt-2 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <span class="text-xs text-slate-400 text-center sm:text-left" data-rt="footerAdmin">&copy; 2026 SAPA RT &middot; RT 017/RW 06 Lontar Barat, Tanjung Duren Utara</span>
+                    <button onclick="closeAbout()" class="px-4 py-2 text-sm bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT APP LOGIC ================= -->
     <script>
         // Default Initial Data (kosong - mulai dari tampilan bersih)
@@ -1225,6 +1321,15 @@
             const s = document.getElementById('search-kas');
             if (s) s.value = '';
             renderKasTable();
+        }
+
+        // Bersihkan pencarian & filter status Daftar Pengajuan Surat.
+        function clearSuratFilters() {
+            const s = document.getElementById('search-surat');
+            if (s) s.value = '';
+            const st = document.getElementById('filter-status-surat');
+            if (st) st.value = '';
+            renderSuratTable();
         }
 
         // Isi datalist nama warga dari Data_Warga (lookup pada Iuran & Kas).
@@ -1940,6 +2045,17 @@
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
         }
 
+        // Modal "Tentang Aplikasi" (visi & misi SAPA RT).
+        function openAbout() { document.getElementById('modal-about').classList.remove('hidden'); }
+        function closeAbout() { document.getElementById('modal-about').classList.add('hidden'); }
+
+        // Tutup modal Tentang Aplikasi dengan tombol Escape.
+        if (document.addEventListener) {
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeAbout();
+            });
+        }
+
         // Form Submit Handlers
         function submitWarga(e) {
             e.preventDefault();
@@ -2476,7 +2592,7 @@
             if (!tbody) return;
             const searchEl = document.getElementById('search-surat');
             const filterEl = document.getElementById('filter-status-surat');
-            const search = searchEl ? searchEl.value.toLowerCase() : '';
+            const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const filterStatus = filterEl ? filterEl.value : '';
 
             tbody.innerHTML = '';
@@ -2489,7 +2605,7 @@
 
             const list = appState.surat.slice().reverse(); // terbaru dahulu
             const filtered = list.filter(function (item) {
-                const haystack = [item._id, item.nama, item.nik, item.noHp, item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan]
+                const haystack = [item._id, item.nama, item.nik, maskNik(item.nik), item.noHp, waNumber(item.noHp), item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan, item.waktu, fmtTimestamp(item.waktu)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || (item.status || 'Pending') === filterStatus;
@@ -2500,8 +2616,12 @@
             if (label) label.innerText = filtered.length + ' dari ' + appState.surat.length + ' pengajuan';
 
             if (filtered.length === 0) {
+                const anyFilter = search !== '' || filterStatus !== '';
+                const msg = appState.surat.length === 0
+                    ? 'Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.'
+                    : (anyFilter ? 'Tidak ada pengajuan yang cocok dengan pencarian/filter.' : 'Belum ada pengajuan surat.');
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="9" class="p-4 text-center text-slate-400">Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.</td>`;
+                empty.innerHTML = `<td colspan="9" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
                 return;
             }
