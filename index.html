@@ -338,20 +338,20 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
-                                <th class="p-4">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span></th>
-                                <th class="p-4">Nama Lengkap</th>
-                                <th class="p-4">Usia</th>
-                                <th class="p-4">Status</th>
-                                <th class="p-4">Jenis Kelamin</th>
-                                <th class="p-4">NIK</th>
-                                <th class="p-4">Tempat Lahir</th>
-                                <th class="p-4">Tanggal Lahir</th>
-                                <th class="p-4">Pendidikan</th>
-                                <th class="p-4">Pekerjaan</th>
-                                <th class="p-4">No. HP</th>
-                                <th class="p-4">Status Tinggal</th>
-                                <th class="p-4">Alamat / No. Rumah</th>
-                                <th class="p-4 text-center">Aksi</th>
+                                <th class="px-3 py-2.5">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span></th>
+                                <th class="px-3 py-2.5">Nama Lengkap</th>
+                                <th class="px-3 py-2.5">Usia</th>
+                                <th class="px-3 py-2.5">Status</th>
+                                <th class="px-3 py-2.5">Jenis Kelamin</th>
+                                <th class="px-3 py-2.5">NIK</th>
+                                <th class="px-3 py-2.5">Tempat Lahir</th>
+                                <th class="px-3 py-2.5">Tanggal Lahir</th>
+                                <th class="px-3 py-2.5">Pendidikan</th>
+                                <th class="px-3 py-2.5">Pekerjaan</th>
+                                <th class="px-3 py-2.5">No. HP</th>
+                                <th class="px-3 py-2.5">Status Tinggal</th>
+                                <th class="px-3 py-2.5">Alamat / No. Rumah</th>
+                                <th class="px-3 py-2.5 text-center">Aksi</th>
                             </tr>
                             <tr class="bg-white border-b border-slate-200 font-normal">
                                 <th class="px-2 pb-2 pt-0"><input id="fw-warga-nomorkk" type="text" oninput="renderWargaTable()" placeholder="Cari No. KK" class="w-full min-w-[7rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
@@ -375,6 +375,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="pagination-warga"></div>
             </div>
         </section>
 
@@ -431,13 +432,13 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
-                                <th class="p-4">Tanggal</th>
-                                <th class="p-4">Nama Warga / Keterangan</th>
-                                <th class="p-4">No. Rumah</th>
-                                <th class="p-4">Jenis Transaksi</th>
-                                <th class="p-4 text-right">Jumlah (Rp)</th>
-                                <th class="p-4">Catatan</th>
-                                <th class="p-4 text-center">Aksi</th>
+                                <th class="px-3 py-2.5">Tanggal</th>
+                                <th class="px-3 py-2.5">Nama Warga / Keterangan</th>
+                                <th class="px-3 py-2.5">No. Rumah</th>
+                                <th class="px-3 py-2.5">Jenis Transaksi</th>
+                                <th class="px-3 py-2.5 text-right">Jumlah (Rp)</th>
+                                <th class="px-3 py-2.5">Catatan</th>
+                                <th class="px-3 py-2.5 text-center">Aksi</th>
                             </tr>
                             <tr class="bg-white border-b border-slate-200 font-normal">
                                 <th class="px-2 pb-2 pt-0"><input id="fw-kas-tanggal" type="text" oninput="renderKasTable()" placeholder="Cari tanggal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-emerald-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"></th>
@@ -454,6 +455,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="pagination-kas"></div>
             </div>
         </section>
 
@@ -559,11 +561,9 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
-                                <th class="p-4 whitespace-nowrap">Tanggal</th>
-                                <th class="p-4 whitespace-nowrap">No. Pengajuan</th>
+                                <th class="p-4 whitespace-nowrap">Tanggal<br>No. Pengajuan</th>
                                 <th class="p-4">Nama Pemohon</th>
-                                <th class="p-4 whitespace-nowrap">NIK</th>
-                                <th class="p-4 whitespace-nowrap">No. HP</th>
+                                <th class="p-4 whitespace-nowrap">NIK / No. HP</th>
                                 <th class="p-4">Jenis Surat</th>
                                 <th class="p-4">Keperluan</th>
                                 <th class="p-4 text-center">Status</th>
@@ -1661,6 +1661,49 @@
             }
         }
 
+        // ===== Paginasi tabel: tampilkan maksimal TABLE_PAGE_SIZE record per halaman =====
+        const TABLE_PAGE_SIZE = 15;
+        let wargaPage = 1;
+        let kasPage = 1;
+        let wargaFilterSig = '\u0000';
+        let kasFilterSig = '\u0000';
+
+        function gotoWargaPage(page) {
+            wargaPage = page;
+            renderWargaTable();
+        }
+
+        function gotoKasPage(page) {
+            kasPage = page;
+            renderKasTable();
+        }
+
+        // Bar umum untuk kontrol paginasi. gotoFnName = nama fungsi global tujuan.
+        function renderPaginationBar(elId, page, totalPages, total, from, to, gotoFnName) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            if (total === 0) { el.innerHTML = ''; return; }
+
+            const btn = (label, target, disabled, icon) => {
+                const base = 'inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-medium transition';
+                const cls = disabled
+                    ? 'border-slate-200 text-slate-300 cursor-not-allowed'
+                    : 'border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-800';
+                return `<button type="button" ${disabled ? 'disabled' : ''} onclick="${gotoFnName}(${target})" class="${base} ${cls}">${icon ? '<i class="fa-solid ' + icon + '"></i>' : ''}${label}</button>`;
+            };
+
+            el.innerHTML = `
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 text-xs text-slate-500">
+                    <span>Menampilkan <b class="text-slate-700">${from}</b>–<b class="text-slate-700">${to}</b> dari <b class="text-slate-700">${total}</b> data</span>
+                    <div class="flex items-center gap-2">
+                        ${btn('Sebelumnya', page - 1, page <= 1, 'fa-chevron-left')}
+                        <span class="px-2 text-slate-600">Hal <b>${page}</b> / ${totalPages}</span>
+                        ${btn('Berikutnya', page + 1, page >= totalPages, 'fa-chevron-right')}
+                    </div>
+                </div>
+            `;
+        }
+
         // Render Warga Table
         function renderWargaTable() {
             const tbody = document.getElementById('table-warga-body');
@@ -1718,21 +1761,33 @@
             const countEl = document.getElementById('warga-count');
             if (countEl) countEl.textContent = '(' + filtered.length + ')';
 
+            // Setiap perubahan pencarian/filter mengembalikan tampilan ke halaman pertama.
+            const filterSig = [search, filterStatus].concat(Object.keys(f).map(k => f[k])).join('\u0001');
+            if (filterSig !== wargaFilterSig) { wargaFilterSig = filterSig; wargaPage = 1; }
+
             if (filtered.length === 0) {
                 const msg = anyFilter
                     ? 'Tidak ada data warga yang cocok dengan pencarian/filter.'
                     : 'Belum ada data warga. Klik "Tambah Data Warga" untuk menambahkan.';
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="14" class="p-4 text-center text-slate-400">${msg}</td>`;
+                empty.innerHTML = `<td colspan="14" class="px-3 py-3 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
+                renderPaginationBar('pagination-warga', 1, 1, 0, 0, 0, 'gotoWargaPage');
                 return;
             }
 
-            filtered.forEach((item, rowIdx) => {
+            const totalPages = Math.max(1, Math.ceil(filtered.length / TABLE_PAGE_SIZE));
+            if (wargaPage > totalPages) wargaPage = totalPages;
+            if (wargaPage < 1) wargaPage = 1;
+            const startIdx = (wargaPage - 1) * TABLE_PAGE_SIZE;
+            const pageItems = filtered.slice(startIdx, startIdx + TABLE_PAGE_SIZE);
+            renderPaginationBar('pagination-warga', wargaPage, totalPages, filtered.length, startIdx + 1, startIdx + pageItems.length, 'gotoWargaPage');
+
+            pageItems.forEach((item, rowIdx) => {
                 const originalIndex = appState.warga.indexOf(item);
                 const statusBadge = item.statusTinggal === 'Tetap' 
-                    ? '<span class="px-2.5 py-1 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Tetap</span>'
-                    : '<span class="px-2.5 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Kontrak</span>';
+                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Tetap</span>'
+                    : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Kontrak</span>';
 
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
                 const tr = document.createElement('tr');
@@ -1740,20 +1795,20 @@
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editWarga(originalIndex);
                 tr.innerHTML = `
-                    <td class="p-4 text-slate-600 text-xs">${item.nomorKK || '-'}</td>
-                    <td class="p-4 font-semibold text-slate-800">${item.nama}</td>
-                    <td class="p-4 text-slate-600 text-xs">${hitungUsia(item.tanggalLahir) || '-'}</td>
-                    <td class="p-4 text-slate-600 text-xs">${item.status || '-'}</td>
-                    <td class="p-4 text-slate-600 text-xs">${item.jenisKelamin || '-'}</td>
-                    <td class="p-4 text-slate-500 text-xs">${item.nik || '-'}</td>
-                    <td class="p-4 text-slate-600">${item.tempat || '-'}</td>
-                    <td class="p-4 text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</td>
-                    <td class="p-4 text-slate-600 text-xs">${item.pendidikan || '-'}</td>
-                    <td class="p-4 text-slate-600 text-xs">${item.pekerjaan || '-'}</td>
-                    <td class="p-4 text-slate-600">${item.hp || '-'}</td>
-                    <td class="p-4">${statusBadge}</td>
-                    <td class="p-4 text-slate-600">${item.alamat}</td>
-                    <td class="p-4 text-center">
+                    <td class="px-3 py-2 text-slate-600 text-xs">${item.nomorKK || '-'}</td>
+                    <td class="px-3 py-2 font-semibold text-slate-800">${item.nama}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${hitungUsia(item.tanggalLahir) || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${item.status || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${item.jenisKelamin || '-'}</td>
+                    <td class="px-3 py-2 text-slate-500 text-xs">${item.nik || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600">${item.tempat || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${item.pendidikan || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${item.pekerjaan || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600">${item.hp || '-'}</td>
+                    <td class="px-3 py-2">${statusBadge}</td>
+                    <td class="px-3 py-2 text-slate-600">${item.alamat}</td>
+                    <td class="px-3 py-2 text-center">
                         <button onclick="event.stopPropagation(); editWarga(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="event.stopPropagation(); deleteWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
@@ -1879,12 +1934,25 @@
                 else if (anyFilter) msg = 'Tidak ada transaksi yang cocok dengan pencarian/filter.';
                 else msg = 'Tidak ada transaksi pada periode ini.';
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
+                empty.innerHTML = `<td colspan="7" class="px-3 py-3 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
+                renderPaginationBar('pagination-kas', 1, 1, 0, 0, 0, 'gotoKasPage');
                 return;
             }
 
-            filtered.forEach((item, rowIdx) => {
+            // Setiap perubahan pencarian/filter/periode mengembalikan tampilan ke halaman pertama.
+            const filterSig = [search, kasView.mode, kasView.month, kasView.date]
+                .concat(KAS_FILTER_IDS.map(id => filterValue(id))).join('\u0001');
+            if (filterSig !== kasFilterSig) { kasFilterSig = filterSig; kasPage = 1; }
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / TABLE_PAGE_SIZE));
+            if (kasPage > totalPages) kasPage = totalPages;
+            if (kasPage < 1) kasPage = 1;
+            const startIdx = (kasPage - 1) * TABLE_PAGE_SIZE;
+            const pageItems = filtered.slice(startIdx, startIdx + TABLE_PAGE_SIZE);
+            renderPaginationBar('pagination-kas', kasPage, totalPages, filtered.length, startIdx + 1, startIdx + pageItems.length, 'gotoKasPage');
+
+            pageItems.forEach((item, rowIdx) => {
                 const originalIndex = appState.kas.indexOf(item);
                 const jenisBadge = item.jenis === 'Pemasukan'
                     ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Pemasukan</span>'
@@ -1898,13 +1966,13 @@
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editKas(originalIndex);
                 tr.innerHTML = `
-                    <td class="p-4 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
-                    <td class="p-4 font-medium text-slate-800">${item.nama}</td>
-                    <td class="p-4 text-slate-600 text-xs">${item.noRumah || '-'}</td>
-                    <td class="p-4">${jenisBadge}</td>
-                    <td class="p-4 text-right ${amountClass}">${formatRupiah(item.jumlah)}</td>
-                    <td class="p-4 text-slate-500 text-xs">${item.keterangan || '-'}</td>
-                    <td class="p-4 text-center">
+                    <td class="px-3 py-2 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
+                    <td class="px-3 py-2 font-medium text-slate-800">${item.nama}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${item.noRumah || '-'}</td>
+                    <td class="px-3 py-2">${jenisBadge}</td>
+                    <td class="px-3 py-2 text-right ${amountClass}">${formatRupiah(item.jumlah)}</td>
+                    <td class="px-3 py-2 text-slate-500 text-xs">${item.keterangan || '-'}</td>
+                    <td class="px-3 py-2 text-center">
                         <button onclick="event.stopPropagation(); editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="event.stopPropagation(); deleteKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
@@ -2621,7 +2689,7 @@
                     ? 'Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.'
                     : (anyFilter ? 'Tidak ada pengajuan yang cocok dengan pencarian/filter.' : 'Belum ada pengajuan surat.');
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="9" class="p-4 text-center text-slate-400">${msg}</td>`;
+                empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
                 return;
             }
@@ -2638,11 +2706,15 @@
                     ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1" title="Chat WhatsApp"><i class="fa-brands fa-whatsapp"></i>${escAttr(item.noHp)}</a>`
                     : escAttr(item.noHp || '-');
                 tr.innerHTML = `
-                    <td class="p-4 text-slate-600 text-xs whitespace-nowrap">${fmtTimestamp(item.waktu) || '-'}</td>
-                    <td class="p-4 text-slate-700 text-xs font-semibold whitespace-nowrap">${escAttr(item._id || '-')}</td>
+                    <td class="p-4 whitespace-nowrap">
+                        <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
+                        <div class="text-slate-700 text-xs font-semibold mt-0.5">${escAttr(item._id || '-')}</div>
+                    </td>
                     <td class="p-4 font-semibold text-slate-800">${escAttr(item.nama || '-')}</td>
-                    <td class="p-4 text-slate-500 text-xs whitespace-nowrap" title="${escAttr(item.nik || '')}">${escAttr(maskNik(item.nik))}</td>
-                    <td class="p-4 text-slate-600 whitespace-nowrap">${hpCell}</td>
+                    <td class="p-4 whitespace-nowrap">
+                        <div class="text-slate-500 text-xs" title="${escAttr(item.nik || '')}">${escAttr(maskNik(item.nik))}</div>
+                        <div class="mt-0.5">${hpCell}</div>
+                    </td>
                     <td class="p-4 text-slate-700 text-xs">${escAttr(item.jenisSurat || '-')}</td>
                     <td class="p-4 text-slate-500 text-xs" style="max-width:16rem">${escAttr(item.keperluan || '-')}</td>
                     <td class="p-4 text-center">${suratStatusBadge(item.status)}</td>
