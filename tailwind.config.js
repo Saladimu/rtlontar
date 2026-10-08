@@ -1,4 +1,4 @@
-/** Tailwind config untuk Dashboard RT (dipakai untuk build CSS statis).
+/** Tailwind config untuk SAPA RT (dipakai untuk build CSS statis).
 
  *  Menggantikan Tailwind Play CDN (cdn.tailwindcss.com) agar halaman tidak
  *  perlu meng-unduh engine Tailwind + generate CSS saat runtime.

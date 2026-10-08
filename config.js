@@ -14,14 +14,18 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '4',
-    appName: 'Sistem',
+    version: '5',
+    appName: 'SAPA RT',
+    appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
     rt: '017',
     rw: '06',
-    kelurahan: 'Lontar Barat',
+    kelurahan: 'Tanjung Duren Utara',
     kecamatan: 'Grogol Petamburan',
     kota: 'Jakarta Barat',
     provinsi: 'DKI Jakarta',
+
+    // Nama kawasan / jalan tempat RT berada. Hanya dipakai untuk tampilan.
+    alamatrt: 'Lontar Barat',
     tahun: new Date().getFullYear(),
     alamatContoh: 'Jl. Lontar Barat No. 06',
     lokasiContoh: 'Depan lapangan',
@@ -67,26 +71,29 @@ window.RT_CONFIG = {
 
     function rtShort() { return 'RT ' + c.rt + '/RW ' + c.rw; }
     function rtFull() { return 'RT ' + c.rt + ' / RW ' + c.rw + ' ' + c.kelurahan; }
-    function wilayah() { return 'Kelurahan ' + c.kelurahan + ', Kec. ' + c.kecamatan; }
-    function copyright() { return '\u00A9 ' + c.tahun + ' ' + rtFull(); }
+    function wilayah() { return c.alamatrt + ', ' + c.kelurahan + ', ' + c.kecamatan; }
+    function copyright() { return '\u00A9 ' + c.tahun + ' ' + c.appName + ' \u00B7 ' + rtShort() + ' ' + c.alamatrt + ', ' + c.kelurahan; }
 
     // Nilai untuk setiap atribut data-rt.
     var values = {
         appName: c.appName,
-        appNameRt: c.appName + ' ' + rtShort(),
-        dashboardTitle: 'Ringkasan ' + c.appName,
-        headerName: 'RT ' + c.kelurahan,
+        appLongName: c.appLongName,
+        appNameRt: c.appName,
+        dashboardTitle: 'Ringkasan RT ' + c.rt + ' / RW ' + c.rw,
+        headerName: c.appName,
         rtShort: rtShort(),
         rtFull: rtFull(),
         kelurahan: c.kelurahan,
         wilayah: wilayah(),
+        wargaTitle: 'Data Warga RT ' + c.rt + ' / RW ' + c.rw,
+        kasTitle: 'Iuran Kas RT ' + c.rt + ' / RW ' + c.rw,
         wargaSubtitle: 'Pendataan warga ' + c.kelurahan,
-        pengumumanSubtitle: 'Papan informasi resmi RT ' + c.kelurahan,
-        publicSubtitle: 'Portal Informasi Publik - ' + rtShort(),
+        pengumumanSubtitle: 'Papan informasi resmi ' + c.appName,
+        publicSubtitle: 'Portal Informasi Publik \u00B7 ' + rtShort() + ' \u00B7 ' + c.alamatrt,
         footerAdmin: copyright(),
         footerPublic: copyright() + ' - Portal Publik',
-        titleAdmin: 'Dashboard ' + rtShort() + ' - ' + c.kelurahan,
-        titlePublic: 'Portal Publik - ' + rtFull()
+        titleAdmin: c.appName + ' - Dashboard ' + rtShort(),
+        titlePublic: c.appName + ' - Portal Publik ' + rtShort()
     };
 
     // Nilai untuk setiap atribut data-rt-placeholder.

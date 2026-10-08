@@ -1,6 +1,6 @@
-# 🏢 Dashboard RT Tanjung Duren Utara
+# 🏢 SAPA RT - Dashboard RT Tanjung Duren Utara
 
-Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang responsif, modern, dan mudah digunakan. Didesain khusus untuk pengurus dan warga RT di wilayah Tanjung Duren Utara. Sistem ini menggunakan **Google Sheets** sebagai *database* tanpa memerlukan *server/backend* yang rumit.
+SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang responsif, modern, dan mudah digunakan. Didesain khusus untuk pengurus dan warga RT di wilayah Tanjung Duren Utara. Sistem ini menggunakan **Google Sheets** sebagai *database* tanpa memerlukan *server/backend* yang rumit.
 
 ---
 
@@ -190,23 +190,26 @@ Modal ditutup lewat tombol silang, klik area latar, atau tombol `Esc`. Data ini 
 
 ## 🧩 Mengubah Informasi RT
 
-Semua identitas RT (nama, nomor RT/RW, kelurahan, kecamatan, kota, tahun footer, contoh alamat) diatur di satu file: **`config.js`**. Ubah nilai di dalam objek `RT_CONFIG`, lalu simpan — perubahan otomatis berlaku di `index.html` dan `public.html`.
+Semua identitas RT (nama aplikasi & nama panjang, nomor RT/RW, kelurahan, kecamatan, kota, alamat kawasan, tahun footer, contoh alamat) diatur di satu file: **`config.js`**. Ubah nilai di dalam objek `RT_CONFIG`, lalu simpan — perubahan otomatis berlaku di `index.html` dan `public.html`.
 
 ```js
 window.RT_CONFIG = {
     // Naikkan versi ini setiap kali mengubah config.js (mis. '2', '3', ...).
     // Halaman akan membandingkannya dan hard-refresh otomatis bila berbeda.
-    version: '4',
-    appName: 'Sistem RT',
-    rt: '005',
-    rw: '02',
+    version: '5',
+    appName: 'SAPA RT',
+    appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
+    rt: '017',
+    rw: '06',
     kelurahan: 'Tanjung Duren Utara',
     kecamatan: 'Grogol Petamburan',
     kota: 'Jakarta Barat',
     provinsi: 'DKI Jakarta',
+    // Nama kawasan / jalan tempat RT (hanya untuk tampilan).
+    alamatrt: 'Lontar Barat',
     tahun: new Date().getFullYear(),
-    alamatContoh: 'Jl. Tanjung Duren Utara No. 12',
-    lokasiContoh: 'Lap. Bulutangkis RT',
+    alamatContoh: 'Jl. Lontar Barat No. 06',
+    lokasiContoh: 'Depan lapangan',
 
     // URL Web App Google Apps Script (berakhiran /exec) untuk Portal Publik.
     // Isi agar public.html dapat diakses cukup lewat "public.html" tanpa ?url=...

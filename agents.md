@@ -1,4 +1,4 @@
-# 🤖 Agents & System Instructions - Dashboard RT Tanjung Duren Utara
+# 🤖 Agents & System Instructions - SAPA RT (RT Tanjung Duren Utara)
 
 Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk teknis bagi pengembang atau AI Agent yang bertugas memelihara, memodifikasi, atau memperluas fungsionalitas aplikasi ini.
 
@@ -7,7 +7,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
 ## 🏗️ System Architecture Overview
 
 - **Frontend Architecture:** Dua halaman HTML5 statis:
-  - `index.html` — SPA admin (semua modul + integrasi), Tailwind CSS CDN + FontAwesome CDN.
+  - `index.html` — SPA admin (semua modul + integrasi), Tailwind CSS statis (`tailwind.css`) + FontAwesome CDN.
   - `public.html` — portal publik warga (read-only, hanya Pengumuman & Kegiatan `Publik=Ya`).
 - **Public Portal Config:** URL backend `public.html` diambil dari `config.js` (`RT_CONFIG.publicApiUrl`) sehingga tautan publik cukup `public.html`; query param `?url=<WebAppURL>` (dibuat otomatis oleh `openPublicPortal()` di admin) tetap didukung sebagai fallback. Tautan yang ditampilkan/dibuka di menu Portal Publik dapat diarahkan ke domain kustom via `RT_CONFIG.publicPortalUrl` (mis. Cloudflare Pages). Tidak ada input URL manual/localStorage di sisi publik; bila semuanya kosong, `showConfigNeeded()` menampilkan instruksi menghubungi admin.
 - **Backend Architecture:** Serverless Function via Google Apps Script (`doGet` + `doPost` HTTP Endpoints).
@@ -26,22 +26,24 @@ Seluruh teks identitas RT (judul halaman, header, footer, sub-judul, placeholder
 
 ```js
 window.RT_CONFIG = {
-    appName: 'Sistem RT',
-    rt: '005',
-    rw: '02',
+    appName: 'SAPA RT',
+    appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
+    rt: '017',
+    rw: '06',
     kelurahan: 'Tanjung Duren Utara',
     kecamatan: 'Grogol Petamburan',
     kota: 'Jakarta Barat',
     provinsi: 'DKI Jakarta',
+    alamatrt: 'Lontar Barat',
     tahun: new Date().getFullYear(),
-    alamatContoh: 'Jl. Tanjung Duren Utara No. 12',
-    lokasiContoh: 'Lap. Bulutangkis RT'
+    alamatContoh: 'Jl. Lontar Barat No. 06',
+    lokasiContoh: 'Depan lapangan'
 };
 ```
 
 - `index.html` & `public.html` memuat `<script src="config.js"></script>`; helper `window.RT.apply()` mengisi elemen ber-atribut `data-rt="<key>"` dan `data-rt-placeholder="<key>"`.
 - Teks di dalam HTML tetap ada sebagai **fallback** (bila `config.js` gagal dimuat), lalu ditimpa oleh JS saat halaman dimuat.
-- Derived values (mis. `appNameRt`, `headerName`, `footerAdmin`, `titlePublic`, `wilayah`) dibentuk otomatis dari field dasar; mengubah `rt`/`rw`/`kelurahan`/`kecamatan`/`tahun` cukup di satu tempat.
+- Derived values (mis. `appNameRt`, `appLongName`, `headerName`, `footerAdmin`, `titlePublic`, `wilayah`) dibentuk otomatis dari field dasar; mengubah `rt`/`rw`/`kelurahan`/`kecamatan`/`tahun` cukup di satu tempat.
 - **Jangan** menambahkan teks identitas RT baru langsung di HTML — tambahkan `data-rt` + key di `config.js`.
 - Bila `config.js` ikut di-deploy/GitHub Pages, pastikan file ini ikut diunggah.
 
@@ -328,6 +330,21 @@ Tombol refresh di:
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 
 ---
+
+## 🔧 Recent Changes (2026-10-08)
+
+- ✅ **Rebrand: SAPA RT (Sistem Administrasi & Pelayanan Antarwarga)** — identitas aplikasi di `config.js` diperbarui: `appName:'SAPA RT'`, field baru `appLongName:'Sistem Administrasi & Pelayanan Antarwarga'`, `kelurahan:'Tanjung Duren Utara'` (sebelumnya keliru `'Lontar Barat'`), field baru `alamatrt:'Lontar Barat'` (nama kawasan/jalan, hanya untuk tampilan), dan contoh alamat → `Jl. Lontar Barat No. 06`. `appNameRt` & `headerName` kini = `appName` (menghindari "SAPA RT RT 017/RW 06" ganda); `appLongName` menjadi sub-judul header admin; `publicSubtitle` memuat kawasan; footer & `<title>` memakai brand. `version` → `'5'`, `EXPECTED_CONFIG_VERSION='5'` di `index.html` & `public.html`; fallback `data-rt`/placeholder di kedua HTML diselaraskan. Uji `test_config_gate_index.js` & `test_public_ready.js` disesuaikan (versi 5).
+
+- ✅ **Header panel "Data Warga"** — judul di `index.html` menjadi `data-rt="wargaTitle"` (key baru di `config.js`: `'Data Warga RT ' + rt + ' / RW ' + rw` → "Data Warga RT 017 / RW 06"); baris sub-judul `wargaSubtitle` ("Pendataan warga ...") dihapus.
+
+- ✅ **Header panel "Ringkasan"** — `data-rt="dashboardTitle"` menjadi "Ringkasan RT &lt;rt&gt; / RW &lt;rw&gt;" (mis. "Ringkasan RT 017 / RW 06"); `data-rt="wilayah"` kini menampilkan "alamatrt, kelurahan, kecamatan" (mis. "Lontar Barat, Tanjung Duren Utara, Grogol Petamburan").
+
+- ✅ **Header panel "Iuran & Kas"** — judul menjadi `data-rt="kasTitle"` (key baru `config.js`: `'Iuran Kas RT ' + rt + ' / RW ' + rw` → "Iuran Kas RT 017 / RW 06"); baris sub-judul ("Pencatatan pemasukan & pengeluaran kas warga") dihapus.
+
+- ✅ **Header panel "Kegiatan Warga"** — baris sub-judul ("Kerja bakti, posyandu, siskamling, dan acara RT") dihapus.
+- ✅ **Header `public.html`** — posisi tukar: judul header (h1, besar) kini `data-rt="publicSubtitle"` ("Portal Informasi Publik · RT 017/RW 06 · Lontar Barat"), baris kedua (kecil) `data-rt="appLongName"` ("Sistem Administrasi & Pelayanan Antarwarga").
+
+- ✅ **Footer** — urutan lokasi di `footerAdmin` / `footerPublic` menjadi `alamatrt, kelurahan` (mis. "© 2026 SAPA RT · RT 017/RW 06 Lontar Barat, Tanjung Duren Utara").
 
 ## 🔧 Recent Changes (2026-10-06)
 

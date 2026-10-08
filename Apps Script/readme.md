@@ -1,6 +1,6 @@
 # Google Apps Script — RT Dashboard Backend
 
-File ini berisi kode backend untuk sistem Dashboard RT Tanjung Duren Utara. Kode ini dijalankan di **Google Apps Script** yang terhubung ke Google Sheets sebagai database.
+File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode ini dijalankan di **Google Apps Script** yang terhubung ke Google Sheets sebagai database.
 
 ---
 
