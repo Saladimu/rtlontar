@@ -346,6 +346,8 @@ Tombol refresh di:
 
 - ✅ **Footer** — urutan lokasi di `footerAdmin` / `footerPublic` menjadi `alamatrt, kelurahan` (mis. "© 2026 SAPA RT · RT 017/RW 06 Lontar Barat, Tanjung Duren Utara").
 
+- ✅ **Teks batas NIK (`public.html`)** — petunjuk "Satu NIK dibatasi maksimal 5 pengajuan per jam." diubah menjadi "Satu NIK dibatasi maksimal 5 pengajuan." (hanya teks; logika rate-limit 5 pengajuan/jam di backend tetap).
+
 ## 🔧 Recent Changes (2026-10-06)
 
 - ✅ **Baris filter per kolom (ganti input tambah cepat)** — baris kosong "tambah cepat" pada tabel **Data Warga** & **Iuran/Kas** di `index.html` diubah fungsinya menjadi **baris filter per kolom** (`<input>` id `fw-warga-*` / `fw-kas-*` di `<thead>`, `oninput` memanggil render). Penyaringan *contains* (case-insensitive) via `filterValue()` + `matchFilter()`, digabung AND antar kolom dan tetap menyatu dengan toolbar (`search-warga`/`filter-status-warga`, `search-kas` + periode). Kolom Tanggal dicocokkan ke ISO & tampilan `dd-Mmm-yyyy`; kolom Jumlah ke angka mentah & `formatRupiah()`. Tombol corong `clearWargaFilters()`/`clearKasFilters()` mengosongkan semua filter (kolom + toolbar). Fitur inline-add dihapus (`saveDraftWarga`/`saveDraftKas`/`clearDraft*`/`captureDraft`/`WARGA_DRAFT_FIELDS`/`KAS_DRAFT_FIELDS` dibuang); tambah data hanya lewat modal. Uji baru: `/tmp/opencode/test_column_filter.js` (48); `test_inline_draft.js` kini jadi guard penghapusan; `test_kas_view.js` disesuaikan (tak ada baris draft).
