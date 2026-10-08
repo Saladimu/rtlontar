@@ -302,7 +302,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 
    **b. `RT Public Assets`** (mengecualikan aset publik)
    - Public hostname: `sapa-rt017.pages.dev` — Path `/public`
-   - Tambah hostname: Path `/public.html`, `/config.js`, `/rt-icon.png`
+   - Tambah hostname: Path `/public.html`, `/config.js`, `/rt-icon.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`
    - Policy: Action **Bypass**, Include → **Everyone**.
 
 4. **Simpan.** Perubahan berlaku langsung, tanpa redeploy.
@@ -335,5 +335,18 @@ Login **bukan sekali pakai**. Setelah PIN dimasukkan, Cloudflare Access menerbit
 2. Untuk memblokir **seketika**, buka Zero Trust → **Access controls → Active sessions** → cari sesi pengguna → **Revoke**.
 
 > **Jika `public.html` kembali meminta login:** pastikan path **`/public`** sudah terdaftar di aplikasi *Bypass* **`RT Public Assets`**.
+
+### ✅ Checklist setiap kali deploy (frontend)
+
+Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar pengguna yang masih membuka halaman lama otomatis diberi penanda **"Muat Ulang"** (lihat **Kesadaran versi aplikasi** di atas):
+
+| Yang berubah | Yang wajib dinaikkan | Di mana |
+|--------------|----------------------|---------|
+| `config.js` (identitas, `jenisSurat`, `publicApiUrl`, dll.) | `RT_CONFIG.version` **dan** `EXPECTED_CONFIG_VERSION` | `config.js`, `index.html`, `public.html` |
+| `index.html` / `public.html` (tampilan, fitur, kelas CSS) | **`APP_BUILD`** | `index.html` **dan** `public.html` |
+| `code.gs` (backend Apps Script) | `CODE_VERSION` **dan** `EXPECTED_BACKEND_VERSION`, lalu **redeploy New version** | `Apps Script/code.gs`, `index.html` |
+| Kelas Tailwind baru/berubah | (build ulang) `tailwind.css` | lihat **Performa** di atas |
+
+> Deteksi update memeriksa **dua sinyal**: versi `config.js` dan `APP_BUILD` pada HTML server. Karena itu, mengubah `index.html`/`public.html` tanpa menaikkan `APP_BUILD` **tidak** akan memunculkan tombol **Muat Ulang** pada pengguna yang membuka halaman lama. Di portal publik penanda hanya berkedip (label **"Versi Baru"**) tanpa reload paksa, agar warga yang sedang mengisi form tidak terganggu.
 
 > **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server.
