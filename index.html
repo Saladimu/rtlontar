@@ -1145,6 +1145,12 @@
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
         const EXPECTED_CONFIG_VERSION = '6';
 
+        // Versi build aplikasi (index.html). NAIKKAN setiap kali mengubah index.html
+        // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
+        // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
+        // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
+        const APP_BUILD = '2026-10-08-1';
+
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
         function newId() {
@@ -1561,22 +1567,43 @@
         }
 
         // Cek apakah sudah ada versi aplikasi/config yang lebih baru di server.
-        // Dipakai untuk memunculkan tombol "Muat Ulang" saat ada update (mis. versi config naik).
+        // Dipakai untuk memunculkan tombol "Muat Ulang" saat ada update.
+        // Dua sinyal diperiksa: (1) versi config.js, (2) versi build index.html —
+        // sehingga perubahan HTML saja (walau config.js tidak berubah) tetap terdeteksi.
         function checkForUpdate() {
+            const checks = [];
+
+            // (1) Versi config.js di server vs yang sedang dipakai halaman.
             try {
-                return fetch('config.js?v=' + Date.now(), { cache: 'no-store' })
+                checks.push(fetch('config.js?v=' + Date.now(), { cache: 'no-store' })
                     .then(function (r) { return r && r.text ? r.text() : ''; })
                     .then(function (txt) {
                         const m = String(txt || '').match(/version\s*[:=]\s*['"]([^'"]+)['"]/);
-                        if (!m) return false;
-                        if (m[1] !== currentConfigVersion()) {
-                            showUpdateAvailable('versi ' + m[1]);
+                        if (m && m[1] !== currentConfigVersion()) {
+                            showUpdateAvailable('config ' + m[1]);
                             return true;
                         }
                         return false;
                     })
-                    .catch(function () { return false; });
-            } catch (e) { return Promise.resolve(false); }
+                    .catch(function () { return false; }));
+            } catch (e) { /* abaikan */ }
+
+            // (2) Versi build HTML di server vs yang sedang dipakai halaman.
+            try {
+                checks.push(fetch(location.pathname + '?_rtcache=' + Date.now(), { cache: 'no-store' })
+                    .then(function (r) { return r && r.text ? r.text() : ''; })
+                    .then(function (txt) {
+                        const m = String(txt || '').match(/APP_BUILD\s*=\s*['"]([^'"]+)['"]/);
+                        if (m && m[1] !== APP_BUILD) {
+                            showUpdateAvailable('aplikasi ' + m[1]);
+                            return true;
+                        }
+                        return false;
+                    })
+                    .catch(function () { return false; }));
+            } catch (e) { /* abaikan */ }
+
+            return Promise.all(checks).then(function (r) { return r.some(Boolean); }).catch(function () { return false; });
         }
 
         // Pantau versi secara berkala (dan saat tab kembali terlihat) selagi halaman terbuka.
@@ -1587,6 +1614,7 @@
                 if (document.visibilityState === 'hidden') return;
                 checkForUpdate();
             };
+            checkForUpdate(); // cek segera saat watcher mulai
             setInterval(tick, 60000);
             document.addEventListener('visibilitychange', function () {
                 if (document.visibilityState !== 'hidden') checkForUpdate();

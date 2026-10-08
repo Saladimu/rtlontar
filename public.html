@@ -79,6 +79,17 @@
         @media (prefers-reduced-motion: reduce) {
             .rt-days-left { animation: none; background-color: #dc2626; }
         }
+        /* Kedipan tombol "Muat Ulang" saat terdeteksi ada versi baru. */
+        @keyframes rt-update-flash {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+            50% { opacity: .55; box-shadow: 0 0 0 5px rgba(251, 191, 36, .45); }
+        }
+        .update-flash {
+            animation: rt-update-flash 1.1s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .update-flash { animation: none; outline: 2px solid #f59e0b; outline-offset: 2px; }
+        }
     </style>
     <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
          agar perubahan config.js langsung terlihat tanpa hard refresh.
@@ -544,6 +555,12 @@
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
         const EXPECTED_CONFIG_VERSION = '6';
 
+        // Versi build aplikasi (public.html). NAIKKAN setiap kali mengubah
+        // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
+        // checkForUpdate() membandingkannya dengan versi di server agar pengguna
+        // yang masih membuka halaman lama diberi tanda "versi baru".
+        const APP_BUILD = '2026-10-08-1';
+
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
             if (window.RT_CONFIG || window.RT_CONFIG_READY) { cb(); return; }
@@ -578,6 +595,78 @@
             try { sessionStorage.setItem(key, '1'); } catch (e) { /* abaikan */ }
             hardReload();
             return true;
+        }
+
+        // Versi config yang sedang dipakai halaman (fallback ke versi yang diharapkan).
+        function currentConfigVersion() {
+            const v = (window.RT_CONFIG && window.RT_CONFIG.version) ? String(window.RT_CONFIG.version) : '';
+            return v || EXPECTED_CONFIG_VERSION;
+        }
+
+        // Tandai tombol "Muat Ulang" (selalu tampil di header) saat ada versi baru.
+        function showUpdateAvailable(reason) {
+            const btn = document.getElementById('refresh-btn');
+            if (btn) {
+                btn.classList.add('update-flash');
+                btn.title = 'Versi terbaru tersedia' + (reason ? ' (' + reason + ')' : '') + ' — klik untuk memuat ulang';
+            }
+            const label = btn ? btn.querySelector('span') : null;
+            if (label) label.textContent = 'Versi Baru';
+            if (!window.__rtUpdateNotified) {
+                window.__rtUpdateNotified = true;
+                btn && btn.setAttribute('aria-label', btn.title);
+            }
+        }
+
+        // Cek apakah ada versi aplikasi/config yang lebih baru di server.
+        // Dua sinyal: (1) versi config.js, (2) versi build public.html.
+        function checkForUpdate() {
+            const checks = [];
+
+            try {
+                checks.push(fetch('config.js?v=' + Date.now(), { cache: 'no-store' })
+                    .then(function (r) { return r && r.text ? r.text() : ''; })
+                    .then(function (txt) {
+                        const m = String(txt || '').match(/version\s*[:=]\s*['"]([^'"]+)['"]/);
+                        if (m && m[1] !== currentConfigVersion()) {
+                            showUpdateAvailable('config ' + m[1]);
+                            return true;
+                        }
+                        return false;
+                    })
+                    .catch(function () { return false; }));
+            } catch (e) { /* abaikan */ }
+
+            try {
+                checks.push(fetch(location.pathname + '?_rtcache=' + Date.now(), { cache: 'no-store' })
+                    .then(function (r) { return r && r.text ? r.text() : ''; })
+                    .then(function (txt) {
+                        const m = String(txt || '').match(/APP_BUILD\s*=\s*['"]([^'"]+)['"]/);
+                        if (m && m[1] !== APP_BUILD) {
+                            showUpdateAvailable('aplikasi ' + m[1]);
+                            return true;
+                        }
+                        return false;
+                    })
+                    .catch(function () { return false; }));
+            } catch (e) { /* abaikan */ }
+
+            return Promise.all(checks).then(function (r) { return r.some(Boolean); }).catch(function () { return false; });
+        }
+
+        // Pantau versi secara berkala dan saat tab kembali terlihat.
+        function startUpdateWatcher() {
+            if (window.__rtUpdateWatcher) return;
+            window.__rtUpdateWatcher = true;
+            const tick = function () {
+                if (document.visibilityState === 'hidden') return;
+                checkForUpdate();
+            };
+            checkForUpdate(); // cek segera saat watcher mulai
+            setInterval(tick, 60000);
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState !== 'hidden') checkForUpdate();
+            });
         }
 
         // ===== Tema terang/gelap =====
@@ -673,6 +762,7 @@
                 WEB_APP_URL = getWebAppUrl();
                 updateLastUpdated();
                 initSuratForm();
+                startUpdateWatcher();
 
                 if (WEB_APP_URL) {
                     showPublicLoading();
