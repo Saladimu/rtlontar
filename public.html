@@ -57,6 +57,28 @@
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
         }
+        /* Badge "N hari lagi" pada agenda kegiatan — berkedip agar mencolok. */
+        .rt-days-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-left: 0.4rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 0.68rem;
+            line-height: 1.25;
+            color: #fff;
+            vertical-align: middle;
+            animation: rt-days-flash 1.1s ease-in-out infinite;
+        }
+        @keyframes rt-days-flash {
+            0%, 100% { background-color: #f59e0b; box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            50% { background-color: #dc2626; box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .rt-days-left { animation: none; background-color: #dc2626; }
+        }
     </style>
     <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
          agar perubahan config.js langsung terlihat tanpa hard refresh.
@@ -590,6 +612,23 @@
             return str;
         }
 
+        // Selisih hari (kalender lokal) dari hari ini ke tanggal "yyyy-MM-dd".
+        // null bila format tidak dikenal. Negatif bila sudah lewat.
+        function daysLeftFromISO(v) {
+            const m = String(v == null ? '' : v).trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!m) return null;
+            const target = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return Math.round((target - today) / 86400000);
+        }
+
+        // Badge "N hari lagi" (hanya untuk agenda yang belum jatuh tempo).
+        function daysLeftBadge(days) {
+            if (days === null || days === undefined || days <= 0) return '';
+            return '<span class="rt-days-left"><i class="fa-solid fa-hourglass-half"></i>' + days + ' hari lagi</span>';
+        }
+
         // Format time: HH:MM am/pm
         // RULE: Google Sheets stores times in GMT+7, Apps Script formats them correctly.
         // Frontend only reformat strings, NO timezone conversion.
@@ -683,14 +722,18 @@
                     // Convert arrays to objects (same mapping as index.html)
                     const pengumuman = (res.data.Pengumuman || []).map(r => {
                         return {
-                            _id: r[r.length - 1], tanggal: formatDateDDMMMYYYY(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]
+                            _id: r[r.length - 1], tanggal: formatDateDDMMMYYYY(r[1]), tanggalISO: r[1], judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]
                         };
                     }).filter(item => isPublicVal(item.publik));
                     const kegiatan = (res.data.Kegiatan_Warga || []).map(r => {
                         return {
-                            _id: r[r.length - 1], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), waktu: formatTimeOnly(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7]
+                            _id: r[r.length - 1], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), tanggalISO: r[2], waktu: formatTimeOnly(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7], daysLeft: daysLeftFromISO(r[2])
                         };
                     }).filter(item => isPublicVal(item.publik));
+
+                    // Pengumuman: terbaru lebih dulu. Agenda: terdekat (paling awal) lebih dulu.
+                    pengumuman.sort((a, b) => String(b.tanggalISO || '').localeCompare(String(a.tanggalISO || '')));
+                    kegiatan.sort((a, b) => String(a.tanggalISO || '').localeCompare(String(b.tanggalISO || '')));
 
                     renderPengumuman(pengumuman);
                     renderKegiatan(kegiatan);
@@ -741,7 +784,7 @@
                         <i class="fa-regular fa-user mr-1"></i>${item.pj}
                     </div>
                 </div>
-            `).reverse().join('');
+            `).join('');
         }
 
         function renderKegiatan(data) {
@@ -761,7 +804,7 @@
             container.innerHTML = data.map(item => `
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-rose-300 dark:hover:border-rose-500 transition">
                     <div class="flex items-start justify-between mb-2">
-                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">${item.namaKegiatan}</h3>
+                        <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">${item.namaKegiatan}${daysLeftBadge(item.daysLeft)}</h3>
                         <span class="text-xs px-2 py-0.5 bg-rose-50 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300 rounded-lg">
                             <i class="fa-regular fa-clock mr-1"></i>${formatTimeOnly(item.waktu)}
                         </span>

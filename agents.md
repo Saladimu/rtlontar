@@ -348,6 +348,14 @@ Tombol refresh di:
 
 - ✅ **Teks batas NIK (`public.html`)** — petunjuk "Satu NIK dibatasi maksimal 5 pengajuan per jam." diubah menjadi "Satu NIK dibatasi maksimal 5 pengajuan." (hanya teks; logika rate-limit 5 pengajuan/jam di backend tetap).
 
+- ✅ **Pilih tanggal lewat kalender (Iuran Kas, Pengumuman, Kegiatan Warga)** — field tanggal modal `#kas-tanggal`, `#pengumuman-tanggal`, `#kegiatan-tanggal` kini membuka kalender native saat diklik (`onclick="openDatePicker(id)"`), memakai helper `<input type="date">` tersembunyi + `showPicker()`. Tampilan teks tetap `dd-mm-yyyy` (mask tetap berfungsi); hasil pilih kalender mengisi field via `isoToDDMMYYYY()` + event `change`. Tidak mengubah logika baca/simpan (`readDateInput`).
+
+- ✅ **Badge "N hari lagi" di agenda `public.html`** — di samping nama kegiatan, agenda yang belum jatuh tempo menampilkan badge berkedip "(N hari lagi)" (kelas `.rt-days-left` + `@keyframes rt-days-flash`, warna kuning↔merah). Agenda yang tanggalnya sudah lewat atau hari ini (`days <= 0`) tidak menampilkan badge. Helper `daysLeftFromISO()` + `daysLeftBadge()`; menghormati `prefers-reduced-motion`.
+
+- ✅ **Urut & kelompok kartu Pengumuman / Kegiatan (admin)** — kartu `Pengumuman` di `index.html` diurutkan **tanggal menurun** (terbaru dulu) dan `Kegiatan Warga` **tanggal menaik** (terdekat dulu), lalu kartu yang berstatus **Disembunyikan** (Publik=Tidak) dipisah ke grup sendiri di bawah judul pemisah "Disembunyikan dari publik (N)". Indeks asli record tetap dipakai pada aksi Edit/Sembunyikan/Hapus (urutan tampilan tidak mengubah indeks `appState`).
+
+- ✅ **Urut tanggal (`public.html`)** — daftar **Pengumuman** diurutkan tanggal menurun (terbaru dulu), **Agenda Kegiatan** menaik (terdekat dulu), memakai field mentah `tanggalISO` (menggantikan `.reverse()` lama).
+
 ## 🔧 Recent Changes (2026-10-06)
 
 - ✅ **Baris filter per kolom (ganti input tambah cepat)** — baris kosong "tambah cepat" pada tabel **Data Warga** & **Iuran/Kas** di `index.html` diubah fungsinya menjadi **baris filter per kolom** (`<input>` id `fw-warga-*` / `fw-kas-*` di `<thead>`, `oninput` memanggil render). Penyaringan *contains* (case-insensitive) via `filterValue()` + `matchFilter()`, digabung AND antar kolom dan tetap menyatu dengan toolbar (`search-warga`/`filter-status-warga`, `search-kas` + periode). Kolom Tanggal dicocokkan ke ISO & tampilan `dd-Mmm-yyyy`; kolom Jumlah ke angka mentah & `formatRupiah()`. Tombol corong `clearWargaFilters()`/`clearKasFilters()` mengosongkan semua filter (kolom + toolbar). Fitur inline-add dihapus (`saveDraftWarga`/`saveDraftKas`/`clearDraft*`/`captureDraft`/`WARGA_DRAFT_FIELDS`/`KAS_DRAFT_FIELDS` dibuang); tambah data hanya lewat modal. Uji baru: `/tmp/opencode/test_column_filter.js` (48); `test_inline_draft.js` kini jadi guard penghapusan; `test_kas_view.js` disesuaikan (tak ada baris draft).
