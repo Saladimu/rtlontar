@@ -5,16 +5,20 @@
    menyesuaikan informasi RT pada seluruh aplikasi
    (index.html dan public.html).
 
-   Semua teks di halaman (judul, header, footer, sub-judul, dan
-   placeholder form) diisi otomatis dari konfigurasi ini melalui
-   atribut data-rt / data-rt-placeholder.
+   Semua teks di halaman (judul, header, footer, sub-judul, tooltip,
+   alt logo, dan placeholder form) diisi otomatis dari konfigurasi ini
+   melalui atribut data-rt / data-rt-placeholder / data-rt-title /
+   data-rt-aria-label / data-rt-alt.
+   Identitas RT/RW/alamat cukup diubah di sini (satu file) — teks
+   turunan (dashboardTitle, wargaTitle, kasTitle, publicSubtitle,
+   footer, wilayah, judul tab, placeholder) menyesuaikan otomatis.
    ============================================================ */
 window.RT_CONFIG = {
     // Versi konfigurasi. Naikkan (mis. '2', '3', ...) setiap kali mengubah config.js.
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '5',
+    version: '6',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
     rt: '017',
@@ -36,11 +40,12 @@ window.RT_CONFIG = {
     // Kosongkan ('') untuk memakai parameter ?url=... (kompatibilitas lama).
     publicApiUrl: 'https://script.google.com/macros/s/AKfycbwOHCJ8GT8FUhWFx5yQ9YvAp9_EqVnIbihyl-n1MUl7yb0YBwX6OUQS4osfrFS7L9cE/exec',
 
-    // URL halaman Portal Publik yang dibagikan ke warga (opsional). Bila diisi,
-    // tautan & tombol "Buka Portal" pada menu Portal Publik memakai URL ini
-    // (mis. domain kustom Cloudflare Pages yang menyembunyikan public.html).
+    // URL halaman Portal Publik yang dibagikan ke warga. Satu domain dengan
+    // admin (akses admin dikunci Cloudflare Access pada path "/" & "/index.html",
+    // sedangkan "/public" + aset publik di-bypass). Contoh:
+    // https://sapa-rt017.pages.dev/public
     // Kosongkan ('') untuk memakai public.html lokal (atau ?url=... bila publicApiUrl kosong).
-    publicPortalUrl: 'https://rt017.pages.dev/',
+    publicPortalUrl: 'https://sapa-rt017.pages.dev/public',
 
     // Daftar pilihan "Jenis Surat" pada fitur Pengajuan Surat. Dipakai oleh
     // index.html (admin) & public.html (form warga) agar seragam. Backend
@@ -89,24 +94,39 @@ window.RT_CONFIG = {
         kasTitle: 'Iuran Kas RT ' + c.rt + ' / RW ' + c.rw,
         wargaSubtitle: 'Pendataan warga ' + c.kelurahan,
         pengumumanSubtitle: 'Papan informasi resmi ' + c.appName,
-        publicSubtitle: 'Portal Informasi Publik \u00B7 ' + rtShort() + ' \u00B7 ' + c.alamatrt,
+        publicSubtitle: 'Portal Publik ' + rtShort(),
         footerAdmin: copyright(),
         footerPublic: copyright() + ' - Portal Publik',
         titleAdmin: c.appName + ' - Dashboard ' + rtShort(),
-        titlePublic: c.appName + ' - Portal Publik ' + rtShort()
+        titlePublic: c.appName + ' - Portal Publik ' + rtShort(),
+        aboutTitle: 'Tentang ' + c.appName,
+        logoAlt: 'Logo ' + c.appName
     };
 
     // Nilai untuk setiap atribut data-rt-placeholder.
     var placeholders = {
         alamat: c.alamatContoh,
         pj: 'Ketua RT ' + c.rt,
-        lokasi: c.lokasiContoh + ' ' + c.rt
+        lokasi: c.lokasiContoh + ' ' + c.rt,
+        suratNo: 'mis. 474/' + c.rt + '-RT/RW.' + c.rw + '/X/' + c.tahun
     };
 
     function apply() {
         document.querySelectorAll('[data-rt]').forEach(function (el) {
             var val = values[el.getAttribute('data-rt')];
             if (val !== undefined && val !== null) el.textContent = val;
+        });
+        document.querySelectorAll('[data-rt-title]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt-title')];
+            if (val !== undefined && val !== null) el.setAttribute('title', val);
+        });
+        document.querySelectorAll('[data-rt-aria-label]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt-aria-label')];
+            if (val !== undefined && val !== null) el.setAttribute('aria-label', val);
+        });
+        document.querySelectorAll('[data-rt-alt]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt-alt')];
+            if (val !== undefined && val !== null) el.setAttribute('alt', val);
         });
         document.querySelectorAll('[data-rt-placeholder]').forEach(function (el) {
             var val = placeholders[el.getAttribute('data-rt-placeholder')];

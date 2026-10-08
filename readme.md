@@ -196,7 +196,7 @@ Semua identitas RT (nama aplikasi & nama panjang, nomor RT/RW, kelurahan, kecama
 window.RT_CONFIG = {
     // Naikkan versi ini setiap kali mengubah config.js (mis. '2', '3', ...).
     // Halaman akan membandingkannya dan hard-refresh otomatis bila berbeda.
-    version: '5',
+    version: '6',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
     rt: '017',
@@ -215,10 +215,11 @@ window.RT_CONFIG = {
     // Isi agar public.html dapat diakses cukup lewat "public.html" tanpa ?url=...
     publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec',
 
-    // URL halaman Portal Publik yang dibagikan ke warga (opsional).
-    // Isi dengan domain kustom (mis. Cloudflare Pages) agar tautan menu
-    // Portal Publik di admin memakai URL ini. Kosongkan ('') untuk memakai public.html.
-    publicPortalUrl: 'https://rt017.pages.dev/',
+    // URL halaman Portal Publik yang dibagikan ke warga.
+    // Satu domain dengan admin; admin dikunci Cloudflare Access pada path
+    // "/" & "/index.html", sedangkan "/public" + aset publik di-bypass.
+    // Kosongkan ('') untuk memakai public.html.
+    publicPortalUrl: 'https://sapa-rt017.pages.dev/public',
 
     // Daftar pilihan "Jenis Surat" untuk fitur Pengajuan Surat (dipakai
     // form warga di public.html & panel admin di index.html). Ubah sesuai
@@ -244,7 +245,7 @@ window.RT_CONFIG = {
 };
 ```
 
-> **Portal Publik tanpa URL panjang:** isi `publicApiUrl` dengan URL Web App Anda. Setelah itu tautan yang dibagikan ke warga cukup **`public.html`** (URL Apps Script tidak tampil di address bar). Bila Anda memakai domain kustom (mis. Cloudflare Pages), isi juga `publicPortalUrl` dengan URL tersebut agar tautan & tombol "Buka Portal" di menu admin mengarah ke sana. `public.html` tetap mendukung `?url=...` sebagai fallback bila `publicApiUrl` masih kosong. `config.js` dimuat dengan cache-bust dan tombol **Muat Ulang** melakukan *hard refresh*, sehingga perubahan config selalu terbaru. Pemuatan config juga menunggu (*readiness gate*) agar tidak ada kedipan "belum dikonfigurasi".
+> **Portal Publik tanpa URL panjang:** isi `publicApiUrl` dengan URL Web App Anda. Setelah itu tautan yang dibagikan ke warga cukup **`public.html`** (URL Apps Script tidak tampil di address bar). Isi juga `publicPortalUrl` dengan URL portal publik Anda (mis. `https://sapa-rt017.pages.dev/public`) agar tautan & tombol "Buka Portal" di menu admin mengarah ke sana. `public.html` tetap mendukung `?url=...` sebagai fallback bila `publicApiUrl` masih kosong. `config.js` dimuat dengan cache-bust dan tombol **Muat Ulang** melakukan *hard refresh*, sehingga perubahan config selalu terbaru. Pemuatan config juga menunggu (*readiness gate*) agar tidak ada kedipan "belum dikonfigurasi".
 
 > **Auto hard refresh (versi config):** setiap kali mengubah `config.js`, naikkan `version` **dan** samakan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila browser masih memegang HTML lama (versi tak cocok), halaman otomatis melakukan *hard refresh* sekali agar HTML & config sinkron; ada pengaman anti-loop, jadi tidak akan reload berulang. Selain itu, selama halaman admin terbuka, versi dipantau berkala: bila ada versi lebih baru, tombol **Muat Ulang** di sidebar **muncul berkedip** untuk di-klik pengurus.
 
@@ -274,7 +275,7 @@ Halaman juga memakai `preconnect` ke Google Fonts, cdnjs, dan `script.google.com
 
 ## 🌐 Publikasi & Kontrol Akses (Cloudflare Pages + Access)
 
-Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository ini), mis. `https://rtlontar.pages.dev`:
+Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository ini), mis. `https://sapa-rt017.pages.dev`:
 
 | URL | Konten | Akses |
 |-----|--------|-------|
@@ -282,7 +283,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
 | `/config.js`, `/rt-icon.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css` | Aset pendukung | Terbuka (tanpa login) |
 
-> **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Bagikan portal publik hanya lewat `https://rtlontar.pages.dev/public` (tanpa ekstensi `.html`). Wrapper `rt017.pages.dev` mengarah ke URL tersebut.
+> **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Portal publik dan admin berbagi satu domain (`sapa-rt017.pages.dev`); bagikan ke warga cukup `https://sapa-rt017.pages.dev/public` (tanpa ekstensi `.html`). Tidak perlu domain/wrapper tambahan — keamanan admin bersumber dari Cloudflare Access pada path `/` & `/index.html`.
 
 ### Menyiapkan Cloudflare Zero Trust (sekali saja)
 
@@ -293,12 +294,12 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 3. **Access controls → Applications → Add an application → Self-hosted**, buat **dua** aplikasi (biarkan **Accept all available identity providers** tetap aktif di tab *Authentication*):
 
    **a. `RT Admin`** (melindungi admin)
-   - Public hostname: `rtlontar.pages.dev` — Path `/`
-   - Tambah hostname kedua: `rtlontar.pages.dev` — Path `/index.html`
+   - Public hostname: `sapa-rt017.pages.dev` — Path `/`
+   - Tambah hostname kedua: `sapa-rt017.pages.dev` — Path `/index.html`
    - Policy: Action **Allow**, Include → **Emails** → email admin. Session duration mis. `24 hours`.
 
    **b. `RT Public Assets`** (mengecualikan aset publik)
-   - Public hostname: `rtlontar.pages.dev` — Path `/public`
+   - Public hostname: `sapa-rt017.pages.dev` — Path `/public`
    - Tambah hostname: Path `/public.html`, `/config.js`, `/rt-icon.png`
    - Policy: Action **Bypass**, Include → **Everyone**.
 
@@ -315,13 +316,13 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
    - **Emails ending in** → `@domain.com` untuk seluruh domain (mis. Google Workspace).
    - **Access Groups** → grup reusable yang dibuat di **Access controls → Access groups**.
 4. **Save** — akses berlaku seketika.
-5. Pengguna membuka `https://rtlontar.pages.dev/` di jendela *incognito* → masukkan email → klik **Send login code** → masukkan kode PIN dari email → dashboard admin terbuka.
+5. Pengguna membuka `https://sapa-rt017.pages.dev/` di jendela *incognito* → masukkan email → klik **Send login code** → masukkan kode PIN dari email → dashboard admin terbuka.
 
 ### Masa berlaku sesi & mencabut akses
 
 Login **bukan sekali pakai**. Setelah PIN dimasukkan, Cloudflare Access menerbitkan *session cookie* yang berlaku selama **Session Duration** aplikasi:
 
-- Selama sesi masih aktif, membuka `https://rtlontar.pages.dev/` kembali akan **langsung masuk tanpa email/PIN** (SSO).
+- Selama sesi masih aktif, membuka `https://sapa-rt017.pages.dev/` kembali akan **langsung masuk tanpa email/PIN** (SSO).
 - Setelah sesi kedaluwarsa, pengguna diminta email + PIN lagi. (PIN-nya sendiri tetap sekali pakai; yang berulang adalah sesinya.)
 - **Session Duration** diatur di Zero Trust → **Access controls → Applications → `RT Admin` → Edit → Details → Session Duration** (default umumnya `24 hours`).
 - Terpisah dari itu, **token admin** (`ADMIN_TOKEN`) disimpan di `localStorage` browser dan tetap ada sampai dibersihkan — jadi dashboard tidak meminta token setiap kali.

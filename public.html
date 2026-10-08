@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-rt="titlePublic">SAPA RT - Portal Publik RT 017/RW 06</title>
+    <title data-rt="titlePublic">SAPA RT - Portal Publik</title>
     <link rel="icon" href="favicon.ico" sizes="any">
     <link rel="icon" type="image/png" href="rt-icon.png" sizes="512x512">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -112,12 +112,12 @@
                         <img src="rt-icon.png" alt="Logo RT" class="w-full h-full object-cover">
                     </div>
                     <div>
-                        <h1 class="font-bold text-lg text-slate-800 dark:text-slate-100" data-rt="publicSubtitle">Portal Informasi Publik &middot; RT 017/RW 06 &middot; Lontar Barat</h1>
+                        <h1 class="font-bold text-lg text-slate-800 dark:text-slate-100" data-rt="publicSubtitle">Portal Publik</h1>
                         <p class="text-xs text-slate-500 dark:text-slate-400" data-rt="appLongName">Sistem Administrasi &amp; Pelayanan Antarwarga</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button id="about-btn" onclick="openAbout()" title="Tentang SAPA RT" aria-label="Tentang SAPA RT"
+                    <button id="about-btn" onclick="openAbout()" data-rt-title="aboutTitle" aria-label="Tentang aplikasi" data-rt-aria-label="aboutTitle"
                         class="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
@@ -291,7 +291,7 @@
 
         <!-- Footer -->
         <footer class="text-center text-xs text-slate-400 dark:text-slate-500 py-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
-            <p data-rt="footerPublic">&copy; 2026 SAPA RT &middot; RT 017/RW 06 Lontar Barat, Tanjung Duren Utara - Portal Publik</p>
+            <p data-rt="footerPublic">&copy; 2026 SAPA RT</p>
             <button onclick="openAbout()" class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 transition">
                 <i class="fa-solid fa-circle-info"></i> Tentang Aplikasi
             </button>
@@ -452,7 +452,7 @@
                 </button>
                 <div class="relative flex items-center space-x-3">
                     <div class="w-12 h-12 rounded-2xl bg-white shadow-lg overflow-hidden flex-shrink-0">
-                        <img src="rt-icon.png" alt="Logo SAPA RT" class="w-full h-full object-cover">
+                        <img src="rt-icon.png" data-rt-alt="logoAlt" alt="Logo" class="w-full h-full object-cover">
                     </div>
                     <div class="min-w-0">
                         <h2 id="about-title" class="font-bold text-xl leading-tight" data-rt="appName">SAPA RT</h2>
@@ -467,7 +467,7 @@
             <div class="p-5 max-h-[65vh] overflow-y-auto custom-scrollbar space-y-5">
                 <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                     <span data-rt="appName">SAPA RT</span> adalah satu platform administrasi &amp; pelayanan warga
-                    untuk <span data-rt="wilayah">Lontar Barat, Tanjung Duren Utara, Grogol Petamburan</span>.
+                    untuk <span data-rt="wilayah"></span>.
                 </p>
 
                 <section>
@@ -542,7 +542,7 @@
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '5';
+        const EXPECTED_CONFIG_VERSION = '6';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
