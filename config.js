@@ -18,9 +18,14 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '6',
+    version: '7',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
+
+    // Versi rilis aplikasi yang tampil di footer (mis. 'v1.0.0').
+    // Naikkan saat ada rilis/perubahan besar. Berbeda dari `version` (penanda
+    // sinkronisasi config) dan `APP_BUILD` (penanda build HTML).
+    appVersion: 'v1.0.0',
     rt: '017',
     rw: '06',
     kelurahan: 'Tanjung Duren Utara',
@@ -84,6 +89,7 @@ window.RT_CONFIG = {
         appName: c.appName,
         appLongName: c.appLongName,
         appNameRt: c.appName,
+        appVersion: c.appVersion,
         dashboardTitle: 'Ringkasan RT ' + c.rt + ' / RW ' + c.rw,
         headerName: c.appName,
         rtShort: rtShort(),
@@ -95,8 +101,8 @@ window.RT_CONFIG = {
         wargaSubtitle: 'Pendataan warga ' + c.kelurahan,
         pengumumanSubtitle: 'Papan informasi resmi ' + c.appName,
         publicSubtitle: 'Portal Publik ' + rtShort(),
-        footerAdmin: copyright(),
-        footerPublic: copyright() + ' - Portal Publik',
+        footerAdmin: copyright() + ' \u00B7 ' + c.appVersion,
+        footerPublic: copyright() + ' - Portal Publik \u00B7 ' + c.appVersion,
         titleAdmin: c.appName + ' - Dashboard ' + rtShort(),
         titlePublic: c.appName + ' - Portal Publik ' + rtShort(),
         aboutTitle: 'Tentang ' + c.appName,

@@ -302,7 +302,7 @@
 
         <!-- Footer -->
         <footer class="text-center text-xs text-slate-400 dark:text-slate-500 py-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
-            <p data-rt="footerPublic">&copy; 2026 SAPA RT</p>
+            <p data-rt="footerPublic">&copy; 2026 SAPA RT - Portal Publik &middot; v1.0.0</p>
             <button onclick="openAbout()" class="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300 transition">
                 <i class="fa-solid fa-circle-info"></i> Tentang Aplikasi
             </button>
@@ -553,13 +553,13 @@
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '6';
+        const EXPECTED_CONFIG_VERSION = '7';
 
         // Versi build aplikasi (public.html). NAIKKAN setiap kali mengubah
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-08-1';
+        const APP_BUILD = '2026-10-08-2';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -652,6 +652,13 @@
             } catch (e) { /* abaikan */ }
 
             return Promise.all(checks).then(function (r) { return r.some(Boolean); }).catch(function () { return false; });
+        }
+
+        // Tampilkan detail build pada tooltip elemen footer (berguna untuk dukungan).
+        function decorateFooterBuildInfo() {
+            const cfg = (window.RT_CONFIG && window.RT_CONFIG.appVersion) ? window.RT_CONFIG.appVersion : '';
+            const info = 'Build ' + APP_BUILD + ' \u00B7 config v' + EXPECTED_CONFIG_VERSION + (cfg ? ' \u00B7 ' + cfg : '');
+            document.querySelectorAll('[data-rt="footerPublic"]').forEach(function (el) { el.title = info; });
         }
 
         // Pantau versi secara berkala dan saat tab kembali terlihat.
@@ -761,6 +768,7 @@
                 if (enforceConfigVersion()) return;
                 WEB_APP_URL = getWebAppUrl();
                 updateLastUpdated();
+                decorateFooterBuildInfo();
                 initSuratForm();
                 startUpdateWatcher();
 

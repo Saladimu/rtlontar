@@ -196,9 +196,13 @@ Semua identitas RT (nama aplikasi & nama panjang, nomor RT/RW, kelurahan, kecama
 window.RT_CONFIG = {
     // Naikkan versi ini setiap kali mengubah config.js (mis. '2', '3', ...).
     // Halaman akan membandingkannya dan hard-refresh otomatis bila berbeda.
-    version: '6',
+    version: '7',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
+    // Versi rilis yang tampil di footer (mis. 'v1.0.0', 'v1.2.0'). Ini label
+    // rilis untuk manusia — berbeda dari `version` (penanda sinkronisasi config)
+    // dan `APP_BUILD` (penanda build HTML). Naikkan saat ada rilis penting.
+    appVersion: 'v1.0.0',
     rt: '017',
     rw: '06',
     kelurahan: 'Tanjung Duren Utara',
@@ -249,9 +253,25 @@ window.RT_CONFIG = {
 
 > **Auto hard refresh (versi config):** setiap kali mengubah `config.js`, naikkan `version` **dan** samakan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila browser masih memegang HTML lama (versi tak cocok), halaman otomatis melakukan *hard refresh* sekali agar HTML & config sinkron; ada pengaman anti-loop, jadi tidak akan reload berulang. Selain itu, selama halaman admin terbuka, versi dipantau berkala: bila ada versi lebih baru, tombol **Muat Ulang** di sidebar **muncul berkedip** untuk di-klik pengurus.
 
-> **Kesadaran versi aplikasi (HTML):** agar perubahan `index.html`/`public.html` **saja** (walau `config.js` tidak berubah) juga memunculkan penanda "Muat Ulang" bagi pengguna yang masih membuka halaman lama, naikkan konstanta **`APP_BUILD`** di kedua file setiap kali deploy. Aplikasi memeriksa dua sinyal sekaligus — versi `config.js` dan `APP_BUILD` di server — saat halaman dimuat, lalu tiap 60 detik dan saat tab kembali aktif. Di `index.html` tombol **Muat Ulang** di sidebar muncul berkedip; di `public.html` tombol **Muat Ulang** di header ikut berkedip (label "Versi Baru") tanpa memaksa reload, agar warga yang sedang mengisi form tidak terganggu.
+> **Kesadaran versi aplikasi (HTML):** agar perubahan `index.html`/`public.html` **saja** (walau `config.js` tidak berubah) juga memunculkan penanda "Muat Ulang" bagi pengguna yang masih membuka halaman lama, naikkan konstanta **`APP_BUILD`** pada file HTML yang berubah setiap kali deploy (bump hanya file yang diubah, agar halaman lain tidak diberi notifikasi palsu). Aplikasi memeriksa dua sinyal sekaligus — versi `config.js` dan `APP_BUILD` di server — saat halaman dimuat, lalu tiap 60 detik dan saat tab kembali aktif. Di `index.html` tombol **Muat Ulang** di sidebar muncul berkedip; di `public.html` tombol **Muat Ulang** di header ikut berkedip (label "Versi Baru") tanpa memaksa reload, agar warga yang sedang mengisi form tidak terganggu.
+
+> **Versi rilis di footer (`appVersion`):** teks footer copyright menampilkan versi rilis (mis. `© 2026 SAPA RT - Portal Publik · v1.0.0`). Ubah `appVersion` di `config.js` saat ada rilis penting (tidak wajib tiap deploy). Arahkan kursor ke teks footer untuk melihat **detail build** (tooltip: `Build <APP_BUILD> · config v<version> · backend <CODE_VERSION>`) — berguna saat melaporkan masalah. Tiga penanda versi yang berbeda: `appVersion` (label rilis, tampil di footer), `version` (sinkronisasi `config.js` → memicu hard refresh), dan `APP_BUILD` (memicu penanda "Muat Ulang" saat HTML berubah).
 
 > Pastikan file `config.js` ikut diunggah saat publikasi.
+
+---
+
+## 🎬 Mode Demo (Offline)
+
+Untuk memperagakan aplikasi ke pengguna **tanpa** menghubungkan ke Google Sheets, **biarkan kolom Web App URL kosong** di menu **Integrasi Google Sheets**. Aplikasi otomatis berjalan dalam **mode lokal**:
+
+- Semua data (warga, iuran, pengumuman, kegiatan, pengajuan) yang Anda tambah/edit/hapus hanya tersimpan di `localStorage` **browser itu**, tidak dikirim ke server.
+- Cocok untuk demo fitur admin (CRUD, pencarian, filter, paginasi, dashboard).
+- Portal publik (`/public`) **tidak** menampilkan data mode lokal — portal publik hanya membaca dari Google Sheets. Jadi jadikan demo **khusus offline** (tidak menyentuh Portal Publik).
+- Setelah demo selesai, klik **Reset Data Demo (Lokal)** di menu **Integrasi Google Sheets** untuk mengosongkan data & tampilan. Tombol ini menghapus `appState` + cache `localStorage` (`rt_warga`, `rt_kas`, `rt_pengumuman`, `rt_kegiatan`, `rt_surat`, dan penanda `rt_local_deletes_*`) serta menggambar ulang semua panel menjadi kosong. **Data di Google Sheets tidak pernah terhapus** oleh tombol ini.
+- URL koneksi, token admin, dan tema **tidak** ikut dihapus, sehingga penyiapan koneksi tetap utuh.
+
+> Ringkasnya: URL kosong = mode demo lokal; **Reset Data Demo (Lokal)** = bersihkan hasil demo. Menyimpan/menghapus ke Sheets hanya terjadi bila Web App URL + token admin diisi.
 
 ---
 
@@ -343,7 +363,8 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 | Yang berubah | Yang wajib dinaikkan | Di mana |
 |--------------|----------------------|---------|
 | `config.js` (identitas, `jenisSurat`, `publicApiUrl`, dll.) | `RT_CONFIG.version` **dan** `EXPECTED_CONFIG_VERSION` | `config.js`, `index.html`, `public.html` |
-| `index.html` / `public.html` (tampilan, fitur, kelas CSS) | **`APP_BUILD`** | `index.html` **dan** `public.html` |
+| Rilis penting (label versi rilis) | `RT_CONFIG.appVersion` (opsional) | `config.js` |
+| `index.html` / `public.html` (tampilan, fitur, kelas CSS) | **`APP_BUILD`** | file HTML yang diubah |
 | `code.gs` (backend Apps Script) | `CODE_VERSION` **dan** `EXPECTED_BACKEND_VERSION`, lalu **redeploy New version** | `Apps Script/code.gs`, `index.html` |
 | Kelas Tailwind baru/berubah | (build ulang) `tailwind.css` | lihat **Performa** di atas |
 
