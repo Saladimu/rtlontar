@@ -320,7 +320,7 @@
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row gap-3 items-center justify-between">
                 <div class="relative w-full md:w-80">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="search-warga" oninput="renderWargaTable()" placeholder="Cari nama, NIK, tempat lahir, atau alamat..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="search-warga" oninput="renderWargaTable()" placeholder="Cari nama, NIK, HP, tempat/tanggal lahir, usia, status, pendidikan, pekerjaan, atau alamat..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div class="flex items-center space-x-2 w-full md:w-auto">
                     <label class="text-xs font-medium text-slate-500 whitespace-nowrap">Status:</label>
@@ -339,35 +339,13 @@
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
                                 <th class="px-3 py-2.5">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span></th>
-                                <th class="px-3 py-2.5">Nama Lengkap</th>
-                                <th class="px-3 py-2.5">Usia</th>
-                                <th class="px-3 py-2.5">Status</th>
-                                <th class="px-3 py-2.5">Jenis Kelamin</th>
-                                <th class="px-3 py-2.5">NIK</th>
-                                <th class="px-3 py-2.5">Tempat Lahir</th>
-                                <th class="px-3 py-2.5">Tanggal Lahir</th>
-                                <th class="px-3 py-2.5">Pendidikan</th>
-                                <th class="px-3 py-2.5">Pekerjaan</th>
-                                <th class="px-3 py-2.5">No. HP</th>
-                                <th class="px-3 py-2.5">Status Tinggal</th>
-                                <th class="px-3 py-2.5">Alamat / No. Rumah</th>
+                                <th class="px-3 py-2.5">Nama Lengkap / Usia</th>
+                                <th class="px-3 py-2.5">NIK / No. HP</th>
+                                <th class="px-3 py-2.5">Tempat / Tgl Lahir</th>
+                                <th class="px-3 py-2.5">Status / Jenis Kelamin</th>
+                                <th class="px-3 py-2.5">Pendidikan / Pekerjaan</th>
+                                <th class="px-3 py-2.5">Status Tinggal / Alamat</th>
                                 <th class="px-3 py-2.5 text-center">Aksi</th>
-                            </tr>
-                            <tr class="bg-white border-b border-slate-200 font-normal">
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-nomorkk" type="text" oninput="renderWargaTable()" placeholder="Cari No. KK" class="w-full min-w-[7rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-nama" type="text" oninput="renderWargaTable()" placeholder="Cari nama" class="w-full min-w-[8rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-usia" type="text" oninput="renderWargaTable()" placeholder="Usia" class="w-full min-w-[4rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-status" type="text" oninput="renderWargaTable()" placeholder="Cari status" class="w-full min-w-[7rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-jeniskelamin" type="text" oninput="renderWargaTable()" placeholder="Cari jenis" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-nik" type="text" oninput="renderWargaTable()" placeholder="Cari NIK" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-tempat" type="text" oninput="renderWargaTable()" placeholder="Cari tempat" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-tanggal" type="text" oninput="renderWargaTable()" placeholder="Cari tanggal" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-pendidikan" type="text" oninput="renderWargaTable()" placeholder="Cari pendidikan" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-pekerjaan" type="text" oninput="renderWargaTable()" placeholder="Cari pekerjaan" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-hp" type="text" oninput="renderWargaTable()" placeholder="Cari HP" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-statustinggal" type="text" oninput="renderWargaTable()" placeholder="Tetap/Kontrak" class="w-full min-w-[6rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0"><input id="fw-warga-alamat" type="text" oninput="renderWargaTable()" placeholder="Cari alamat" class="w-full min-w-[8rem] px-2 py-1.5 text-xs font-normal border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"></th>
-                                <th class="px-2 pb-2 pt-0 text-center"><button type="button" onclick="clearWargaFilters()" title="Bersihkan semua filter" class="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg"><i class="fa-solid fa-filter-circle-xmark"></i></button></th>
                             </tr>
                         </thead>
                         <tbody id="table-warga-body" class="divide-y divide-slate-100 text-slate-700">
@@ -817,7 +795,12 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">No. HP / WhatsApp *</label>
-                    <input type="tel" id="warga-hp" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08123456789">
+                    <input type="tel" id="warga-hp" required inputmode="numeric" maxlength="15" oninput="onPhoneInput(this); updateWargaHpActions()" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="08123456789">
+                    <div id="warga-hp-actions" class="hidden mt-2 flex items-center gap-2">
+                        <a id="warga-hp-wa" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition"><i class="fa-brands fa-whatsapp"></i>Chat WhatsApp</a>
+                        <a id="warga-hp-call" href="#" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition"><i class="fa-solid fa-phone"></i>Telepon</a>
+                    </div>
+                    <p id="warga-hp-hint" class="hidden mt-1 text-xs text-slate-400">Masukkan nomor HP yang valid untuk mengaktifkan tombol Chat WhatsApp / Telepon.</p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Status Tempat Tinggal *</label>
@@ -1010,7 +993,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">No. HP / WhatsApp *</label>
-                        <input type="tel" id="surat-hp" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="08123456789">
+                        <input type="tel" id="surat-hp" required inputmode="numeric" maxlength="15" oninput="onPhoneInput(this)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="08123456789">
                     </div>
                 </div>
                 <div>
@@ -1170,7 +1153,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-08-7';
+        const APP_BUILD = '2026-10-08-9';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1389,6 +1372,13 @@
             else setNIKHint(digits.length ? (digits.length + '/16 digit') : '', '');
         }
 
+        // Batasi input No. HP hanya angka (maks. 15 digit), mis. menolak huruf/simbol.
+        function onPhoneInput(el) {
+            if (!el) return;
+            const digits = String(el.value || '').replace(/\D/g, '').slice(0, 15);
+            if (digits !== el.value) el.value = digits;
+        }
+
         // ===== Baris filter per kolom (di bawah header tabel) =====
         function escAttr(v) {
             return String(v == null ? '' : v)
@@ -1409,7 +1399,6 @@
         }
 
         // Daftar id input filter agar mudah dibersihkan.
-        const WARGA_FILTER_IDS = ['fw-warga-nomorkk', 'fw-warga-nama', 'fw-warga-usia', 'fw-warga-status', 'fw-warga-jeniskelamin', 'fw-warga-nik', 'fw-warga-tempat', 'fw-warga-tanggal', 'fw-warga-pendidikan', 'fw-warga-pekerjaan', 'fw-warga-hp', 'fw-warga-statustinggal', 'fw-warga-alamat'];
         const KAS_FILTER_IDS = ['fw-kas-tanggal', 'fw-kas-nama', 'fw-kas-norumah', 'fw-kas-jenis', 'fw-kas-jumlah', 'fw-kas-keterangan'];
 
         function clearFilterIds(ids) {
@@ -1417,16 +1406,6 @@
                 const el = document.getElementById(id);
                 if (el) el.value = '';
             });
-        }
-
-        // Bersihkan seluruh filter Data_Warga (kolom + toolbar).
-        function clearWargaFilters() {
-            clearFilterIds(WARGA_FILTER_IDS);
-            const s = document.getElementById('search-warga');
-            if (s) s.value = '';
-            const st = document.getElementById('filter-status-warga');
-            if (st) st.value = '';
-            renderWargaTable();
         }
 
         // Bersihkan seluruh filter Iuran & Kas (kolom + toolbar).
@@ -1858,55 +1837,25 @@
 
             renderWargaNameList();
 
-            // Filter per kolom dari baris filter di bawah header.
-            const f = {
-                nomorKK: filterValue('fw-warga-nomorkk'),
-                nama: filterValue('fw-warga-nama'),
-                usia: filterValue('fw-warga-usia'),
-                status: filterValue('fw-warga-status'),
-                jenisKelamin: filterValue('fw-warga-jeniskelamin'),
-                nik: filterValue('fw-warga-nik'),
-                tempat: filterValue('fw-warga-tempat'),
-                tanggal: filterValue('fw-warga-tanggal'),
-                pendidikan: filterValue('fw-warga-pendidikan'),
-                pekerjaan: filterValue('fw-warga-pekerjaan'),
-                hp: filterValue('fw-warga-hp'),
-                statusTinggal: filterValue('fw-warga-statustinggal'),
-                alamat: filterValue('fw-warga-alamat')
-            };
-
+            // Pencarian memakai kotak pencarian atas + filter status (baris filter
+            // per kolom dihapus). Haystack mencakup seluruh field + usia + tanggal
+            // tampilan agar pencarian nama/NIK/tanggal/usia tetap bekerja.
             const filtered = appState.warga.filter(item => {
-                const haystack = [item.nomorKK, item.nama, item.status, item.jenisKelamin, item.nik, item.tempat, item.tanggalLahir, item.pendidikan, item.pekerjaan, item.hp, item.statusTinggal, item.alamat]
+                const haystack = [item.nomorKK, item.nama, item.status, item.jenisKelamin, item.nik, item.tempat, item.tanggalLahir, item.pendidikan, item.pekerjaan, item.hp, fmtPhone(item.hp), item.statusTinggal, item.alamat, hitungUsia(item.tanggalLahir), fmtDateDisplay(item.tanggalLahir)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
-                const usia = hitungUsia(item.tanggalLahir);
-                const tanggal = (item.tanggalLahir || '') + ' ' + fmtDateDisplay(item.tanggalLahir);
-                const matchCols =
-                    matchFilter(item.nomorKK, f.nomorKK) &&
-                    matchFilter(item.nama, f.nama) &&
-                    matchFilter(usia, f.usia) &&
-                    matchFilter(item.status, f.status) &&
-                    matchFilter(item.jenisKelamin, f.jenisKelamin) &&
-                    matchFilter(item.nik, f.nik) &&
-                    matchFilter(item.tempat, f.tempat) &&
-                    matchFilter(tanggal, f.tanggal) &&
-                    matchFilter(item.pendidikan, f.pendidikan) &&
-                    matchFilter(item.pekerjaan, f.pekerjaan) &&
-                    matchFilter(item.hp, f.hp) &&
-                    matchFilter(item.statusTinggal, f.statusTinggal) &&
-                    matchFilter(item.alamat, f.alamat);
-                return matchSearch && matchStatus && matchCols;
+                return matchSearch && matchStatus;
             });
 
-            const anyFilter = search !== '' || filterStatus !== '' || Object.keys(f).some(k => f[k] !== '');
+            const anyFilter = search !== '' || filterStatus !== '';
 
             // Jumlah record yang ditemukan, tampil di samping header "No. KK".
             const countEl = document.getElementById('warga-count');
             if (countEl) countEl.textContent = '(' + filtered.length + ')';
 
             // Setiap perubahan pencarian/filter mengembalikan tampilan ke halaman pertama.
-            const filterSig = [search, filterStatus].concat(Object.keys(f).map(k => f[k])).join('\u0001');
+            const filterSig = [search, filterStatus].join('\u0001');
             if (filterSig !== wargaFilterSig) { wargaFilterSig = filterSig; wargaPage = 1; }
 
             if (filtered.length === 0) {
@@ -1914,7 +1863,7 @@
                     ? 'Tidak ada data warga yang cocok dengan pencarian/filter.'
                     : 'Belum ada data warga. Klik "Tambah Data Warga" untuk menambahkan.';
                 const empty = document.createElement('tr');
-                empty.innerHTML = `<td colspan="14" class="px-3 py-3 text-center text-slate-400">${msg}</td>`;
+                empty.innerHTML = `<td colspan="8" class="px-3 py-3 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
                 renderPaginationBar('pagination-warga', 1, 1, 0, 0, 0, 'gotoWargaPage');
                 return;
@@ -1939,19 +1888,31 @@
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editWarga(originalIndex);
                 tr.innerHTML = `
-                    <td class="px-3 py-2 text-slate-600 text-xs">${item.nomorKK || '-'}</td>
-                    <td class="px-3 py-2 font-semibold text-slate-800">${item.nama}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${hitungUsia(item.tanggalLahir) || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${item.status || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${item.jenisKelamin || '-'}</td>
-                    <td class="px-3 py-2 text-slate-500 text-xs">${item.nik || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600">${item.tempat || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${item.pendidikan || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${item.pekerjaan || '-'}</td>
-                    <td class="px-3 py-2 text-slate-600">${item.hp || '-'}</td>
-                    <td class="px-3 py-2">${statusBadge}</td>
-                    <td class="px-3 py-2 text-slate-600">${item.alamat}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs whitespace-nowrap">${item.nomorKK || '-'}</td>
+                    <td class="px-3 py-2">
+                        <div class="font-semibold text-slate-800">${item.nama}</div>
+                        <div class="text-xs text-slate-500">${hitungUsia(item.tanggalLahir) || '-'}</div>
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="text-slate-500 text-xs">${item.nik || '-'}</div>
+                        <div class="text-slate-600 text-xs">${fmtPhone(item.hp) || '-'}</div>
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="text-slate-600">${item.tempat || '-'}</div>
+                        <div class="text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</div>
+                    </td>
+                    <td class="px-3 py-2 text-xs">
+                        <div class="text-slate-600">${item.status || '-'}</div>
+                        <div class="text-slate-500">${item.jenisKelamin || '-'}</div>
+                    </td>
+                    <td class="px-3 py-2 text-xs">
+                        <div class="text-slate-600">${item.pendidikan || '-'}</div>
+                        <div class="text-slate-500">${item.pekerjaan || '-'}</div>
+                    </td>
+                    <td class="px-3 py-2">
+                        <div class="mb-0.5">${statusBadge}</div>
+                        <div class="text-slate-600 text-xs">${item.alamat}</div>
+                    </td>
                     <td class="px-3 py-2 text-center">
                         <button onclick="event.stopPropagation(); editWarga(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="event.stopPropagation(); deleteWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
@@ -2254,13 +2215,13 @@
             if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
             if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
             if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
-            if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); }
+            if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
             document.getElementById(id).classList.remove('hidden');
         }
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
             // Reset edit mode and modal UI
-            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); }
+            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
             else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
@@ -2634,6 +2595,58 @@
             return n ? ('https://wa.me/' + n) : '';
         }
 
+        // Tautan telepon dari No. HP (format internasional +62), atau '' bila tidak valid.
+        function telLink(noHp) {
+            const n = waNumber(noHp);
+            return n ? ('tel:+' + n) : '';
+        }
+
+        // Tampilkan No. HP dengan pengelompokan 3-3-4 (mis. 081-234-5678) agar mudah
+        // dibaca. Hanya untuk TAMPILAN pada tabel record; nilai tersimpan di Sheets
+        // dan tautan WhatsApp/Telepon tetap memakai digit asli.
+        function fmtPhone(noHp) {
+            const raw = String(noHp == null ? '' : noHp).trim();
+            const d = raw.replace(/\D/g, '');
+            if (d.length < 7) return raw;
+            let out = d.slice(0, 3) + '-' + d.slice(3, 6);
+            let rest = d.slice(6);
+            const parts = [];
+            while (rest.length > 4) { parts.push(rest.slice(0, 4)); rest = rest.slice(4); }
+            if (rest.length === 1 && parts.length) { parts.push(parts.pop() + rest); rest = ''; }
+            if (rest) parts.push(rest);
+            parts.forEach(p => { out += '-' + p; });
+            return out;
+        }
+
+        // Tombol "Chat WhatsApp" / "Telepon" pada form Data Warga. Hanya aktif
+        // saat mengedit record (editMode.warga terisi) sehingga pengguna harus
+        // membuka detail warga lebih dulu; saat menambah record tombol disembunyikan.
+        // Tautan mengikuti nilai No. HP yang sedang tampil di input.
+        function updateWargaHpActions() {
+            const box = document.getElementById('warga-hp-actions');
+            if (!box) return;
+            const hint = document.getElementById('warga-hp-hint');
+            const waEl = document.getElementById('warga-hp-wa');
+            const callEl = document.getElementById('warga-hp-call');
+            const hpEl = document.getElementById('warga-hp');
+            const editing = editMode.warga !== null;
+            const val = hpEl ? hpEl.value : '';
+            const wa = editing ? waLink(val) : '';
+            const tel = editing ? telLink(val) : '';
+            if (wa && tel) {
+                if (waEl) waEl.href = wa;
+                if (callEl) callEl.href = tel;
+                box.classList.remove('hidden');
+                if (hint) hint.classList.add('hidden');
+            } else {
+                box.classList.add('hidden');
+                if (waEl) waEl.href = '#';
+                if (callEl) callEl.href = '#';
+                // Saat mengedit namun nomor belum valid, tampilkan petunjuk.
+                if (hint) hint.classList.toggle('hidden', !(editing && String(val).trim() !== ''));
+            }
+        }
+
         function suratStatusBadge(status) {
             const s = String(status || 'Pending');
             const map = {
@@ -2856,8 +2869,8 @@
                 tr.onclick = () => editSurat(originalIndex);
                 const wa = waLink(item.noHp);
                 const hpCell = wa
-                    ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1" title="Chat WhatsApp"><i class="fa-brands fa-whatsapp"></i>${escAttr(item.noHp)}</a>`
-                    : escAttr(item.noHp || '-');
+                    ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1" title="Chat WhatsApp"><i class="fa-brands fa-whatsapp"></i>${escAttr(fmtPhone(item.noHp))}</a>`
+                    : escAttr(fmtPhone(item.noHp) || '-');
                 tr.innerHTML = `
                     <td class="p-4 whitespace-nowrap">
                         <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
