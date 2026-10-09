@@ -1159,7 +1159,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-08-12';
+        const APP_BUILD = '2026-10-08-14';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3065,8 +3065,38 @@
         }
 
         // Google Apps Script Integration Logic
+        // Rapikan URL Web App agar tidak tersimpan ganda, mis. akibat paste
+        // berulang: "https://script.google.https://script.google.com/macros/s/.../exec".
+        function normalizeScriptUrl(raw) {
+            let s = String(raw == null ? '' : raw).trim();
+            if (!s) return '';
+            const last = s.lastIndexOf('https://');
+            if (last > 0) s = s.slice(last);
+            return s.trim();
+        }
+
+        // Validasi format URL Web App Apps Script (berakhiran /exec).
+        function isValidScriptUrl(url) {
+            return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(\?.*)?$/.test(String(url || '').trim());
+        }
+
+        // URL yang dipakai untuk koneksi: utamakan isian di kolom Pengaturan bila
+        // valid (agar uji koneksi bekerja tanpa harus simpan dulu), jika tidak pakai
+        // URL tersimpan.
+        function resolveScriptUrl() {
+            const input = document.getElementById('script-url-input');
+            const typed = input ? normalizeScriptUrl(input.value) : '';
+            return typed || appState.scriptUrl;
+        }
+
         function saveScriptUrl() {
-            const url = document.getElementById('script-url-input').value.trim();
+            const input = document.getElementById('script-url-input');
+            const url = normalizeScriptUrl(input ? input.value : '');
+            if (input && url !== input.value) input.value = url;
+            if (url && !isValidScriptUrl(url)) {
+                showToast('URL Web App tidak valid. Format: https://script.google.com/macros/s/.../exec', 'error');
+                return;
+            }
             appState.scriptUrl = url;
             localStorage.setItem('rt_script_url', url);
             updateConnectionUI();
@@ -3240,6 +3270,10 @@
                 showToast('Silakan masukkan dan simpan Web App URL terlebih dahulu', 'error');
                 return;
             }
+            if (!isValidScriptUrl(appState.scriptUrl)) {
+                showToast('URL Web App tidak valid. Buka Pengaturan, tempel URL yang diakhiri /exec, lalu Simpan URL Koneksi.', 'error');
+                return;
+            }
 
             const callbackName = '__rtSheetsRead_' + Date.now();
             const script = document.createElement('script');
@@ -3273,13 +3307,18 @@
 
         // Cek versi code.gs yang sedang aktif di Web App (untuk memastikan sudah redeploy).
         function checkBackendVersion() {
-            if (!appState.scriptUrl) {
+            const url = resolveScriptUrl();
+            if (!url) {
                 showToast('Simpan Web App URL terlebih dahulu', 'error');
+                return;
+            }
+            if (!isValidScriptUrl(url)) {
+                showToast('URL Web App tidak valid. Pastikan diawali https://script.google.com/macros/s/ dan diakhiri /exec.', 'error');
                 return;
             }
             const callbackName = '__rtVersion_' + Date.now();
             const script = document.createElement('script');
-            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
+            const sep = url.indexOf('?') === -1 ? '?' : '&';
             const cleanup = () => {
                 delete window[callbackName];
                 if (script.parentNode) script.parentNode.removeChild(script);
@@ -3308,7 +3347,7 @@
                 showToast('Gagal cek versi backend', 'error');
             };
 
-            script.src = appState.scriptUrl + sep + 'action=version&callback=' + callbackName;
+            script.src = url + sep + 'action=version&callback=' + callbackName;
             document.body.appendChild(script);
         }
 

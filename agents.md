@@ -336,6 +336,12 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-08)
 
+- ✅ **Diagnosa "Gagal cek versi backend": URL tanpa `/exec`** — penyebab kedua error tersebut adalah URL Web App yang tidak berakhiran **`/exec`** (mis. hanya `.../macros/s/<ID>`); request lalu dialihkan Google ke halaman login (`text/html`), sehingga `<script>` JSONP gagal (`onerror`). Ditambahkan helper **`resolveScriptUrl()`** (pakai isian kolom Pengaturan bila valid — jadi uji bisa tanpa simpan dulu — fallback ke URL tersimpan) dan validasi **`isValidScriptUrl()`** di **`checkBackendVersion()`** serta **`syncFromGoogleSheets()`**, dengan pesan jelas "URL Web App tidak valid. Pastikan ... diakhiri /exec." menggantikan "Gagal cek versi backend" yang ambigu. `APP_BUILD` index → `2026-10-08-14`. Uji `test_script_url.js` diperluas (32). Dokumentasi: `Apps Script/readme.md` tabel Troubleshooting.
+
+
+- ✅ **Perbaikan URL Web App ganda di Pengaturan** — penyebab error **"Gagal cek versi backend"** ketika URL tersimpan ganda akibat paste berulang (mis. `https://script.google.https://script.google.com/macros/s/.../exec`). `saveScriptUrl()` kini memakai **`normalizeScriptUrl(raw)`** (memotong awalan ganda: ambil dari `https://` terakhir) dan **`isValidScriptUrl(url)`** (regex `https://script.google.com/macros/s/<id>/exec`); URL tidak valid **ditolak** dengan toast jelas dan tidak menimpa nilai lama, sementara URL ganda **otomatis dirapikan lalu disimpan**. `APP_BUILD` index → `2026-10-08-13`. Uji baru: `/tmp/opencode/test_script_url.js` (23). Dokumentasi: `Apps Script/readme.md` tabel Troubleshooting.
+
+
 - ✅ **Pindah deployment/akun (owner/executor) Portal Publik** — `config.js` `publicApiUrl` diarahkan ke Web App baru milik **`admin.rt017@gmail.com`** (`AKfycbxpKHBNpvDvUzAlKSzRT7eI0QpRsCRN1GabW33IM5V9eKSNH5s_cBFJpqIWlGaYfyRW`). Karena `config.js` berubah, **`RT_CONFIG.version` `'7'`→`'8'`** dan **`EXPECTED_CONFIG_VERSION`** di `index.html` & `public.html` → `'8'`; `APP_BUILD` index `2026-10-08-12`, public `2026-10-08-5`. Deployment baru diverifikasi live: `action=version` → `publik-v13-2026-10-08`, `action=readPublic` → sukses (data spreadsheet yang sama, `portalEnabled:true`). **Tindak lanjut manual (di akun baru):** set Script Properties `ADMIN_TOKEN` (+ `ADMIN_EMAIL`, opsional `NOTIF_*`/`SURAT_*`), jalankan `authorizeMail()` sekali, lalu di halaman admin **Pengaturan** tempel URL Web App baru + Token Admin yang sama agar `localStorage.rt_script_url` menunjuk ke deployment baru.
 
 

@@ -353,6 +353,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | "Script function not found" | Nama fungsi typo | Pastikan `doGet` & `doPost` exact |
 | Email gagal: **"You do not have permission to call MailApp.sendEmail. Required permissions: .../auth/script.send_mail"** | Scope kirim email belum diizinkan pada akun pemilik skrip | Di editor Apps Script: simpan (Ctrl+S) > pilih fungsi **`authorizeMail`** > **Run** > **Review permissions** > pilih akun pemilik > **Allow**. Lalu **Manage deployments > Edit > Version: New version > Deploy**. Di UI, error ini tampil sebagai kode `mail_scope_denied`. Akun yang meng-Allow harus **sama** dengan pemilik/pendeploy (Web App *Execute as: Me*) |
 | Email tidak terkirim tapi tidak ada error | `ADMIN_EMAIL` belum diisi | Tambahkan Script Property **`ADMIN_EMAIL`**, lalu jalankan **`authorizeMail`** dan redeploy |
+| "Gagal cek versi backend" di UI | URL Web App salah/rusak (mis. tersimpan ganda `https://script.google.https://...`) | Buka **Pengaturan > Koneksi**, klik **Simpan URL Koneksi** (URL ganda otomatis dirapikan) atau tempel ulang URL `/exec` yang benar; URL non-Apps-Script akan ditolak dengan pesan jelas |
 
 ---
 
