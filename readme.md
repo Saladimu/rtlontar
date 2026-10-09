@@ -158,10 +158,13 @@ Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti m
 Email otomatis dikirim **hanya untuk pengajuan yang masuk dari Portal Publik** (bukan untuk entri manual admin). Cara mengaktifkan:
 
 1. Buka **Project Settings > Script Properties** pada Apps Script, tambahkan properti **`ADMIN_EMAIL`** berisi alamat email admin. (Jangan ditulis di dalam `code.gs` — nilainya dibaca dari Script Properties saat runtime.)
-2. Buka editor **Apps Script**, pilih fungsi **`authorizeMail`** pada dropdown lalu klik **Run** > **Review permissions** > **Allow**. Langkah ini memberi izin scope `script.send_mail` (kirim email) pada akun pemilik; tanpa ini, email gagal dengan error *"You do not have permission to call MailApp.sendEmail"*. Setelah itu deploy ulang sebagai **New version**.
-3. Uji dari dashboard: buka menu **Pengajuan Surat** lalu klik **Tes Email Admin**. Bila berhasil, email uji terkirim; bila `ADMIN_EMAIL` belum diatur, muncul pesan error yang menjelaskan.
+2. (Opsional) Tambahkan **`NOTIF_SENDER_NAME`** untuk mengatur **nama pengirim** yang tampil di kotak masuk (default **`Pengajuan surat`**), dan **`NOTIF_REPLY_TO`** untuk mengatur alamat **Reply-To** (default memakai nilai `ADMIN_EMAIL`, sehingga balasan otomatis mengarah ke admin). Keduanya dapat diubah kapan saja tanpa menyentuh kode.
+3. Buka editor **Apps Script**, pilih fungsi **`authorizeMail`** pada dropdown lalu klik **Run** > **Review permissions** > **Allow**. Langkah ini memberi izin scope `script.send_mail` (kirim email) pada akun pemilik; tanpa ini, email gagal dengan error *"You do not have permission to call MailApp.sendEmail"*. Setelah itu deploy ulang sebagai **New version**.
+4. Uji dari dashboard: buka menu **Pengajuan Surat** lalu klik **Tes Email Admin**. Bila berhasil, email uji terkirim; bila `ADMIN_EMAIL` belum diatur, muncul pesan error yang menjelaskan.
 
 Untuk menguji alur lengkap, kirim pengajuan dari Portal Publik menggunakan NIK & No. HP asli; email notifikasi akan dikirim ke `ADMIN_EMAIL`.
+
+> **Siapa pengirimnya?** Email dikirim oleh `MailApp` atas nama **akun Google pemilik/pendeploy Apps Script** (*Execute as: Me*), bukan oleh warga dan bukan dari server email terpisah. Alamat **From** selalu alamat akun tersebut; `NOTIF_SENDER_NAME` hanya mengubah **nama tampilan**, dan `NOTIF_REPLY_TO` mengatur ke mana balasan diarahkan. Pengiriman memakai kuota email akun Google tersebut (Gmail pribadi ±100 penerima/hari, Google Workspace ±1.500/hari).
 
 > **Catatan penting:** Web App dijalankan **sebagai pemilik skrip** (*Execute as: Me*). Karena itu, akun yang menekan **Allow** saat langkah 2 harus **akun yang sama** dengan pemilik/pendeploy Apps Script. Bila berbeda, pengiriman email tetap gagal meski sudah diizinkan.
 >

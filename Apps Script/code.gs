@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v11-2026-10-07";
+var CODE_VERSION = "publik-v12-2026-10-08";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -32,6 +32,39 @@ var PUBLIK_INDEX = {
   "Pengumuman": 6,
   "Kegiatan_Warga": 7
 };
+
+// ================= NOTIFIKASI EMAIL (dapat diubah lewat Script Properties) =================
+// Nama pengirim (From display name) notifikasi email pengajuan surat.
+// Ubah via Script Property "NOTIF_SENDER_NAME" (lihat readme).
+var NOTIF_SENDER_NAME_DEFAULT = "Pengajuan surat";
+
+// Ambil nama pengirim notifikasi; fallback ke default bila properti kosong.
+function getNotifSenderName() {
+  var v = PropertiesService.getScriptProperties().getProperty('NOTIF_SENDER_NAME');
+  v = (v == null) ? '' : String(v).trim();
+  return v || NOTIF_SENDER_NAME_DEFAULT;
+}
+
+// Ambil alamat Reply-To notifikasi; bila Script Property "NOTIF_REPLY_TO" kosong,
+// memakai alamat penerima (ADMIN_EMAIL) sebagai default.
+function getNotifReplyTo(adminEmail) {
+  var v = PropertiesService.getScriptProperties().getProperty('NOTIF_REPLY_TO');
+  v = (v == null) ? '' : String(v).trim();
+  return v || adminEmail || '';
+}
+
+// Susun opsi MailApp.sendEmail dengan nama pengirim & Reply-To terparameter.
+function buildNotifMailOptions(to, subject, body) {
+  var opts = {
+    to: to,
+    subject: subject,
+    body: body,
+    name: getNotifSenderName()
+  };
+  var replyTo = getNotifReplyTo(to);
+  if (replyTo) opts.replyTo = replyTo;
+  return opts;
+}
 
 // ================= KEAMANAN / TOKEN ADMIN =================
 // Token admin disimpan di Script Properties: Project Settings > Script Properties,
@@ -641,11 +674,7 @@ function notifyAdminNewSurat(r) {
       '',
       'Buka panel "Pengajuan Surat" di dashboard admin untuk memproses.'
     ];
-    MailApp.sendEmail({
-      to: to,
-      subject: subject,
-      body: lines.join('\n')
-    });
+    MailApp.sendEmail(buildNotifMailOptions(to, subject, lines.join('\n')));
   } catch (err) {
     // sengaja diabaikan: kegagalan email tidak boleh membatalkan pengajuan
     console.log('notifyAdminNewSurat gagal: ' + err);
@@ -666,11 +695,11 @@ function handleSendTestEmail() {
   }
   try {
     var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
-    MailApp.sendEmail({
-      to: to,
-      subject: '[RT] Tes Notifikasi Email Pengajuan Surat',
-      body: 'Ini email uji dari dashboard RT.\n\nBila Anda menerima email ini, notifikasi pengajuan surat sudah aktif.\nWaktu: ' + ts
-    });
+    MailApp.sendEmail(buildNotifMailOptions(
+      to,
+      '[RT] Tes Notifikasi Email Pengajuan Surat',
+      'Ini email uji dari dashboard RT.\n\nBila Anda menerima email ini, notifikasi pengajuan surat sudah aktif.\nWaktu: ' + ts
+    ));
     return { "result": "success", "to": to, "message": 'Email uji terkirim ke ' + to + '.' };
   } catch (err) {
     var detail = String(err);

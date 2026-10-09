@@ -20,6 +20,8 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
    - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan.
+   - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
+   - (Opsional) **Nama:** `NOTIF_REPLY_TO`, **Nilai:** alamat **Reply-To** email notifikasi. Bila kosong, default memakai nilai `ADMIN_EMAIL` (balasan otomatis mengarah ke admin).
    - Setelah `ADMIN_EMAIL` diisi, jalankan fungsi **`authorizeMail`** sekali dari editor Apps Script (dropdown fungsi > Run > Review permissions > Allow) agar scope `script.send_mail` diberikan, lalu deploy ulang sebagai **New version**. Tanpa langkah ini, pengiriman email gagal dengan pesan *"You do not have permission to call MailApp.sendEmail"*.
 
 ---
@@ -324,8 +326,11 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |
-| `notifyAdminNewSurat(row)` | Kirim email notifikasi ke `ADMIN_EMAIL` (bila diatur); gagal email tidak membatalkan penyimpanan |
+| `notifyAdminNewSurat(row)` | Kirim email notifikasi ke `ADMIN_EMAIL` (bila diatur) memakai `buildNotifMailOptions()`; gagal email tidak membatalkan penyimpanan |
 | `handleSendTestEmail()` | Aksi admin `sendTestEmail`: kirim email uji ke `ADMIN_EMAIL`; kembalikan `no_admin_email` / `email_failed` / `mail_scope_denied` bila gagal |
+| `getNotifSenderName()` | Nama pengirim notifikasi dari Script Property `NOTIF_SENDER_NAME` (default `Pengajuan surat`) |
+| `getNotifReplyTo(adminEmail)` | Alamat Reply-To dari Script Property `NOTIF_REPLY_TO` (default `adminEmail`/`ADMIN_EMAIL`) |
+| `buildNotifMailOptions(to, subject, body)` | Susun objek opsi `MailApp.sendEmail` lengkap dengan `name` & `replyTo` terparameter |
 | `authorizeMail()` | Jalankan **sekali** dari editor (Run) untuk memicu izin scope `script.send_mail`. Wajib sebelum email dapat dikirim; tanpa ini `MailApp.sendEmail` error "You do not have permission..." |
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |
 | `ensureIds(sheet, name)` | Pastikan header `ID` & backfill ID baris lama |
