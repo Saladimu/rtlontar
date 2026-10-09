@@ -761,6 +761,24 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap *</label>
                     <input type="text" id="warga-nama" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Budi Santoso">
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">NIK (Nomor Induk Kependudukan)</label>
+                    <input type="text" id="warga-nik" inputmode="numeric" maxlength="16" oninput="onNIKInput(this)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="16 digit NIK">
+                    <div class="flex items-center justify-between gap-2 mt-1">
+                        <p id="warga-nik-hint" class="text-xs text-slate-400 leading-snug"></p>
+                        <button type="button" onclick="fillWargaFromNIK(true)" class="text-xs text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap shrink-0">Isi dari NIK</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tempat Lahir</label>
+                        <input type="text" id="warga-tempat" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jakarta">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Lahir</label>
+                        <input type="text" id="warga-tanggallahir" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status dalam Keluarga</label>
@@ -785,20 +803,6 @@
                             <option value="Laki-laki">Laki-laki</option>
                             <option value="Perempuan">Perempuan</option>
                         </select>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">NIK (Nomor Induk Kependudukan)</label>
-                    <input type="text" id="warga-nik" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="317301...">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tempat Lahir</label>
-                        <input type="text" id="warga-tempat" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Jakarta">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Lahir</label>
-                        <input type="text" id="warga-tanggallahir" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
@@ -1166,7 +1170,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-08-3';
+        const APP_BUILD = '2026-10-08-7';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1296,6 +1300,93 @@
             if (!hadBirthday) age--;
             if (age < 0 || age > 150) return '';
             return age + ' th';
+        }
+
+        // ===== Isi otomatis dari NIK (Jenis Kelamin & Tanggal Lahir) =====
+        // NIK = PPKKSS-DDMMYY-NNNN (16 digit).
+        //   - Laki-laki : DD (digit 7-8) = 01-31 apa adanya.
+        //   - Perempuan : DD (digit 7-8) = 41-71, yaitu 40 + tanggal lahir.
+        // Tahun 2 digit ditebak: YY <= tahun berjalan -> 20YY, selain itu -> 19YY
+        // (mencakup rentang usia 0-99 tahun). Mengembalikan null bila tidak valid.
+        function parseNIK(nik) {
+            const digits = String(nik == null ? '' : nik).replace(/\D/g, '');
+            if (digits.length !== 16) return null;
+            let dd = parseInt(digits.substr(6, 2), 10);
+            const mm = parseInt(digits.substr(8, 2), 10);
+            const yy = parseInt(digits.substr(10, 2), 10);
+            let gender;
+            if (dd >= 41 && dd <= 71) { gender = 'Perempuan'; dd -= 40; }
+            else if (dd >= 1 && dd <= 31) { gender = 'Laki-laki'; }
+            else return null;
+            if (mm < 1 || mm > 12) return null;
+            const curYY = new Date().getFullYear() % 100;
+            const year = yy <= curYY ? 2000 + yy : 1900 + yy;
+            const daysInMonth = new Date(year, mm, 0).getDate();
+            if (dd < 1 || dd > daysInMonth) return null;
+            const pad = function (n) { return String(n).padStart(2, '0'); };
+            return { gender: gender, tanggalLahir: year + '-' + pad(mm) + '-' + pad(dd) };
+        }
+
+        function setNIKHint(msg, kind) {
+            const el = document.getElementById('warga-nik-hint');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = 'text-xs leading-snug ' + (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400'));
+        }
+
+        // Nilai yang terakhir KAMI isikan otomatis dari NIK (bentuk tampilan).
+        // Dipakai untuk membedakan "masih nilai hasil auto-isi" (boleh ditimpa
+        // saat NIK diedit lagi) vs "sudah diubah manual" (jangan ditimpa).
+        let nikAuto = { jk: null, dob: null };
+        function resetNIKAuto() { nikAuto = { jk: null, dob: null }; }
+
+        // Mengisi Jenis Kelamin & Tanggal Lahir dari NIK. force=true selalu
+        // menimpa (tombol "Isi dari NIK"). Tanpa force, sebuah field ditulis hanya
+        // bila masih kosong ATAU masih berisi nilai hasil auto-isi sebelumnya,
+        // sehingga koreksi manual tidak tertimpa, tetapi memperbaiki digit NIK
+        // (mis. salah hari) tetap memperbarui hasilnya.
+        function fillWargaFromNIK(force) {
+            const nikEl = document.getElementById('warga-nik');
+            const jkEl = document.getElementById('warga-jeniskelamin');
+            const dobEl = document.getElementById('warga-tanggallahir');
+            if (!nikEl || !jkEl || !dobEl) return false;
+            const digits = String(nikEl.value || '').replace(/\D/g, '');
+            if (digits.length !== 16) {
+                setNIKHint(digits.length ? ('NIK ' + digits.length + '/16 digit.') : '', '');
+                return false;
+            }
+            const info = parseNIK(digits);
+            if (!info) {
+                setNIKHint('NIK 16 digit, tetapi data tanggal lahir di dalamnya tidak valid.', 'warn');
+                return false;
+            }
+            const newDob = isoToDDMMYYYY(info.tanggalLahir);
+            const canWriteJK = force || !jkEl.value || jkEl.value === nikAuto.jk;
+            const canWriteDOB = force || !dobEl.value || dobEl.value === nikAuto.dob;
+            const filled = [];
+            const skipped = [];
+            if (canWriteJK) { jkEl.value = info.gender; nikAuto.jk = info.gender; filled.push('jenis kelamin'); }
+            else { skipped.push('jenis kelamin'); }
+            if (canWriteDOB) { dobEl.value = newDob; nikAuto.dob = newDob; filled.push('tanggal lahir'); }
+            else { skipped.push('tanggal lahir'); }
+            if (filled.length) {
+                let msg = 'Diisi otomatis dari NIK: ' + filled.join(' & ') + '.';
+                if (skipped.length) msg += ' (' + skipped.join(' & ') + ' dibiarkan karena isian manual)';
+                setNIKHint(msg, skipped.length ? 'warn' : 'ok');
+                if (typeof showToast === 'function') showToast('Terisi dari NIK: ' + filled.join(' & ') + '.', 'success');
+            } else if (skipped.length) {
+                setNIKHint('Isian manual berbeda dari NIK; klik "Isi dari NIK" untuk menimpanya.', 'warn');
+            } else {
+                setNIKHint('Data NIK sudah sesuai dengan isian.', 'ok');
+            }
+            return true;
+        }
+
+        function onNIKInput(el) {
+            const digits = String(el.value || '').replace(/\D/g, '').slice(0, 16);
+            if (digits !== el.value) el.value = digits;
+            if (digits.length === 16) fillWargaFromNIK(false);
+            else setNIKHint(digits.length ? (digits.length + '/16 digit') : '', '');
         }
 
         // ===== Baris filter per kolom (di bawah header tabel) =====
@@ -2151,16 +2242,25 @@
 
         // Modal Control Helpers
         function openModal(id) {
+            // Saat menambah record baru, bersihkan sisa isian dari sesi edit
+            // sebelumnya agar modal tidak menampilkan data lama.
+            const addForms = { 'modal-warga': 'form-warga', 'modal-kas': 'form-kas', 'modal-pengumuman': 'form-pengumuman', 'modal-kegiatan': 'form-kegiatan' };
+            const addModes = { 'modal-warga': 'warga', 'modal-kas': 'kas', 'modal-pengumuman': 'pengumuman', 'modal-kegiatan': 'kegiatan' };
+            if (addForms[id] && editMode[addModes[id]] === null) {
+                const f = document.getElementById(addForms[id]);
+                if (f && typeof f.reset === 'function') f.reset();
+            }
             // Default tanggal hari ini (dd-mm-yyyy) saat menambah record baru.
             if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
             if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
             if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
+            if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); }
             document.getElementById(id).classList.remove('hidden');
         }
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
             // Reset edit mode and modal UI
-            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; }
+            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); }
             else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
