@@ -336,6 +336,9 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-08)
 
+- ✅ **Pindah deployment/akun (owner/executor) Portal Publik** — `config.js` `publicApiUrl` diarahkan ke Web App baru milik **`admin.rt017@gmail.com`** (`AKfycbxpKHBNpvDvUzAlKSzRT7eI0QpRsCRN1GabW33IM5V9eKSNH5s_cBFJpqIWlGaYfyRW`). Karena `config.js` berubah, **`RT_CONFIG.version` `'7'`→`'8'`** dan **`EXPECTED_CONFIG_VERSION`** di `index.html` & `public.html` → `'8'`; `APP_BUILD` index `2026-10-08-12`, public `2026-10-08-5`. Deployment baru diverifikasi live: `action=version` → `publik-v13-2026-10-08`, `action=readPublic` → sukses (data spreadsheet yang sama, `portalEnabled:true`). **Tindak lanjut manual (di akun baru):** set Script Properties `ADMIN_TOKEN` (+ `ADMIN_EMAIL`, opsional `NOTIF_*`/`SURAT_*`), jalankan `authorizeMail()` sekali, lalu di halaman admin **Pengaturan** tempel URL Web App baru + Token Admin yang sama agar `localStorage.rt_script_url` menunjuk ke deployment baru.
+
+
 - ✅ **No. Surat tampil bertumpuk di bawah Jenis Surat (tabel admin)** — pada tabel **Pengajuan Surat**, sel **Jenis Surat** kini menampilkan **No. Surat** sebagai baris kedua (ikon `fa-file-signature` warna amber) bila sudah diisi (yakni saat status `Selesai`). `renderSuratTable()` mengubah sel menjadi bertumpuk: `<div>Jenis Surat</div>` + `<div>ikon + No. Surat</div>` (hanya muncul jika `item.noSurat` tidak kosong). `tailwind.css` di-rebuild (kelas `text-amber-500`/`mt-0.5`). Uji `test_surat_admin.js` diperluas (93, memverifikasi No. Surat ada di dalam sel Jenis Surat & tidak muncul untuk record tanpa No. Surat). Dokumentasi: `readme.md` bagian **Mengelola Pengajuan di Halaman Admin** (bullet No. Surat).
 
 
