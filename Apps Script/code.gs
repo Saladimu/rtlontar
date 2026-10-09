@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v12-2026-10-08";
+var CODE_VERSION = "publik-v13-2026-10-08";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -769,7 +769,17 @@ function checkAndRecordSuratCheckRate(key) {
 }
 
 // Handler aksi publik `checkSurat`: warga cek status dengan NIK + No. HP.
-// Hanya mengembalikan pengajuan yang NIK & HP-nya SAMA PERSIS dengan input.
+// Hanya mengembalikan pengajuan yang NIK sama dan No. HP cocok (setelah dinormalisasi).
+// Normalisasi nomor HP Indonesia menjadi format internasional "62..." agar
+// variasi penulisan ("0812...", "62812...", "+62 812...", "812...") saling cocok.
+function normalizeSuratHp(value) {
+  var d = String(value === undefined || value === null ? '' : value).replace(/\D/g, '');
+  if (!d) return '';
+  if (d.charAt(0) === '0') return '62' + d.substring(1);
+  if (d.charAt(0) === '8') return '62' + d;
+  return d;
+}
+
 function handleCheckSurat(params) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
@@ -783,7 +793,10 @@ function handleCheckSurat(params) {
     return suratError('invalid', 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.');
   }
 
-  if (!checkAndRecordSuratCheckRate(nik + '|' + hp)) {
+  // Normalisasi nomor HP agar "0812...", "62812...", "+62 812...", dsb. saling cocok.
+  var hpNorm = normalizeSuratHp(hp);
+
+  if (!checkAndRecordSuratCheckRate(nik + '|' + hpNorm)) {
     return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
   }
 
@@ -798,7 +811,7 @@ function handleCheckSurat(params) {
       var row = rows[i];
       var rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
       var rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
-      if (rNik === nik && rHp === hp) {
+      if (rNik === nik && normalizeSuratHp(rHp) === hpNorm) {
         results.push({
           "ref": String(row[10] === undefined || row[10] === null ? '' : row[10]),
           "tanggal": formatTimestampCell(row[0]),

@@ -993,9 +993,15 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">No. HP / WhatsApp *</label>
-                        <input type="tel" id="surat-hp" required inputmode="numeric" maxlength="15" oninput="onPhoneInput(this)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="08123456789">
+                        <input type="tel" id="surat-hp" required inputmode="numeric" maxlength="15" oninput="onPhoneInput(this); updateSuratHpActions()" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="08123456789">
+                        <div id="surat-hp-actions" class="hidden mt-2 flex items-center gap-2">
+                            <a id="surat-hp-wa" href="#" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition"><i class="fa-brands fa-whatsapp"></i>Chat WhatsApp</a>
+                            <a id="surat-hp-call" href="#" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg transition"><i class="fa-solid fa-phone"></i>Telepon</a>
+                        </div>
+                        <p id="surat-hp-hint" class="hidden mt-1 text-xs text-slate-400">Masukkan nomor HP yang valid untuk mengaktifkan tombol Chat WhatsApp / Telepon.</p>
                     </div>
                 </div>
+                <p id="surat-nikhp-locked-hint" class="hidden text-xs text-slate-400 -mt-1"><i class="fa-solid fa-lock mr-1"></i>NIK & No. HP tidak dapat diubah karena dipakai warga untuk Cek Status.</p>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat / No. Rumah *</label>
                     <input type="text" id="surat-alamat" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" data-rt-placeholder="alamat" placeholder="Alamat lengkap / No. Rumah">
@@ -1143,7 +1149,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v12-2026-10-08';
+        const EXPECTED_BACKEND_VERSION = 'publik-v13-2026-10-08';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1153,7 +1159,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-08-10';
+        const APP_BUILD = '2026-10-08-11';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2216,6 +2222,7 @@
             if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
             if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
             if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
+            if (id === 'modal-surat') updateSuratHpActions();
             document.getElementById(id).classList.remove('hidden');
         }
         function closeModal(id) {
@@ -2225,6 +2232,7 @@
             else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
+            else if (id === 'modal-surat') { updateSuratHpActions(); }
         }
 
         // Modal "Tentang Aplikasi" (visi & misi SAPA RT).
@@ -2647,6 +2655,50 @@
             }
         }
 
+        // Tombol "Chat WhatsApp" / "Telepon" pada form Pengajuan Surat. Sama seperti
+        // Data Warga, tombol hanya muncul saat mengedit record (editMode.surat terisi),
+        // dan tautan mengikuti nilai No. HP yang sedang tampil di input.
+        function updateSuratHpActions() {
+            const box = document.getElementById('surat-hp-actions');
+            if (!box) return;
+            const hint = document.getElementById('surat-hp-hint');
+            const waEl = document.getElementById('surat-hp-wa');
+            const callEl = document.getElementById('surat-hp-call');
+            const hpEl = document.getElementById('surat-hp');
+            const editing = editMode.surat !== null;
+            const val = hpEl ? hpEl.value : '';
+            const wa = editing ? waLink(val) : '';
+            const tel = editing ? telLink(val) : '';
+            if (wa && tel) {
+                if (waEl) waEl.href = wa;
+                if (callEl) callEl.href = tel;
+                box.classList.remove('hidden');
+                if (hint) hint.classList.add('hidden');
+            } else {
+                box.classList.add('hidden');
+                if (waEl) waEl.href = '#';
+                if (callEl) callEl.href = '#';
+                if (hint) hint.classList.toggle('hidden', !(editing && String(val).trim() !== ''));
+            }
+        }
+
+        // Kunci/buka kolom NIK & No. HP pada form Pengajuan Surat. Saat MENGEDIT
+        // record, kedua kolom dibuat hanya-baca karena warga memakai NIK + No. HP
+        // untuk Cek Status, sehingga nilainya tidak boleh berubah.
+        function setSuratNikHpLocked(locked) {
+            ['surat-nik', 'surat-hp'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.readOnly = !!locked;
+                el.classList.toggle('bg-slate-100', !!locked);
+                el.classList.toggle('text-slate-500', !!locked);
+                el.classList.toggle('cursor-not-allowed', !!locked);
+                el.title = locked ? 'NIK & No. HP tidak dapat diubah karena dipakai warga untuk Cek Status.' : '';
+            });
+            const note = document.getElementById('surat-nikhp-locked-hint');
+            if (note) note.classList.toggle('hidden', !locked);
+        }
+
         function suratStatusBadge(status) {
             const s = String(status || 'Pending');
             const map = {
@@ -2664,6 +2716,7 @@
             const form = document.getElementById('form-surat');
             if (form) form.reset();
             clearSuratFormError();
+            setSuratNikHpLocked(false);
             document.getElementById('modal-surat-title').textContent = 'Catat Pengajuan Surat';
             const wrap = document.getElementById('surat-tanggal-wrap');
             if (wrap) wrap.classList.add('hidden');
@@ -2697,6 +2750,7 @@
             document.getElementById('surat-status').value = item.status || 'Pending';
             document.getElementById('surat-nosurat').value = item.noSurat || '';
             document.getElementById('surat-catatan').value = item.catatan || '';
+            setSuratNikHpLocked(true);
             updateSuratNoSuratReq();
             document.getElementById('btn-save-surat').textContent = 'Perbarui Pengajuan';
             openModal('modal-surat');
@@ -2867,10 +2921,7 @@
                 tr.className = `${zebra} hover:bg-cyan-100 cursor-pointer transition`;
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editSurat(originalIndex);
-                const wa = waLink(item.noHp);
-                const hpCell = wa
-                    ? `<a href="${escAttr(wa)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-emerald-600 hover:text-emerald-700 font-medium inline-flex items-center gap-1" title="Chat WhatsApp"><i class="fa-brands fa-whatsapp"></i>${escAttr(fmtPhone(item.noHp))}</a>`
-                    : escAttr(fmtPhone(item.noHp) || '-');
+                const hpCell = escAttr(fmtPhone(item.noHp) || '-');
                 tr.innerHTML = `
                     <td class="p-4 whitespace-nowrap">
                         <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
@@ -2881,7 +2932,10 @@
                         <div class="text-slate-500 text-xs" title="${escAttr(item.nik || '')}">${escAttr(maskNik(item.nik))}</div>
                         <div class="mt-0.5">${hpCell}</div>
                     </td>
-                    <td class="p-4 text-slate-700 text-xs">${escAttr(item.jenisSurat || '-')}</td>
+                    <td class="p-4 text-xs">
+                        <div class="text-slate-700">${escAttr(item.jenisSurat || '-')}</div>
+                        ${item.noSurat ? `<div class="text-slate-500 mt-0.5"><i class="fa-solid fa-file-signature mr-1 text-amber-500"></i>${escAttr(item.noSurat)}</div>` : ''}
+                    </td>
                     <td class="p-4 text-slate-500 text-xs" style="max-width:16rem">${escAttr(item.keperluan || '-')}</td>
                     <td class="p-4 text-center">${suratStatusBadge(item.status)}</td>
                     <td class="p-4 text-center whitespace-nowrap">
