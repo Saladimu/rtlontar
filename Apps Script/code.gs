@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v13-2026-10-08";
+var CODE_VERSION = "publik-v14-2026-10-09";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -43,6 +43,16 @@ function getNotifSenderName() {
   var v = PropertiesService.getScriptProperties().getProperty('NOTIF_SENDER_NAME');
   v = (v == null) ? '' : String(v).trim();
   return v || NOTIF_SENDER_NAME_DEFAULT;
+}
+
+// Prefiks subjek email notifikasi pengajuan surat.
+// Ubah via Script Property "NOTIF_SUBJECT_PREFIX"; fallback ke default.
+var NOTIF_SUBJECT_PREFIX_DEFAULT = "[SAPA-RT]";
+
+function getNotifSubjectPrefix() {
+  var v = PropertiesService.getScriptProperties().getProperty('NOTIF_SUBJECT_PREFIX');
+  v = (v == null) ? '' : String(v).trim();
+  return v || NOTIF_SUBJECT_PREFIX_DEFAULT;
 }
 
 // Ambil alamat Reply-To notifikasi; bila Script Property "NOTIF_REPLY_TO" kosong,
@@ -660,7 +670,7 @@ function notifyAdminNewSurat(r) {
     var to = props.getProperty('ADMIN_EMAIL');
     if (!to) return;
     var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
-    var subject = '[RT] Pengajuan Surat Baru: ' + r.jenisSurat + ' - ' + r.nama;
+    var subject = getNotifSubjectPrefix() + ' Pengajuan Surat Baru: ' + r.jenisSurat + ' - ' + r.nama;
     var lines = [
       'Pengajuan surat baru masuk melalui Portal Publik.',
       '',
@@ -697,7 +707,7 @@ function handleSendTestEmail() {
     var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
     MailApp.sendEmail(buildNotifMailOptions(
       to,
-      '[RT] Tes Notifikasi Email Pengajuan Surat',
+      getNotifSubjectPrefix() + ' Tes Notifikasi Email Pengajuan Surat',
       'Ini email uji dari dashboard RT.\n\nBila Anda menerima email ini, notifikasi pengajuan surat sudah aktif.\nWaktu: ' + ts
     ));
     return { "result": "success", "to": to, "message": 'Email uji terkirim ke ' + to + '.' };

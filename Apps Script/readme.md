@@ -22,6 +22,7 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan.
    - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
    - (Opsional) **Nama:** `NOTIF_REPLY_TO`, **Nilai:** alamat **Reply-To** email notifikasi. Bila kosong, default memakai nilai `ADMIN_EMAIL` (balasan otomatis mengarah ke admin).
+   - (Opsional) **Nama:** `NOTIF_SUBJECT_PREFIX`, **Nilai:** prefiks subjek email notifikasi pengajuan surat. Bila kosong, default **`[SAPA-RT]`**.
    - Setelah `ADMIN_EMAIL` diisi, jalankan fungsi **`authorizeMail`** sekali dari editor Apps Script (dropdown fungsi > Run > Review permissions > Allow) agar scope `script.send_mail` diberikan, lalu deploy ulang sebagai **New version**. Tanpa langkah ini, pengiriman email gagal dengan pesan *"You do not have permission to call MailApp.sendEmail"*.
 
 ---
@@ -330,6 +331,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `handleSendTestEmail()` | Aksi admin `sendTestEmail`: kirim email uji ke `ADMIN_EMAIL`; kembalikan `no_admin_email` / `email_failed` / `mail_scope_denied` bila gagal |
 | `getNotifSenderName()` | Nama pengirim notifikasi dari Script Property `NOTIF_SENDER_NAME` (default `Pengajuan surat`) |
 | `getNotifReplyTo(adminEmail)` | Alamat Reply-To dari Script Property `NOTIF_REPLY_TO` (default `adminEmail`/`ADMIN_EMAIL`) |
+| `getNotifSubjectPrefix()` | Prefiks subjek email notifikasi dari Script Property `NOTIF_SUBJECT_PREFIX` (default `[SAPA-RT]`) |
 | `buildNotifMailOptions(to, subject, body)` | Susun objek opsi `MailApp.sendEmail` lengkap dengan `name` & `replyTo` terparameter |
 | `authorizeMail()` | Jalankan **sekali** dari editor (Run) untuk memicu izin scope `script.send_mail`. Wajib sebelum email dapat dikirim; tanpa ini `MailApp.sendEmail` error "You do not have permission..." |
 | `findRowById(sheet, name, id)` | Cari nomor baris berdasarkan ID stabil |

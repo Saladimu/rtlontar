@@ -334,7 +334,10 @@ Tombol refresh di:
 
 ---
 
-## 🔧 Recent Changes (2026-10-08)
+## 🔧 Recent Changes (2026-10-09)
+
+- ✅ **Prefiks subjek email notifikasi `[SAPA-RT]`** — subjek **notifikasi pengajuan surat** & **email uji** kini memakai prefiks yang dapat diatur lewat Script Property **`NOTIF_SUBJECT_PREFIX`** (default **`[SAPA-RT]`**; sebelumnya hardcoded `[RT]`). Helper baru `getNotifSubjectPrefix()` + konstanta `NOTIF_SUBJECT_PREFIX_DEFAULT` di `code.gs`, dipakai di `notifyAdminNewSurat()` dan `handleSendTestEmail()`. `CODE_VERSION` & `EXPECTED_BACKEND_VERSION` → `publik-v14-2026-10-09` (perlu redeploy **New version**); `APP_BUILD` index → `2026-10-09-1`. Uji `test_send_test_email.js` diperluas (17, default + override); `test_codegs_read.js`, `test_id_identity.js`, `test_script_url.js` disesuaikan ke v14. Dokumentasi: `readme.md` & `Apps Script/readme.md` (Script Properties + tabel fungsi).
+
 
 - ✅ **Diagnosa "Gagal cek versi backend": URL tanpa `/exec`** — penyebab kedua error tersebut adalah URL Web App yang tidak berakhiran **`/exec`** (mis. hanya `.../macros/s/<ID>`); request lalu dialihkan Google ke halaman login (`text/html`), sehingga `<script>` JSONP gagal (`onerror`). Ditambahkan helper **`resolveScriptUrl()`** (pakai isian kolom Pengaturan bila valid — jadi uji bisa tanpa simpan dulu — fallback ke URL tersimpan) dan validasi **`isValidScriptUrl()`** di **`checkBackendVersion()`** serta **`syncFromGoogleSheets()`**, dengan pesan jelas "URL Web App tidak valid. Pastikan ... diakhiri /exec." menggantikan "Gagal cek versi backend" yang ambigu. `APP_BUILD` index → `2026-10-08-14`. Uji `test_script_url.js` diperluas (32). Dokumentasi: `Apps Script/readme.md` tabel Troubleshooting.
 
