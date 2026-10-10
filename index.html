@@ -1161,7 +1161,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-6';
+        const APP_BUILD = '2026-10-09-7';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1759,8 +1759,12 @@
             });
             const saldo = totalMasuk - totalKeluar;
             document.getElementById('stat-kas').innerText = formatRupiah(saldo);
-            document.getElementById('stat-pengumuman').innerText = appState.pengumuman.length;
-            document.getElementById('stat-kegiatan').innerText = appState.kegiatan.length;
+            // Pengumuman & Agenda Kegiatan: angka utama = jumlah yang tampil (publik),
+            // lalu "(N)" = jumlah yang disembunyikan dari portal publik.
+            const pubPengumuman = appState.pengumuman.filter(p => isPublikVal(p.publik)).length;
+            const pubKegiatan = appState.kegiatan.filter(k => isPublikVal(k.publik)).length;
+            document.getElementById('stat-pengumuman').innerHTML = pubPengumuman + ' <span class="text-base font-semibold text-slate-400">(' + (appState.pengumuman.length - pubPengumuman) + ')</span>';
+            document.getElementById('stat-kegiatan').innerHTML = pubKegiatan + ' <span class="text-base font-semibold text-slate-400">(' + (appState.kegiatan.length - pubKegiatan) + ')</span>';
 
             // Render Dashboard Latest Announcement & Next Activity
             const latestAnn = appState.pengumuman[appState.pengumuman.length - 1];

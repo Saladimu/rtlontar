@@ -336,6 +336,8 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-09)
 
+- ✅ **Ringkasan: kartu Pengumuman & Agenda Kegiatan menampilkan jumlah tampil + "(N)" disembunyikan** — `renderDashboardStats()` (index.html) kini menghitung item yang **publik** (`isPublikVal`) sebagai angka utama, lalu menambahkan `"(N)"` (font lebih kecil, abu-abu) untuk jumlah yang **disembunyikan** dari portal publik. Contoh: `5 (2)` = 5 tampil, 2 disembunyikan. `APP_BUILD` index → `2026-10-09-7`.
+
 - ✅ **Ikon aplikasi baru (SAPA RT)** — `rt-icon.png` (512×512), `apple-touch-icon.png` (180×180), dan `favicon.ico` (multi-ukuran 16/32/48/64) diganti dari logo SAPA RT terbaru. `index.html` & `public.html` menambahkan cache-buster `?v=2` pada `<link rel="icon">`/`apple-touch-icon` agar ikon baru langsung terlihat tanpa bergantung cache browser (nama berkas tidak berubah, jadi daftar Bypass Cloudflare Access tetap sama). `APP_BUILD` index → `2026-10-09-6`, public → `2026-10-09-2`.
 
 - ✅ **Header tabel Iuran & Kas: "Nama Warga / Keterangan" → "Nama Warga"** — kolom pertama tabel **Iuran & Kas RT** kini berjudul **Nama Warga** (sebelumnya "Nama Warga / Keterangan"). Hanya label `<th>` yang diubah (index.html), struktur data/kolom tidak berubah. `APP_BUILD` index → `2026-10-09-5`.
