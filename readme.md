@@ -79,7 +79,7 @@ Lihat `Apps Script/readme.md` untuk:
 2. Salin isi `code.gs` dan tempel di editor
 3. Deploy > New Deployment → pilih **Web app**
 4. Execute as: **Me** | Who has access: **Anyone**
-5. Salin Web App URL ke aplikasi web (tab Koneksi)
+5. Salin Web App URL, lalu isi ke `publicApiUrl` pada `config.js` (lihat bagian **Konfigurasi Terpusat**)
 6. Setelah update kode, Deploy > Manage deployments > Edit > New version > Deploy
 
 **Perubahan Terbaru di code.gs:**
@@ -107,12 +107,14 @@ Lihat `Apps Script/readme.md` untuk:
 4. Atur *Who has access*: **Anyone** (Siapa saja).
 5. Klik **Deploy**, lalu salin **Web App URL** yang didapat.
 6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda. (Opsional) tambahkan **`ADMIN_EMAIL`** berisi email admin — bila diisi, setiap pengajuan surat baru dari portal publik akan dikirimkan notifikasi email. Bila mengisi `ADMIN_EMAIL`, jalankan fungsi **`authorizeMail`** sekali dari editor (Run > Review permissions > Allow) lalu deploy **New version** agar izin email aktif (lihat bagian **Notifikasi Email ke Admin**).
-7. Buka aplikasi web RT, masuk ke tab **Koneksi App Script**, tempelkan URL tersebut, isi **Token Admin** dengan nilai `ADMIN_TOKEN` yang sama, lalu klik **Simpan Token** (dan **Simpan URL Koneksi**).
+7. Buka aplikasi web RT, masuk ke tab **Integrasi Google Sheets**, isi **Token Admin** dengan nilai `ADMIN_TOKEN` yang sama lalu klik **Simpan Token**. URL sumber data tidak lagi diisi dari UI — atur lewat **`publicApiUrl` di `config.js`** (dan proxy `/api` bila memakai Cloudflare Pages).
 
 > **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
 
 ### Membaca data dari Google Sheets
-Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (bila Web App URL sudah tersimpan) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di tab **Koneksi App Script** atau **tombol Refresh 🔄** di header untuk menyegarkan data kapan saja.
+Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (memakai `publicApiUrl` di `config.js`, lewat proxy `/api` bila aktif) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di tab **Integrasi Google Sheets** atau **tombol Refresh 🔄** di header untuk menyegarkan data kapan saja.
+
+> **Sumber Data Aktif:** di tab **Integrasi Google Sheets** terdapat kartu ringkasan yang menampilkan **Transport** (proxy `/api` atau langsung), **Web App URL** yang dipakai, dan **Versi backend** (terisi otomatis setelah sinkronisasi, atau tekan **Cek Versi Backend**). Berguna untuk memastikan aplikasi membaca dari deployment/spreadsheet yang benar.
 
 ### Edit & Delete Data
 Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit** ✏️ dan **Hapus** 🗑️ di setiap record.
@@ -281,15 +283,15 @@ window.RT_CONFIG = {
 
 ## 🎬 Mode Demo (Offline)
 
-Untuk memperagakan aplikasi ke pengguna **tanpa** menghubungkan ke Google Sheets, **biarkan kolom Web App URL kosong** di menu **Integrasi Google Sheets**. Aplikasi otomatis berjalan dalam **mode lokal**:
+Untuk memperagakan aplikasi ke pengguna **tanpa** menghubungkan ke Google Sheets, **kosongkan `publicApiUrl` dan `apiBase` di `config.js`**. Aplikasi otomatis berjalan dalam **mode lokal**:
 
 - Semua data (warga, iuran, pengumuman, kegiatan, pengajuan) yang Anda tambah/edit/hapus hanya tersimpan di `localStorage` **browser itu**, tidak dikirim ke server.
 - Cocok untuk demo fitur admin (CRUD, pencarian, filter, paginasi, dashboard).
 - Portal publik (`/public`) **tidak** menampilkan data mode lokal — portal publik hanya membaca dari Google Sheets. Jadi jadikan demo **khusus offline** (tidak menyentuh Portal Publik).
 - Setelah demo selesai, klik **Reset Data Demo (Lokal)** di menu **Integrasi Google Sheets** untuk mengosongkan data & tampilan. Tombol ini menghapus `appState` + cache `localStorage` (`rt_warga`, `rt_kas`, `rt_pengumuman`, `rt_kegiatan`, `rt_surat`, dan penanda `rt_local_deletes_*`) serta menggambar ulang semua panel menjadi kosong. **Data di Google Sheets tidak pernah terhapus** oleh tombol ini.
-- URL koneksi, token admin, dan tema **tidak** ikut dihapus, sehingga penyiapan koneksi tetap utuh.
+- Token admin dan tema **tidak** ikut dihapus, sehingga penyiapan koneksi tetap utuh.
 
-> Ringkasnya: URL kosong = mode demo lokal; **Reset Data Demo (Lokal)** = bersihkan hasil demo. Menyimpan/menghapus ke Sheets hanya terjadi bila Web App URL + token admin diisi.
+> Ringkasnya: `publicApiUrl`/`apiBase` kosong = mode demo lokal; **Reset Data Demo (Lokal)** = bersihkan hasil demo. Menyimpan/menghapus ke Sheets hanya terjadi bila sumber data (`config.js`) + token admin diisi.
 
 ---
 

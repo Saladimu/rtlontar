@@ -359,14 +359,14 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 
 | Masalah | Penyebab | Solusi |
 |---------|----------|--------|
-| Data tidak muncul | URL salah / belum deploy | Cek Web App URL di Settings > Koneksi |
+| Data tidak muncul | URL sumber data salah / belum deploy | Cek `publicApiUrl` di `config.js` & `APPS_SCRIPT_URL` di Cloudflare Pages |
 | Delete tidak work | Kode lama di Web App | **Deploy ulang dengan versi baru** |
 | CORS error | `mode: 'no-cors'` tapi butuh response | Frontend pakai JSONP GET untuk delete |
 | Empty rows di Sheets | Delete pakai POST lama | Gunakan GET delete di code.gs terbaru |
 | "Script function not found" | Nama fungsi typo | Pastikan `doGet` & `doPost` exact |
 | Email gagal: **"You do not have permission to call MailApp.sendEmail. Required permissions: .../auth/script.send_mail"** | Scope kirim email belum diizinkan pada akun pemilik skrip | Di editor Apps Script: simpan (Ctrl+S) > pilih fungsi **`authorizeMail`** > **Run** > **Review permissions** > pilih akun pemilik > **Allow**. Lalu **Manage deployments > Edit > Version: New version > Deploy**. Di UI, error ini tampil sebagai kode `mail_scope_denied`. Akun yang meng-Allow harus **sama** dengan pemilik/pendeploy (Web App *Execute as: Me*) |
 | Email tidak terkirim tapi tidak ada error | `ADMIN_EMAIL` belum diisi | Tambahkan Script Property **`ADMIN_EMAIL`**, lalu jalankan **`authorizeMail`** dan redeploy |
-| "Gagal cek versi backend" di UI | URL Web App salah/rusak (mis. tersimpan ganda `https://script.google.https://...`) | Buka **Pengaturan > Koneksi**, klik **Simpan URL Koneksi** (URL ganda otomatis dirapikan) atau tempel ulang URL `/exec` yang benar; URL non-Apps-Script akan ditolak dengan pesan jelas |
+| "Gagal cek versi backend" / "Gagal memuat data" di UI | URL Web App salah, atau proxy `/api` gagal & URL cadangan tidak valid | Pastikan `publicApiUrl` di `config.js` berakhiran `/exec`, dan `APPS_SCRIPT_URL` di Cloudflare Pages (Settings → Environment variables) menunjuk Web App `/exec` yang benar. Koneksi memakai proxy `/api` lebih dulu lalu jatuh ke URL langsung. |
 
 ---
 

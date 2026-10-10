@@ -138,7 +138,7 @@
             </button>
             <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-gear w-5"></i>
-                <span class="font-medium text-sm">Koneksi App Script</span>
+                <span class="font-medium text-sm">Integrasi Google Sheets</span>
             </button>
             <button onclick="openAbout()" class="w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-circle-info w-5"></i>
@@ -563,13 +563,18 @@
                 <p class="text-sm text-slate-500">Hubungkan web ini dengan spreadsheet Google Apps Script Anda</p>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-6 max-w-3xl">
-                <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-slate-700">Web App URL Google Apps Script</label>
-                    <input type="url" id="script-url-input" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <p class="text-xs text-slate-500">Masukkan Web App URL yang telah Anda dapatkan setelah melakukan <i>Deploy as Web App</i> di Google Apps Script.</p>
-                </div>
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 max-w-3xl">
+                <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <i class="fa-solid fa-database text-slate-400"></i> Sumber Data Aktif
+                </h3>
+                <dl class="text-xs text-slate-600 space-y-1 break-all">
+                    <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Transport</dt><dd id="conn-transport" class="font-mono">-</dd></div>
+                    <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Web App URL</dt><dd id="conn-source" class="font-mono">-</dd></div>
+                    <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Versi backend</dt><dd id="conn-backend" class="font-mono">-</dd></div>
+                </dl>
+            </div>
 
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-6 max-w-3xl">
                 <div class="space-y-2">
                     <label class="block text-sm font-semibold text-slate-700">Token Admin (ADMIN_TOKEN)</label>
                     <div class="flex items-center space-x-3">
@@ -582,9 +587,6 @@
                 </div>
 
                 <div class="flex items-center space-x-3">
-                    <button onclick="saveScriptUrl()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm">
-                        Simpan URL Koneksi
-                    </button>
                     <button onclick="testConnection()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
                         Tes Koneksi
                     </button>
@@ -607,7 +609,7 @@
                         <i class="fa-solid fa-flask"></i> Mode Demo (Offline) — tanpa Apps Script
                     </h4>
                     <p class="text-xs text-amber-800 leading-relaxed">
-                        Untuk <b>demo / uji coba</b> tanpa menyambung ke Google Sheets, cukup <b>biarkan Web App URL kosong</b>. Aplikasi berjalan dalam <b>mode lokal</b>: semua data (warga, iuran, pengumuman, kegiatan, pengajuan) hanya tersimpan di browser ini (<i>localStorage</i>) dan tidak dikirim ke server.
+                        Untuk <b>demo / uji coba</b> tanpa menyambung ke Google Sheets, kosongkan <code class="bg-amber-100 px-1 py-0.5 rounded">publicApiUrl</code> dan <code class="bg-amber-100 px-1 py-0.5 rounded">apiBase</code> di <b>config.js</b>. Aplikasi lalu berjalan dalam <b>mode lokal</b>: semua data (warga, iuran, pengumuman, kegiatan, pengajuan) hanya tersimpan di browser ini (<i>localStorage</i>) dan tidak dikirim ke server.
                     </p>
                     <ul class="list-disc list-inside text-xs text-amber-800 space-y-1">
                         <li>Portal publik <b>tidak</b> menampilkan data mode lokal — portal publik hanya membaca dari Google Sheets.</li>
@@ -622,14 +624,14 @@
                 <div class="space-y-3">
                     <h4 class="font-bold text-sm text-slate-800">Panduan Penyiapan Google Sheets & Apps Script:</h4>
                     <ol class="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
-                        <li>Buat file <b>Google Sheets</b> baru dan siapkan 4 tab sheet dengan nama exact: <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Data_Warga</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Iuran_Kas</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengumuman</code>, dan <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Kegiatan_Warga</code>.</li>
-                        <li>Buka menu <b>Ekstensi > Apps Script</b> pada Google Sheets Anda.</li>
-                        <li>Tempelkan kode Apps Script standar <code class="bg-slate-100 px-1 py-0.5 rounded">doPost(e)</code> yang menangani pengiriman JSON.</li>
-                        <li>Klik <b>Deploy > New Deployment</b>. Pilih tipe <b>Web app</b>.</li>
+                        <li>Buat file <b>Google Sheets</b> baru. Tab &amp; header dibuat/dirapikan otomatis saat pertama dijalankan: <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Data_Warga</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Iuran_Kas</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengumuman</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Kegiatan_Warga</code>, dan <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengajuan_Surat</code>.</li>
+                        <li>Buka menu <b>Ekstensi &gt; Apps Script</b> pada Google Sheets Anda.</li>
+                        <li>Salin seluruh isi file <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> (folder <b>Apps Script</b> proyek ini), lalu tempel menggantikan isi editor.</li>
+                        <li>Klik <b>Deploy &gt; New Deployment</b>. Pilih tipe <b>Web app</b> dengan <i>Execute as</i>: <b>Me</b>.</li>
                         <li>Atur <i>Who has access</i> menjadi <b>Anyone</b> (Siapa saja).</li>
-                        <li>Di Apps Script buka <b>Project Settings &gt; Script Properties</b>, tambahkan properti <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">ADMIN_TOKEN</code> dengan nilai rahasia pilihan Anda (mis. <code class="bg-slate-100 px-1 py-0.5 rounded">rt-rahasia-2026</code>).</li>
-                        <li>Salin Web App URL hasil deployment ke kolom di atas, lalu isi <b>Token Admin</b> dengan nilai <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> yang sama, dan klik <b>Simpan Token</b>.</li>
-                        <li>Deploy ulang sebagai <b>New version</b> setiap kali kode <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> diubah.</li>
+                        <li>Di Apps Script buka <b>Project Settings &gt; Script Properties</b>, tambahkan properti <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">ADMIN_TOKEN</code> dengan nilai rahasia pilihan Anda (mis. <code class="bg-slate-100 px-1 py-0.5 rounded">rt-rahasia-2026</code>). Tambahkan juga <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_EMAIL</code> agar notifikasi email pengajuan surat aktif (lalu jalankan fungsi <code class="bg-slate-100 px-1 py-0.5 rounded">authorizeMail</code> sekali).</li>
+                        <li>Salin <b>Web App URL</b> (berakhiran <code class="bg-slate-100 px-1 py-0.5 rounded">/exec</code>) ke <code class="bg-slate-100 px-1 py-0.5 rounded">publicApiUrl</code> di <b>config.js</b> — dan ke <code class="bg-slate-100 px-1 py-0.5 rounded">APPS_SCRIPT_URL</code> di Cloudflare Pages bila memakai proxy <code class="bg-slate-100 px-1 py-0.5 rounded">/api</code>. Lalu isi <b>Token Admin</b> dengan nilai yang sama dan klik <b>Simpan Token</b>.</li>
+                        <li>Deploy ulang sebagai <b>New version</b> setiap kali <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> diubah.</li>
                     </ol>
                 </div>
             </div>
@@ -1159,7 +1161,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-2';
+        const APP_BUILD = '2026-10-09-3';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1490,8 +1492,9 @@
             pengumuman: JSON.parse(localStorage.getItem('rt_pengumuman')) || initialPengumuman,
             kegiatan: JSON.parse(localStorage.getItem('rt_kegiatan')) || initialKegiatan,
             surat: JSON.parse(localStorage.getItem('rt_surat')) || [],
-            scriptUrl: localStorage.getItem('rt_script_url') || '',
             adminToken: localStorage.getItem('rt_admin_token') || '',
+            backendVersion: '',
+            activeBase: '',
             portalEnabled: true
         };
 
@@ -1525,7 +1528,6 @@
             setDateInput('kas-tanggal', todayLocalISO());
             setDateInput('pengumuman-tanggal', todayLocalISO());
             setDateInput('kegiatan-tanggal', todayLocalISO());
-            updateScriptUrlInput();
             if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
 
             // Switch to dashboard tab by default
@@ -1538,7 +1540,7 @@
                 if (enforceConfigVersion()) return;
                 initSuratForm();
                 updatePublicPortalUI();
-                updateScriptUrlInput();
+                updateConnectionInfo();
                 if (apiBases().length) syncFromGoogleSheets();
                 startUpdateWatcher();
             });
@@ -3039,7 +3041,7 @@
         // lintas-situs. Ini menghindari blokir cookie pihak ketiga/ITP/ekstensi yang
         // membuat JSONP gagal ("Gagal cek versi backend" / "Gagal memuat data...").
         // Bila proxy tidak tersedia (mis. pratinjau lokal), otomatis jatuh ke URL
-        // Web App langsung (config.publicApiUrl / URL tersimpan).
+        // Web App langsung (config.publicApiUrl).
 
         // Path proxy same-origin dari config.js (mis. "/api"); '' bila tidak aktif.
         function getApiBase() {
@@ -3047,13 +3049,11 @@
             return cfg ? String(cfg).trim() : '';
         }
 
-        // URL Web App langsung (Apps Script) dari URL tersimpan atau config.js.
+        // URL Web App langsung (Apps Script) dari config.js. Sumber data diubah
+        // hanya lewat config.js (RT_CONFIG.publicApiUrl).
         function getDirectBase() {
-            const saved = String(appState.scriptUrl || '').trim();
-            if (/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/.test(saved)) return saved;
-            const cfgUrl = (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl)
+            return (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl)
                 ? String(window.RT_CONFIG.publicApiUrl).trim() : '';
-            return cfgUrl;
         }
 
         // Urutan base yang dicoba: proxy same-origin dulu, lalu URL langsung.
@@ -3064,49 +3064,6 @@
             const direct = getDirectBase();
             if (direct && direct !== proxy) list.push(direct);
             return list;
-        }
-
-        // Rapikan URL Web App agar tidak tersimpan ganda, mis. akibat paste
-        // berulang: "https://script.google.https://script.google.com/macros/s/.../exec".
-        function normalizeScriptUrl(raw) {
-            let s = String(raw == null ? '' : raw).trim();
-            if (!s) return '';
-            const last = s.lastIndexOf('https://');
-            if (last > 0) s = s.slice(last);
-            return s.trim();
-        }
-
-        // Validasi base koneksi: path proxy same-origin ATAU URL Web App (/exec).
-        function isValidScriptUrl(url) {
-            const s = String(url || '').trim();
-            if (s && s === getApiBase()) return true;
-            return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(\?.*)?$/.test(s);
-        }
-
-        // Base yang ditampilkan/dipakai kolom Pengaturan: utamakan proxy same-origin,
-        // jika tidak pakai isian kolom (bila valid) atau URL tersimpan.
-        function resolveScriptUrl() {
-            const proxy = getApiBase();
-            if (proxy) return proxy;
-            const input = document.getElementById('script-url-input');
-            const typed = input ? normalizeScriptUrl(input.value) : '';
-            return typed || appState.scriptUrl;
-        }
-
-        // Tampilkan base koneksi aktif di kolom Pengaturan. Saat proxy same-origin
-        // aktif, kolom diisi path proxy dan dibuat read-only (URL Apps Script tak
-        // perlu lagi diisi manual oleh admin).
-        function updateScriptUrlInput() {
-            const input = document.getElementById('script-url-input');
-            if (!input) return;
-            const proxy = getApiBase();
-            if (proxy) {
-                input.value = proxy;
-                input.readOnly = true;
-            } else {
-                input.readOnly = false;
-                if (!input.value) input.value = appState.scriptUrl;
-            }
         }
 
         // Muat respons JSONP dari Apps Script dengan fallback berurutan antar base.
@@ -3139,6 +3096,10 @@
                 settled = true;
                 clearTimeout(timer);
                 cleanup();
+                if (typeof appState !== 'undefined' && appState) {
+                    appState.activeBase = bases[idx];
+                    if (typeof updateConnectionInfo === 'function') updateConnectionInfo();
+                }
                 if (handlers.onSuccess) handlers.onSuccess(res);
             };
 
@@ -3160,27 +3121,6 @@
             script.src = first + (first.indexOf('?') === -1 ? '?' : '&') + buildQuery();
             document.body.appendChild(script);
             return true;
-        }
-
-        function saveScriptUrl() {
-            const input = document.getElementById('script-url-input');
-            if (getApiBase()) {
-                // Proxy same-origin aktif: URL Apps Script tidak perlu disimpan manual.
-                updateScriptUrlInput();
-                showToast('Koneksi memakai proxy bawaan. URL Apps Script tetap dipakai via proxy.', 'info');
-                return;
-            }
-            const url = normalizeScriptUrl(input ? input.value : '');
-            if (input && url !== input.value) input.value = url;
-            if (url && !isValidScriptUrl(url)) {
-                showToast('URL Web App tidak valid. Format: https://script.google.com/macros/s/.../exec', 'error');
-                return;
-            }
-            appState.scriptUrl = url;
-            localStorage.setItem('rt_script_url', url);
-            updateConnectionUI();
-            showToast('URL Google Apps Script berhasil disimpan!', 'success');
-            if (url) syncFromGoogleSheets();
         }
 
         // Simpan token admin (dikirim ke backend untuk otorisasi tulis/baca lengkap).
@@ -3214,6 +3154,36 @@
                 if(mobPill) mobPill.innerText = "Mode Local Storage";
             }
             updatePublicPortalUI();
+            updateConnectionInfo();
+        }
+
+        // Tampilkan sumber data aktif (transport, URL Web App, versi backend) di
+        // panel Pengaturan agar admin bisa memastikan deployment/database yang dipakai.
+        function updateConnectionInfo() {
+            const transportEl = document.getElementById('conn-transport');
+            const sourceEl = document.getElementById('conn-source');
+            const backendEl = document.getElementById('conn-backend');
+            if (!transportEl || !sourceEl || !backendEl) return;
+            const proxy = getApiBase();
+            const direct = getDirectBase();
+            const active = appState.activeBase || '';
+            if (active) {
+                if (proxy && active === proxy) {
+                    transportEl.textContent = direct ? ('Proxy ' + proxy + ' (aktif) · cadangan: langsung') : ('Proxy ' + proxy + ' (aktif)');
+                } else {
+                    transportEl.textContent = 'Langsung ke Apps Script (aktif)';
+                }
+            } else if (proxy && direct) {
+                transportEl.textContent = 'Proxy ' + proxy + ' (cadangan: langsung)';
+            } else if (proxy) {
+                transportEl.textContent = 'Proxy ' + proxy;
+            } else if (direct) {
+                transportEl.textContent = 'Langsung ke Apps Script';
+            } else {
+                transportEl.textContent = 'Tidak dikonfigurasi (mode lokal)';
+            }
+            sourceEl.textContent = direct || '—';
+            backendEl.textContent = appState.backendVersion || '—';
         }
 
         // Toggle ON/OFF Portal Publik. Status disimpan di backend (Script Properties)
@@ -3249,22 +3219,20 @@
         }
 
         // Tautan Portal Publik: bila config.js mengisi publicPortalUrl, pakai URL itu
-        // (mis. domain kustom). Bila tidak, cukup "public.html" saat publicApiUrl terisi
-        // (tanpa ?url=) agar URL Apps Script tidak tampil di address bar. Fallback ke ?url=
-        // hanya bila keduanya kosong (kompatibilitas lama).
+        // (mis. domain kustom). Bila tidak, cukup "public.html" karena publicApiUrl
+        // sudah diisi di config.js (URL Apps Script tidak tampil di address bar).
         function getPublicPortalUrl() {
             const portalUrl = (window.RT_CONFIG && window.RT_CONFIG.publicPortalUrl) ? String(window.RT_CONFIG.publicPortalUrl).trim() : '';
             if (portalUrl) return portalUrl;
             const cfgUrl = (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl) ? String(window.RT_CONFIG.publicApiUrl).trim() : '';
             if (cfgUrl) return 'public.html';
-            if (appState.scriptUrl) return `public.html?url=${encodeURIComponent(appState.scriptUrl)}`;
             return '';
         }
 
         function openPublicPortal() {
             const publicUrl = getPublicPortalUrl();
             if (!publicUrl) {
-                showToast('Isi publicApiUrl di config.js atau simpan URL Apps Script terlebih dahulu!', 'error');
+                showToast('Isi publicApiUrl di config.js terlebih dahulu!', 'error');
                 return;
             }
             window.open(publicUrl, '_blank');
@@ -3370,6 +3338,10 @@
                     timeout: 10000,
                     onSuccess: (res) => {
                         const v = res && res.version;
+                        if (v) {
+                            appState.backendVersion = v;
+                            updateConnectionInfo();
+                        }
                         if (v === EXPECTED_BACKEND_VERSION) {
                             showToast('Backend sudah versi terbaru (' + v + ')', 'success');
                         } else if (v) {
@@ -3392,6 +3364,10 @@
             if (!res || res.result !== 'success' || !res.data) {
                 showToast('Gagal memuat data dari Google Sheets', 'error');
                 return;
+            }
+            if (res.version) {
+                appState.backendVersion = res.version;
+                updateConnectionInfo();
             }
             const d = res.data;
             appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
