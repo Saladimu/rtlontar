@@ -147,7 +147,7 @@
                         <i id="theme-icon" class="fa-solid fa-moon"></i>
                     </button>
                     <button id="install-btn" data-install-btn onclick="installApp()" title="Pasang aplikasi ke layar utama" aria-label="Pasang aplikasi"
-                        class="hidden flex items-center space-x-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-xl transition shadow-sm">
+                        class="flex items-center space-x-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-xl transition shadow-sm">
                         <i class="fa-solid fa-download"></i>
                         <span class="hidden sm:inline">Pasang</span>
                     </button>
@@ -703,7 +703,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-3';
+        const APP_BUILD = '2026-10-09-4';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1457,11 +1457,15 @@
                 setBtns(false);
                 return;
             }
+            if (standalone) {
+                alert('Aplikasi sudah terpasang di perangkat ini.');
+                return;
+            }
             if (isIOS) {
                 alert('Untuk memasang di iPhone/iPad:\n1) Ketuk ikon Bagikan (Share)\n2) Pilih "Tambahkan ke Layar Utama" (Add to Home Screen)');
                 return;
             }
-            alert('Fitur pasang belum tersedia di browser ini. Coba lewat Chrome/Edge (Android/desktop) atau Safari (iOS) lalu muat ulang halaman.');
+            alert('Untuk memasang: buka menu browser (tanda \u22EE) lalu pilih "Install app" / "Tambahkan ke Layar Utama". Jika pilihan itu tidak ada, coba lewat Chrome/Edge (Android/desktop).');
         };
 
         if (standalone) setBtns(false);
