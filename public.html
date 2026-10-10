@@ -703,7 +703,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-5';
+        const APP_BUILD = '2026-10-09-6';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -849,48 +849,77 @@
             applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
         }
 
-        // ===== Nomor Siaga Darurat =====
-        function openSiaga() {
-            const m = document.getElementById('siaga-modal');
-            if (m) m.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
+        // ===== Riwayat navigasi (tombol / gestur "Back") =====
+        // Simpan status modal ke History API agar gestur "Back" mobile menutup
+        // modal yang terbuka, bukan langsung keluar dari aplikasi.
+        const PUBLIC_MODAL_IDS = ['siaga-modal', 'panduan-surat-modal', 'modal-about'];
+        let openPublicModalId = null;
+
+        function getOpenPublicModal() { return openPublicModalId; }
+
+        function anyPublicModalOpen() { return openPublicModalId !== null; }
+
+        function pushPublicNav() {
+            try {
+                history.pushState({ rtPub: 1, modal: getOpenPublicModal() }, '');
+            } catch (e) { /* abaikan */ }
         }
 
-        function closeSiaga() {
-            const m = document.getElementById('siaga-modal');
-            if (m) m.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
+        function openPublicModal(id, opts) {
+            opts = opts || {};
+            const m = document.getElementById(id);
+            if (m) m.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+            openPublicModalId = id;
+            if (!opts.fromHistory) pushPublicNav();
         }
+
+        function closePublicModal(id, opts) {
+            opts = opts || {};
+            const m = document.getElementById(id);
+            if (m) m.classList.add('hidden');
+            if (openPublicModalId === id) openPublicModalId = null;
+            if (!anyPublicModalOpen()) document.body.classList.remove('overflow-hidden');
+            if (!opts.fromHistory && history.state && history.state.rtPub && history.state.modal === id) {
+                try { history.back(); } catch (e) { /* abaikan */ }
+            }
+        }
+
+        // Terapkan snapshot riwayat tanpa menambah entri baru.
+        function applyPublicNav(state) {
+            const modal = (state && state.rtPub && state.modal) ? state.modal : null;
+            if (modal) {
+                if (openPublicModalId !== modal) {
+                    if (openPublicModalId) closePublicModal(openPublicModalId, { fromHistory: true });
+                    openPublicModal(modal, { fromHistory: true });
+                }
+            } else if (openPublicModalId) {
+                closePublicModal(openPublicModalId, { fromHistory: true });
+            }
+        }
+
+        if (window.addEventListener) {
+            window.addEventListener('popstate', function (e) { applyPublicNav(e.state); });
+        }
+
+        // ===== Nomor Siaga Darurat =====
+        function openSiaga(opts) { openPublicModal('siaga-modal', opts); }
+        function closeSiaga(opts) { closePublicModal('siaga-modal', opts); }
 
         // ===== Panduan Layanan Surat =====
-        function openPanduanSurat() {
-            const m = document.getElementById('panduan-surat-modal');
-            if (m) m.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        }
-
-        function closePanduanSurat() {
-            const m = document.getElementById('panduan-surat-modal');
-            if (m) m.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
+        function openPanduanSurat(opts) { openPublicModal('panduan-surat-modal', opts); }
+        function closePanduanSurat(opts) { closePublicModal('panduan-surat-modal', opts); }
 
         // ===== Tentang Aplikasi (visi & misi) =====
-        function openAbout() {
-            const m = document.getElementById('modal-about');
-            if (m) m.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        }
+        function openAbout(opts) { openPublicModal('modal-about', opts); }
+        function closeAbout(opts) { closePublicModal('modal-about', opts); }
 
-        function closeAbout() {
-            const m = document.getElementById('modal-about');
-            if (m) m.classList.add('hidden');
-            document.body.classList.remove('overflow-hidden');
-        }
-
-        // Tutup modal dengan tombol Escape.
+        // Tutup modal teratas dengan tombol Escape.
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { closeSiaga(); closePanduanSurat(); closeAbout(); }
+            if (e.key === 'Escape') {
+                const open = getOpenPublicModal();
+                if (open) closePublicModal(open);
+            }
         });
 
         // Bersihkan parameter cache-buster hard-refresh agar URL tetap rapi.
@@ -907,6 +936,7 @@
         // Init
         document.addEventListener('DOMContentLoaded', function() {
             updateThemeToggleUI(currentTheme() === 'dark');
+            try { history.replaceState({ rtPub: 1, modal: null }, ''); } catch (e) { /* abaikan */ }
 
             whenConfigReady(function () {
                 if (enforceConfigVersion()) return;

@@ -1187,7 +1187,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-10';
+        const APP_BUILD = '2026-10-09-11';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1556,8 +1556,9 @@
             setDateInput('kegiatan-tanggal', todayLocalISO());
             if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
 
-            // Switch to dashboard tab by default
-            switchTab('dashboard');
+            // Switch to dashboard tab by default (tanpa menambah entri riwayat)
+            switchTab('dashboard', { fromHistory: true });
+            try { history.replaceState({ rt: 1, tab: 'dashboard', modal: null }, ''); } catch (e) { /* abaikan */ }
 
             // Bila config.js belum selesai dimuat, tunggu sampai siap. Setelah siap:
             // (1) perbarui tautan portal (publicApiUrl dari config.js), dan
@@ -1572,8 +1573,50 @@
             });
         };
 
+        // ===== Riwayat navigasi (tombol / gestur "Back") =====
+        // Simpan snapshot tampilan (tab aktif + modal terbuka) ke History API agar
+        // gestur "Back" pada perangkat mobile menutup modal atau kembali ke tab
+        // sebelumnya, bukan langsung keluar dari aplikasi.
+        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-about'];
+        let currentTab = 'dashboard';
+
+        function getOpenModal() {
+            for (const id of MODAL_IDS) {
+                const el = document.getElementById(id);
+                if (el && !el.classList.contains('hidden')) return id;
+            }
+            return null;
+        }
+
+        function pushNavState() {
+            try {
+                history.pushState({ rt: 1, tab: currentTab, modal: getOpenModal() }, '');
+            } catch (e) { /* abaikan */ }
+        }
+
+        // Terapkan snapshot riwayat tanpa menambah entri baru.
+        function applyNavState(state) {
+            const tab = (state && state.rt && state.tab) ? state.tab : 'dashboard';
+            const modal = (state && state.rt && state.modal) ? state.modal : null;
+            MODAL_IDS.forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (id === modal) {
+                    if (el.classList.contains('hidden')) openModal(id, { fromHistory: true });
+                } else if (!el.classList.contains('hidden')) {
+                    closeModal(id, { fromHistory: true });
+                }
+            });
+            if (tab !== currentTab) switchTab(tab, { fromHistory: true });
+        }
+
+        if (window.addEventListener) {
+            window.addEventListener('popstate', function (e) { applyNavState(e.state); });
+        }
+
         // Tab Switch Navigation Handler
-        function switchTab(tabId) {
+        function switchTab(tabId, opts) {
+            opts = opts || {};
             document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-slate-800', 'text-white', 'font-semibold');
@@ -1588,6 +1631,9 @@
                 activeNav.classList.add('bg-slate-800', 'text-white', 'font-semibold');
                 activeNav.classList.remove('text-slate-300');
             }
+
+            currentTab = tabId;
+            if (!opts.fromHistory) pushNavState();
         }
 
         function toggleMobileMenu() {
@@ -2260,24 +2306,29 @@
         }
 
         // Modal Control Helpers
-        function openModal(id) {
+        function openModal(id, opts) {
+            opts = opts || {};
             // Saat menambah record baru, bersihkan sisa isian dari sesi edit
             // sebelumnya agar modal tidak menampilkan data lama.
             const addForms = { 'modal-warga': 'form-warga', 'modal-kas': 'form-kas', 'modal-pengumuman': 'form-pengumuman', 'modal-kegiatan': 'form-kegiatan' };
             const addModes = { 'modal-warga': 'warga', 'modal-kas': 'kas', 'modal-pengumuman': 'pengumuman', 'modal-kegiatan': 'kegiatan' };
-            if (addForms[id] && editMode[addModes[id]] === null) {
-                const f = document.getElementById(addForms[id]);
-                if (f && typeof f.reset === 'function') f.reset();
+            if (!opts.fromHistory) {
+                if (addForms[id] && editMode[addModes[id]] === null) {
+                    const f = document.getElementById(addForms[id]);
+                    if (f && typeof f.reset === 'function') f.reset();
+                }
+                // Default tanggal hari ini (dd-mm-yyyy) saat menambah record baru.
+                if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
+                if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
+                if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
+                if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
+                if (id === 'modal-surat') updateSuratHpActions();
             }
-            // Default tanggal hari ini (dd-mm-yyyy) saat menambah record baru.
-            if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
-            if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
-            if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
-            if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
-            if (id === 'modal-surat') updateSuratHpActions();
             document.getElementById(id).classList.remove('hidden');
+            if (!opts.fromHistory) pushNavState();
         }
-        function closeModal(id) {
+        function closeModal(id, opts) {
+            opts = opts || {};
             document.getElementById(id).classList.add('hidden');
             // Reset edit mode and modal UI
             if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
@@ -2285,16 +2336,24 @@
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
             else if (id === 'modal-surat') { updateSuratHpActions(); }
+            // Hapus entri riwayat milik modal ini (bila ada) agar gestur "Back"
+            // setelah menutup modal tidak membukanya kembali.
+            if (!opts.fromHistory && history.state && history.state.rt && history.state.modal === id) {
+                try { history.back(); } catch (e) { /* abaikan */ }
+            }
         }
 
         // Modal "Tentang Aplikasi" (visi & misi SAPA RT).
-        function openAbout() { document.getElementById('modal-about').classList.remove('hidden'); }
-        function closeAbout() { document.getElementById('modal-about').classList.add('hidden'); }
+        function openAbout(opts) { openModal('modal-about', opts); }
+        function closeAbout(opts) { closeModal('modal-about', opts); }
 
-        // Tutup modal Tentang Aplikasi dengan tombol Escape.
+        // Tutup modal yang sedang terbuka dengan tombol Escape (modal teratas).
         if (document.addEventListener) {
             document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') closeAbout();
+                if (e.key === 'Escape') {
+                    const open = getOpenModal();
+                    if (open) closeModal(open);
+                }
             });
         }
 

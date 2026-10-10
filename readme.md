@@ -28,6 +28,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🚨 Nomor Siaga Darurat (Portal Publik):** tombol ikon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama** (112, 110, 113, 118/119, 115, 117, 129, 123) lengkap dengan ikon per layanan. Setiap nomor dapat diketuk untuk langsung menelepon (`tel:`).
 - **🔒 ON/OFF Portal Publik:** Toggle di tab Portal Publik untuk mengaktifkan/menonaktifkan akses warga. Saat OFF, server menolak `readPublic` sehingga data benar-benar tidak bisa diakses (bukan sekadar menyembunyikan tautan).
+- **↩️ Tombol "Back" Android menutup modal / kembali tab (bukan keluar aplikasi):** tombol/swipe **Back** di perangkat Android kini memakai History API — menekan Back saat ada modal terbuka akan **menutup modal** itu, di halaman admin Back berikutnya **kembali ke tab sebelumnya**, dan baru keluar saat sudah di tab utama tanpa modal. Berlaku di halaman admin (`index.html`) dan Portal Publik (`public.html`, untuk modal Siaga / Panduan Surat / Tentang).
 - **⚡ Loading Cepat:** CSS Tailwind dibangun statis (`tailwind.css`, ~35 KB) alih-alih memuat Play CDN yang berat, plus `preconnect` ke font/CDN/endpoint data. Lihat bagian **Performa (Tailwind CSS Statis)**.
 
 ---
