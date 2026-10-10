@@ -7,6 +7,12 @@
     <link rel="icon" href="favicon.ico?v=2" sizes="any">
     <link rel="icon" type="image/png" href="rt-icon.png?v=2" sizes="512x512">
     <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+    <link rel="manifest" href="manifest-public.webmanifest">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SAPA RT">
     <!-- Preconnect agar aset eksternal lebih cepat terhubung. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -139,6 +145,11 @@
                     <button id="theme-toggle" onclick="toggleTheme()" title="Ganti tema terang/gelap" aria-label="Ganti tema terang/gelap"
                         class="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
                         <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                    <button id="install-btn" data-install-btn onclick="installApp()" title="Pasang aplikasi ke layar utama" aria-label="Pasang aplikasi"
+                        class="hidden flex items-center space-x-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-xl transition shadow-sm">
+                        <i class="fa-solid fa-download"></i>
+                        <span class="hidden sm:inline">Pasang</span>
                     </button>
                     <button id="refresh-btn" onclick="refreshPublicData()" title="Muat Ulang Aplikasi (Hard Refresh)"
                         class="flex items-center space-x-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 px-3 py-2 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed">
@@ -692,7 +703,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-2';
+        const APP_BUILD = '2026-10-09-3';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1414,6 +1425,54 @@
             document.getElementById('count-kegiatan').textContent = '-';
             hideSuratSection();
         }
+    </script>
+    <script>
+    (function () {
+        var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+        var deferredPrompt = null;
+
+        function setBtns(show) {
+            document.querySelectorAll('[data-install-btn]').forEach(function (b) {
+                if (show) { b.classList.remove('hidden'); } else { b.classList.add('hidden'); }
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            setBtns(true);
+        });
+
+        window.addEventListener('appinstalled', function () {
+            deferredPrompt = null;
+            setBtns(false);
+        });
+
+        window.installApp = async function () {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch (err) {}
+                deferredPrompt = null;
+                setBtns(false);
+                return;
+            }
+            if (isIOS) {
+                alert('Untuk memasang di iPhone/iPad:\n1) Ketuk ikon Bagikan (Share)\n2) Pilih "Tambahkan ke Layar Utama" (Add to Home Screen)');
+                return;
+            }
+            alert('Fitur pasang belum tersedia di browser ini. Coba lewat Chrome/Edge (Android/desktop) atau Safari (iOS) lalu muat ulang halaman.');
+        };
+
+        if (standalone) setBtns(false);
+        else if (isIOS) setBtns(true);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function () {});
+            });
+        }
+    })();
     </script>
 </body>
 </html>

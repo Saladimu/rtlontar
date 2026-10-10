@@ -7,6 +7,12 @@
     <link rel="icon" href="favicon.ico?v=2" sizes="any">
     <link rel="icon" type="image/png" href="rt-icon.png?v=2" sizes="512x512">
     <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SAPA RT">
     <!-- Preconnect agar aset eksternal lebih cepat terhubung. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -136,14 +142,25 @@
                 <i class="fa-solid fa-globe w-5"></i>
                 <span class="font-medium text-sm">Portal Publik</span>
             </button>
-            <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
-                <i class="fa-solid fa-gear w-5"></i>
-                <span class="font-medium text-sm">Integrasi Google Sheets</span>
+            <button type="button" onclick="toggleSettingMenu()" id="nav-setting-group" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i class="fa-solid fa-sliders w-5"></i>
+                <span class="font-medium text-sm">Setting</span>
+                <i id="nav-setting-chevron" class="fa-solid fa-chevron-down text-xs ml-auto transition-transform"></i>
             </button>
-            <button onclick="openAbout()" class="w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
-                <i class="fa-solid fa-circle-info w-5"></i>
-                <span class="font-medium text-sm">Tentang Aplikasi</span>
-            </button>
+            <div id="setting-submenu" class="hidden ml-3 space-y-1 border-l border-slate-700">
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center space-x-3 pl-4 pr-3 py-2.5 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-gear w-4"></i>
+                    <span class="font-medium text-sm">Integrasi Google Sheets</span>
+                </button>
+                <button onclick="installApp()" id="nav-install" data-install-btn class="hidden w-full flex items-center space-x-3 pl-4 pr-3 py-2.5 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-download w-4"></i>
+                    <span class="font-medium text-sm">Pasang Aplikasi</span>
+                </button>
+                <button onclick="openAbout()" class="w-full flex items-center space-x-3 pl-4 pr-3 py-2.5 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                    <i class="fa-solid fa-circle-info w-4"></i>
+                    <span class="font-medium text-sm">Tentang Aplikasi</span>
+                </button>
+            </div>
         </nav>
 
         <div class="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
@@ -193,12 +210,21 @@
         <button onclick="switchTab('publicportal'); toggleMobileMenu();" id="nav-publicportal-mobile" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-globe w-5 text-blue-400"></i><span>Portal Publik</span>
         </button>
-        <button onclick="switchTab('settings'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
-            <i class="fa-solid fa-gear w-5 text-slate-400"></i><span>Koneksi Google Sheets</span>
+        <button onclick="toggleMobileSettingMenu()" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+            <i class="fa-solid fa-sliders w-5 text-slate-400"></i><span>Setting</span>
+            <i id="mobile-setting-chevron" class="fa-solid fa-chevron-down text-xs ml-auto transition-transform"></i>
         </button>
-        <button onclick="openAbout(); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
-            <i class="fa-solid fa-circle-info w-5 text-cyan-300"></i><span>Tentang Aplikasi</span>
-        </button>
+        <div id="mobile-setting-submenu" class="hidden ml-3 pl-2 space-y-1 border-l border-slate-700">
+            <button onclick="switchTab('settings'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+                <i class="fa-solid fa-gear w-5 text-slate-400"></i><span>Integrasi Google Sheets</span>
+            </button>
+            <button onclick="installApp(); toggleMobileMenu();" data-install-btn class="hidden w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+                <i class="fa-solid fa-download w-5 text-emerald-400"></i><span>Pasang Aplikasi</span>
+            </button>
+            <button onclick="openAbout(); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+                <i class="fa-solid fa-circle-info w-5 text-cyan-300"></i><span>Tentang Aplikasi</span>
+            </button>
+        </div>
     </div>
 
     <!-- Main Content Area -->
@@ -1161,7 +1187,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-7';
+        const APP_BUILD = '2026-10-09-9';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1567,6 +1593,24 @@
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
+        }
+
+        // Grup "Setting" di sidebar: buka/tutup submenu (Integrasi Google Sheets,
+        // Pasang Aplikasi, Tentang Aplikasi).
+        function toggleSettingMenu() {
+            const sub = document.getElementById('setting-submenu');
+            const chev = document.getElementById('nav-setting-chevron');
+            if (!sub) return;
+            sub.classList.toggle('hidden');
+            if (chev) chev.classList.toggle('rotate-180');
+        }
+
+        function toggleMobileSettingMenu() {
+            const sub = document.getElementById('mobile-setting-submenu');
+            const chev = document.getElementById('mobile-setting-chevron');
+            if (!sub) return;
+            sub.classList.toggle('hidden');
+            if (chev) chev.classList.toggle('rotate-180');
         }
 
         // Refresh data from Google Sheets
@@ -3512,6 +3556,54 @@
         function closeToast() {
             document.getElementById('toast-banner').classList.add('hidden');
         }
+    </script>
+    <script>
+    (function () {
+        var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+        var deferredPrompt = null;
+
+        function setBtns(show) {
+            document.querySelectorAll('[data-install-btn]').forEach(function (b) {
+                if (show) { b.classList.remove('hidden'); } else { b.classList.add('hidden'); }
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            setBtns(true);
+        });
+
+        window.addEventListener('appinstalled', function () {
+            deferredPrompt = null;
+            setBtns(false);
+        });
+
+        window.installApp = async function () {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                try { await deferredPrompt.userChoice; } catch (err) {}
+                deferredPrompt = null;
+                setBtns(false);
+                return;
+            }
+            if (isIOS) {
+                alert('Untuk memasang di iPhone/iPad:\n1) Ketuk ikon Bagikan (Share)\n2) Pilih "Tambahkan ke Layar Utama" (Add to Home Screen)');
+                return;
+            }
+            alert('Fitur pasang belum tersedia di browser ini. Coba lewat Chrome/Edge (Android/desktop) atau Safari (iOS) lalu muat ulang halaman.');
+        };
+
+        if (standalone) setBtns(false);
+        else if (isIOS) setBtns(true);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function () {});
+            });
+        }
+    })();
     </script>
 </body>
 </html>
