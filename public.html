@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-rt="titlePublic">SAPA RT - Portal Publik</title>
-    <link rel="icon" href="favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" href="rt-icon.png" sizes="512x512">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="icon" href="favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/png" href="rt-icon.png?v=2" sizes="512x512">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
     <!-- Preconnect agar aset eksternal lebih cepat terhubung. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -692,7 +692,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-1';
+        const APP_BUILD = '2026-10-09-2';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
