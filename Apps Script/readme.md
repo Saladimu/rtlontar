@@ -158,6 +158,18 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 Frontend **tidak** memanggil `script.google.com` secara langsung. Browser memanggil endpoint same-origin `/api` yang diteruskan oleh Cloudflare Pages Function `functions/api/[[path]].js` ke Web App `/exec`. Ini mencegah kegagalan JSONP akibat pemblokiran *third-party cookie* / ITP / ekstensi adblock di sebagian perangkat.
 
 - **Transport:** proxy dipakai lebih dulu; bila gagal, frontend otomatis jatuh ke URL Web App langsung (`publicApiUrl`).
+- **Nilai Transport yang mungkin** (kartu **Active Data Source** di Pengaturan menampilkan transport yang benar-benar aktif):
+
+| Nilai Transport | Arti |
+|---|---|
+| `Proxy /api (active) · fallback: direct` | Proxy berhasil & dipakai; URL langsung tersedia sebagai cadangan. |
+| `Proxy /api (active)` | Proxy berhasil & dipakai; `publicApiUrl` kosong. |
+| `Direct to Apps Script (active)` | Proxy gagal; otomatis jatuh ke URL langsung (`publicApiUrl`). |
+| `Proxy /api (fallback: direct)` | Belum ada permintaan sukses; proxy dikonfigurasi dengan cadangan langsung. |
+| `Proxy /api` | Belum tersambung; hanya `apiBase` dikonfigurasi. |
+| `Direct to Apps Script` | Belum tersambung; hanya `publicApiUrl` dikonfigurasi. |
+| `Not configured (local mode)` | `apiBase` & `publicApiUrl` kosong; mode lokal (localStorage). |
+
 - **Target:** diatur lewat *environment variable* **`APPS_SCRIPT_URL`** di Cloudflare Pages (Settings → Environment variables) berisi Web App URL (`.../exec`). Bila tidak diset, dipakai URL default di dalam file function.
 - **Method:** `GET` (baca/JSONP), `POST` (tulis, `text/plain`), `HEAD`; redirect Apps Script diikuti (`redirect: 'follow'`).
 - **Access:** path `/api` **wajib di-bypass** Cloudflare Access (lihat `../readme.md` → **Publikasi & Kontrol Akses**). Operasi sensitif tetap divalidasi `ADMIN_TOKEN` di `code.gs`.

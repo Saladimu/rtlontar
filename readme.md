@@ -114,7 +114,21 @@ Lihat `Apps Script/readme.md` untuk:
 ### Membaca data dari Google Sheets
 Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (memakai `publicApiUrl` di `config.js`, lewat proxy `/api` bila aktif) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di tab **Integrasi Google Sheets** atau **tombol Refresh 🔄** di header untuk menyegarkan data kapan saja.
 
-> **Sumber Data Aktif:** di tab **Integrasi Google Sheets** terdapat kartu ringkasan yang menampilkan **Transport** (proxy `/api` atau langsung), **Web App URL** yang dipakai, dan **Versi backend** (terisi otomatis setelah sinkronisasi, atau tekan **Cek Versi Backend**). Berguna untuk memastikan aplikasi membaca dari deployment/spreadsheet yang benar.
+> **Sumber Data Aktif:** di tab **Integrasi Google Sheets** terdapat kartu ringkasan yang menampilkan **Transport**, **Web App URL** yang dipakai, dan **Versi backend** (terisi otomatis setelah sinkronisasi, atau tekan **Cek Versi Backend**). Berguna untuk memastikan aplikasi membaca dari deployment/spreadsheet yang benar.
+>
+> Dua endpoint berasal dari `config.js`: **proxy** dari `apiBase` (mis. `/api`) dan **langsung/direct** dari `publicApiUrl` (URL Web App `.../exec`). Keduanya menuju Web App Apps Script yang sama; proxy dicoba lebih dulu.
+>
+> Semua nilai **Transport** yang mungkin muncul:
+>
+> | Nilai Transport | Arti |
+> |---|---|
+> | `Proxy /api (active) · fallback: direct` | Proxy `/api` berhasil & sedang dipakai; URL langsung (`publicApiUrl`) tersedia sebagai cadangan. |
+> | `Proxy /api (active)` | Proxy `/api` berhasil & dipakai; tidak ada URL langsung ( `publicApiUrl` kosong). |
+> | `Direct to Apps Script (active)` | Proxy `/api` gagal/tidak tersedia, sehingga otomatis jatuh ke URL langsung (`publicApiUrl`). |
+> | `Proxy /api (fallback: direct)` | Belum ada permintaan sukses; proxy `/api` dikonfigurasi dengan cadangan langsung. |
+> | `Proxy /api` | Belum tersambung; hanya proxy ( `apiBase` ) yang dikonfigurasi. |
+> | `Direct to Apps Script` | Belum tersambung; hanya URL langsung ( `publicApiUrl` ) yang dikonfigurasi. |
+> | `Not configured (local mode)` | `apiBase` & `publicApiUrl` sama-sama kosong; aplikasi berjalan dalam mode lokal (localStorage). |
 
 ### Edit & Delete Data
 Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit** ✏️ dan **Hapus** 🗑️ di setiap record.
