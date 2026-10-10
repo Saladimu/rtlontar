@@ -225,8 +225,14 @@ window.RT_CONFIG = {
     lokasiContoh: 'Depan lapangan',
 
     // URL Web App Google Apps Script (berakhiran /exec) untuk Portal Publik.
-    // Isi agar public.html dapat diakses cukup lewat "public.html" tanpa ?url=...
+    // Dipakai sebagai jalur cadangan (fallback) bila proxy same-origin tidak aktif.
     publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec',
+
+    // Path proxy same-origin (Cloudflare Pages Function) ke Apps Script.
+    // Default '/api' mengarah ke functions/api/[[path]].js. Halaman memanggil
+    // endpoint same-origin ini lebih dulu, lalu otomatis jatuh ke publicApiUrl
+    // bila proxy tidak tersedia. Kosongkan ('') untuk selalu memakai publicApiUrl.
+    apiBase: '/api',
 
     // URL halaman Portal Publik yang dibagikan ke warga.
     // Satu domain dengan admin; admin dikunci Cloudflare Access pada path
@@ -259,6 +265,9 @@ window.RT_CONFIG = {
 ```
 
 > **Portal Publik tanpa URL panjang:** isi `publicApiUrl` dengan URL Web App Anda. Setelah itu tautan yang dibagikan ke warga cukup **`public.html`** (URL Apps Script tidak tampil di address bar). Isi juga `publicPortalUrl` dengan URL portal publik Anda (mis. `https://sapa-rt017.pages.dev/public`) agar tautan & tombol "Buka Portal" di menu admin mengarah ke sana. `public.html` tetap mendukung `?url=...` sebagai fallback bila `publicApiUrl` masih kosong. `config.js` dimuat dengan cache-bust dan tombol **Muat Ulang** melakukan *hard refresh*, sehingga perubahan config selalu terbaru. Pemuatan config juga menunggu (*readiness gate*) agar tidak ada kedipan "belum dikonfigurasi".
+
+> **Proxy same-origin (anti-blokir perangkat):** aplikasi memanggil endpoint same-origin `apiBase` (`/api`) lebih dulu, yang diteruskan ke Apps Script oleh **Cloudflare Pages Function** (`functions/api/[[path]].js`). Dengan begitu browser tidak lagi memanggil `script.google.com` secara lintas situs, sehingga JSONP tidak lagi gagal karena *third-party cookie* / ITP / ekstensi adblock (yang dulu memunculkan pesan "Gagal cek versi backend" atau "Gagal memuat data dari Google Sheets" di sebagian perangkat Android). Bila proxy tidak tersedia (mis. dibuka langsung dari file lokal), aplikasi otomatis jatuh ke `publicApiUrl` (jalur langsung). Target Apps Script proxy dapat diubah lewat *environment variable* **`APPS_SCRIPT_URL`** di project Cloudflare Pages (Settings → Environment variables); bila tidak diset, dipakai URL default di dalam file function. Untuk membuka Portal Publik cukup jalan lewat domain yang sama (proxy ikut berlaku). Path `/api` **wajib di-bypass** Cloudflare Access agar portal publik bisa memuat data (lihat **Publikasi & Kontrol Akses**); keamanan data tetap dijaga `ADMIN_TOKEN`.
+
 
 > **Auto hard refresh (versi config):** setiap kali mengubah `config.js`, naikkan `version` **dan** samakan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila browser masih memegang HTML lama (versi tak cocok), halaman otomatis melakukan *hard refresh* sekali agar HTML & config sinkron; ada pengaman anti-loop, jadi tidak akan reload berulang. Selain itu, selama halaman admin terbuka, versi dipantau berkala: bila ada versi lebih baru, tombol **Muat Ulang** di sidebar **muncul berkedip** untuk di-klik pengurus.
 
@@ -312,9 +321,12 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 |-----|--------|-------|
 | `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
+| `/api` (proxy same-origin ke Apps Script) | Data portal publik & operasi admin | Terbuka (tanpa login); data tetap dijaga token `ADMIN_TOKEN` |
 | `/config.js`, `/rt-icon.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css` | Aset pendukung | Terbuka (tanpa login) |
 
 > **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Portal publik dan admin berbagi satu domain (`sapa-rt017.pages.dev`); bagikan ke warga cukup `https://sapa-rt017.pages.dev/public` (tanpa ekstensi `.html`). Tidak perlu domain/wrapper tambahan — keamanan admin bersumber dari Cloudflare Access pada path `/` & `/index.html`.
+
+> **Penting (proxy `/api`):** karena portal publik (`/public`) mengakses data lewat jalur same-origin `/api`, path `/api` **harus ikut di-bypass** Cloudflare Access. Tanpa bypass, request data dari portal publik akan tertahan halaman login Access. Ini aman karena `/api` hanya jembatan ke Apps Script dan operasi sensitif tetap divalidasi oleh `ADMIN_TOKEN` di backend.
 
 ### Menyiapkan Cloudflare Zero Trust (sekali saja)
 
@@ -331,7 +343,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 
    **b. `RT Public Assets`** (mengecualikan aset publik)
    - Public hostname: `sapa-rt017.pages.dev` — Path `/public`
-   - Tambah hostname: Path `/public.html`, `/config.js`, `/rt-icon.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`
+   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/rt-icon.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`
    - Policy: Action **Bypass**, Include → **Everyone**.
 
 4. **Simpan.** Perubahan berlaku langsung, tanpa redeploy.
@@ -371,7 +383,7 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 
 | Yang berubah | Yang wajib dinaikkan | Di mana |
 |--------------|----------------------|---------|
-| `config.js` (identitas, `jenisSurat`, `publicApiUrl`, dll.) | `RT_CONFIG.version` **dan** `EXPECTED_CONFIG_VERSION` | `config.js`, `index.html`, `public.html` |
+| `config.js` (identitas, `jenisSurat`, `publicApiUrl`, `apiBase`, dll.) | `RT_CONFIG.version` **dan** `EXPECTED_CONFIG_VERSION` | `config.js`, `index.html`, `public.html` |
 | Rilis penting (label versi rilis) | `RT_CONFIG.appVersion` (opsional) | `config.js` |
 | `index.html` / `public.html` (tampilan, fitur, kelas CSS) | **`APP_BUILD`** | file HTML yang diubah |
 | `code.gs` (backend Apps Script) | `CODE_VERSION` **dan** `EXPECTED_BACKEND_VERSION`, lalu **redeploy New version** | `Apps Script/code.gs`, `index.html` |

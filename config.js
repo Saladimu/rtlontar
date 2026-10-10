@@ -18,7 +18,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '8',
+    version: '9',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
 
@@ -44,6 +44,14 @@ window.RT_CONFIG = {
     // diakses cukup lewat "public.html" tanpa parameter ?url=...
     // Kosongkan ('') untuk memakai parameter ?url=... (kompatibilitas lama).
     publicApiUrl: 'https://script.google.com/macros/s/AKfycbxpKHBNpvDvUzAlKSzRT7eI0QpRsCRN1GabW33IM5V9eKSNH5s_cBFJpqIWlGaYfyRW/exec',
+
+    // Path proxy same-origin (Cloudflare Pages Function, lihat folder `functions/`).
+    // Dipakai sebagai jalur utama request ke Apps Script supaya browser tidak
+    // memanggil script.google.com secara lintas-situs (menghindari blokir cookie
+    // pihak ketiga/ITP/ekstensi yang membuat JSONP gagal). Bila proxy tidak
+    // tersedia (mis. pratinjau lokal), aplikasi otomatis jatuh ke publicApiUrl.
+    // Kosongkan ('') untuk selalu memakai publicApiUrl (URL langsung).
+    apiBase: '/api',
 
     // URL halaman Portal Publik yang dibagikan ke warga. Satu domain dengan
     // admin (akses admin dikunci Cloudflare Access pada path "/" & "/index.html",

@@ -613,17 +613,86 @@
             return '';
         }
 
+        // Path proxy same-origin dari config.js (mis. "/api"); '' bila tidak aktif.
+        // Proxy ini (Cloudflare Pages Function) meneruskan permintaan ke Apps Script
+        // sehingga browser tidak lagi memanggil script.google.com secara lintas situs.
+        function getApiBase() {
+            const cfg = window.RT_CONFIG && window.RT_CONFIG.apiBase;
+            return cfg ? String(cfg).trim() : '';
+        }
+
+        // Urutan base yang dicoba: proxy same-origin dulu, lalu URL Web App langsung.
+        function apiBases() {
+            const list = [];
+            const proxy = getApiBase();
+            if (proxy) list.push(proxy);
+            if (WEB_APP_URL && WEB_APP_URL !== proxy) list.push(WEB_APP_URL);
+            return list;
+        }
+
+        // Muat respons JSONP dengan fallback berurutan antar base.
+        function loadApiJsonp(buildQuery, callbackName, handlers) {
+            handlers = handlers || {};
+            const bases = apiBases();
+            if (!bases.length) {
+                if (handlers.onError) handlers.onError('no_base');
+                return false;
+            }
+            const timeoutMs = handlers.timeout || 15000;
+            const script = document.createElement('script');
+            let idx = 0;
+            let settled = false;
+
+            const cleanup = () => {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                if (handlers.onError) handlers.onError('timeout');
+            }, timeoutMs);
+
+            window[callbackName] = function (res) {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                cleanup();
+                if (handlers.onSuccess) handlers.onSuccess(res);
+            };
+
+            script.onerror = function () {
+                if (settled) return;
+                idx += 1;
+                if (idx < bases.length) {
+                    const b = bases[idx];
+                    script.src = b + (b.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+                } else {
+                    settled = true;
+                    clearTimeout(timer);
+                    cleanup();
+                    if (handlers.onError) handlers.onError('all_failed');
+                }
+            };
+
+            const first = bases[0];
+            script.src = first + (first.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+            document.body.appendChild(script);
+            return true;
+        }
+
         let WEB_APP_URL = '';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '8';
+        const EXPECTED_CONFIG_VERSION = '9';
 
         // Versi build aplikasi (public.html). NAIKKAN setiap kali mengubah
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-08-5';
+        const APP_BUILD = '2026-10-09-1';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -836,7 +905,7 @@
                 initSuratForm();
                 startUpdateWatcher();
 
-                if (WEB_APP_URL) {
+                if (apiBases().length) {
                     showPublicLoading();
                     loadPublicData();
                 } else {
@@ -971,48 +1040,45 @@
 
         function loadPublicData(onComplete) {
             const callbackName = '__publicData_' + Date.now();
-            const script = document.createElement('script');
+            loadApiJsonp(
+                () => 'action=readPublic&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 15000,
+                    onSuccess: function (res) {
+                        if (res && res.result === 'success' && res.data) {
+                            // Convert arrays to objects (same mapping as index.html)
+                            const pengumuman = (res.data.Pengumuman || []).map(r => {
+                                return {
+                                    _id: r[r.length - 1], tanggal: formatDateDDMMMYYYY(r[1]), tanggalISO: r[1], judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]
+                                };
+                            }).filter(item => isPublicVal(item.publik));
+                            const kegiatan = (res.data.Kegiatan_Warga || []).map(r => {
+                                return {
+                                    _id: r[r.length - 1], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), tanggalISO: r[2], waktu: formatTimeOnly(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7], daysLeft: daysLeftFromISO(r[2])
+                                };
+                            }).filter(item => isPublicVal(item.publik));
 
-            window[callbackName] = function(res) {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
+                            // Pengumuman: terbaru lebih dulu. Agenda: terdekat (paling awal) lebih dulu.
+                            pengumuman.sort((a, b) => String(b.tanggalISO || '').localeCompare(String(a.tanggalISO || '')));
+                            kegiatan.sort((a, b) => String(a.tanggalISO || '').localeCompare(String(b.tanggalISO || '')));
 
-                if (res && res.result === 'success' && res.data) {
-                    // Convert arrays to objects (same mapping as index.html)
-                    const pengumuman = (res.data.Pengumuman || []).map(r => {
-                        return {
-                            _id: r[r.length - 1], tanggal: formatDateDDMMMYYYY(r[1]), tanggalISO: r[1], judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]
-                        };
-                    }).filter(item => isPublicVal(item.publik));
-                    const kegiatan = (res.data.Kegiatan_Warga || []).map(r => {
-                        return {
-                            _id: r[r.length - 1], namaKegiatan: r[1], tanggal: formatDateDDMMMYYYY(r[2]), tanggalISO: r[2], waktu: formatTimeOnly(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7], daysLeft: daysLeftFromISO(r[2])
-                        };
-                    }).filter(item => isPublicVal(item.publik));
+                            renderPengumuman(pengumuman);
+                            renderKegiatan(kegiatan);
+                        } else if (res && res.code === 'portal_disabled') {
+                            showPortalDisabled();
+                        } else {
+                            showLoadError();
+                        }
 
-                    // Pengumuman: terbaru lebih dulu. Agenda: terdekat (paling awal) lebih dulu.
-                    pengumuman.sort((a, b) => String(b.tanggalISO || '').localeCompare(String(a.tanggalISO || '')));
-                    kegiatan.sort((a, b) => String(a.tanggalISO || '').localeCompare(String(b.tanggalISO || '')));
-
-                    renderPengumuman(pengumuman);
-                    renderKegiatan(kegiatan);
-                } else if (res && res.code === 'portal_disabled') {
-                    showPortalDisabled();
-                } else {
-                    showLoadError();
+                        if (typeof onComplete === 'function') onComplete();
+                    },
+                    onError: function () {
+                        showLoadError();
+                        if (typeof onComplete === 'function') onComplete();
+                    }
                 }
-
-                if (typeof onComplete === 'function') onComplete();
-            };
-
-            script.onerror = function() {
-                showLoadError();
-                if (typeof onComplete === 'function') onComplete();
-            };
-
-            const sep = WEB_APP_URL.indexOf('?') === -1 ? '?' : '&';
-            script.src = WEB_APP_URL + sep + 'action=readPublic&callback=' + callbackName;
-            document.body.appendChild(script);
+            );
         }
 
         function renderPengumuman(data) {
@@ -1182,7 +1248,7 @@
         // Kirim pengajuan via POST no-cors (respons opaque, jadi optimistis).
         function submitSuratWarga(e) {
             e.preventDefault();
-            if (!WEB_APP_URL) {
+            if (!apiBases().length) {
                 showSuratMessage('error', 'Portal belum dikonfigurasi. Hubungi admin RT.');
                 return false;
             }
@@ -1209,7 +1275,7 @@
             };
 
             setSuratBusy(true);
-            fetch(WEB_APP_URL, {
+            fetch(getApiBase() || WEB_APP_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1234,7 +1300,7 @@
         function cekStatusSurat(e) {
             e.preventDefault();
             const box = document.getElementById('cek-result');
-            if (!WEB_APP_URL) {
+            if (!apiBases().length) {
                 box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Portal belum dikonfigurasi.</div>';
                 return false;
             }
@@ -1255,21 +1321,17 @@
 
             box.innerHTML = '<div class="flex justify-center py-4"><i class="fa-solid fa-circle-notch fa-spin text-slate-300 dark:text-slate-600"></i></div>';
             const callbackName = '__cekSurat_' + Date.now();
-            const script = document.createElement('script');
-            window[callbackName] = function (res) {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-                renderCekResult(res, box);
-            };
-            script.onerror = function () {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Gagal menghubungi server. Coba lagi.</div>';
-            };
-            const sep = WEB_APP_URL.indexOf('?') === -1 ? '?' : '&';
-            script.src = WEB_APP_URL + sep + 'action=checkSurat&nik=' + encodeURIComponent(nik) +
-                '&hp=' + encodeURIComponent(hp) + '&callback=' + callbackName;
-            document.body.appendChild(script);
+            loadApiJsonp(
+                () => 'action=checkSurat&nik=' + encodeURIComponent(nik) + '&hp=' + encodeURIComponent(hp) + '&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 15000,
+                    onSuccess: function (res) { renderCekResult(res, box); },
+                    onError: function () {
+                        box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Gagal menghubungi server. Coba lagi.</div>';
+                    }
+                }
+            );
             return false;
         }
 
@@ -1337,12 +1399,12 @@
                     <i class="fa-solid fa-gear text-4xl text-amber-400 mb-3"></i>
                     <h3 class="font-bold text-amber-900 dark:text-amber-200 text-lg mb-2">Konfigurasi diperlukan</h3>
                     <p class="text-sm text-amber-700 dark:text-amber-300 mb-4">
-                        Halaman publik membutuhkan URL Google Apps Script agar dapat menampilkan data.<br>
-                        Isi <b>publicApiUrl</b> pada <b>config.js</b> dengan URL Web App (berakhiran /exec),
+                        Halaman publik membutuhkan koneksi ke Google Apps Script agar dapat menampilkan data.<br>
+                        Isi <b>apiBase</b> (proxy same-origin, disarankan) atau <b>publicApiUrl</b> pada <b>config.js</b>,
                         atau hubungi admin.
                     </p>
                     <p class="text-xs text-amber-600 dark:text-amber-300 font-mono bg-amber-100 dark:bg-amber-900/50 p-2 rounded">
-                        config.js &rarr; RT_CONFIG.publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec'
+                        config.js &rarr; RT_CONFIG.apiBase: '/api' &nbsp;|&nbsp; RT_CONFIG.publicApiUrl: 'https://script.google.com/macros/s/xxxx/exec'
                     </p>
                 </div>
             `;

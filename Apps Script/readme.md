@@ -153,6 +153,17 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 
 ---
 
+## 🌐 Proxy Same-Origin (Cloudflare Pages Function)
+
+Frontend **tidak** memanggil `script.google.com` secara langsung. Browser memanggil endpoint same-origin `/api` yang diteruskan oleh Cloudflare Pages Function `functions/api/[[path]].js` ke Web App `/exec`. Ini mencegah kegagalan JSONP akibat pemblokiran *third-party cookie* / ITP / ekstensi adblock di sebagian perangkat.
+
+- **Transport:** proxy dipakai lebih dulu; bila gagal, frontend otomatis jatuh ke URL Web App langsung (`publicApiUrl`).
+- **Target:** diatur lewat *environment variable* **`APPS_SCRIPT_URL`** di Cloudflare Pages (Settings → Environment variables) berisi Web App URL (`.../exec`). Bila tidak diset, dipakai URL default di dalam file function.
+- **Method:** `GET` (baca/JSONP), `POST` (tulis, `text/plain`), `HEAD`; redirect Apps Script diikuti (`redirect: 'follow'`).
+- **Access:** path `/api` **wajib di-bypass** Cloudflare Access (lihat `../readme.md` → **Publikasi & Kontrol Akses**). Operasi sensitif tetap divalidasi `ADMIN_TOKEN` di `code.gs`.
+
+---
+
 ## 🔌 API Endpoints
 
 Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
@@ -382,5 +393,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 ## 📂 File Terkait
 
 - `code.gs` — Kode utama (copy ke Apps Script)
+- `../functions/api/[[path]].js` — Cloudflare Pages Function (proxy same-origin `/api` ke Apps Script)
 - `../index.html` — Frontend dashboard
+- `../public.html` — Portal publik warga
 - `../readme.md` — Dokumentasi utama proyek

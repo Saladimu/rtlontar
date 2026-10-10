@@ -1153,13 +1153,13 @@
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '8';
+        const EXPECTED_CONFIG_VERSION = '9';
 
         // Versi build aplikasi (index.html). NAIKKAN setiap kali mengubah index.html
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-1';
+        const APP_BUILD = '2026-10-09-2';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1518,14 +1518,14 @@
             updateConnectionUI();
             updatePublicPortalUI();
 
-            // Jika URL tersimpan, muat data langsung dari Google Sheets.
-            if (appState.scriptUrl) syncFromGoogleSheets();
+            // Sinkronisasi awal dijalankan setelah config.js siap (lihat runWhenConfigReady),
+            // karena base default bisa berasal dari config.js (publicApiUrl / apiBase).
 
             // Default dates in forms (format dd-mm-yyyy)
             setDateInput('kas-tanggal', todayLocalISO());
             setDateInput('pengumuman-tanggal', todayLocalISO());
             setDateInput('kegiatan-tanggal', todayLocalISO());
-            if (document.getElementById('script-url-input')) document.getElementById('script-url-input').value = appState.scriptUrl;
+            updateScriptUrlInput();
             if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
 
             // Switch to dashboard tab by default
@@ -1538,6 +1538,8 @@
                 if (enforceConfigVersion()) return;
                 initSuratForm();
                 updatePublicPortalUI();
+                updateScriptUrlInput();
+                if (apiBases().length) syncFromGoogleSheets();
                 startUpdateWatcher();
             });
         };
@@ -2951,8 +2953,8 @@
         // Kirim email uji ke ADMIN_EMAIL (Script Property) untuk memverifikasi
         // notifikasi pengajuan. Memakai JSONP agar bisa menampilkan hasilnya.
         function testAdminEmail() {
-            if (!appState.scriptUrl) {
-                showToast('Simpan Web App URL terlebih dahulu di Pengaturan.', 'error');
+            if (!apiBases().length) {
+                showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan.', 'error');
                 return;
             }
             if (!appState.adminToken) {
@@ -2963,39 +2965,23 @@
             showToast('Mengirim email uji ke admin...', 'info');
 
             const callbackName = '__rtTestEmail_' + Date.now();
-            const script = document.createElement('script');
-            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
-
-            const cleanup = () => {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-            };
-
-            const timer = setTimeout(() => {
-                cleanup();
-                showToast('Timeout saat mengirim email uji.', 'error');
-            }, 15000);
-
-            window[callbackName] = function (res) {
-                clearTimeout(timer);
-                cleanup();
-                if (res && res.result === 'success') {
-                    showToast(res.message || 'Email uji terkirim.', 'success');
-                } else if (res && res.code === 'unauthorized') {
-                    promptForAdminToken('Email uji ditolak: token admin tidak valid atau belum diatur di pengaturan.');
-                } else {
-                    showToast((res && res.message) || 'Gagal mengirim email uji.', 'error');
+            loadApiJsonp(
+                () => 'action=sendTestEmail&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 15000,
+                    onSuccess: (res) => {
+                        if (res && res.result === 'success') {
+                            showToast(res.message || 'Email uji terkirim.', 'success');
+                        } else if (res && res.code === 'unauthorized') {
+                            promptForAdminToken('Email uji ditolak: token admin tidak valid atau belum diatur di pengaturan.');
+                        } else {
+                            showToast((res && res.message) || 'Gagal mengirim email uji.', 'error');
+                        }
+                    },
+                    onError: () => showToast('Gagal terhubung ke Google Apps Script.', 'error')
                 }
-            };
-
-            script.onerror = function () {
-                clearTimeout(timer);
-                cleanup();
-                showToast('Gagal terhubung ke Google Apps Script.', 'error');
-            };
-
-            script.src = appState.scriptUrl + sep + 'action=sendTestEmail&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName;
-            document.body.appendChild(script);
+            );
         }
 
         // Generic delete: send to Sheets FIRST, then update local if successful
@@ -3005,7 +2991,7 @@
             if (!item._id) { item._id = (sheetName === 'Pengajuan_Surat') ? makeSuratRef() : newId(); saveLocalState(); }
             const id = item._id;
 
-            if (!appState.scriptUrl) {
+            if (!apiBases().length) {
                 // Local mode: just delete locally
                 trackLocalDelete(localDeleteKey, item);
                 const li = findIndexById(arrayRef, id);
@@ -3018,53 +3004,68 @@
 
             showToast('Menghapus dari Google Sheets...', 'info');
 
-            // Use GET with action=delete for CORS-free call (JSONP style)
+            // JSONP: action=delete&sheetName=...&id=...&token=...&callback=...
             const callbackName = '__rtDelete_' + Date.now();
-            const script = document.createElement('script');
-            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
-
-            const cleanup = () => {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-            };
-
-            const timer = setTimeout(() => {
-                cleanup();
-                showToast('Timeout menghapus dari Google Sheets', 'error');
-            }, 10000);
-
-            window[callbackName] = function (res) {
-                clearTimeout(timer);
-                cleanup();
-
-                if (res && res.result === 'success') {
-                    // Success: delete locally & track signature so reload won't bring it back
-                    trackLocalDelete(localDeleteKey, item);
-                    const li = findIndexById(arrayRef, id);
-                    if (li !== -1) arrayRef.splice(li, 1);
-                    saveLocalState();
-                    renderFn();
-                    showToast('Dihapus dari Google Sheets', 'success');
-                } else if (res && res.code === 'unauthorized') {
-                    promptForAdminToken('Hapus ditolak: token admin tidak valid atau belum diatur.');
-                } else {
-                    const msg = res?.message || 'Gagal menghapus';
-                    showToast('Gagal: ' + msg, 'error');
+            loadApiJsonp(
+                () => 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 10000,
+                    onSuccess: (res) => {
+                        if (res && res.result === 'success') {
+                            // Success: delete locally & track signature so reload won't bring it back
+                            trackLocalDelete(localDeleteKey, item);
+                            const li = findIndexById(arrayRef, id);
+                            if (li !== -1) arrayRef.splice(li, 1);
+                            saveLocalState();
+                            renderFn();
+                            showToast('Dihapus dari Google Sheets', 'success');
+                        } else if (res && res.code === 'unauthorized') {
+                            promptForAdminToken('Hapus ditolak: token admin tidak valid atau belum diatur.');
+                        } else {
+                            const msg = (res && res.message) || 'Gagal menghapus';
+                            showToast('Gagal: ' + msg, 'error');
+                        }
+                    },
+                    onError: () => showToast('Gagal terhubung ke Google Sheets', 'error')
                 }
-            };
-
-            script.onerror = function () {
-                clearTimeout(timer);
-                cleanup();
-                showToast('Gagal terhubung ke Google Sheets', 'error');
-            };
-
-            // Send as JSONP: action=delete&sheetName=...&id=...&token=...&callback=...
-            script.src = appState.scriptUrl + sep + 'action=delete&sheetName=' + encodeURIComponent(sheetName) + '&id=' + encodeURIComponent(id) + '&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName;
-            document.body.appendChild(script);
+            );
         }
 
         // Google Apps Script Integration Logic
+        //
+        // Transport koneksi memakai PROXY same-origin (config.apiBase, mis. "/api")
+        // sebagai jalur utama agar browser tidak memanggil script.google.com secara
+        // lintas-situs. Ini menghindari blokir cookie pihak ketiga/ITP/ekstensi yang
+        // membuat JSONP gagal ("Gagal cek versi backend" / "Gagal memuat data...").
+        // Bila proxy tidak tersedia (mis. pratinjau lokal), otomatis jatuh ke URL
+        // Web App langsung (config.publicApiUrl / URL tersimpan).
+
+        // Path proxy same-origin dari config.js (mis. "/api"); '' bila tidak aktif.
+        function getApiBase() {
+            const cfg = window.RT_CONFIG && window.RT_CONFIG.apiBase;
+            return cfg ? String(cfg).trim() : '';
+        }
+
+        // URL Web App langsung (Apps Script) dari URL tersimpan atau config.js.
+        function getDirectBase() {
+            const saved = String(appState.scriptUrl || '').trim();
+            if (/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/.test(saved)) return saved;
+            const cfgUrl = (window.RT_CONFIG && window.RT_CONFIG.publicApiUrl)
+                ? String(window.RT_CONFIG.publicApiUrl).trim() : '';
+            return cfgUrl;
+        }
+
+        // Urutan base yang dicoba: proxy same-origin dulu, lalu URL langsung.
+        function apiBases() {
+            const list = [];
+            const proxy = getApiBase();
+            if (proxy) list.push(proxy);
+            const direct = getDirectBase();
+            if (direct && direct !== proxy) list.push(direct);
+            return list;
+        }
+
         // Rapikan URL Web App agar tidak tersimpan ganda, mis. akibat paste
         // berulang: "https://script.google.https://script.google.com/macros/s/.../exec".
         function normalizeScriptUrl(raw) {
@@ -3075,22 +3076,100 @@
             return s.trim();
         }
 
-        // Validasi format URL Web App Apps Script (berakhiran /exec).
+        // Validasi base koneksi: path proxy same-origin ATAU URL Web App (/exec).
         function isValidScriptUrl(url) {
-            return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(\?.*)?$/.test(String(url || '').trim());
+            const s = String(url || '').trim();
+            if (s && s === getApiBase()) return true;
+            return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec(\?.*)?$/.test(s);
         }
 
-        // URL yang dipakai untuk koneksi: utamakan isian di kolom Pengaturan bila
-        // valid (agar uji koneksi bekerja tanpa harus simpan dulu), jika tidak pakai
-        // URL tersimpan.
+        // Base yang ditampilkan/dipakai kolom Pengaturan: utamakan proxy same-origin,
+        // jika tidak pakai isian kolom (bila valid) atau URL tersimpan.
         function resolveScriptUrl() {
+            const proxy = getApiBase();
+            if (proxy) return proxy;
             const input = document.getElementById('script-url-input');
             const typed = input ? normalizeScriptUrl(input.value) : '';
             return typed || appState.scriptUrl;
         }
 
+        // Tampilkan base koneksi aktif di kolom Pengaturan. Saat proxy same-origin
+        // aktif, kolom diisi path proxy dan dibuat read-only (URL Apps Script tak
+        // perlu lagi diisi manual oleh admin).
+        function updateScriptUrlInput() {
+            const input = document.getElementById('script-url-input');
+            if (!input) return;
+            const proxy = getApiBase();
+            if (proxy) {
+                input.value = proxy;
+                input.readOnly = true;
+            } else {
+                input.readOnly = false;
+                if (!input.value) input.value = appState.scriptUrl;
+            }
+        }
+
+        // Muat respons JSONP dari Apps Script dengan fallback berurutan antar base.
+        // buildQuery() mengembalikan query string (termasuk parameter callback).
+        function loadApiJsonp(buildQuery, callbackName, handlers) {
+            handlers = handlers || {};
+            const bases = apiBases();
+            if (!bases.length) {
+                if (handlers.onError) handlers.onError('no_base');
+                return false;
+            }
+            const timeoutMs = handlers.timeout || 15000;
+            const script = document.createElement('script');
+            let idx = 0;
+            let settled = false;
+
+            const cleanup = () => {
+                delete window[callbackName];
+                if (script.parentNode) script.parentNode.removeChild(script);
+            };
+            const timer = setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                if (handlers.onError) handlers.onError('timeout');
+            }, timeoutMs);
+
+            window[callbackName] = function (res) {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                cleanup();
+                if (handlers.onSuccess) handlers.onSuccess(res);
+            };
+
+            script.onerror = function () {
+                if (settled) return;
+                idx += 1;
+                if (idx < bases.length) {
+                    const b = bases[idx];
+                    script.src = b + (b.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+                } else {
+                    settled = true;
+                    clearTimeout(timer);
+                    cleanup();
+                    if (handlers.onError) handlers.onError('all_failed');
+                }
+            };
+
+            const first = bases[0];
+            script.src = first + (first.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+            document.body.appendChild(script);
+            return true;
+        }
+
         function saveScriptUrl() {
             const input = document.getElementById('script-url-input');
+            if (getApiBase()) {
+                // Proxy same-origin aktif: URL Apps Script tidak perlu disimpan manual.
+                updateScriptUrlInput();
+                showToast('Koneksi memakai proxy bawaan. URL Apps Script tetap dipakai via proxy.', 'info');
+                return;
+            }
             const url = normalizeScriptUrl(input ? input.value : '');
             if (input && url !== input.value) input.value = url;
             if (url && !isValidScriptUrl(url)) {
@@ -3110,7 +3189,7 @@
             appState.adminToken = token;
             localStorage.setItem('rt_admin_token', token);
             showToast(token ? 'Token admin berhasil disimpan!' : 'Token admin dikosongkan.', token ? 'success' : 'info');
-            if (token && appState.scriptUrl) syncFromGoogleSheets();
+            if (token && apiBases().length) syncFromGoogleSheets();
         }
 
         // Arahkan admin ke tab Pengaturan untuk mengisi token yang valid.
@@ -3125,7 +3204,7 @@
             const deskPill = document.getElementById('desk-status-pill');
             const mobPill = document.getElementById('mob-status-pill');
 
-            if (appState.scriptUrl) {
+            if (apiBases().length) {
                 deskPill.className = "inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium";
                 deskPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5"></span> Connected`;
                 if(mobPill) mobPill.innerText = "Connected to Google Sheets";
@@ -3143,8 +3222,8 @@
             const checkbox = document.getElementById('toggle-public-portal');
             const enabled = checkbox ? checkbox.checked : true;
 
-            if (!appState.scriptUrl) {
-                showToast('Simpan Web App URL terlebih dahulu sebelum mengubah status portal.', 'error');
+            if (!apiBases().length) {
+                showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan.', 'error');
                 if (checkbox) checkbox.checked = !enabled;
                 return;
             }
@@ -3157,7 +3236,7 @@
             appState.portalEnabled = enabled;
             updatePublicPortalUI();
 
-            fetch(appState.scriptUrl, {
+            fetch(getApiBase() || getDirectBase(), {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -3224,7 +3303,8 @@
         }
 
         function sendToGoogleSheets(payload) {
-            if (!appState.scriptUrl) {
+            const base = getApiBase() || getDirectBase();
+            if (!base) {
                 console.log("Local mode active: Google Apps Script URL not configured.");
                 return;
             }
@@ -3237,10 +3317,10 @@
 
             const body = Object.assign({}, payload, { token: appState.adminToken });
 
-            // Send async POST request to Google Apps Script Web App.
-            // Use text/plain so this stays a CORS "simple request" (no preflight).
-            // The Apps Script doPost still reads the raw JSON via e.postData.contents.
-            fetch(appState.scriptUrl, {
+            // Send async POST request. Use text/plain so this stays a CORS
+            // "simple request" (no preflight); Apps Script doPost reads the raw
+            // JSON via e.postData.contents.
+            fetch(base, {
                 method: 'POST',
                 mode: 'no-cors', // Required because Apps Script does not return CORS headers
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -3256,99 +3336,52 @@
         }
 
         function testConnection() {
-            if (!appState.scriptUrl) {
-                showToast('Silakan masukkan Web App URL terlebih dahulu', 'error');
+            if (!apiBases().length) {
+                showToast('Koneksi Google Sheets belum dikonfigurasi.', 'error');
                 return;
             }
             showToast('Menguji koneksi ke Google Apps Script...', 'info');
             sendToGoogleSheets({ test: true });
         }
 
-        // Baca / muat data dari Google Sheets memakai JSONP (bebas kendala CORS)
+        // Baca / muat data dari Google Sheets memakai JSONP (bebas kendala CORS).
+        // Transport memakai proxy same-origin bila tersedia (lihat loadApiJsonp).
         function syncFromGoogleSheets() {
-            if (!appState.scriptUrl) {
-                showToast('Silakan masukkan dan simpan Web App URL terlebih dahulu', 'error');
-                return;
-            }
-            if (!isValidScriptUrl(appState.scriptUrl)) {
-                showToast('URL Web App tidak valid. Buka Pengaturan, tempel URL yang diakhiri /exec, lalu Simpan URL Koneksi.', 'error');
-                return;
-            }
-
             const callbackName = '__rtSheetsRead_' + Date.now();
-            const script = document.createElement('script');
-            const sep = appState.scriptUrl.indexOf('?') === -1 ? '?' : '&';
-
-            const cleanup = () => {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-            };
-
-            const timer = setTimeout(() => {
-                cleanup();
-                showToast('Timeout saat memuat data dari Google Sheets', 'error');
-            }, 15000);
-
-            window[callbackName] = function (res) {
-                clearTimeout(timer);
-                cleanup();
-                applySheetsData(res);
-            };
-
-            script.onerror = function () {
-                clearTimeout(timer);
-                cleanup();
-                showToast('Gagal memuat data dari Google Sheets', 'error');
-            };
-
-            script.src = appState.scriptUrl + sep + 'action=read&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName;
-            document.body.appendChild(script);
+            const started = loadApiJsonp(
+                () => 'action=read&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 15000,
+                    onSuccess: applySheetsData,
+                    onError: () => showToast('Gagal memuat data dari Google Sheets', 'error')
+                }
+            );
+            if (!started) showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan untuk mengatur.', 'error');
         }
 
         // Cek versi code.gs yang sedang aktif di Web App (untuk memastikan sudah redeploy).
         function checkBackendVersion() {
-            const url = resolveScriptUrl();
-            if (!url) {
-                showToast('Simpan Web App URL terlebih dahulu', 'error');
-                return;
-            }
-            if (!isValidScriptUrl(url)) {
-                showToast('URL Web App tidak valid. Pastikan diawali https://script.google.com/macros/s/ dan diakhiri /exec.', 'error');
-                return;
-            }
             const callbackName = '__rtVersion_' + Date.now();
-            const script = document.createElement('script');
-            const sep = url.indexOf('?') === -1 ? '?' : '&';
-            const cleanup = () => {
-                delete window[callbackName];
-                if (script.parentNode) script.parentNode.removeChild(script);
-            };
-            const timer = setTimeout(() => {
-                cleanup();
-                showToast('Timeout cek versi backend', 'error');
-            }, 10000);
-
-            window[callbackName] = function (res) {
-                clearTimeout(timer);
-                cleanup();
-                const v = res && res.version;
-                if (v === EXPECTED_BACKEND_VERSION) {
-                    showToast('Backend sudah versi terbaru (' + v + ')', 'success');
-                } else if (v) {
-                    showToast('Backend versi lama (' + v + '). Redeploy code.gs > New version.', 'error');
-                } else {
-                    showToast('Backend belum diperbarui. Redeploy code.gs > New version.', 'error');
+            const started = loadApiJsonp(
+                () => 'action=version&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 10000,
+                    onSuccess: (res) => {
+                        const v = res && res.version;
+                        if (v === EXPECTED_BACKEND_VERSION) {
+                            showToast('Backend sudah versi terbaru (' + v + ')', 'success');
+                        } else if (v) {
+                            showToast('Backend versi lama (' + v + '). Redeploy code.gs > New version.', 'error');
+                        } else {
+                            showToast('Backend belum diperbarui. Redeploy code.gs > New version.', 'error');
+                        }
+                    },
+                    onError: () => showToast('Gagal cek versi backend', 'error')
                 }
-            };
-
-            script.onerror = function () {
-                clearTimeout(timer);
-                cleanup();
-                showToast('Gagal cek versi backend', 'error');
-            };
-
-            script.src = url + sep + 'action=version&callback=' + callbackName;
-            document.body.appendChild(script);
+            );
+            if (!started) showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan untuk mengatur.', 'error');
         }
 
         function applySheetsData(res) {
