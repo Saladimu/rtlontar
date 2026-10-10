@@ -289,7 +289,7 @@ window.RT_CONFIG = {
 
 > **Auto hard refresh (versi config):** setiap kali mengubah `config.js`, naikkan `version` **dan** samakan `EXPECTED_CONFIG_VERSION` di `index.html` & `public.html`. Bila browser masih memegang HTML lama (versi tak cocok), halaman otomatis melakukan *hard refresh* sekali agar HTML & config sinkron; ada pengaman anti-loop, jadi tidak akan reload berulang. Selain itu, selama halaman admin terbuka, versi dipantau berkala: bila ada versi lebih baru, tombol **Muat Ulang** di sidebar **muncul berkedip** untuk di-klik pengurus.
 
-> **Kesadaran versi aplikasi (HTML):** agar perubahan `index.html`/`public.html` **saja** (walau `config.js` tidak berubah) juga memunculkan penanda "Muat Ulang" bagi pengguna yang masih membuka halaman lama, naikkan konstanta **`APP_BUILD`** pada file HTML yang berubah setiap kali deploy (bump hanya file yang diubah, agar halaman lain tidak diberi notifikasi palsu). Aplikasi memeriksa dua sinyal sekaligus — versi `config.js` dan `APP_BUILD` di server — saat halaman dimuat, lalu tiap 60 detik dan saat tab kembali aktif. Di `index.html` tombol **Muat Ulang** di sidebar muncul berkedip; di `public.html` tombol **Muat Ulang** di header ikut berkedip (label "Versi Baru") tanpa memaksa reload, agar warga yang sedang mengisi form tidak terganggu.
+> **Kesadaran versi aplikasi (HTML):** agar perubahan `index.html`/`public.html` **saja** (walau `config.js` tidak berubah) juga memunculkan penanda "Muat Ulang" bagi pengguna yang masih membuka halaman lama, naikkan konstanta **`APP_BUILD`** pada file HTML yang berubah **dan** nilai yang sesuai (`index`/`public`) di berkas kecil **`version.json`** setiap kali deploy (bump hanya yang diubah, agar halaman lain tidak diberi notifikasi palsu). Aplikasi memeriksa dua sinyal sekaligus — versi `config.js` dan `APP_BUILD` dari `version.json` — saat halaman dimuat, lalu tiap 60 detik dan saat tab kembali aktif. Pemeriksaan memakai `cache: 'no-cache'` sehingga server membalas **304 (tanpa body)** bila berkas tidak berubah (tidak lagi mengunduh seluruh HTML tiap menit). Di `index.html` tombol **Muat Ulang** di sidebar muncul berkedip; di `public.html` tombol **Muat Ulang** di header ikut berkedip (label "Versi Baru") tanpa memaksa reload, agar warga yang sedang mengisi form tidak terganggu.
 
 > **Versi rilis di footer (`appVersion`):** teks footer copyright menampilkan versi rilis (mis. `© 2026 SAPA RT - Portal Publik · v1.0.0`). Ubah `appVersion` di `config.js` saat ada rilis penting (tidak wajib tiap deploy). Arahkan kursor ke teks footer untuk melihat **detail build** (tooltip: `Build <APP_BUILD> · config v<version> · backend <CODE_VERSION>`) — berguna saat melaporkan masalah. Tiga penanda versi yang berbeda: `appVersion` (label rilis, tampil di footer), `version` (sinkronisasi `config.js` → memicu hard refresh), dan `APP_BUILD` (memicu penanda "Muat Ulang" saat HTML berubah).
 
@@ -329,6 +329,13 @@ npx tailwindcss@3 -c tailwind.config.js -i tailwind.input.css -o tailwind.css --
 
 Halaman juga memakai `preconnect` ke Google Fonts, cdnjs, dan `script.google.com`/`script.googleusercontent.com` (endpoint data) agar koneksi awal lebih cepat.
 
+### Optimasi jaringan
+
+- **Ikon WhatsApp pakai SVG inline** (bukan Font Awesome Brands), sehingga browser tidak lagi mengunduh `fa-brands-400.woff2` (~108 KB) hanya untuk satu ikon.
+- **Pemeriksaan update hemat kuota:** versi build HTML dibaca dari **`version.json`** yang kecil (dengan `cache: 'no-cache'` → respons **304 tanpa body** bila tidak berubah), bukan mengunduh ulang seluruh `index.html` tiap 60 detik.
+- **Caching aset (`_headers`):** berkas **`_headers`** (Cloudflare Pages) memberi `Cache-Control` lama (7 hari) untuk ikon statis ber-cache-buster (`rt-icon.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`), dan `must-revalidate` untuk `/config.js`, `/version.json`, `/sw.js` agar deteksi versi tetap akurat.
+- **Ikon dioptimalkan** (palet 256 warna): `rt-icon.png` 190 KB → 27 KB, `icon-192.png` 44 KB → 8 KB, `apple-touch-icon.png` 40 KB → 8 KB, `favicon.ico` 17 KB → 8 KB (multi-ukuran 16/32/48/64).
+
 ---
 
 ## 🌐 Publikasi & Kontrol Akses (Cloudflare Pages + Access)
@@ -340,7 +347,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 | `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
 | `/api` (proxy same-origin ke Apps Script) | Data portal publik & operasi admin | Terbuka (tanpa login); data tetap dijaga token `ADMIN_TOKEN` |
-| `/config.js`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js` | Aset pendukung + berkas PWA portal publik | Terbuka (tanpa login) |
+| `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js` | Aset pendukung + berkas PWA portal publik | Terbuka (tanpa login) |
 
 > **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Portal publik dan admin berbagi satu domain (`sapa-rt017.pages.dev`); bagikan ke warga cukup `https://sapa-rt017.pages.dev/public` (tanpa ekstensi `.html`). Tidak perlu domain/wrapper tambahan — keamanan admin bersumber dari Cloudflare Access pada path `/` & `/index.html`.
 
@@ -361,7 +368,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 
    **b. `RT Public Assets`** (mengecualikan aset publik)
    - Public hostname: `sapa-rt017.pages.dev` — Path `/public`
-   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`
+   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`
    - Policy: Action **Bypass**, Include → **Everyone**.
 
 4. **Simpan.** Perubahan berlaku langsung, tanpa redeploy.
@@ -403,10 +410,10 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 |--------------|----------------------|---------|
 | `config.js` (identitas, `jenisSurat`, `publicApiUrl`, `apiBase`, dll.) | `RT_CONFIG.version` **dan** `EXPECTED_CONFIG_VERSION` | `config.js`, `index.html`, `public.html` |
 | Rilis penting (label versi rilis) | `RT_CONFIG.appVersion` (opsional) | `config.js` |
-| `index.html` / `public.html` (tampilan, fitur, kelas CSS) | **`APP_BUILD`** | file HTML yang diubah |
+| `index.html` / `public.html` (tampilan, fitur, kelas CSS) | **`APP_BUILD`** **dan** nilai terkait di `version.json` | file HTML yang diubah, `version.json` |
 | `code.gs` (backend Apps Script) | `CODE_VERSION` **dan** `EXPECTED_BACKEND_VERSION`, lalu **redeploy New version** | `Apps Script/code.gs`, `index.html` |
 | Kelas Tailwind baru/berubah | (build ulang) `tailwind.css` | lihat **Performa** di atas |
 
-> Deteksi update memeriksa **dua sinyal**: versi `config.js` dan `APP_BUILD` pada HTML server. Karena itu, mengubah `index.html`/`public.html` tanpa menaikkan `APP_BUILD` **tidak** akan memunculkan tombol **Muat Ulang** pada pengguna yang membuka halaman lama. Di portal publik penanda hanya berkedip (label **"Versi Baru"**) tanpa reload paksa, agar warga yang sedang mengisi form tidak terganggu.
+> Deteksi update memeriksa **dua sinyal**: versi `config.js` dan `APP_BUILD` (dibaca dari `version.json` kecil — bukan lagi mengunduh seluruh HTML, agar hemat kuota). Karena itu, mengubah `index.html`/`public.html` tanpa menaikkan `APP_BUILD` **dan** `version.json` yang sesuai **tidak** akan memunculkan tombol **Muat Ulang** pada pengguna yang membuka halaman lama. `version.json` memuat kunci `index` (untuk halaman admin) dan `public` (untuk portal publik). Di portal publik penanda hanya berkedip (label **"Versi Baru"**) tanpa reload paksa, agar warga yang sedang mengisi form tidak terganggu.
 
 > **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server.

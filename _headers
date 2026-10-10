@@ -1,0 +1,24 @@
+# Aturan caching Cloudflare Pages.
+# Ikon statis (URL-nya diberi cache-buster ?v= di HTML) boleh di-cache lama.
+# Saat mengganti ikon, naikkan angka ?v= pada <link> di index.html & public.html.
+/rt-icon.png
+  Cache-Control: public, max-age=604800
+
+/icon-192.png
+  Cache-Control: public, max-age=604800
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=604800
+
+/favicon.ico
+  Cache-Control: public, max-age=604800
+
+# Berkas penanda versi: selalu revalidasi (ETag -> 304 tanpa body bila tak berubah).
+/config.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/version.json
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate

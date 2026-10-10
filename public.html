@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title data-rt="titlePublic">SAPA RT - Portal Publik</title>
-    <link rel="icon" href="favicon.ico?v=2" sizes="any">
-    <link rel="icon" type="image/png" href="rt-icon.png?v=2" sizes="512x512">
-    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
+    <link rel="icon" href="favicon.ico?v=3" sizes="any">
+    <link rel="icon" type="image/png" href="rt-icon.png?v=3" sizes="512x512">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png?v=3">
     <link rel="manifest" href="manifest-public.webmanifest">
     <meta name="theme-color" content="#0f172a">
     <meta name="mobile-web-app-capable" content="yes">
@@ -703,7 +703,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-6';
+        const APP_BUILD = '2026-10-09-7';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -763,12 +763,14 @@
         }
 
         // Cek apakah ada versi aplikasi/config yang lebih baru di server.
-        // Dua sinyal: (1) versi config.js, (2) versi build public.html.
+        // Dua sinyal: (1) versi config.js, (2) versi build public.html (dari
+        // version.json). Keduanya memakai cache:'no-cache' agar revalidasi ETag
+        // menghasilkan 304 (tanpa body) bila tidak berubah.
         function checkForUpdate() {
             const checks = [];
 
             try {
-                checks.push(fetch('config.js?v=' + Date.now(), { cache: 'no-store' })
+                checks.push(fetch('config.js', { cache: 'no-cache' })
                     .then(function (r) { return r && r.text ? r.text() : ''; })
                     .then(function (txt) {
                         const m = String(txt || '').match(/version\s*[:=]\s*['"]([^'"]+)['"]/);
@@ -782,12 +784,12 @@
             } catch (e) { /* abaikan */ }
 
             try {
-                checks.push(fetch(location.pathname + '?_rtcache=' + Date.now(), { cache: 'no-store' })
-                    .then(function (r) { return r && r.text ? r.text() : ''; })
-                    .then(function (txt) {
-                        const m = String(txt || '').match(/APP_BUILD\s*=\s*['"]([^'"]+)['"]/);
-                        if (m && m[1] !== APP_BUILD) {
-                            showUpdateAvailable('aplikasi ' + m[1]);
+                checks.push(fetch('version.json', { cache: 'no-cache' })
+                    .then(function (r) { return r && r.json ? r.json() : {}; })
+                    .then(function (j) {
+                        const build = j && j.public;
+                        if (build && build !== APP_BUILD) {
+                            showUpdateAvailable('aplikasi ' + build);
                             return true;
                         }
                         return false;
