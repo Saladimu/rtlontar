@@ -559,45 +559,45 @@
         <!-- ================= PANEL 5: GOOGLE SHEETS SETTINGS ================= -->
         <section id="panel-settings" class="tab-panel hidden space-y-6">
             <div class="border-b border-slate-200 pb-4">
-                <h2 class="text-2xl font-bold text-slate-800">Integrasi Google Sheets</h2>
-                <p class="text-sm text-slate-500">Hubungkan web ini dengan spreadsheet Google Apps Script Anda</p>
+                <h2 class="text-2xl font-bold text-slate-800">Google Sheets Integration</h2>
+                <p class="text-sm text-slate-500">Connect this web app to your Google Apps Script spreadsheet</p>
             </div>
 
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 max-w-3xl">
                 <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-2">
-                    <i class="fa-solid fa-database text-slate-400"></i> Sumber Data Aktif
+                    <i class="fa-solid fa-database text-slate-400"></i> Active Data Source
                 </h3>
                 <dl class="text-xs text-slate-600 space-y-1 break-all">
                     <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Transport</dt><dd id="conn-transport" class="font-mono">-</dd></div>
                     <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Web App URL</dt><dd id="conn-source" class="font-mono">-</dd></div>
-                    <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Versi backend</dt><dd id="conn-backend" class="font-mono">-</dd></div>
+                    <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Backend version</dt><dd id="conn-backend" class="font-mono">-</dd></div>
                 </dl>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-6 max-w-3xl">
                 <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-slate-700">Token Admin (ADMIN_TOKEN)</label>
+                    <label class="block text-sm font-semibold text-slate-700">Admin Token (ADMIN_TOKEN)</label>
                     <div class="flex items-center space-x-3">
-                        <input type="password" id="admin-token-input" autocomplete="off" placeholder="Token rahasia yang sama dengan Script Properties" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="password" id="admin-token-input" autocomplete="off" placeholder="Secret token matching Script Properties" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button onclick="saveAdminToken()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm whitespace-nowrap">
-                            Simpan Token
+                            Save Token
                         </button>
                     </div>
-                    <p class="text-xs text-slate-500">Wajib untuk menyimpan, mengubah, dan menghapus data. Harus sama dengan <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> di <i>Project Settings &gt; Script Properties</i> pada Apps Script. Tanpa token ini, operasi tulis akan ditolak oleh server.</p>
+                    <p class="text-xs text-slate-500">Required to save, edit, and delete data. Must match <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> in <i>Project Settings &gt; Script Properties</i> in Apps Script. Without this token, write operations are rejected by the server.</p>
                 </div>
 
                 <div class="flex items-center space-x-3">
                     <button onclick="testConnection()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Tes Koneksi
+                        Test Connection
                     </button>
                     <button onclick="syncFromGoogleSheets()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Muat Data dari Sheets
+                        Load Data from Sheets
                     </button>
                     <button onclick="checkBackendVersion()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Cek Versi Backend
+                        Check Backend Version
                     </button>
-                    <button onclick="resetAllData()" title="Mengosongkan data mode lokal/demo di browser ini (tidak menghapus data di Google Sheets)" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Reset Data Demo (Lokal)
+                    <button onclick="resetAllData()" title="Clears local/demo data in this browser (does not delete data in Google Sheets)" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
+                        Reset Demo Data (Local)
                     </button>
                 </div>
 
@@ -606,15 +606,15 @@
                 <!-- Mode Demo (Offline) -->
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
                     <h4 class="font-bold text-sm text-amber-800 flex items-center gap-2">
-                        <i class="fa-solid fa-flask"></i> Mode Demo (Offline) — tanpa Apps Script
+                        <i class="fa-solid fa-flask"></i> Demo Mode (Offline) — without Apps Script
                     </h4>
                     <p class="text-xs text-amber-800 leading-relaxed">
-                        Untuk <b>demo / uji coba</b> tanpa menyambung ke Google Sheets, kosongkan <code class="bg-amber-100 px-1 py-0.5 rounded">publicApiUrl</code> dan <code class="bg-amber-100 px-1 py-0.5 rounded">apiBase</code> di <b>config.js</b>. Aplikasi lalu berjalan dalam <b>mode lokal</b>: semua data (warga, iuran, pengumuman, kegiatan, pengajuan) hanya tersimpan di browser ini (<i>localStorage</i>) dan tidak dikirim ke server.
+                        For a <b>demo / trial</b> without connecting to Google Sheets, leave <code class="bg-amber-100 px-1 py-0.5 rounded">publicApiUrl</code> and <code class="bg-amber-100 px-1 py-0.5 rounded">apiBase</code> empty in <b>config.js</b>. The app then runs in <b>local mode</b>: all data (residents, dues, announcements, activities, requests) is stored only in this browser (<i>localStorage</i>) and is not sent to the server.
                     </p>
                     <ul class="list-disc list-inside text-xs text-amber-800 space-y-1">
-                        <li>Portal publik <b>tidak</b> menampilkan data mode lokal — portal publik hanya membaca dari Google Sheets.</li>
-                        <li>Setelah demo selesai, klik <b>Reset Data Demo (Lokal)</b> untuk mengosongkan data &amp; tampilan.</li>
-                        <li>Data di Google Sheets <b>tidak pernah</b> terhapus oleh tombol ini.</li>
+                        <li>The public portal does <b>not</b> show local-mode data — it only reads from Google Sheets.</li>
+                        <li>After the demo, click <b>Reset Demo Data (Local)</b> to clear the data &amp; display.</li>
+                        <li>Data in Google Sheets is <b>never</b> deleted by this button.</li>
                     </ul>
                 </div>
 
@@ -622,16 +622,16 @@
 
                 <!-- Tutorial Accordion / Guide -->
                 <div class="space-y-3">
-                    <h4 class="font-bold text-sm text-slate-800">Panduan Penyiapan Google Sheets & Apps Script:</h4>
+                    <h4 class="font-bold text-sm text-slate-800">Google Sheets & Apps Script Setup Guide:</h4>
                     <ol class="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
-                        <li>Buat file <b>Google Sheets</b> baru. Tab &amp; header dibuat/dirapikan otomatis saat pertama dijalankan: <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Data_Warga</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Iuran_Kas</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengumuman</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Kegiatan_Warga</code>, dan <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengajuan_Surat</code>.</li>
-                        <li>Buka menu <b>Ekstensi &gt; Apps Script</b> pada Google Sheets Anda.</li>
-                        <li>Salin seluruh isi file <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> (folder <b>Apps Script</b> proyek ini), lalu tempel menggantikan isi editor.</li>
-                        <li>Klik <b>Deploy &gt; New Deployment</b>. Pilih tipe <b>Web app</b> dengan <i>Execute as</i>: <b>Me</b>.</li>
-                        <li>Atur <i>Who has access</i> menjadi <b>Anyone</b> (Siapa saja).</li>
-                        <li>Di Apps Script buka <b>Project Settings &gt; Script Properties</b>, tambahkan properti <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">ADMIN_TOKEN</code> dengan nilai rahasia pilihan Anda (mis. <code class="bg-slate-100 px-1 py-0.5 rounded">rt-rahasia-2026</code>). Tambahkan juga <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_EMAIL</code> agar notifikasi email pengajuan surat aktif (lalu jalankan fungsi <code class="bg-slate-100 px-1 py-0.5 rounded">authorizeMail</code> sekali).</li>
-                        <li>Salin <b>Web App URL</b> (berakhiran <code class="bg-slate-100 px-1 py-0.5 rounded">/exec</code>) ke <code class="bg-slate-100 px-1 py-0.5 rounded">publicApiUrl</code> di <b>config.js</b> — dan ke <code class="bg-slate-100 px-1 py-0.5 rounded">APPS_SCRIPT_URL</code> di Cloudflare Pages bila memakai proxy <code class="bg-slate-100 px-1 py-0.5 rounded">/api</code>. Lalu isi <b>Token Admin</b> dengan nilai yang sama dan klik <b>Simpan Token</b>.</li>
-                        <li>Deploy ulang sebagai <b>New version</b> setiap kali <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> diubah.</li>
+                        <li>Create a new <b>Google Sheets</b> file. Tabs &amp; headers are created/fixed automatically on first run: <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Data_Warga</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Iuran_Kas</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengumuman</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Kegiatan_Warga</code>, and <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengajuan_Surat</code>.</li>
+                        <li>Open the <b>Extensions &gt; Apps Script</b> menu in your Google Sheets.</li>
+                        <li>Copy the entire contents of the <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> file (in this project's <b>Apps Script</b> folder), then paste it to replace the editor's contents.</li>
+                        <li>Click <b>Deploy &gt; New Deployment</b>. Choose type <b>Web app</b> with <i>Execute as</i>: <b>Me</b>.</li>
+                        <li>Set <i>Who has access</i> to <b>Anyone</b>.</li>
+                        <li>In Apps Script open <b>Project Settings &gt; Script Properties</b>, add an <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">ADMIN_TOKEN</code> property with your chosen secret value (e.g. <code class="bg-slate-100 px-1 py-0.5 rounded">rt-secret-2026</code>). Also add <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_EMAIL</code> to enable email notifications for letter requests (then run the <code class="bg-slate-100 px-1 py-0.5 rounded">authorizeMail</code> function once).</li>
+                        <li>Copy the <b>Web App URL</b> (ending in <code class="bg-slate-100 px-1 py-0.5 rounded">/exec</code>) into <code class="bg-slate-100 px-1 py-0.5 rounded">publicApiUrl</code> in <b>config.js</b> — and into <code class="bg-slate-100 px-1 py-0.5 rounded">APPS_SCRIPT_URL</code> in Cloudflare Pages if using the <code class="bg-slate-100 px-1 py-0.5 rounded">/api</code> proxy. Then enter the same value in <b>Admin Token</b> and click <b>Save Token</b>.</li>
+                        <li>Redeploy as <b>New version</b> whenever <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> changes.</li>
                     </ol>
                 </div>
             </div>
@@ -1161,7 +1161,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-3';
+        const APP_BUILD = '2026-10-09-4';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3169,18 +3169,18 @@
             const active = appState.activeBase || '';
             if (active) {
                 if (proxy && active === proxy) {
-                    transportEl.textContent = direct ? ('Proxy ' + proxy + ' (aktif) · cadangan: langsung') : ('Proxy ' + proxy + ' (aktif)');
+                    transportEl.textContent = direct ? ('Proxy ' + proxy + ' (active) · fallback: direct') : ('Proxy ' + proxy + ' (active)');
                 } else {
-                    transportEl.textContent = 'Langsung ke Apps Script (aktif)';
+                    transportEl.textContent = 'Direct to Apps Script (active)';
                 }
             } else if (proxy && direct) {
-                transportEl.textContent = 'Proxy ' + proxy + ' (cadangan: langsung)';
+                transportEl.textContent = 'Proxy ' + proxy + ' (fallback: direct)';
             } else if (proxy) {
                 transportEl.textContent = 'Proxy ' + proxy;
             } else if (direct) {
-                transportEl.textContent = 'Langsung ke Apps Script';
+                transportEl.textContent = 'Direct to Apps Script';
             } else {
-                transportEl.textContent = 'Tidak dikonfigurasi (mode lokal)';
+                transportEl.textContent = 'Not configured (local mode)';
             }
             sourceEl.textContent = direct || '—';
             backendEl.textContent = appState.backendVersion || '—';
