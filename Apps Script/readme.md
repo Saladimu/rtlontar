@@ -187,6 +187,7 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 | `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
 | `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
+| `lookupWarga` | `action=lookupWarga&nik=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **NIK (16 digit) persis** untuk mengisi otomatis **Nama, No. HP, & Alamat** pada form pengajuan surat. Ketemu → `{result:"success", found:true, nama, noHp, alamat}`; tidak → `{found:false}` (warga tetap boleh mengisi manual). Hanya 3 field itu yang dibuka (bukan seluruh data warga). Ter-gate status portal; dibatasi ≤ 20 pencarian/jam per NIK. Mendukung JSONP |
 | `sendTestEmail` | `action=sendTestEmail&token=T` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; bila scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
@@ -207,6 +208,13 @@ GET https://script.google.com/macros/s/XXXX/exec?action=readPublic&callback=myCa
 GET https://script.google.com/macros/s/XXXX/exec?action=checkSurat&nik=3173012304567890&hp=081234567890&callback=myCallback
 ```
 Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tanggal":"06-10-2026 13:00","jenisSurat":"Surat Pengantar KTP-el","status":"Diproses","catatan":"Menunggu tanda tangan"}]}`
+
+**Contoh Lookup Warga berdasarkan NIK (form pengajuan surat):**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
+```
+Respons (ditemukan): `{"result":"success","version":"publik-v15-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v15-2026-10-11","found":false}`
 
 **Contoh Delete:**
 ```

@@ -231,15 +231,16 @@
                     <div id="surat-panel-ajukan" class="px-5 pb-5 hidden">
                     <form id="surat-form" class="space-y-3" onsubmit="return submitSuratWarga(event)">
                         <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
-                            <input id="surat-nama" type="text" required maxlength="100" autocomplete="name"
-                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-                        </div>
-                        <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
                             <input id="surat-nik" type="text" required inputmode="numeric" maxlength="16" autocomplete="off" oninput="onSuratNIKInput(this, 'surat-nik-hint')"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
                             <p id="surat-nik-hint" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500"></p>
+                            <p id="surat-nik-lookup" class="text-xs mt-1 leading-snug hidden"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
+                            <input id="surat-nama" type="text" required maxlength="100" autocomplete="name"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
@@ -430,7 +431,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">2</span>
-                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Isi data dengan benar: <b>Nama Lengkap</b>, <b>NIK (16 digit)</b>, <b>No. HP/WhatsApp</b>, <b>Alamat / No. Rumah</b>, pilih <b>Jenis Surat</b>, dan tulis <b>Keperluan</b>.</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Isi data dengan benar: masukkan <b>NIK (16 digit)</b> lebih dulu — bila NIK terdaftar di <b>data warga</b>, kolom <b>Nama Lengkap</b>, <b>No. HP/WhatsApp</b>, &amp; <b>Alamat / No. Rumah</b> terisi otomatis (tetap dapat diubah). Jika NIK tidak terdaftar, isi kolom tersebut secara manual. Lalu pilih <b>Jenis Surat</b> dan tulis <b>Keperluan</b>.</span>
                     </li>
                     <li class="flex gap-3">
                         <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">3</span>
@@ -452,7 +453,8 @@
                 <div class="mt-4 bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3">
                     <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>Tips</p>
                     <ul class="text-xs text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
-                        <li>NIK & No. HP saat cek status harus <b>sama persis</b> dengan saat mengajukan.</li>
+                        <li>NIK &amp; No. HP saat cek status harus <b>sama persis</b> dengan saat mengajukan.</li>
+                        <li>Bila NIK tidak terdaftar di data warga, pengajuan <b>tetap bisa dikirim</b> dengan mengisi data secara manual.</li>
                         <li>Satu NIK dibatasi maksimal <b>5 pengajuan</b>.</li>
                         <li>Data pribadi aman: portal hanya menampilkan pengajuan yang cocok dengan NIK & No. HP Anda.</li>
                     </ul>
@@ -593,21 +595,89 @@
         }
 
         // Handler real-time untuk input NIK: hanya angka, maks 16, sekaligus
-        // memvalidasi tanggal lahir yang tersandi di dalam NIK.
+        // memvalidasi tanggal lahir yang tersandi di dalam NIK. Untuk kolom NIK
+        // pada form surat, sekaligus memicu pencarian data warga (lihat di bawah).
         function onSuratNIKInput(el, hintId) {
             if (!el) return;
             const digits = String(el.value || '').replace(/\D/g, '').slice(0, 16);
             if (digits !== el.value) el.value = digits;
-            if (!digits) { setSuratNIKHint(hintId, '', ''); return; }
-            if (digits.length < 16) {
+            const isSuratForm = (el.id === 'surat-nik');
+            const validNik = (digits.length === 16 && !!parseNIK(digits));
+            if (!digits) {
+                setSuratNIKHint(hintId, '', '');
+            } else if (digits.length < 16) {
                 setSuratNIKHint(hintId, 'NIK ' + digits.length + '/16 digit.', '');
-                return;
-            }
-            if (!parseNIK(digits)) {
+            } else if (!parseNIK(digits)) {
                 setSuratNIKHint(hintId, 'Harap periksa ulang NIK', 'warn');
-                return;
+            } else {
+                setSuratNIKHint(hintId, 'NIK valid.', 'ok');
             }
-            setSuratNIKHint(hintId, 'NIK valid.', 'ok');
+            if (isSuratForm) scheduleWargaLookup(validNik ? digits : '');
+        }
+
+        // ===== Lookup data warga berdasarkan NIK (bantu isi form surat) =====
+        // Saat NIK 16 digit & valid, cari warga di Data_Warga (action=lookupWarga).
+        // Ketemu  -> isi Nama/No. HP/Alamat otomatis + info.
+        // Tak ada  -> info NIK tidak terdaftar; form TETAP dapat diisi & dikirim.
+        let wargaLookupTimer = null;
+        let wargaLookupSeq = 0;
+
+        function setSuratNikLookup(kind, html) {
+            const el = document.getElementById('surat-nik-lookup');
+            if (!el) return;
+            if (!html) { el.textContent = ''; el.className = 'text-xs mt-1 leading-snug hidden'; return; }
+            const cls = kind === 'warn'
+                ? 'text-amber-600 dark:text-amber-300'
+                : kind === 'ok'
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-slate-400 dark:text-slate-500';
+            el.className = 'text-xs mt-1 leading-snug ' + cls;
+            el.innerHTML = html;
+        }
+
+        function scheduleWargaLookup(nik) {
+            if (wargaLookupTimer) { clearTimeout(wargaLookupTimer); wargaLookupTimer = null; }
+            wargaLookupSeq += 1;
+            const seq = wargaLookupSeq;
+            if (!nik || nik.length !== 16 || !parseNIK(nik)) { setSuratNikLookup('', ''); return; }
+            setSuratNikLookup('', '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mencari data warga...');
+            wargaLookupTimer = setTimeout(function () { lookupWargaByNik(nik, seq); }, 500);
+        }
+
+        function lookupWargaByNik(nik, seq) {
+            if (!apiBases().length) { setSuratNikLookup('', ''); return; }
+            const callbackName = '__wargaLookup_' + Date.now() + '_' + seq;
+            loadApiJsonp(
+                function () { return 'action=lookupWarga&nik=' + encodeURIComponent(nik) + '&callback=' + callbackName; },
+                callbackName,
+                {
+                    timeout: 12000,
+                    onSuccess: function (res) {
+                        if (seq !== wargaLookupSeq) return;
+                        if (!res || res.result !== 'success') { setSuratNikLookup('', ''); return; }
+                        if (res.found) {
+                            fillSuratFromWarga(res);
+                            setSuratNikLookup('ok', '<i class="fa-solid fa-circle-check mr-1"></i> Data warga ditemukan: <b>' +
+                                escapeHtml(res.nama || '') + '</b>. Nama, No. HP, &amp; Alamat terisi otomatis — silakan periksa &amp; ubah bila perlu.');
+                        } else {
+                            setSuratNikLookup('warn', '<i class="fa-solid fa-circle-info mr-1"></i> NIK tidak terdaftar dalam data warga. Anda tetap dapat mengisi data di bawah secara manual.');
+                        }
+                    },
+                    onError: function () {
+                        if (seq !== wargaLookupSeq) return;
+                        setSuratNikLookup('', '');
+                    }
+                }
+            );
+        }
+
+        function fillSuratFromWarga(res) {
+            const namaEl = document.getElementById('surat-nama');
+            const hpEl = document.getElementById('surat-hp');
+            const alamatEl = document.getElementById('surat-alamat');
+            if (namaEl && res.nama) namaEl.value = res.nama;
+            if (hpEl && res.noHp) hpEl.value = res.noHp;
+            if (alamatEl && res.alamat) alamatEl.value = res.alamat;
         }
 
         // Ambil URL Web App: utamakan config.js, lalu ?url=...
@@ -703,7 +773,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-8';
+        const APP_BUILD = '2026-10-09-10';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -943,7 +1013,6 @@
             whenConfigReady(function () {
                 if (enforceConfigVersion()) return;
                 WEB_APP_URL = getWebAppUrl();
-                updateLastUpdated();
                 decorateFooterBuildInfo();
                 initSuratForm();
                 startUpdateWatcher();
@@ -1041,13 +1110,19 @@
             return `${hours}:${minutes} ${ampm}`;
         }
 
-        function updateLastUpdated() {
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('id-ID', {
-                day: 'numeric', month: 'short', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
+        // "Terakhir diperbarui" = tanggal terbaru dari Pengumuman & Kegiatan Warga
+        // yang tampil di portal publik (bukan waktu perangkat pengunjung).
+        function updateLastUpdated(pengumuman, kegiatan) {
+            const el = document.getElementById('last-update-time');
+            if (!el) return;
+            let latest = '';
+            [pengumuman, kegiatan].forEach(function (list) {
+                (list || []).forEach(function (item) {
+                    const iso = item && item.tanggalISO ? String(item.tanggalISO).trim() : '';
+                    if (/^\d{4}-\d{2}-\d{2}/.test(iso) && iso > latest) latest = iso;
+                });
             });
-            document.getElementById('last-update-time').innerText = dateStr;
+            el.innerText = latest ? formatDateDDMMMYYYY(latest) : '-';
         }
 
         // Tampilkan spinner di kedua container saat memuat data.
@@ -1108,6 +1183,7 @@
 
                             renderPengumuman(pengumuman);
                             renderKegiatan(kegiatan);
+                            updateLastUpdated(pengumuman, kegiatan);
                         } else if (res && res.code === 'portal_disabled') {
                             showPortalDisabled();
                         } else {
@@ -1327,6 +1403,8 @@
             .then(function () {
                 setSuratBusy(false);
                 document.getElementById('surat-form').reset();
+                setSuratNIKHint('surat-nik-hint', '', '');
+                setSuratNikLookup('', '');
                 showSuratMessage('success',
                     '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
                     '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');

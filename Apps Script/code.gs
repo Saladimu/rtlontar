@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v14-2026-10-09";
+var CODE_VERSION = "publik-v15-2026-10-11";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -158,6 +158,9 @@ function doGet(e) {
   } else if (params.action === 'checkSurat') {
     // Cek status pengajuan surat oleh warga: cocokkan NIK + No. HP. Tanpa token.
     payload = handleCheckSurat(params);
+  } else if (params.action === 'lookupWarga') {
+    // Cari profil warga berdasarkan NIK (bantu isi form surat). Tanpa token.
+    payload = handleLookupWarga(params);
   } else if (params.action === 'sendTestEmail') {
     // Kirim email uji notifikasi (butuh token admin).
     payload = isAuthorized(params.token) ? handleSendTestEmail() : unauthorized();
@@ -837,6 +840,111 @@ function handleCheckSurat(params) {
   results.reverse(); // terbaru lebih dahulu
 
   return { "result": "success", "version": CODE_VERSION, "count": results.length, "data": results };
+}
+
+// ================= LOOKUP WARGA (bantu isi form surat) =================
+// Cari SATU warga berdasarkan NIK (16 digit) persis, untuk mengisi otomatis
+// Nama, No. HP, & Alamat pada form pengajuan surat portal publik. Bukan untuk
+// membaca seluruh data warga: hanya 3 field itu yang dikembalikan. Tetap
+// ter-gate oleh status portal + rate-limited untuk mencegah enumerasi NIK.
+// Indeks kolom Data_Warga (termasuk kolom A Timestamp):
+//   2 = Nama Lengkap, 5 = NIK, 10 = No HP, 12 = Alamat/No Rumah.
+var WARGA_COL_NAMA = 2;
+var WARGA_COL_NIK = 5;
+var WARGA_COL_HP = 10;
+var WARGA_COL_ALAMAT = 12;
+
+var WARGA_LOOKUP_MAX_PER_KEY = 20;
+var WARGA_LOOKUP_MAX_GLOBAL = 200;
+
+function checkAndRecordWargaLookupRate(key) {
+  var props = PropertiesService.getScriptProperties();
+  var now = Date.now();
+  var data;
+  try {
+    var raw = props.getProperty('WARGA_LOOKUP_RATE');
+    data = raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    data = {};
+  }
+  if (!data || typeof data !== 'object') data = {};
+
+  function prune(arr) {
+    var out = [];
+    for (var i = 0; i < (arr || []).length; i++) {
+      if (now - arr[i] < SURAT_RATE_WINDOW_MS) out.push(arr[i]);
+    }
+    return out;
+  }
+
+  var global = prune(data._global);
+  if (global.length >= WARGA_LOOKUP_MAX_GLOBAL) return false;
+
+  var k = 'key:' + key;
+  var list = prune(data[k]);
+  if (list.length >= WARGA_LOOKUP_MAX_PER_KEY) return false;
+
+  list.push(now);
+  global.push(now);
+  data[k] = list;
+  data._global = global;
+  props.setProperty('WARGA_LOOKUP_RATE', JSON.stringify(data));
+  return true;
+}
+
+// Handler aksi publik `lookupWarga`: cocokkan NIK persis.
+// Ketemu  -> { result:"success", found:true,  nama, noHp, alamat }
+// Tidak    -> { result:"success", found:false }
+// Warga TETAP boleh mengisi form manual walau NIK tidak terdaftar.
+function handleLookupWarga(params) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+
+  var nik = cleanStr(params.nik, 40).replace(/\D/g, '');
+  if (!/^\d{16}$/.test(nik)) {
+    // Bukan NIK valid -> anggap "tidak ditemukan" (bukan error), agar frontend
+    // cukup menampilkan info tanpa memblokir pengisian manual.
+    return { "result": "success", "version": CODE_VERSION, "found": false, "code": "invalid_nik" };
+  }
+
+  if (!checkAndRecordWargaLookupRate(nik)) {
+    return suratError('rate_limited', 'Terlalu banyak pencarian. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Data_Warga');
+  var found = null;
+
+  if (sheet) {
+    ensureSpreadsheetFormat(ss, sheet, 'Data_Warga');
+    var rows = ensureIds(sheet, 'Data_Warga');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var rNik = String(row[WARGA_COL_NIK] === undefined || row[WARGA_COL_NIK] === null ? '' : row[WARGA_COL_NIK]).replace(/\D/g, '');
+      if (rNik === nik) {
+        found = {
+          "nama": cleanStr(row[WARGA_COL_NAMA], 100),
+          "noHp": cleanStr(row[WARGA_COL_HP], 30),
+          "alamat": cleanStr(row[WARGA_COL_ALAMAT], 200)
+        };
+        break;
+      }
+    }
+  }
+
+  if (!found) {
+    return { "result": "success", "version": CODE_VERSION, "found": false };
+  }
+
+  return {
+    "result": "success",
+    "version": CODE_VERSION,
+    "found": true,
+    "nama": found.nama,
+    "noHp": found.noHp,
+    "alamat": found.alamat
+  };
 }
 
 // Handler aksi publik `submitSurat`: validasi, rate limit, simpan, notifikasi.
