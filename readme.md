@@ -320,6 +320,30 @@ Untuk memperagakan aplikasi ke pengguna **tanpa** menghubungkan ke Google Sheets
 
 ---
 
+## 🖥️ Pratinjau Lokal (Mock Backend, Tanpa Menyentuh Produksi)
+
+Untuk menguji aplikasi **lengkap dengan sinkronisasi data** di komputer tanpa mengubah data di Google Sheets, tersedia **mock backend** lokal (`tools/mock-server.js`). Server ini menggantikan peran Cloudflare Pages: menyajikan berkas statis (`/`, `/public`) **dan** menangani endpoint same-origin `/api` persis seperti kontrak Google Apps Script.
+
+```bash
+# Jalankan pratinjau lokal (default http://localhost:8000)
+node tools/mock-server.js
+
+# Ganti port bila perlu
+PORT=8080 node tools/mock-server.js
+
+# Tulis ulang data contoh (mulai dari nol)
+node tools/mock-server.js --reset
+```
+
+- Data disimpan di `tools/mock-data.json` (dibuat otomatis; berkas ini **tidak** ikut di-commit — lihat `.gitignore`).
+- Karena `/api` dilayani penuh oleh server lokal, **tidak ada** permintaan keluar ke `script.google.com`. Google Sheets dan situs produksi **tidak tersentuh sama sekali**.
+- Endpoint yang didukung: `version`, `read`, `readPublic`, `checkSurat`, `lookupWarga`, `sendTestEmail`, `delete` (GET), serta `add` / `update` / `delete` / `setPortalStatus` / `submitSurat` (POST).
+- Token admin boleh diisi apa saja (mock tidak menyimpan rahasia). Portal publik, arsip warga, dan format No. Surat (`SRT-<yymmdd>-XXXX`) juga disimulasikan agar perilaku mendekati produksi.
+
+> Selama pratinjau lokal berjalan, **semua** perubahan data hanya tersimpan di `tools/mock-data.json`. Menghapus/mengedit berkas itu hanya memengaruhi data lokal, bukan produksi.
+
+---
+
 ## ⚡ Performa (Tailwind CSS Statis)
 
 Aplikasi **tidak lagi memakai Tailwind Play CDN** (`cdn.tailwindcss.com`). Dulu CDN tersebut mengunduh *engine* Tailwind (ratusan KB) secara *blocking* lalu men-*generate* CSS di browser saat halaman dibuka, sehingga terasa lambat. Sekarang CSS Tailwind sudah **dibangun lebih dulu** menjadi satu berkas statis kecil (`tailwind.css`, ~35 KB) yang langsung dipakai halaman admin & portal publik.
