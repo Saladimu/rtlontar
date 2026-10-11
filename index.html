@@ -370,8 +370,8 @@
                     <table class="w-full text-left text-sm border-collapse">
                         <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
                             <tr>
-                                <th class="px-3 py-2.5">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span></th>
-                                <th class="px-3 py-2.5">Nama Lengkap / Usia</th>
+                                <th class="px-3 py-2.5 cursor-pointer select-none whitespace-nowrap" onclick="toggleWargaSort('nomorKK')" title="Klik untuk urutkan No. KK (naik / turun / tanpa urutan)">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span><i id="sort-warga-kk" class="fa-solid fa-sort text-xs ml-1 text-slate-400"></i></th>
+                                <th class="px-3 py-2.5 cursor-pointer select-none whitespace-nowrap" onclick="toggleWargaSort('nama')" title="Klik untuk urutkan Nama Lengkap (naik / turun / tanpa urutan)">Nama Lengkap / Usia<i id="sort-warga-nama" class="fa-solid fa-sort text-xs ml-1 text-slate-400"></i></th>
                                 <th class="px-3 py-2.5">NIK / No. HP</th>
                                 <th class="px-3 py-2.5">Tempat / Tgl Lahir</th>
                                 <th class="px-3 py-2.5">Status / Jenis Kelamin</th>
@@ -1207,7 +1207,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-04';
+        const APP_BUILD = '2026-10-11-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1603,6 +1603,7 @@
             decorateFooterBuildInfo();
             renderDashboardStats();
             initShowArchivedWarga();
+            initWargaSort();
             renderWargaTable();
             initKasView();
             renderKasTable();
@@ -2005,6 +2006,10 @@
         // Tampilkan data warga yang diarsipkan (disembunyikan secara default).
         let showArchivedWarga = localStorage.getItem('rt_show_archived_warga') === '1';
 
+        // Pengurutan tabel warga (kolom No. KK / Nama Lengkap): klik header
+        // bersiklus asc -> desc -> tanpa urutan. key: 'nomorKK' | 'nama' | null.
+        let wargaSort = { key: null, dir: 1 };
+
         function isArchivedWarga(item) {
             if (!item) return false;
             if (item.arsip === true) return true;
@@ -2022,6 +2027,60 @@
         function initShowArchivedWarga() {
             const el = document.getElementById('show-archived-warga');
             if (el) el.checked = showArchivedWarga;
+        }
+
+        // Bandingkan dua item warga menurut kolom yang dipilih (locale-aware,
+        // angka dikenali sehingga No. KK 16 digit terurut benar).
+        function compareWargaItems(a, b, key) {
+            const av = (a && a[key] != null ? String(a[key]) : '').trim();
+            const bv = (b && b[key] != null ? String(b[key]) : '').trim();
+            if (!av && !bv) return 0;
+            if (!av) return 1;  // nilai kosong selalu di akhir
+            if (!bv) return -1;
+            return av.localeCompare(bv, 'id', { numeric: true, sensitivity: 'base' });
+        }
+
+        // Perbarui ikon indikator header (netral / naik / turun).
+        function renderWargaSortIcons() {
+            [['nomorKK', 'sort-warga-kk'], ['nama', 'sort-warga-nama']].forEach(function (pair) {
+                const el = document.getElementById(pair[1]);
+                if (!el) return;
+                let cls = 'fa-solid text-xs ml-1 ';
+                if (wargaSort.key !== pair[0]) cls += 'fa-sort text-slate-400';
+                else if (wargaSort.dir === 1) cls += 'fa-sort-up text-blue-600';
+                else cls += 'fa-sort-down text-blue-600';
+                el.className = cls;
+            });
+        }
+
+        function saveWargaSort() {
+            try {
+                if (wargaSort.key) localStorage.setItem('rt_warga_sort', wargaSort.key + ':' + wargaSort.dir);
+                else localStorage.removeItem('rt_warga_sort');
+            } catch (e) { /* abaikan */ }
+        }
+
+        // Klik header: kolom lain -> asc; kolom sama -> desc; lalu -> tanpa urutan.
+        function toggleWargaSort(key) {
+            if (wargaSort.key !== key) wargaSort = { key: key, dir: 1 };
+            else if (wargaSort.dir === 1) wargaSort = { key: key, dir: -1 };
+            else wargaSort = { key: null, dir: 1 };
+            saveWargaSort();
+            wargaPage = 1;
+            renderWargaTable();
+        }
+
+        function initWargaSort() {
+            try {
+                const saved = localStorage.getItem('rt_warga_sort');
+                if (saved) {
+                    const parts = saved.split(':');
+                    if ((parts[0] === 'nomorKK' || parts[0] === 'nama') && (parts[1] === '1' || parts[1] === '-1')) {
+                        wargaSort = { key: parts[0], dir: parseInt(parts[1], 10) };
+                    }
+                }
+            } catch (e) { /* abaikan */ }
+            renderWargaSortIcons();
         }
 
         function gotoWargaPage(page) {
@@ -2085,11 +2144,23 @@
             });
             const aktifItems = matched.filter(item => !isArchivedWarga(item));
             const archivedItems = showArchivedWarga ? matched.filter(item => isArchivedWarga(item)) : [];
-            const filtered = showArchivedWarga ? archivedItems.concat(aktifItems) : aktifItems;
+
+            // Terapkan pengurutan pada tiap kelompok (arsip & aktif terpisah) agar
+            // bagian arsip tetap di atas saat "Tampilkan arsip" aktif.
+            const sortItems = arr => {
+                if (!wargaSort.key) return arr.slice();
+                const dir = wargaSort.dir;
+                return arr.slice().sort((a, b) => dir * compareWargaItems(a, b, wargaSort.key));
+            };
+            const aktifSorted = sortItems(aktifItems);
+            const archivedSorted = sortItems(archivedItems);
+            const filtered = showArchivedWarga ? archivedSorted.concat(aktifSorted) : aktifSorted;
             // Tampilkan judul pemisah hanya bila ada baris arsip yang ikut ditampilkan.
             const showSections = showArchivedWarga && archivedItems.length > 0;
             const firstArchivedPos = 0;
             const firstActivePos = archivedItems.length;
+
+            renderWargaSortIcons();
 
             const anyFilter = search !== '' || filterStatus !== '';
 
@@ -2098,7 +2169,7 @@
             if (countEl) countEl.textContent = '(' + filtered.length + ')';
 
             // Setiap perubahan pencarian/filter mengembalikan tampilan ke halaman pertama.
-            const filterSig = [search, filterStatus, showArchivedWarga ? '1' : '0'].join('\u0001');
+            const filterSig = [search, filterStatus, showArchivedWarga ? '1' : '0', wargaSort.key || '', wargaSort.dir].join('\u0001');
             if (filterSig !== wargaFilterSig) { wargaFilterSig = filterSig; wargaPage = 1; }
 
             if (filtered.length === 0) {
