@@ -1207,7 +1207,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-02';
+        const APP_BUILD = '2026-10-11-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1368,7 +1368,46 @@
             const el = document.getElementById('warga-nik-hint');
             if (!el) return;
             el.textContent = msg || '';
-            el.className = 'text-xs leading-snug ' + (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400'));
+            el.className = 'text-xs leading-snug ' + (kind === 'err' ? 'text-rose-600' : (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400')));
+        }
+
+        // Nilai NIK dibandingkan sebagai digit saja (abaikan spasi/tanda).
+        function nikKey(v) {
+            return String(v === null || v === undefined ? '' : v).replace(/\D/g, '');
+        }
+
+        // Cari baris warga lain dengan NIK sama (digit). excludeIndex untuk mode edit
+        // agar baris yang sedang diedit tidak dianggap duplikat dirinya sendiri.
+        function findWargaByNik(nik, excludeIndex) {
+            const key = nikKey(nik);
+            if (!key) return -1;
+            for (let i = 0; i < appState.warga.length; i++) {
+                if (i === excludeIndex) continue;
+                if (nikKey(appState.warga[i] && appState.warga[i].nik) === key) return i;
+            }
+            return -1;
+        }
+
+        // Indeks baris warga yang sedang diedit (-1 bila mode tambah).
+        function wargaEditIndex() {
+            if (editMode.warga === null || editMode.warga === undefined) return -1;
+            return findIndexById(appState.warga, editMode.warga);
+        }
+
+        // Tolak NIK ganda pada Data_Warga. Mengembalikan true bila unik/kosong.
+        // silent=true hanya menampilkan catatan (tanpa toast) — dipakai saat mengetik.
+        function validateWargaNikUnique(data, excludeIndex, silent) {
+            const key = nikKey(data && data.nik);
+            if (!key) return true; // NIK kosong tidak diperiksa
+            const dupIdx = findWargaByNik(data.nik, excludeIndex);
+            if (dupIdx === -1) return true;
+            const dup = appState.warga[dupIdx];
+            const who = (dup && dup.nama) ? dup.nama : 'warga lain';
+            setNIKHint('NIK ini sudah terdaftar untuk ' + who + '. Satu NIK tidak boleh ganda.', 'err');
+            const nikEl = document.getElementById('warga-nik');
+            if (nikEl && typeof nikEl.focus === 'function') nikEl.focus();
+            if (!silent && typeof showToast === 'function') showToast('NIK sudah terdaftar untuk ' + who + ' (tidak boleh ganda).', 'error');
+            return false;
         }
 
         // Nilai yang terakhir KAMI isikan otomatis dari NIK (bentuk tampilan).
@@ -1422,8 +1461,13 @@
         function onNIKInput(el) {
             const digits = String(el.value || '').replace(/\D/g, '').slice(0, 16);
             if (digits !== el.value) el.value = digits;
-            if (digits.length === 16) fillWargaFromNIK(false);
-            else setNIKHint(digits.length ? (digits.length + '/16 digit') : '', '');
+            if (digits.length === 16) {
+                fillWargaFromNIK(false);
+                // Peringatan awal bila NIK sudah dipakai baris warga lain.
+                validateWargaNikUnique({ nik: digits }, wargaEditIndex(), true);
+            } else {
+                setNIKHint(digits.length ? (digits.length + '/16 digit') : '', '');
+            }
         }
 
         // Batasi input No. HP hanya angka (maks. 15 digit), mis. menolak huruf/simbol.
@@ -2465,7 +2509,10 @@
             if (editMode.warga !== null) {
                 const editId = editMode.warga;
                 const idx = findIndexById(appState.warga, editId);
-                const prevArsip = (idx !== -1 && appState.warga[idx]) ? (appState.warga[idx].arsip || 'Tidak') : 'Tidak';
+                const prev = (idx !== -1) ? appState.warga[idx] : null;
+                // Tolak NIK ganda bila NIK diubah (selain baris ini sendiri).
+                if (nikKey(data.nik) !== nikKey(prev && prev.nik) && !validateWargaNikUnique(data, idx)) return;
+                const prevArsip = prev ? (prev.arsip || 'Tidak') : 'Tidak';
                 const updated = { _id: editId, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat, arsip: prevArsip };
                 if (idx !== -1) appState.warga[idx] = updated;
                 editMode.warga = null;
@@ -2475,6 +2522,8 @@
                 sendToGoogleSheets({ action: 'update', id: editId, arsip: prevArsip, ...data });
                 showToast('Data warga diperbarui!', 'success');
             } else {
+                // Tambah baru: tolak NIK yang sudah terdaftar.
+                if (!validateWargaNikUnique(data, -1)) return;
                 const id = newId();
                 data.id = id;
                 appState.warga.push({ _id: id, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat });
