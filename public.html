@@ -246,6 +246,7 @@
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
                             <input id="surat-hp" type="tel" required inputmode="numeric" maxlength="15" autocomplete="tel" oninput="onPhoneInput(this)"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                            <p id="surat-hp-note" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500 hidden"></p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Alamat / No. Rumah</label>
@@ -639,13 +640,13 @@
             if (wargaLookupTimer) { clearTimeout(wargaLookupTimer); wargaLookupTimer = null; }
             wargaLookupSeq += 1;
             const seq = wargaLookupSeq;
-            if (!nik || nik.length !== 16 || !parseNIK(nik)) { setSuratNikLookup('', ''); return; }
+            if (!nik || nik.length !== 16 || !parseNIK(nik)) { setSuratNikLookup('', ''); releaseSuratHpIfLocked(); return; }
             setSuratNikLookup('', '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mencari data warga...');
             wargaLookupTimer = setTimeout(function () { lookupWargaByNik(nik, seq); }, 500);
         }
 
         function lookupWargaByNik(nik, seq) {
-            if (!apiBases().length) { setSuratNikLookup('', ''); return; }
+            if (!apiBases().length) { setSuratNikLookup('', ''); releaseSuratHpIfLocked(); return; }
             const callbackName = '__wargaLookup_' + Date.now() + '_' + seq;
             loadApiJsonp(
                 function () { return 'action=lookupWarga&nik=' + encodeURIComponent(nik) + '&callback=' + callbackName; },
@@ -654,17 +655,19 @@
                     timeout: 12000,
                     onSuccess: function (res) {
                         if (seq !== wargaLookupSeq) return;
-                        if (!res || res.result !== 'success') { setSuratNikLookup('', ''); return; }
+                        if (!res || res.result !== 'success') { setSuratNikLookup('', ''); releaseSuratHpIfLocked(); return; }
                         if (res.found) {
                             fillSuratFromWarga(res);
                             setSuratNikLookup('ok', '<i class="fa-solid fa-circle-check mr-1"></i> Data warga ditemukan: <b>' +
-                                escapeHtml(res.nama || '') + '</b>. Nama, No. HP, &amp; Alamat terisi otomatis — silakan periksa &amp; ubah bila perlu.');
+                                escapeHtml(res.nama || '') + '</b>. Nama &amp; Alamat terisi otomatis. No. HP terisi dari data warga &amp; <b>tidak dapat diubah</b> di sini.');
                         } else {
+                            releaseSuratHpIfLocked();
                             setSuratNikLookup('warn', '<i class="fa-solid fa-circle-info mr-1"></i> NIK tidak terdaftar dalam data warga. Anda tetap dapat mengisi data di bawah secara manual.');
                         }
                     },
                     onError: function () {
                         if (seq !== wargaLookupSeq) return;
+                        releaseSuratHpIfLocked();
                         setSuratNikLookup('', '');
                     }
                 }
@@ -673,11 +676,72 @@
 
         function fillSuratFromWarga(res) {
             const namaEl = document.getElementById('surat-nama');
-            const hpEl = document.getElementById('surat-hp');
             const alamatEl = document.getElementById('surat-alamat');
             if (namaEl && res.nama) namaEl.value = res.nama;
-            if (hpEl && res.noHp) hpEl.value = res.noHp;
             if (alamatEl && res.alamat) alamatEl.value = res.alamat;
+            const hpDigits = String(res.noHp || '').replace(/\D/g, '');
+            if (hpDigits.length >= 8) lockSuratHp(hpDigits);
+            else unlockSuratHp(true);
+        }
+
+        // ===== Masking No. HP (dari data warga) =====
+        // Bila NIK ketemu & No. HP terdaftar, kolom No. HP diformat tersamar
+        // (mis. "0812••••7890"), dibuat HANYA-BACA, dan nilai aslinya disimpan
+        // (suratHpFull) untuk dikirim saat submit. Warga tidak melihat/mengubah
+        // nomor lengkap. Bila tidak ketemu, kolom dibuka kembali & dikosongkan.
+        let suratHpLocked = false;
+        let suratHpFull = '';
+
+        function maskPhone(v) {
+            const d = String(v == null ? '' : v).replace(/\D/g, '');
+            if (!d) return '';
+            if (d.length <= 4) return '\u2022'.repeat(d.length);
+            if (d.length <= 8) return '\u2022'.repeat(d.length - 4) + d.slice(-4);
+            return d.slice(0, 4) + '\u2022'.repeat(d.length - 8) + d.slice(-4);
+        }
+
+        function setSuratHpNote(show) {
+            const el = document.getElementById('surat-hp-note');
+            if (!el) return;
+            if (show) {
+                el.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Nomor HP dari data warga (tidak dapat diubah). Hubungi pengurus bila perlu diperbarui.';
+                el.className = 'text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500';
+            } else {
+                el.textContent = '';
+                el.className = 'text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500 hidden';
+            }
+        }
+
+        function lockSuratHp(fullHp) {
+            const el = document.getElementById('surat-hp');
+            suratHpFull = String(fullHp == null ? '' : fullHp).replace(/\D/g, '');
+            suratHpLocked = true;
+            if (el) {
+                el.value = maskPhone(suratHpFull);
+                el.setAttribute('readonly', 'readonly');
+                el.setAttribute('aria-readonly', 'true');
+                el.classList.add('bg-slate-100', 'dark:bg-slate-800', 'cursor-not-allowed', 'text-slate-500', 'dark:text-slate-400');
+            }
+            setSuratHpNote(true);
+        }
+
+        function unlockSuratHp(clear) {
+            const el = document.getElementById('surat-hp');
+            suratHpLocked = false;
+            suratHpFull = '';
+            if (el) {
+                el.removeAttribute('readonly');
+                el.removeAttribute('aria-readonly');
+                el.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'cursor-not-allowed', 'text-slate-500', 'dark:text-slate-400');
+                if (clear) el.value = '';
+            }
+            setSuratHpNote(false);
+        }
+
+        // Lepas kunci hanya bila sedang terkunci, agar isian manual warga (saat
+        // NIK tidak terdaftar) tidak ikut terhapus.
+        function releaseSuratHpIfLocked() {
+            if (suratHpLocked) unlockSuratHp(true);
         }
 
         // Ambil URL Web App: utamakan config.js, lalu ?url=...
@@ -773,7 +837,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-10';
+        const APP_BUILD = '2026-10-09-11';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1374,7 +1438,9 @@
 
             const nama = (document.getElementById('surat-nama').value || '').trim();
             const nik = (document.getElementById('surat-nik').value || '').replace(/\D/g, '');
-            const noHp = (document.getElementById('surat-hp').value || '').trim();
+            const noHp = (suratHpLocked && suratHpFull)
+                ? suratHpFull
+                : (document.getElementById('surat-hp').value || '').trim();
             const alamat = (document.getElementById('surat-alamat').value || '').trim();
             const jenisSurat = (document.getElementById('surat-jenis').value || '').trim();
             const keperluan = (document.getElementById('surat-keperluan').value || '').trim();
@@ -1405,6 +1471,7 @@
                 document.getElementById('surat-form').reset();
                 setSuratNIKHint('surat-nik-hint', '', '');
                 setSuratNikLookup('', '');
+                unlockSuratHp(true);
                 showSuratMessage('success',
                     '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
                     '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');
