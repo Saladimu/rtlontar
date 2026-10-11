@@ -1064,6 +1064,20 @@
         </div>
     </div>
 
+    <!-- ================= MODAL: RIWAYAT PENGAJUAN SURAT WARGA ================= -->
+    <div id="modal-warga-surat" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b pb-3">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-clock-rotate-left mr-1 text-cyan-600"></i>Riwayat Pengajuan Surat</h3>
+                    <p id="modal-warga-surat-sub" class="text-xs text-slate-500 mt-0.5">-</p>
+                </div>
+                <button onclick="closeModal('modal-warga-surat')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="warga-surat-history-body"></div>
+        </div>
+    </div>
+
     <!-- ================= MODAL: TENTANG APLIKASI ================= -->
     <div id="modal-about" onclick="if(event.target===this)closeAbout()" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
         <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
@@ -1187,7 +1201,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-13';
+        const APP_BUILD = '2026-10-09-15';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1577,7 +1591,7 @@
         // Simpan snapshot tampilan (tab aktif + modal terbuka) ke History API agar
         // gestur "Back" pada perangkat mobile menutup modal atau kembali ke tab
         // sebelumnya, bukan langsung keluar dari aplikasi.
-        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-about'];
+        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-warga-surat', 'modal-about'];
         let currentTab = 'dashboard';
 
         function getOpenModal() {
@@ -2023,7 +2037,8 @@
                         <div class="mb-0.5">${statusBadge}</div>
                         <div class="text-slate-600 text-xs">${item.alamat}</div>
                     </td>
-                    <td class="px-3 py-2 text-center">
+                    <td class="px-3 py-2 text-center whitespace-nowrap">
+                        <button onclick="event.stopPropagation(); showWargaSuratHistory(${originalIndex})" class="text-cyan-600 hover:text-cyan-800 p-1 rounded mr-2" title="Riwayat pengajuan surat"><i class="fa-solid fa-clock-rotate-left"></i></button>
                         <button onclick="event.stopPropagation(); editWarga(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button onclick="event.stopPropagation(); deleteWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
                     </td>
@@ -2826,6 +2841,57 @@
             };
             const cls = map[s] || 'bg-slate-100 text-slate-600';
             return `<span class="px-2.5 py-1 text-xs rounded-full font-medium ${cls}">${escAttr(s)}</span>`;
+        }
+
+        // ===== Riwayat Pengajuan Surat per warga (dari Data Warga) =====
+        // Cocokkan record Pengajuan_Surat ke warga lewat NIK (digit saja).
+        // Bila salah satu NIK kosong (mis. data lama), jatuh ke pencocokan nama.
+        function wargaNikKey(v) {
+            return String(v == null ? '' : v).replace(/\D/g, '');
+        }
+        function suratBelongsToWarga(warga, surat) {
+            const wNik = wargaNikKey(warga && warga.nik);
+            const sNik = wargaNikKey(surat && surat.nik);
+            if (wNik && sNik) return wNik === sNik;
+            const wNama = String((warga && warga.nama) || '').trim().toLowerCase();
+            const sNama = String((surat && surat.nama) || '').trim().toLowerCase();
+            return !!(wNama && sNama && wNama === sNama);
+        }
+
+        function renderWargaSuratHistory(list) {
+            if (!list.length) {
+                return '<p class="text-sm text-slate-400 text-center py-8">Belum ada pengajuan surat untuk warga ini.</p>';
+            }
+            const rows = list.map(function (item) {
+                return '<tr class="border-b border-slate-100 align-top">' +
+                    '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(fmtTimestamp(item.waktu) || '-') + '</td>' +
+                    '<td class="py-2 pr-3 text-slate-700 text-xs font-medium">' + escAttr(item.noSurat || '-') + '</td>' +
+                    '<td class="py-2 pr-3 text-slate-700 text-xs">' + escAttr(item.jenisSurat || '-') + '</td>' +
+                    '<td class="py-2 text-center">' + suratStatusBadge(item.status) + '</td>' +
+                '</tr>';
+            }).join('');
+            return '<div class="overflow-x-auto"><table class="w-full">' +
+                '<thead><tr class="text-left text-xs text-slate-500 border-b">' +
+                    '<th class="py-2 pr-3 font-semibold">Tanggal</th>' +
+                    '<th class="py-2 pr-3 font-semibold">No. Surat</th>' +
+                    '<th class="py-2 pr-3 font-semibold">Jenis Surat</th>' +
+                    '<th class="py-2 font-semibold text-center">Status</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }
+
+        function showWargaSuratHistory(index) {
+            const warga = appState.warga[index];
+            if (!warga) return;
+            const list = (appState.surat || []).filter(function (s) { return suratBelongsToWarga(warga, s); })
+                .sort(function (a, b) { return String(b.waktu || '').localeCompare(String(a.waktu || '')); });
+            const sub = document.getElementById('modal-warga-surat-sub');
+            if (sub) {
+                sub.innerHTML = escAttr(warga.nama || '-') + ' &middot; NIK ' + escAttr(maskNik(warga.nik)) +
+                    ' &middot; ' + list.length + ' pengajuan';
+            }
+            const body = document.getElementById('warga-surat-history-body');
+            if (body) body.innerHTML = renderWargaSuratHistory(list);
+            openModal('modal-warga-surat');
         }
 
         function openAddSurat() {
