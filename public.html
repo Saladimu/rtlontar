@@ -229,7 +229,7 @@
                         <i id="surat-chevron-ajukan" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0 rotate-180"></i>
                     </button>
                     <div id="surat-panel-ajukan" class="px-5 pb-5 hidden">
-                    <form id="surat-form" class="space-y-3" onsubmit="return submitSuratWarga(event)">
+                    <form id="surat-form" class="space-y-3" onsubmit="return submitSuratWarga(event)" oninput="clearSuratMessage()">
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
                             <input id="surat-nik" type="text" required inputmode="numeric" maxlength="16" autocomplete="off" oninput="onSuratNIKInput(this, 'surat-nik-hint')"
@@ -241,10 +241,11 @@
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Lengkap</label>
                             <input id="surat-nama" type="text" required maxlength="100" autocomplete="name"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                            <p id="surat-nama-note" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500 hidden"></p>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
-                            <input id="surat-hp" type="tel" required inputmode="numeric" maxlength="15" autocomplete="tel" oninput="onPhoneInput(this)"
+                            <input id="surat-hp" type="tel" required inputmode="numeric" maxlength="15" autocomplete="tel" oninput="onPhoneInput(this)" onfocus="onSuratHpFocus(this)" onblur="onSuratHpBlur(this)"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
                             <p id="surat-hp-note" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500 hidden"></p>
                         </div>
@@ -432,7 +433,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">2</span>
-                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Isi data dengan benar: masukkan <b>NIK (16 digit)</b> lebih dulu — bila NIK terdaftar di <b>data warga</b>, kolom <b>Nama Lengkap</b>, <b>No. HP/WhatsApp</b>, &amp; <b>Alamat / No. Rumah</b> terisi otomatis (tetap dapat diubah). Jika NIK tidak terdaftar, isi kolom tersebut secara manual. Lalu pilih <b>Jenis Surat</b> dan tulis <b>Keperluan</b>.</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Isi data dengan benar: masukkan <b>NIK (16 digit)</b> lebih dulu — bila NIK terdaftar di <b>data warga</b>, kolom <b>Nama Lengkap</b> &amp; <b>Alamat / No. Rumah</b> terisi otomatis &amp; <b>terkunci (hanya tampilan)</b>, sedangkan <b>No. HP/WhatsApp</b> terisi <b>tersamar</b> namun tetap dapat diperiksa/diubah (ketuk kolomnya). Jika NIK tidak terdaftar, isi kolom tersebut secara manual. Lalu pilih <b>Jenis Surat</b> dan tulis <b>Keperluan</b>.</span>
                     </li>
                     <li class="flex gap-3">
                         <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">3</span>
@@ -640,13 +641,13 @@
             if (wargaLookupTimer) { clearTimeout(wargaLookupTimer); wargaLookupTimer = null; }
             wargaLookupSeq += 1;
             const seq = wargaLookupSeq;
-            if (!nik || nik.length !== 16 || !parseNIK(nik)) { setSuratNikLookup('', ''); releaseSuratHpIfLocked(); return; }
+            if (!nik || nik.length !== 16 || !parseNIK(nik)) { setSuratNikLookup('', ''); releaseWargaFillIfLocked(); return; }
             setSuratNikLookup('', '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mencari data warga...');
             wargaLookupTimer = setTimeout(function () { lookupWargaByNik(nik, seq); }, 500);
         }
 
         function lookupWargaByNik(nik, seq) {
-            if (!apiBases().length) { setSuratNikLookup('', ''); releaseSuratHpIfLocked(); return; }
+            if (!apiBases().length) { setSuratNikLookup('', ''); releaseWargaFillIfLocked(); return; }
             const callbackName = '__wargaLookup_' + Date.now() + '_' + seq;
             loadApiJsonp(
                 function () { return 'action=lookupWarga&nik=' + encodeURIComponent(nik) + '&callback=' + callbackName; },
@@ -655,42 +656,94 @@
                     timeout: 12000,
                     onSuccess: function (res) {
                         if (seq !== wargaLookupSeq) return;
-                        if (!res || res.result !== 'success') { setSuratNikLookup('', ''); releaseSuratHpIfLocked(); return; }
+                        if (!res || res.result !== 'success') { setSuratNikLookup('', ''); releaseWargaFillIfLocked(); return; }
                         if (res.found) {
                             fillSuratFromWarga(res);
                             setSuratNikLookup('ok', '<i class="fa-solid fa-circle-check mr-1"></i> Data warga ditemukan: <b>' +
-                                escapeHtml(res.nama || '') + '</b>. Nama &amp; Alamat terisi otomatis. No. HP terisi dari data warga &amp; <b>tidak dapat diubah</b> di sini.');
+                                escapeHtml(res.nama || '') + '</b>. Nama &amp; Alamat terisi otomatis &amp; <b>tidak dapat diubah</b>. No. HP tersamar &amp; tetap dapat diperiksa/diubah.');
                         } else {
-                            releaseSuratHpIfLocked();
+                            releaseWargaFillIfLocked();
                             setSuratNikLookup('warn', '<i class="fa-solid fa-circle-info mr-1"></i> NIK tidak terdaftar dalam data warga. Anda tetap dapat mengisi data di bawah secara manual.');
                         }
                     },
                     onError: function () {
                         if (seq !== wargaLookupSeq) return;
-                        releaseSuratHpIfLocked();
+                        releaseWargaFillIfLocked();
                         setSuratNikLookup('', '');
                     }
                 }
             );
         }
 
+        // Bila NIK ketemu: Nama & Alamat diisi otomatis lalu DIKUNCI (hanya
+        // tampilan, tidak dapat diubah); No. HP ditampilkan tersamar namun
+        // tetap dapat diubah (untuk validasi Cek Status).
         function fillSuratFromWarga(res) {
             const namaEl = document.getElementById('surat-nama');
             const alamatEl = document.getElementById('surat-alamat');
             if (namaEl && res.nama) namaEl.value = res.nama;
             if (alamatEl && res.alamat) alamatEl.value = res.alamat;
+            lockSuratIdentity(true);
             const hpDigits = String(res.noHp || '').replace(/\D/g, '');
-            if (hpDigits.length >= 8) lockSuratHp(hpDigits);
-            else unlockSuratHp(true);
+            if (hpDigits.length >= 8) maskSuratHp(hpDigits);
+            else clearSuratHpMask(true);
+        }
+
+        // ===== Nama & Alamat: terisi otomatis & terkunci (hanya tampilan) =====
+        let suratIdentityLocked = false;
+        const SURAT_LOCK_CLASSES = ['bg-slate-100', 'dark:bg-slate-800', 'cursor-not-allowed', 'text-slate-500', 'dark:text-slate-400'];
+
+        function setSuratFieldLock(id, on) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (on) {
+                el.setAttribute('readonly', 'readonly');
+                el.setAttribute('aria-readonly', 'true');
+                if (el.classList && el.classList.add) SURAT_LOCK_CLASSES.forEach(function (c) { el.classList.add(c); });
+            } else {
+                el.removeAttribute('readonly');
+                el.removeAttribute('aria-readonly');
+                if (el.classList && el.classList.remove) SURAT_LOCK_CLASSES.forEach(function (c) { el.classList.remove(c); });
+            }
+        }
+
+        function setSuratNamaNote(show) {
+            const el = document.getElementById('surat-nama-note');
+            if (!el) return;
+            if (show) {
+                el.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Terisi dari data warga (tidak dapat diubah).';
+                el.className = 'text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500';
+            } else {
+                el.textContent = '';
+                el.className = 'text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500 hidden';
+            }
+        }
+
+        function lockSuratIdentity(on) {
+            suratIdentityLocked = !!on;
+            setSuratFieldLock('surat-nama', !!on);
+            setSuratFieldLock('surat-alamat', !!on);
+            setSuratNamaNote(!!on);
+        }
+
+        function clearSuratIdentity() {
+            const namaEl = document.getElementById('surat-nama');
+            const alamatEl = document.getElementById('surat-alamat');
+            if (namaEl) namaEl.value = '';
+            if (alamatEl) alamatEl.value = '';
         }
 
         // ===== Masking No. HP (dari data warga) =====
-        // Bila NIK ketemu & No. HP terdaftar, kolom No. HP diformat tersamar
-        // (mis. "0812••••7890"), dibuat HANYA-BACA, dan nilai aslinya disimpan
-        // (suratHpFull) untuk dikirim saat submit. Warga tidak melihat/mengubah
-        // nomor lengkap. Bila tidak ketemu, kolom dibuka kembali & dikosongkan.
-        let suratHpLocked = false;
-        let suratHpFull = '';
+        // Bila NIK ketemu & No. HP terdaftar, kolom No. HP ditampilkan tersamar
+        // (mis. "0812••••7890") namun TETAP DAPAT DIUBAH: ketuk kolom untuk
+        // melihat nomor asli & mengeditnya (mis. bila berbeda dari nomor yang
+        // dipakai untuk Cek Status). Saat fokus hilang tanpa perubahan, nilai
+        // dikembalikan ke tampilan tersamar. Nilai asli (suratHpReal) dikirim
+        // saat submit.
+        let suratHpMasked = false;
+        let suratHpReal = '';
+        let suratHpOriginal = '';
+        let suratHpFromWarga = false;
 
         function maskPhone(v) {
             const d = String(v == null ? '' : v).replace(/\D/g, '');
@@ -704,7 +757,7 @@
             const el = document.getElementById('surat-hp-note');
             if (!el) return;
             if (show) {
-                el.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> Nomor HP dari data warga (tidak dapat diubah). Hubungi pengurus bila perlu diperbarui.';
+                el.innerHTML = '<i class="fa-solid fa-eye mr-1"></i> Nomor HP dari data warga (tersamar). Ketuk kolom untuk melihat/mengubah bila perlu &mdash; pastikan sama dengan nomor untuk Cek Status.';
                 el.className = 'text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500';
             } else {
                 el.textContent = '';
@@ -712,36 +765,57 @@
             }
         }
 
-        function lockSuratHp(fullHp) {
+        function maskSuratHp(fullHp) {
             const el = document.getElementById('surat-hp');
-            suratHpFull = String(fullHp == null ? '' : fullHp).replace(/\D/g, '');
-            suratHpLocked = true;
+            suratHpReal = String(fullHp == null ? '' : fullHp).replace(/\D/g, '');
+            suratHpOriginal = suratHpReal;
+            suratHpMasked = true;
+            suratHpFromWarga = true;
             if (el) {
-                el.value = maskPhone(suratHpFull);
-                el.setAttribute('readonly', 'readonly');
-                el.setAttribute('aria-readonly', 'true');
-                el.classList.add('bg-slate-100', 'dark:bg-slate-800', 'cursor-not-allowed', 'text-slate-500', 'dark:text-slate-400');
+                el.value = maskPhone(suratHpReal);
+                el.removeAttribute('readonly');
+                el.removeAttribute('aria-readonly');
+                if (el.classList && el.classList.remove) SURAT_LOCK_CLASSES.forEach(function (c) { el.classList.remove(c); });
             }
             setSuratHpNote(true);
         }
 
-        function unlockSuratHp(clear) {
+        function clearSuratHpMask(clear) {
             const el = document.getElementById('surat-hp');
-            suratHpLocked = false;
-            suratHpFull = '';
-            if (el) {
-                el.removeAttribute('readonly');
-                el.removeAttribute('aria-readonly');
-                el.classList.remove('bg-slate-100', 'dark:bg-slate-800', 'cursor-not-allowed', 'text-slate-500', 'dark:text-slate-400');
-                if (clear) el.value = '';
-            }
+            suratHpMasked = false;
+            suratHpReal = '';
+            suratHpOriginal = '';
+            suratHpFromWarga = false;
+            if (el && clear) el.value = '';
             setSuratHpNote(false);
         }
 
-        // Lepas kunci hanya bila sedang terkunci, agar isian manual warga (saat
-        // NIK tidak terdaftar) tidak ikut terhapus.
-        function releaseSuratHpIfLocked() {
-            if (suratHpLocked) unlockSuratHp(true);
+        // Ketuk kolom No. HP -> tampilkan nomor asli agar dapat diedit.
+        function onSuratHpFocus(el) {
+            if (suratHpMasked && el) {
+                el.value = suratHpReal;
+                suratHpMasked = false;
+                setSuratHpNote(false);
+            }
+        }
+
+        // Fokus hilang: bila nilai tidak diubah, kembalikan ke tampilan tersamar.
+        function onSuratHpBlur(el) {
+            if (!el) return;
+            const digits = String(el.value || '').replace(/\D/g, '');
+            if (suratHpOriginal && digits === suratHpOriginal) {
+                maskSuratHp(suratHpOriginal);
+            } else {
+                suratHpReal = digits;
+                suratHpMasked = false;
+            }
+        }
+
+        // Lepas isian otomatis & kunci hanya bila sedang aktif, agar isian
+        // manual warga (saat NIK tidak terdaftar) tidak ikut terhapus.
+        function releaseWargaFillIfLocked() {
+            if (suratIdentityLocked) { lockSuratIdentity(false); clearSuratIdentity(); }
+            if (suratHpFromWarga || suratHpMasked) clearSuratHpMask(true);
         }
 
         // Ambil URL Web App: utamakan config.js, lalu ?url=...
@@ -837,7 +911,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-11';
+        const APP_BUILD = '2026-10-09-13';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1415,6 +1489,13 @@
                 : '<i class="fa-solid fa-paper-plane mr-1"></i> Kirim Pengajuan';
         }
 
+        function clearSuratMessage() {
+            const box = document.getElementById('surat-result');
+            if (!box) return;
+            box.className = 'hidden mt-3';
+            box.innerHTML = '';
+        }
+
         function showSuratMessage(kind, html) {
             const box = document.getElementById('surat-result');
             if (!box) return;
@@ -1438,8 +1519,8 @@
 
             const nama = (document.getElementById('surat-nama').value || '').trim();
             const nik = (document.getElementById('surat-nik').value || '').replace(/\D/g, '');
-            const noHp = (suratHpLocked && suratHpFull)
-                ? suratHpFull
+            const noHp = (suratHpMasked && suratHpReal)
+                ? suratHpReal
                 : (document.getElementById('surat-hp').value || '').trim();
             const alamat = (document.getElementById('surat-alamat').value || '').trim();
             const jenisSurat = (document.getElementById('surat-jenis').value || '').trim();
@@ -1471,7 +1552,7 @@
                 document.getElementById('surat-form').reset();
                 setSuratNIKHint('surat-nik-hint', '', '');
                 setSuratNikLookup('', '');
-                unlockSuratHp(true);
+                releaseWargaFillIfLocked();
                 showSuratMessage('success',
                     '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
                     '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');
