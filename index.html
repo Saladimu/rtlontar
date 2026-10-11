@@ -1201,7 +1201,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-15';
+        const APP_BUILD = '2026-10-09-16';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2863,8 +2863,9 @@
                 return '<p class="text-sm text-slate-400 text-center py-8">Belum ada pengajuan surat untuk warga ini.</p>';
             }
             const rows = list.map(function (item) {
+                const tanggal = String(fmtTimestamp(item.waktu) || '').split(' ')[0];
                 return '<tr class="border-b border-slate-100 align-top">' +
-                    '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(fmtTimestamp(item.waktu) || '-') + '</td>' +
+                    '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(tanggal || '-') + '</td>' +
                     '<td class="py-2 pr-3 text-slate-700 text-xs font-medium">' + escAttr(item.noSurat || '-') + '</td>' +
                     '<td class="py-2 pr-3 text-slate-700 text-xs">' + escAttr(item.jenisSurat || '-') + '</td>' +
                     '<td class="py-2 text-center">' + suratStatusBadge(item.status) + '</td>' +
