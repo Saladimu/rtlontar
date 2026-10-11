@@ -68,6 +68,7 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | No HP | String | 081234567890 |
 | Status Tempat Tinggal | String | Tetap / Kontrak |
 | Alamat/No Rumah | String | Jl. Tanjung Duren No. 12 |
+| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan baris dari daftar tanpa menghapusnya |
 
 ### 2. Tab `Iuran_Kas`
 | Kolom | Tipe | Contoh |
@@ -213,8 +214,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v15-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v15-2026-10-11","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v16-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v16-2026-10-11","found":false}`
 
 **Contoh Delete:**
 ```
@@ -233,7 +234,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 
 | Sheet | Payload Fields |
 |-------|----------------|
-| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nomorKK`, `nama`, `status`, `jenisKelamin`, `nik`, `tempat`, `tanggalLahir`, `pendidikan`, `pekerjaan`, `noHp`, `statusTinggal`, `alamat` |
+| `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nomorKK`, `nama`, `status`, `jenisKelamin`, `nik`, `tempat`, `tanggalLahir`, `pendidikan`, `pekerjaan`, `noHp`, `statusTinggal`, `alamat`, `arsip` (`Ya`/`Tidak`) |
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |

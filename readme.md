@@ -7,7 +7,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 ## 🚀 Fitur Utama
 
 - **📊 Ringkasan / Dashboard:** Menampilkan statistik **Total Warga** dalam format `jiwa / No. KK unik (KK)` (mis. `12 / 4 (KK)`), saldo kas berjalan, pengumuman terbaru, dan kegiatan mendatang.
-- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nomor KK, Nama Lengkap, NIK, Tempat & Tanggal Lahir, Status dalam Keluarga & Jenis Kelamin, Pendidikan & Pekerjaan, No. HP, Status Tempat Tinggal, Alamat/No Rumah — sesuai urutan form) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database). Tabel tampil **ringkas dengan kolom bertumpuk** (mis. "Nama Lengkap / Usia", "NIK / No. HP") sehingga lebih banyak data terlihat tanpa scroll horizontal, dengan fitur pencarian, filter status, **Edit & Hapus** dengan warning dialog.
+- **👥 Pendataan Warga:** Pengelolaan data penduduk (Nomor KK, Nama Lengkap, NIK, Tempat & Tanggal Lahir, Status dalam Keluarga & Jenis Kelamin, Pendidikan & Pekerjaan, No. HP, Status Tempat Tinggal, Alamat/No Rumah — sesuai urutan form) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database). Tabel tampil **ringkas dengan kolom bertumpuk** (mis. "Nama Lengkap / Usia", "NIK / No. HP") sehingga lebih banyak data terlihat tanpa scroll horizontal, dengan fitur pencarian, filter status, **Edit & Arsip** (data warga ditandai arsip, bukan dihapus, sehingga tetap tersimpan & dapat dipulihkan) dengan warning dialog.
 - **🪪 Isi otomatis dari NIK:** saat mengisi **NIK 16 digit** di form Tambah/Edit Warga, kolom **Jenis Kelamin** & **Tanggal Lahir** otomatis terisi dari NIK (laki-laki: digit ke-7/8 = `01-31`; perempuan: `41-71` = `40 + tanggal`; tahun 2 digit ditebak `<= tahun berjalan` → `20YY`, selain itu `19YY`). Memperbaiki digit NIK (mis. salah hari) otomatis memperbarui kembali **Jenis Kelamin**/**Tanggal Lahir** selama kolom tersebut belum diubah manual; isian yang sudah dikoreksi manual **tidak** tertimpa (muncul catatan di bawah kolom NIK), dan tombol **Isi dari NIK** dapat menimpa paksa. Bila NIK 16 digit namun tanggal di dalamnya tidak valid (mis. bulan 13 / 30 Feb), muncul peringatan dan isian tidak diubah. NIK hanya menerima angka (maks. 16 digit).
 - **💬 Chat WhatsApp & Telepon dari No. HP (saat Edit):** buka detail record lewat **Edit** untuk menampilkan tombol **Chat WhatsApp** & **Telepon** di bawah kolom No. HP — berlaku pada form **Data Warga** maupun **Pengajuan Surat**. Tombol ini **hanya aktif saat mengedit** record (saat menambah record disembunyikan), dan tautan mengikuti nomor yang sedang tampil — jadi pengurus dapat langsung menghubungi warga tanpa menyalin nomor. Nomor dinormalisasi ke format `62...` (mis. `0812...` → `62812...`); bila nomor belum/kurang valid saat mengedit, muncul petunjuk singkat.
 - **🔢 Format No. HP (tampilan):** pada tabel record (**Data Warga** & **Pengajuan Surat**), No. HP ditampilkan berkelompok **3-3-4** agar mudah dibaca, mis. `0812345678` → `081-234-5678` (nomor lebih panjang melanjutkan grup berikutnya). Ini **hanya tampilan** — nilai yang tersimpan di Sheets dan tautan WhatsApp/Telepon tetap memakai digit asli.
@@ -46,8 +46,9 @@ Buat file baru di **Google Sheets**, buat 4 tab/sheet dengan nama exact di bawah
 
 ### 1. Tab `Data_Warga`
 ```tsv
-Timestamp	Nomor KK	Nama Lengkap	Status	Jenis Kelamin	NIK	Tempat Lahir	Tanggal Lahir	Pendidikan	Pekerjaan	No HP	Status Tempat Tinggal	Alamat/No Rumah
+Timestamp	Nomor KK	Nama Lengkap	Status	Jenis Kelamin	NIK	Tempat Lahir	Tanggal Lahir	Pendidikan	Pekerjaan	No HP	Status Tempat Tinggal	Alamat/No Rumah	Diarsipkan
 ```
+> Kolom **`Diarsipkan`** menandai data warga yang disembunyikan dari daftar tanpa dihapus: isi `Ya` untuk mengarsipkan, `Tidak`/kosong untuk data aktif. Baris ber-`Diarsipkan=Ya` tidak ditampilkan pada tabel, datalist nama, dashboard, maupun pencarian NIK publik, tetapi **tetap tersimpan** dan dapat dipulihkan lewat tombol **Pulihkan** di aplikasi.
 
 ### 2. Tab `Iuran_Kas`
 ```tsv
@@ -102,7 +103,8 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ **ON/OFF Portal Publik** server-side (`PUBLIC_PORTAL_ENABLED` di Script Properties + aksi `setPortalStatus`); saat OFF `readPublic` ditolak
 - ✅ **Identitas RT terpusat** di `config.js` (ubah info RT di satu tempat)
 - ✅ **Fitur Pengajuan Surat (backend v11)** — tab `Pengajuan_Surat` (dibuat otomatis), aksi publik `submitSurat` (tanpa token; validasi NIK 16 digit, honeypot, rate limit 5/jam per NIK), notifikasi email admin (Script Property `ADMIN_EMAIL`), `Status` default `Pending`, **No. Pengajuan konsisten `SRT-<yymmdd>-XXXX`** untuk semua jalur (publik & catat manual admin), serta **panel admin** untuk melihat/mencatat/mengubah status/menghapus & memfilter pengajuan
-- ✅ **Kolom baru `Data_Warga`**: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` (urutan: Nomor KK → Nama Lengkap → Status → Jenis Kelamin → NIK → Tempat/Tanggal Lahir → Pendidikan → Pekerjaan → No HP → Status Tinggal → Alamat); migrasi otomatis berbasis **nama header** (`migrateDataWargaLayout()`), aman dijalankan berulang
+- ✅ **Kolom baru `Data_Warga`**: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` (urutan: Nomor KK → Nama Lengkap → Status → Jenis Kelamin → NIK → Tempat/Tanggal Lahir → Pendidikan → Pekerjaan → No HP → Status Tinggal → Alamat → Diarsipkan); migrasi otomatis berbasis **nama header** (`migrateDataWargaLayout()`), aman dijalankan berulang
+- ✅ **Arsip Data Warga (bukan hapus)** — data warga tidak lagi dihapus permanen; tombol **Arsip** menandai kolom `Diarsipkan=Ya` sehingga baris disembunyikan dari tabel, datalist nama, dashboard, & `lookupWarga` publik, namun **tetap tersimpan**. Toggle **"Tampilkan arsip"** + tombol **Pulihkan** tersedia di tab Data Warga (`backend v16`)
 </details>
 
 ### Langkah Deployment Web App:
@@ -135,9 +137,10 @@ Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (memakai `publ
 > | `Direct to Apps Script` | Belum tersambung; hanya URL langsung ( `publicApiUrl` ) yang dikonfigurasi. |
 > | `Not configured (local mode)` | `apiBase` & `publicApiUrl` sama-sama kosong; aplikasi berjalan dalam mode lokal (localStorage). |
 
-### Edit & Delete Data
-Semua modul (Warga, Kas, Pengumuman, Kegiatan) sekarang memiliki tombol **Edit** ✏️ dan **Hapus** 🗑️ di setiap record.
-- **Hapus**: Data warga akan menampilkan warning dialog detail sebelum dihapus.
+### Edit, Hapus & Arsip Data
+Semua modul (Warga, Kas, Pengumuman, Kegiatan) memiliki tombol **Edit** ✏️. Modul **Kas, Pengumuman, & Kegiatan** juga memiliki tombol **Hapus** 🗑️, sedangkan **Data Warga memakai tombol Arsip** 📦 (bukan hapus).
+- **Arsip (Data Warga)**: alih-alih menghapus, data warga **ditandai arsip**, disembunyikan dari tabel/dashboard/datalist, tetapi **tetap tersimpan** di Google Sheets. Centang **"Tampilkan arsip"** di atas tabel: data terarsip lalu tampil **terpisah di bagian atas** dengan **latar kuning (amber)** dan judul **"Data Diarsipkan (N)"**, diikuti bagian **"Data Aktif (M)"** — klik **Pulihkan** untuk mengaktifkannya kembali.
+- **Hapus (Kas/Pengumuman/Kegiatan)**: menampilkan dialog konfirmasi sebelum data benar-benar dihapus dari Google Sheets.
 - **Edit**: Modal akan terbuka dengan data yang sudah terisi, klik simpan untuk menyimpan perubahan.
 - **Delete Sync**: Penghapusan dilakukan di Google Sheets dulu, jika gagal data lokal tidak berubah.
 

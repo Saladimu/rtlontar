@@ -348,13 +348,19 @@
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <input type="text" id="search-warga" oninput="renderWargaTable()" placeholder="Cari nama, NIK, HP, tempat/tanggal lahir, usia, status, pendidikan, pekerjaan, atau alamat..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
-                <div class="flex items-center space-x-2 w-full md:w-auto">
-                    <label class="text-xs font-medium text-slate-500 whitespace-nowrap">Status:</label>
-                    <select id="filter-status-warga" onchange="renderWargaTable()" class="w-full md:w-auto text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        <option value="">Semua Status</option>
-                        <option value="Tetap">Tetap</option>
-                        <option value="Kontrak">Kontrak</option>
-                    </select>
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs font-medium text-slate-500 whitespace-nowrap">Status:</label>
+                        <select id="filter-status-warga" onchange="renderWargaTable()" class="w-full md:w-auto text-sm bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Semua Status</option>
+                            <option value="Tetap">Tetap</option>
+                            <option value="Kontrak">Kontrak</option>
+                        </select>
+                    </div>
+                    <label class="flex items-center space-x-2 text-xs font-medium text-slate-500 whitespace-nowrap cursor-pointer select-none" title="Tampilkan data warga yang diarsipkan">
+                        <input type="checkbox" id="show-archived-warga" onchange="toggleShowArchivedWarga(this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span>Tampilkan arsip</span>
+                    </label>
                 </div>
             </div>
 
@@ -1191,7 +1197,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v15-2026-10-11';
+        const EXPECTED_BACKEND_VERSION = 'publik-v16-2026-10-11';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1201,7 +1207,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-09-16';
+        const APP_BUILD = '2026-10-11-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1477,7 +1483,7 @@
         function renderWargaNameList() {
             const dl = document.getElementById('warga-nama-list');
             if (!dl) return;
-            const names = Array.from(new Set(appState.warga.map(w => (w && w.nama ? String(w.nama).trim() : '')).filter(Boolean)));
+            const names = Array.from(new Set(appState.warga.filter(w => !isArchivedWarga(w)).map(w => (w && w.nama ? String(w.nama).trim() : '')).filter(Boolean)));
             names.sort((a, b) => a.localeCompare(b, 'id'));
             dl.innerHTML = names.map(n => `<option value="${escAttr(n)}"></option>`).join('');
         }
@@ -1552,6 +1558,7 @@
             updateLastUpdated();
             decorateFooterBuildInfo();
             renderDashboardStats();
+            initShowArchivedWarga();
             renderWargaTable();
             initKasView();
             renderKasTable();
@@ -1856,8 +1863,10 @@
         // Render Dashboard Statistics
         function renderDashboardStats() {
             // Total warga + jumlah Nomor KK unik: "#total / #unik (KK)".
-            const totalWarga = appState.warga.length;
-            const uniqueKK = new Set(appState.warga.map(w => (w && w.nomorKK ? String(w.nomorKK).trim() : '')).filter(Boolean)).size;
+            // Baris yang diarsipkan tidak dihitung.
+            const aktifWarga = appState.warga.filter(w => !isArchivedWarga(w));
+            const totalWarga = aktifWarga.length;
+            const uniqueKK = new Set(aktifWarga.map(w => (w && w.nomorKK ? String(w.nomorKK).trim() : '')).filter(Boolean)).size;
             document.getElementById('stat-warga').innerHTML = totalWarga + ' <span class="text-base font-semibold text-slate-400">/ ' + uniqueKK + ' (KK)</span>';
             
             // Calculate Kas
@@ -1915,6 +1924,28 @@
         let wargaFilterSig = '\u0000';
         let kasFilterSig = '\u0000';
 
+        // Tampilkan data warga yang diarsipkan (disembunyikan secara default).
+        let showArchivedWarga = localStorage.getItem('rt_show_archived_warga') === '1';
+
+        function isArchivedWarga(item) {
+            if (!item) return false;
+            if (item.arsip === true) return true;
+            const s = String(item.arsip === null || item.arsip === undefined ? '' : item.arsip).trim().toLowerCase();
+            return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'arsip';
+        }
+
+        function toggleShowArchivedWarga(on) {
+            showArchivedWarga = !!on;
+            localStorage.setItem('rt_show_archived_warga', showArchivedWarga ? '1' : '0');
+            wargaPage = 1;
+            renderWargaTable();
+        }
+
+        function initShowArchivedWarga() {
+            const el = document.getElementById('show-archived-warga');
+            if (el) el.checked = showArchivedWarga;
+        }
+
         function gotoWargaPage(page) {
             wargaPage = page;
             renderWargaTable();
@@ -1964,13 +1995,23 @@
             // Pencarian memakai kotak pencarian atas + filter status (baris filter
             // per kolom dihapus). Haystack mencakup seluruh field + usia + tanggal
             // tampilan agar pencarian nama/NIK/tanggal/usia tetap bekerja.
-            const filtered = appState.warga.filter(item => {
+            // Baris yang diarsipkan disembunyikan kecuali "Tampilkan arsip" aktif.
+            // Saat tampil, data arsip dipisah ke bagian tersendiri di ATAS tabel
+            // dengan warna latar berbeda agar mudah dikenali (fitur jarang dipakai).
+            const matched = appState.warga.filter(item => {
                 const haystack = [item.nomorKK, item.nama, item.status, item.jenisKelamin, item.nik, item.tempat, item.tanggalLahir, item.pendidikan, item.pekerjaan, item.hp, fmtPhone(item.hp), item.statusTinggal, item.alamat, hitungUsia(item.tanggalLahir), fmtDateDisplay(item.tanggalLahir)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
                 return matchSearch && matchStatus;
             });
+            const aktifItems = matched.filter(item => !isArchivedWarga(item));
+            const archivedItems = showArchivedWarga ? matched.filter(item => isArchivedWarga(item)) : [];
+            const filtered = showArchivedWarga ? archivedItems.concat(aktifItems) : aktifItems;
+            // Tampilkan judul pemisah hanya bila ada baris arsip yang ikut ditampilkan.
+            const showSections = showArchivedWarga && archivedItems.length > 0;
+            const firstArchivedPos = 0;
+            const firstActivePos = archivedItems.length;
 
             const anyFilter = search !== '' || filterStatus !== '';
 
@@ -1979,7 +2020,7 @@
             if (countEl) countEl.textContent = '(' + filtered.length + ')';
 
             // Setiap perubahan pencarian/filter mengembalikan tampilan ke halaman pertama.
-            const filterSig = [search, filterStatus].join('\u0001');
+            const filterSig = [search, filterStatus, showArchivedWarga ? '1' : '0'].join('\u0001');
             if (filterSig !== wargaFilterSig) { wargaFilterSig = filterSig; wargaPage = 1; }
 
             if (filtered.length === 0) {
@@ -2000,21 +2041,43 @@
             const pageItems = filtered.slice(startIdx, startIdx + TABLE_PAGE_SIZE);
             renderPaginationBar('pagination-warga', wargaPage, totalPages, filtered.length, startIdx + 1, startIdx + pageItems.length, 'gotoWargaPage');
 
+            // Judul pemisah bagian (arsip vs aktif) saat "Tampilkan arsip" aktif.
+            const appendSectionRow = (kind, count) => {
+                const tr = document.createElement('tr');
+                if (kind === 'archived') {
+                    tr.className = 'bg-amber-100 text-amber-800';
+                    tr.innerHTML = `<td colspan="8" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider"><i class="fa-solid fa-box-archive mr-1"></i>Data Diarsipkan (${count}) <span class="font-normal normal-case tracking-normal">- tidak tampil di daftar utama &amp; portal publik</span></td>`;
+                } else {
+                    tr.className = 'bg-slate-100 text-slate-600';
+                    tr.innerHTML = `<td colspan="8" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider"><i class="fa-solid fa-users mr-1"></i>Data Aktif (${count})</td>`;
+                }
+                tbody.appendChild(tr);
+            };
+
             pageItems.forEach((item, rowIdx) => {
+                const absIdx = startIdx + rowIdx;
+                if (showSections && absIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
+                if (showSections && absIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
                 const originalIndex = appState.warga.indexOf(item);
+                const archived = isArchivedWarga(item);
                 const statusBadge = item.statusTinggal === 'Tetap' 
                     ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Tetap</span>'
                     : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-700 font-medium">Kontrak</span>';
+                const archiveBadge = archived
+                    ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>'
+                    : '';
 
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
                 const tr = document.createElement('tr');
-                tr.className = `${zebra} hover:bg-emerald-100 cursor-pointer transition`;
+                tr.className = archived
+                    ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer transition'
+                    : `${zebra} hover:bg-emerald-100 cursor-pointer transition`;
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editWarga(originalIndex);
                 tr.innerHTML = `
                     <td class="px-3 py-2 text-slate-600 text-xs whitespace-nowrap">${item.nomorKK || '-'}</td>
                     <td class="px-3 py-2">
-                        <div class="font-semibold text-slate-800">${item.nama}</div>
+                        <div class="font-semibold text-slate-800">${item.nama}${archiveBadge}</div>
                         <div class="text-xs text-slate-500">${hitungUsia(item.tanggalLahir) || '-'}</div>
                     </td>
                     <td class="px-3 py-2">
@@ -2040,7 +2103,9 @@
                     <td class="px-3 py-2 text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); showWargaSuratHistory(${originalIndex})" class="text-cyan-600 hover:text-cyan-800 p-1 rounded mr-2" title="Riwayat pengajuan surat"><i class="fa-solid fa-clock-rotate-left"></i></button>
                         <button onclick="event.stopPropagation(); editWarga(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="event.stopPropagation(); deleteWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
+                        ${archived
+                            ? `<button onclick="event.stopPropagation(); restoreWarga(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan dari arsip"><i class="fa-solid fa-box-open"></i></button>`
+                            : `<button onclick="event.stopPropagation(); archiveWarga(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Arsipkan"><i class="fa-solid fa-box-archive"></i></button>`}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -2400,12 +2465,14 @@
             if (editMode.warga !== null) {
                 const editId = editMode.warga;
                 const idx = findIndexById(appState.warga, editId);
-                const updated = { _id: editId, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat };
+                const prevArsip = (idx !== -1 && appState.warga[idx]) ? (appState.warga[idx].arsip || 'Tidak') : 'Tidak';
+                const updated = { _id: editId, nomorKK: data.nomorKK, nama: data.nama, status: data.status, jenisKelamin: data.jenisKelamin, nik: data.nik, tempat: data.tempat, tanggalLahir: data.tanggalLahir, pendidikan: data.pendidikan, pekerjaan: data.pekerjaan, hp: data.noHp, statusTinggal: data.statusTinggal, alamat: data.alamat, arsip: prevArsip };
                 if (idx !== -1) appState.warga[idx] = updated;
                 editMode.warga = null;
                 saveLocalState();
                 renderWargaTable();
-                sendToGoogleSheets({ action: 'update', id: editId, ...data });
+                // Pertahankan status arsip saat edit (jangan sampai ter-unarchive).
+                sendToGoogleSheets({ action: 'update', id: editId, arsip: prevArsip, ...data });
                 showToast('Data warga diperbarui!', 'success');
             } else {
                 const id = newId();
@@ -2636,24 +2703,43 @@
             showToast(newVal === 'Ya' ? 'Kegiatan ditampilkan ke publik' : 'Kegiatan disembunyikan dari publik', newVal === 'Ya' ? 'success' : 'info');
         }
 
-        // Deletion Functions
-        function deleteWarga(index) {
-            const item = appState.warga[index];
-            const warningMsg = `⚠️ PERHATIAN!`;
-            const detailMsg = `Anda akan menghapus data warga:
-• Nama: ${item?.nama || 'Tidak diketahui'}
-• Nomor KK: ${item?.nomorKK || '-'}
-• Status: ${item?.status || '-'}
-• NIK: ${item?.nik || '-'}
-• Tempat Lahir: ${item?.tempat || '-'}
-• Tanggal Lahir: ${fmtDateDisplay(item?.tanggalLahir) || '-'}
-• No. HP: ${item?.hp || '-'}`;
-            const confirmMsg = `${warningMsg}\n\n${detailMsg}\n\nYakin ingin menghapus data ini?`;
-
-            if(confirm(confirmMsg)) {
-                deleteRecord('Data_Warga', index, appState.warga, renderWargaTable, 'warga');
-            }
+        // Arsipkan data warga (alih-alih menghapus): tandai kolom "Diarsipkan",
+        // sembunyikan dari daftar, tetapi baris TETAP tersimpan & dapat dipulihkan.
+        function wargaRowPayload(item, arsip) {
+            return {
+                nomorKK: item.nomorKK || '', nama: item.nama || '', status: item.status || '',
+                jenisKelamin: item.jenisKelamin || '', nik: item.nik || '', tempat: item.tempat || '',
+                tanggalLahir: item.tanggalLahir || '', pendidikan: item.pendidikan || '', pekerjaan: item.pekerjaan || '',
+                noHp: item.hp || '', statusTinggal: item.statusTinggal || '', alamat: item.alamat || '',
+                arsip: arsip ? 'Ya' : 'Tidak'
+            };
         }
+
+        function updateWargaArsip(index, arsip) {
+            const item = appState.warga[index];
+            if (!item) return;
+            if (!item._id) { item._id = newId(); }
+            item.arsip = arsip ? 'Ya' : 'Tidak';
+            saveLocalState();
+            renderWargaTable();
+            sendToGoogleSheets(Object.assign({ action: 'update', sheetName: 'Data_Warga', id: item._id }, wargaRowPayload(item, arsip)));
+            showToast(arsip ? 'Data warga diarsipkan (tetap tersimpan).' : 'Data warga dipulihkan.', arsip ? 'info' : 'success');
+        }
+
+        function archiveWarga(index) {
+            const item = appState.warga[index];
+            if (!item) return;
+            const confirmMsg = `Arsipkan data warga ini?\n\n• Nama: ${item.nama || '-'}\n• Nomor KK: ${item.nomorKK || '-'}\n• NIK: ${item.nik || '-'}\n\nData tidak akan ditampilkan, namun tetap tersimpan dan dapat dipulihkan.`;
+            if (confirm(confirmMsg)) updateWargaArsip(index, true);
+        }
+
+        function restoreWarga(index) {
+            const item = appState.warga[index];
+            if (!item) return;
+            updateWargaArsip(index, false);
+        }
+
+        // Deletion Functions
 
         function deleteKas(index) {
             if(confirm('Hapus catatan kas ini?')) {
@@ -3551,7 +3637,7 @@
             }
             const d = res.data;
             appState.warga = applyLocalDeletes('warga', (d.Data_Warga || []).map(r => ({
-                _id: r[r.length - 1], nomorKK: r[1], nama: r[2], status: r[3], jenisKelamin: r[4], nik: r[5], tempat: r[6], tanggalLahir: fmtDate(r[7]), pendidikan: r[8], pekerjaan: r[9], hp: r[10], statusTinggal: r[11], alamat: r[12]
+                _id: r[r.length - 1], nomorKK: r[1], nama: r[2], status: r[3], jenisKelamin: r[4], nik: r[5], tempat: r[6], tanggalLahir: fmtDate(r[7]), pendidikan: r[8], pekerjaan: r[9], hp: r[10], statusTinggal: r[11], alamat: r[12], arsip: r[13]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
                 _id: r[r.length - 1], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]

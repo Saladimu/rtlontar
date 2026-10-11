@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v15-2026-10-11";
+var CODE_VERSION = "publik-v16-2026-10-11";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -8,7 +8,7 @@ var TS_FORMAT = "dd-mm-yyyy hh:mm";
 
 // Jumlah kolom data (termasuk kolom A Timestamp), TIDAK termasuk kolom bantu "ID".
 var EXPECTED_FIELDS = {
-  "Data_Warga": 13,     // A Timestamp + 12 field (Nomor KK, Status, Jenis Kelamin, Pendidikan, Pekerjaan, dst.)
+  "Data_Warga": 14,     // A Timestamp + 13 field (termasuk kolom "Diarsipkan")
   "Iuran_Kas": 7,       // A Timestamp + 6 field
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
@@ -17,7 +17,7 @@ var EXPECTED_FIELDS = {
 
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
 var DESIRED_HEADERS = {
-  "Data_Warga": ["Timestamp", "Nomor KK", "Nama Lengkap", "Status", "Jenis Kelamin", "NIK", "Tempat Lahir", "Tanggal Lahir", "Pendidikan", "Pekerjaan", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "ID"],
+  "Data_Warga": ["Timestamp", "Nomor KK", "Nama Lengkap", "Status", "Jenis Kelamin", "NIK", "Tempat Lahir", "Tanggal Lahir", "Pendidikan", "Pekerjaan", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "Diarsipkan", "ID"],
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
@@ -140,6 +140,19 @@ function isPublik(v) {
 function normalizePublik(v) {
   if (v === undefined || v === null || v === '') return PUBLIK_DEFAULT;
   return isPublik(v) ? 'Ya' : 'Tidak';
+}
+
+// True bila nilai Diarsipkan menandai baris warga diarsipkan (disembunyikan).
+function isArsip(v) {
+  if (v === true) return true;
+  if (v === false || v === null || v === undefined) return false;
+  var s = String(v).trim().toLowerCase();
+  return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'arsip';
+}
+
+// Normalisasi nilai Diarsipkan ke "Ya" / "Tidak". Default "Tidak" (aktif).
+function normalizeArsip(v) {
+  return isArsip(v) ? 'Ya' : 'Tidak';
 }
 
 function doGet(e) {
@@ -555,7 +568,7 @@ function buildRowData(sheetName, data, timestamp, id) {
     rowData.push(
       data.nomorKK, data.nama, data.status, data.jenisKelamin, data.nik,
       data.tempat, data.tanggalLahir, data.pendidikan, data.pekerjaan,
-      data.noHp, data.statusTinggal, data.alamat
+      data.noHp, data.statusTinggal, data.alamat, normalizeArsip(data.arsip)
     );
   } else if (sheetName === "Iuran_Kas") {
     rowData.push(data.tanggal, data.nama, data.noRumah, data.jenis, data.jumlah, data.keterangan);
@@ -848,11 +861,12 @@ function handleCheckSurat(params) {
 // membaca seluruh data warga: hanya 3 field itu yang dikembalikan. Tetap
 // ter-gate oleh status portal + rate-limited untuk mencegah enumerasi NIK.
 // Indeks kolom Data_Warga (termasuk kolom A Timestamp):
-//   2 = Nama Lengkap, 5 = NIK, 10 = No HP, 12 = Alamat/No Rumah.
+//   2 = Nama Lengkap, 5 = NIK, 10 = No HP, 12 = Alamat/No Rumah, 13 = Diarsipkan.
 var WARGA_COL_NAMA = 2;
 var WARGA_COL_NIK = 5;
 var WARGA_COL_HP = 10;
 var WARGA_COL_ALAMAT = 12;
+var WARGA_COL_ARSIP = 13;
 
 var WARGA_LOOKUP_MAX_PER_KEY = 20;
 var WARGA_LOOKUP_MAX_GLOBAL = 200;
@@ -921,6 +935,7 @@ function handleLookupWarga(params) {
     var rows = ensureIds(sheet, 'Data_Warga');
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
+      if (isArsip(row[WARGA_COL_ARSIP])) continue; // lewati warga yang diarsipkan
       var rNik = String(row[WARGA_COL_NIK] === undefined || row[WARGA_COL_NIK] === null ? '' : row[WARGA_COL_NIK]).replace(/\D/g, '');
       if (rNik === nik) {
         found = {
