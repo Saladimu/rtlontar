@@ -618,18 +618,18 @@
                     <p class="text-xs text-slate-500">Required to save, edit, and delete data. Must match <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> in <i>Project Settings &gt; Script Properties</i> in Apps Script. Without this token, write operations are rejected by the server.</p>
                 </div>
 
-                <div class="flex items-center space-x-3">
-                    <button onclick="testConnection()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Test Connection
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button onclick="testConnection()" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                        <i class="fa-solid fa-plug-circle-check text-slate-400"></i>Test Connection
                     </button>
-                    <button onclick="syncFromGoogleSheets()" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Load Data from Sheets
+                    <button onclick="syncFromGoogleSheets()" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-transparent bg-blue-600 text-white hover:bg-blue-700 transition shadow-sm">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>Load Data from Sheets
                     </button>
-                    <button onclick="checkBackendVersion()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Check Backend Version
+                    <button onclick="checkBackendVersion()" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                        <i class="fa-solid fa-server text-slate-400"></i>Check Backend Version
                     </button>
-                    <button onclick="resetAllData()" title="Clears local/demo data in this browser (does not delete data in Google Sheets)" class="bg-rose-100 hover:bg-rose-200 text-rose-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                        Reset Demo Data (Local)
+                    <button onclick="resetAllData()" title="Clears local/demo data in this browser (does not delete data in Google Sheets)" class="inline-flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm font-medium border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition shadow-sm">
+                        <i class="fa-solid fa-eraser"></i>Reset Demo Data (Local)
                     </button>
                 </div>
 
@@ -1207,7 +1207,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-06';
+        const APP_BUILD = '2026-10-11-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
