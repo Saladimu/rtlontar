@@ -1346,7 +1346,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-18';
+        const APP_BUILD = '2026-10-11-19';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3353,6 +3353,7 @@
             if (form) form.reset();
             clearSuratFormError();
             setSuratNikHint('', '');
+            resetSuratNikAuto();
             setSuratNikHpLocked(false);
             document.getElementById('modal-surat-title').textContent = 'Catat Pengajuan Surat';
             const wrap = document.getElementById('surat-tanggal-wrap');
@@ -3379,7 +3380,7 @@
             document.getElementById('surat-tanggal-info').value = item.waktu || '-';
             document.getElementById('surat-nama').value = item.nama || '';
             document.getElementById('surat-nik').value = item.nik || '';
-            onSuratNikInput(document.getElementById('surat-nik'));
+            onSuratNikInput(document.getElementById('surat-nik'), false);
             document.getElementById('surat-hp').value = item.noHp || '';
             document.getElementById('surat-alamat').value = item.alamat || '';
             initSuratForm();
@@ -3420,11 +3421,42 @@
             el.className = 'text-xs mt-1 leading-snug ' + (kind === 'err' ? 'text-rose-600' : (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400')));
         }
 
+        // Nilai Nama/No. HP/Alamat yang terakhir KAMI isikan otomatis dari Data_Warga.
+        // Dipakai untuk membedakan "masih nilai auto-isi" (boleh ditimpa saat NIK
+        // diganti) vs "sudah diubah manual" (jangan ditimpa).
+        let suratNikAuto = { nama: '', hp: '', alamat: '' };
+        function resetSuratNikAuto() { suratNikAuto = { nama: '', hp: '', alamat: '' }; }
+
+        // Isi Nama, No. HP, & Alamat dari data warga yang cocok dengan NIK. Hanya
+        // menulis field yang masih kosong atau masih berisi hasil auto-isi sebelumnya,
+        // sehingga koreksi manual pengurus tidak tertimpa. Mengembalikan daftar field
+        // yang terisi.
+        function fillSuratFromWarga(warga) {
+            if (!warga) return [];
+            const filled = [];
+            const tryFill = (id, val, key) => {
+                const el = document.getElementById(id);
+                if (!el || !val) return;
+                if (!el.value || el.value === suratNikAuto[key]) {
+                    el.value = val;
+                    suratNikAuto[key] = val;
+                    filled.push(key);
+                }
+            };
+            tryFill('surat-nama', warga.nama || '', 'nama');
+            tryFill('surat-hp', warga.hp || '', 'hp');
+            tryFill('surat-alamat', warga.alamat || '', 'alamat');
+            if (filled.indexOf('hp') !== -1 && typeof updateSuratHpActions === 'function') updateSuratHpActions();
+            return filled;
+        }
+
         // Validasi real-time NIK: hanya angka, maks 16 digit, dan struktur NIK valid
-        // (tanggal lahir & jenis kelamin) via parseNIK(). Bila cocok dengan Data_Warga,
-        // tampilkan nama warga sebagai informasi (tidak menimpa isian).
-        function onSuratNikInput(el) {
+        // (tanggal lahir & jenis kelamin) via parseNIK(). Bila NIK cocok dengan
+        // Data_Warga, Nama/No. HP/Alamat diisi otomatis; bila tidak, diisi manual.
+        // doFill=false hanya menampilkan petunjuk (dipakai saat mengedit record).
+        function onSuratNikInput(el, doFill) {
             if (!el) return;
+            if (doFill !== false) doFill = true;
             const digits = String(el.value || '').replace(/\D/g, '').slice(0, 16);
             if (digits !== el.value) el.value = digits;
             if (!digits) { setSuratNikHint('', ''); return; }
@@ -3432,7 +3464,13 @@
             if (!parseNIK(digits)) { setSuratNikHint('Harap periksa ulang NIK', 'warn'); return; }
             const idx = findWargaByNik(digits, -1);
             const warga = idx !== -1 ? appState.warga[idx] : null;
-            setSuratNikHint(warga && warga.nama ? ('NIK valid. Terdaftar di Data Warga: ' + warga.nama) : 'NIK valid.', 'ok');
+            if (!warga) {
+                setSuratNikHint('NIK valid, tetapi tidak terdaftar di Data Warga. Isi Nama, No. HP, & Alamat secara manual.', '');
+                return;
+            }
+            const filled = doFill ? fillSuratFromWarga(warga) : [];
+            const base = 'NIK valid. Data warga ditemukan: ' + (warga.nama || '-') + '.';
+            setSuratNikHint(filled.length ? (base + ' Nama, No. HP, & Alamat diisi otomatis.') : base, 'ok');
         }
 
         function submitSurat(e) {
