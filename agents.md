@@ -334,6 +334,10 @@ Tombol refresh di:
 
 ---
 
+## 🔧 Recent Changes (2026-10-12)
+
+- ✅ **QR Buka Portal Publik** — pada `public.html`, **logo RT di header** (sebelah judul "Portal Publik") kini dapat diketuk (`role="button"`, `tabindex`, dukung Enter/Space) dan membuka modal baru **`#qr-modal`** yang menampilkan **`qr-public.png`** (kode QR untuk membuka Portal Publik) + tautan `RT_CONFIG.publicPortalUrl` yang dapat diketuk. Menambah `openQrModal()`/`closeQrModal()` (didaftarkan ke `window`) dan memasukkan `qr-modal` ke `PUBLIC_MODAL_IDS` (Esc/back-gesture berfungsi). Berkas `qr-public.png` ditambahkan ke root (perlu masuk **Bypass** Cloudflare Access). `APP_BUILD` public → `2026-10-12-01` (+ `version.json`).
+
 ## 🔧 Recent Changes (2026-10-11)
 
 - ✅ **Auto-isi data warga dari NIK pada form "Catat Pengajuan Surat" (Isi Manual)** — saat NIK 16 digit **valid & terdaftar** di Data_Warga, kolom **Nama Lengkap**, **No. HP**, & **Alamat/No. Rumah** terisi otomatis (`fillSuratFromWarga()`) via `findWargaByNik()`. **Selalu menimpa ketiga kolom** sehingga **mengganti NIK ke warga lain memperbarui semuanya** (perbaikan bug: sebelumnya menyisakan data pemohon lama bila kolom pernah diisi manual). Bila No. HP terisi, tombol Chat WhatsApp/Telepon langsung aktif (`updateSuratHpActions()`). Bila NIK valid tetapi **tidak terdaftar**, muncul keterangan **"NIK valid, tetapi tidak terdaftar di Data Warga. Isi Nama, No. HP, & Alamat secara manual."** Kolom tetap dapat diedit dan koreksi manual bertahan selama NIK tidak diubah lagi. `editSurat()` memanggil `onSuratNikInput(el, false)` (hanya petunjuk, tanpa auto-isi). `APP_BUILD` index → `2026-10-11-20` (+ `version.json`).

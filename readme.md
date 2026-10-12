@@ -29,6 +29,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 - **🧾 Isi form surat otomatis dari Data Warga (bantu warga):** pada **Layanan Surat**, kolom **NIK (16 digit)** berada di **paling atas**. Begitu NIK valid dimasukkan, sistem mencari NIK di **Data Warga** (`action=lookupWarga`) — bila ketemu, **Nama Lengkap & Alamat/No. Rumah** terisi otomatis **dan terkunci** (hanya tampilan, tidak dapat diubah), sedangkan **No. HP/WhatsApp** ditampilkan **tersamar namun tetap dapat diperiksa/diubah** (mis. `0812••••7890`; ketuk kolom untuk melihat nomor aslinya) — nomor asli tetap dikirim saat submit. Bila NIK **tidak terdaftar**, muncul info bahwa NIK tidak ada di data warga dan form **tetap dapat diisi manual** lalu dikirim.
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🚨 Nomor Siaga Darurat (Portal Publik):** tombol ikon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama** (112, 110, 113, 118/119, 115, 117, 129, 123) lengkap dengan ikon per layanan. Setiap nomor dapat diketuk untuk langsung menelepon (`tel:`).
+- **📱 QR Buka Portal (Portal Publik):** mengeklik **logo RT** di header `public.html` (sebelah judul "Portal Publik") membuka jendela berisi gambar **`qr-public.png`** — kode QR untuk membuka Portal Publik lewat ponsel — beserta tautan URL portal (`RT_CONFIG.publicPortalUrl`) yang dapat diketuk langsung. Memudahkan membagikan akses portal antar warga tanpa mengetik alamat.
 - **🔒 ON/OFF Portal Publik:** Toggle di tab Portal Publik untuk mengaktifkan/menonaktifkan akses warga. Saat OFF, server menolak `readPublic` sehingga data benar-benar tidak bisa diakses (bukan sekadar menyembunyikan tautan).
 - **🗓️ "Terakhir diperbarui" dari waktu data (Portal Publik):** label **Terakhir diperbarui:** pada `public.html` menampilkan **tanggal paling baru** berdasarkan **kolom Timestamp** (waktu record dibuat/diubah) dari **Pengumuman & Agenda Kegiatan Warga** yang tampil publik (format `dd-Mmm-yyyy`, waktu dikonversi ke zona **GMT+7**), bukan lagi jam perangkat pengunjung; bila belum ada data ditampilkan `-`.
 - **🗓️ "Terakhir diperbarui" (Panel Admin):** label serupa di `index.html` menampilkan **tanggal paling baru** dari **kolom Timestamp** di **seluruh tabel** (Data Warga, Iuran Kas, Pengumuman, Agenda Kegiatan Warga) yang telah disinkronkan ke Google Sheets, dengan konversi ke zona **GMT+7** dan format `dd-Mmm-yyyy`; bila belum ada data ditampilkan `-`.
@@ -381,7 +382,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 | `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
 | `/api` (proxy same-origin ke Apps Script) | Data portal publik & operasi admin | Terbuka (tanpa login); data tetap dijaga token `ADMIN_TOKEN` |
-| `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js` | Aset pendukung + berkas PWA portal publik | Terbuka (tanpa login) |
+| `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png` | Aset pendukung + berkas PWA portal publik | Terbuka (tanpa login) |
 
 > **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Portal publik dan admin berbagi satu domain (`sapa-rt017.pages.dev`); bagikan ke warga cukup `https://sapa-rt017.pages.dev/public` (tanpa ekstensi `.html`). Tidak perlu domain/wrapper tambahan — keamanan admin bersumber dari Cloudflare Access pada path `/` & `/index.html`.
 
@@ -402,7 +403,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 
    **b. `RT Public Assets`** (mengecualikan aset publik)
    - Public hostname: `sapa-rt017.pages.dev` — Path `/public`
-   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`
+   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png`
    - Policy: Action **Bypass**, Include → **Everyone**.
 
 4. **Simpan.** Perubahan berlaku langsung, tanpa redeploy.

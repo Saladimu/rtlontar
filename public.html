@@ -125,7 +125,8 @@
         <div class="max-w-5xl mx-auto px-4 py-4">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center space-x-3 min-w-0">
-                    <div class="w-10 h-10 rounded-xl overflow-hidden bg-white dark:bg-slate-700 shadow-sm flex-shrink-0">
+                    <div role="button" tabindex="0" onclick="openQrModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openQrModal();}" title="Tampilkan QR untuk buka Portal Publik" aria-label="Tampilkan QR kode untuk membuka Portal Publik"
+                        class="w-10 h-10 rounded-xl overflow-hidden bg-white dark:bg-slate-700 shadow-sm flex-shrink-0 cursor-pointer ring-offset-2 hover:ring-2 hover:ring-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
                         <img src="rt-icon.png" alt="Logo RT" class="w-full h-full object-cover">
                     </div>
                     <div class="min-w-0">
@@ -645,6 +646,30 @@
         </div>
     </div>
 
+    <!-- ================= QR BUKA PORTAL PUBLIK ================= -->
+    <div id="qr-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeQrModal()"></div>
+        <div class="relative bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 my-8 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 bg-cyan-600 text-white">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-qrcode text-lg"></i>
+                    <h2 id="qr-title" class="font-bold">Pindai untuk Buka Portal</h2>
+                </div>
+                <button onclick="closeQrModal()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-5 text-center space-y-3">
+                <p class="text-sm text-slate-600 dark:text-slate-300">Arahkan kamera ponsel ke kode QR berikut untuk membuka <b>Portal Publik RT</b>.</p>
+                <img src="qr-public.png" alt="Kode QR Portal Publik" class="mx-auto w-56 h-56 object-contain rounded-xl border border-slate-200 dark:border-slate-700 bg-white p-2">
+                <p class="text-xs text-slate-500 dark:text-slate-400 break-all">atau kunjungi:<br><a id="qr-public-url" href="#" target="_blank" rel="noopener" class="text-cyan-600 dark:text-cyan-400 hover:underline font-medium"></a></p>
+            </div>
+            <div class="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                <button onclick="closeQrModal()" class="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition"><i class="fa-solid fa-check mr-1.5"></i>Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT ================= -->
     <script>
         // ============================================================
@@ -1011,7 +1036,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-09-16';
+        const APP_BUILD = '2026-10-12-01';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1162,7 +1187,7 @@
         // ===== Riwayat navigasi (tombol / gestur "Back") =====
         // Simpan status modal ke History API agar gestur "Back" mobile menutup
         // modal yang terbuka, bukan langsung keluar dari aplikasi.
-        const PUBLIC_MODAL_IDS = ['siaga-modal', 'panduan-surat-modal', 'modal-about', 'install-modal'];
+        const PUBLIC_MODAL_IDS = ['siaga-modal', 'panduan-surat-modal', 'modal-about', 'install-modal', 'qr-modal'];
         let openPublicModalId = null;
 
         function getOpenPublicModal() { return openPublicModalId; }
@@ -1223,6 +1248,22 @@
         // ===== Tentang Aplikasi (visi & misi) =====
         function openAbout(opts) { openPublicModal('modal-about', opts); }
         function closeAbout(opts) { closePublicModal('modal-about', opts); }
+
+        // ===== QR Buka Portal Publik (klik logo di header) =====
+        // Menampilkan gambar qr-public.png agar mudah dibagikan/dipindai lewat ponsel.
+        function openQrModal(opts) {
+            const link = document.getElementById('qr-public-url');
+            if (link) {
+                const cfg = window.RT_CONFIG || {};
+                const url = cfg.publicPortalUrl || (window.location.origin + window.location.pathname);
+                link.href = url;
+                link.textContent = url;
+            }
+            openPublicModal('qr-modal', opts);
+        }
+        function closeQrModal(opts) { closePublicModal('qr-modal', opts); }
+        window.openQrModal = openQrModal;
+        window.closeQrModal = closeQrModal;
 
         // ===== Pasang Aplikasi (panduan PWA) =====
         function detectInstallPlatform() {
