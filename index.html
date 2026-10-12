@@ -1346,7 +1346,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-19';
+        const APP_BUILD = '2026-10-11-20';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3353,7 +3353,6 @@
             if (form) form.reset();
             clearSuratFormError();
             setSuratNikHint('', '');
-            resetSuratNikAuto();
             setSuratNikHpLocked(false);
             document.getElementById('modal-surat-title').textContent = 'Catat Pengajuan Surat';
             const wrap = document.getElementById('surat-tanggal-wrap');
@@ -3421,32 +3420,22 @@
             el.className = 'text-xs mt-1 leading-snug ' + (kind === 'err' ? 'text-rose-600' : (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400')));
         }
 
-        // Nilai Nama/No. HP/Alamat yang terakhir KAMI isikan otomatis dari Data_Warga.
-        // Dipakai untuk membedakan "masih nilai auto-isi" (boleh ditimpa saat NIK
-        // diganti) vs "sudah diubah manual" (jangan ditimpa).
-        let suratNikAuto = { nama: '', hp: '', alamat: '' };
-        function resetSuratNikAuto() { suratNikAuto = { nama: '', hp: '', alamat: '' }; }
-
-        // Isi Nama, No. HP, & Alamat dari data warga yang cocok dengan NIK. Hanya
-        // menulis field yang masih kosong atau masih berisi hasil auto-isi sebelumnya,
-        // sehingga koreksi manual pengurus tidak tertimpa. Mengembalikan daftar field
-        // yang terisi.
+        // Isi Nama, No. HP, & Alamat dari data warga yang cocok dengan NIK. Selalu
+        // menimpa ketiganya agar mengganti NIK ke warga lain tidak menyisakan data
+        // pemohon sebelumnya. Mengembalikan daftar field yang terisi.
         function fillSuratFromWarga(warga) {
             if (!warga) return [];
             const filled = [];
-            const tryFill = (id, val, key) => {
+            const put = (id, val, key) => {
                 const el = document.getElementById(id);
-                if (!el || !val) return;
-                if (!el.value || el.value === suratNikAuto[key]) {
-                    el.value = val;
-                    suratNikAuto[key] = val;
-                    filled.push(key);
-                }
+                if (!el) return;
+                el.value = (val == null ? '' : String(val));
+                if (el.value !== '') filled.push(key);
             };
-            tryFill('surat-nama', warga.nama || '', 'nama');
-            tryFill('surat-hp', warga.hp || '', 'hp');
-            tryFill('surat-alamat', warga.alamat || '', 'alamat');
-            if (filled.indexOf('hp') !== -1 && typeof updateSuratHpActions === 'function') updateSuratHpActions();
+            put('surat-nama', warga.nama || '', 'nama');
+            put('surat-hp', warga.hp || '', 'hp');
+            put('surat-alamat', warga.alamat || '', 'alamat');
+            if (typeof updateSuratHpActions === 'function') updateSuratHpActions();
             return filled;
         }
 
