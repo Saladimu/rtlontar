@@ -381,6 +381,10 @@ Halaman juga memakai `preconnect` ke Google Fonts, cdnjs, dan `script.google.com
 - **Sadar offline:** indikator header berubah menjadi **Offline** saat perangkat tanpa internet; Portal Publik menampilkan banner offline. Begitu kembali online, data disinkronkan ulang otomatis.
 - **Tombol "Cek Koneksi"** melakukan pemeriksaan versi backend nyata (`action=version`), bukan sekadar mengirim uji kosong.
 - Bila token admin salah/kadaluarsa saat menyimpan, aplikasi langsung mengarahkan ke **Pengaturan → Token Admin**.
+- **Antrean tulis (outbox):** perubahan yang gagal karena **koneksi** (bukan validasi/token) disimpan di browser (`rt_outbox`) dan **dikirim ulang otomatis** saat kembali online (event `online`, saat data berhasil dimuat, dan berkala tiap 60 dtk). Indikator **Pending sync** + tombol **Coba sekarang** muncul di **Pengaturan → Active Data Source**. Duplikat dicegah karena backend **mengabaikan `add` dengan ID yang sudah ada** (idempoten) — sehingga pengiriman ulang aman.
+- **Kerangka aplikasi offline (PWA):** service worker (`sw.js`) menyimpan **app-shell statis** (HTML, CSS, ikon, manifest, `config.js`) agar aplikasi tetap terbuka tanpa internet. **Respons API (`/api`) & Apps Script tidak pernah di-cache**; `config.js` & `version.json` selalu **network-first** supaya deteksi versi tetap akurat.
+
+> **Catatan deploy backend:** fitur antrean aman di atas menyertakan perubahan `code.gs` (`CODE_VERSION` → **`publik-v19-2026-10-12`**, idempotensi `add`). Deploy ulang Apps Script sebagai **New version** agar penanda versi cocok.
 
 ---
 

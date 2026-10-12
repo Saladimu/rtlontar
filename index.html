@@ -603,6 +603,14 @@
                     <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Transport</dt><dd id="conn-transport" class="font-mono">-</dd></div>
                     <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Web App URL</dt><dd id="conn-source" class="font-mono">-</dd></div>
                     <div class="flex gap-2"><dt class="w-28 shrink-0 text-slate-400">Backend version</dt><dd id="conn-backend" class="font-mono">-</dd></div>
+                    <div id="outbox-status" class="hidden flex gap-2 items-center">
+                        <dt class="w-28 shrink-0 text-slate-400">Pending sync</dt>
+                        <dd class="text-amber-700 flex items-center gap-2">
+                            <span id="outbox-badge" class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold">0</span>
+                            <span>perubahan menunggu koneksi</span>
+                            <button type="button" onclick="flushOutbox()" class="text-blue-600 hover:underline inline-flex items-center gap-1"><i class="fa-solid fa-rotate"></i> Coba sekarang</button>
+                        </dd>
+                    </div>
                 </dl>
             </div>
 
@@ -1336,7 +1344,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v18-2026-10-11';
+        const EXPECTED_BACKEND_VERSION = 'publik-v19-2026-10-12';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1346,7 +1354,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-12-03';
+        const APP_BUILD = '2026-10-12-04';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1753,6 +1761,7 @@
             renderSuratTable();
             updateConnectionUI();
             initNetworkStatus();
+            initOutbox();
             updatePublicPortalUI();
 
             // Sinkronisasi awal dijalankan setelah config.js siap (lihat runWhenConfigReady),
@@ -1778,6 +1787,7 @@
                 updatePublicPortalUI();
                 updateConnectionInfo();
                 if (apiBases().length) syncFromGoogleSheets();
+                if (apiBases().length) flushOutbox();
                 startUpdateWatcher();
             });
         };
@@ -4244,9 +4254,97 @@
                         showToast((detail && detail.message) ? detail.message : 'Google Sheets menolak permintaan.', 'error');
                         return;
                     }
-                    showToast('Gagal menyimpan ke Google Sheets (tersimpan lokal).', 'error');
+                    // Gangguan koneksi (offline/timeout): simpan ke antrean agar dicoba ulang.
+                    enqueueWrite(payload);
+                    showToast('Tersimpan lokal. Akan disinkronkan otomatis saat online.', 'info');
                 }
             });
+        }
+
+        // ===== Antrean tulis (outbox) =====
+        // Menyimpan operasi tulis yang gagal karena KONEKSI (bukan validasi/token) untuk
+        // dicoba ulang otomatis saat online. Keamanan dari duplikat dijamin oleh kolom ID
+        // stabil: backend mengabaikan "add" yang ID-nya sudah ada (idempoten).
+        const OUTBOX_KEY = 'rt_outbox';
+        const OUTBOX_MAX = 100;
+
+        function readOutbox() {
+            try {
+                const raw = localStorage.getItem(OUTBOX_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                return Array.isArray(list) ? list : [];
+            } catch (e) { return []; }
+        }
+        function writeOutbox(list) {
+            try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(list)); } catch (e) { /* penuh/privasi */ }
+            updateOutboxUI();
+        }
+        function outboxSignature(payload) {
+            try { return JSON.stringify(payload); } catch (e) { return String(Date.now()); }
+        }
+        function enqueueWrite(payload) {
+            if (!payload || !payload.sheetName) return;
+            const list = readOutbox();
+            const sig = outboxSignature(payload);
+            if (list.some(function (it) { return it && it.sig === sig; })) return;
+            list.push({ sig: sig, payload: payload, ts: Date.now(), tries: 0 });
+            while (list.length > OUTBOX_MAX) list.shift();
+            writeOutbox(list);
+        }
+        function outboxCount() { return readOutbox().length; }
+        function updateOutboxUI() {
+            const n = outboxCount();
+            const badge = document.getElementById('outbox-badge');
+            if (badge) badge.textContent = String(n);
+            const row = document.getElementById('outbox-status');
+            if (row) row.classList.toggle('hidden', n === 0);
+        }
+
+        let outboxFlushing = false;
+        function flushOutbox() {
+            if (outboxFlushing) return;
+            if (!apiBases().length || !appState.adminToken || !isOnline()) { updateOutboxUI(); return; }
+            const list = readOutbox();
+            if (!list.length) { updateOutboxUI(); return; }
+            outboxFlushing = true;
+            const item = list[0];
+            postToSheets(Object.assign({}, item.payload, { token: appState.adminToken }), {
+                onSuccess: () => {
+                    outboxFlushing = false;
+                    const cur = readOutbox();
+                    cur.shift();
+                    writeOutbox(cur);
+                    if (cur.length) { flushOutbox(); }
+                    else { showToast('Semua perubahan tertunda berhasil disinkronkan.', 'success'); }
+                },
+                onError: (reason, detail) => {
+                    outboxFlushing = false;
+                    if (reason === 'server_error') {
+                        // Tidak akan berhasil bila diulang (validasi/token): buang agar tidak menyumbat.
+                        const cur = readOutbox();
+                        cur.shift();
+                        writeOutbox(cur);
+                        if (detail && detail.code === 'unauthorized') {
+                            promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        } else {
+                            showToast((detail && detail.message) ? ('Perubahan tertunda dilewati: ' + detail.message) : 'Perubahan tertunda dilewati (ditolak server).', 'error');
+                        }
+                        if (cur.length) flushOutbox();
+                        return;
+                    }
+                    // Masih gangguan koneksi: biarkan di antrean, coba lagi nanti.
+                    updateOutboxUI();
+                }
+            });
+        }
+
+        // Inisialisasi antrean: perbarui badge, coba ulang saat online, dan berkala.
+        function initOutbox() {
+            updateOutboxUI();
+            if (window && typeof window.addEventListener === 'function') {
+                window.addEventListener('online', function () { setTimeout(flushOutbox, 500); });
+            }
+            setInterval(function () { if (outboxCount()) flushOutbox(); }, 60000);
         }
 
         function testConnection() {
@@ -4364,6 +4462,9 @@
             } else {
                 showToast('Data berhasil dimuat dari Google Sheets', 'success');
             }
+
+            // Koneksi terbukti hidup: coba kirim perubahan yang tertunda.
+            if (outboxCount()) flushOutbox();
         }
 
         function fmtDate(v) {
@@ -4426,10 +4527,11 @@
             appState.pengumuman = [];
             appState.kegiatan = [];
             appState.surat = [];
-            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat'].forEach(function (key) {
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_outbox'].forEach(function (key) {
                 localStorage.removeItem(key);
             });
             localDeletes = { warga: [], kas: [], pengumuman: [], kegiatan: [], surat: [] };
+            updateOutboxUI();
             renderDashboardStats();
             renderWargaTable();
             renderKasTable();
