@@ -170,7 +170,7 @@ Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengajuan baru akan dikirim
 
 #### Mengelola Pengajuan di Halaman Admin
 
-Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (terbaru di atas) beserta kartu ringkasan jumlah per status:
+Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (terbaru di atas) beserta kartu ringkasan jumlah per status. Judul kolom dibuat **bertumpuk dua baris** agar ringkas di layar sempit: **Tanggal / No. Pengajuan**, **Nama Pemohon / NIK** (NIK tersamar), **No. HP / Alamat**, lalu **Jenis Surat**, **Keperluan**, **Status**, dan **Aksi**.
 
 - **Isi Manual**: menambah pengajuan secara manual (mis. permohonan langsung/lisan) dengan tombol **Isi Manual**. Isian ditata berurutan: **NIK / No. HP** → **Nama Lengkap Pemohon** → **Alamat / No. Rumah** → **Jenis Surat** → **Keperluan** → **No. Surat** → **Status Pengurusan / Catatan Pengurus** → (**No. Pengajuan / Tanggal Pengajuan**, tampil saat mengedit). Bila ada isian yang salah (mis. NIK kurang dari 16 digit), pesan error muncul **di dalam modal** dan field yang bermasalah disorot.
 - **No. Pengajuan**: setiap baris menampilkan nomor pengajuan (kolom `ID`, mis. `SRT-261006-AB12`). Nomor ini dibuat dengan format yang **sama** baik untuk pengajuan dari Portal Publik maupun **pencatatan manual admin** (**Isi Manual**), sehingga konsisten dan mudah dicocokkan.
