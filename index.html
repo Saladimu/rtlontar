@@ -1345,7 +1345,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-16';
+        const APP_BUILD = '2026-10-11-17';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3635,7 +3635,7 @@
                         <div class="text-slate-500 text-xs mt-0.5" title="${escAttr(item.nik || '')}">${escAttr(maskNik(item.nik) || '-')}</div>
                     </td>
                     <td class="p-4">
-                        <div class="text-slate-700">${hpCell}</div>
+                        <div class="text-slate-700 text-xs whitespace-nowrap" title="${hpCell}">${hpCell}</div>
                         <div class="text-slate-500 text-xs mt-0.5">${escAttr(item.alamat || '-')}</div>
                     </td>
                     <td class="p-4 text-xs">
