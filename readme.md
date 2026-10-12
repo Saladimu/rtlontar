@@ -187,10 +187,10 @@ Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti m
 
 Email otomatis dikirim **hanya untuk pengajuan yang masuk dari Portal Publik** (bukan untuk entri manual admin). Cara mengaktifkan:
 
-1. Buka **Project Settings > Script Properties** pada Apps Script, tambahkan properti **`ADMIN_EMAIL`** berisi alamat email admin. (Jangan ditulis di dalam `code.gs` — nilainya dibaca dari Script Properties saat runtime.)
+1. Isi alamat email admin di **dashboard**: buka menu **Settings > Integrasi Google Sheets**, isi kolom **Admin Email (ADMIN_EMAIL)** lalu klik **Save Email**. Nilainya disimpan sebagai Script Property **`ADMIN_EMAIL`** di backend. (Alternatif: tambahkan langsung di **Project Settings > Script Properties** pada Apps Script. Jangan ditulis di dalam `code.gs` — nilainya dibaca dari Script Properties saat runtime.)
 2. (Opsional) Tambahkan **`NOTIF_SENDER_NAME`** untuk mengatur **nama pengirim** yang tampil di kotak masuk (default **`Pengajuan surat`**), **`NOTIF_REPLY_TO`** untuk mengatur alamat **Reply-To** (default memakai nilai `ADMIN_EMAIL`, sehingga balasan otomatis mengarah ke admin), dan **`NOTIF_SUBJECT_PREFIX`** untuk mengatur prefiks subjek email (default **`[SAPA-RT]`**). Ketiganya dapat diubah kapan saja tanpa menyentuh kode.
 3. Buka editor **Apps Script**, pilih fungsi **`authorizeMail`** pada dropdown lalu klik **Run** > **Review permissions** > **Allow**. Langkah ini memberi izin scope `script.send_mail` (kirim email) pada akun pemilik; tanpa ini, email gagal dengan error *"You do not have permission to call MailApp.sendEmail"*. Setelah itu deploy ulang sebagai **New version**.
-4. Uji dari dashboard: buka menu **Pengajuan Surat** lalu klik **Tes Email Admin**. Bila berhasil, email uji terkirim; bila `ADMIN_EMAIL` belum diatur, muncul pesan error yang menjelaskan.
+4. Uji dari dashboard: buka menu **Settings > Integrasi Google Sheets**, pastikan kolom **Admin Email** terisi, lalu klik **Test Email Admin**. Bila berhasil, email uji terkirim; alamat yang sedang ada di kolom itu dipakai sebagai penerima sekaligus disimpan ke `ADMIN_EMAIL`. Bila kosong/format salah, muncul pesan error yang menjelaskan.
 
 Untuk menguji alur lengkap, kirim pengajuan dari Portal Publik menggunakan NIK & No. HP asli; email notifikasi akan dikirim ke `ADMIN_EMAIL`.
 

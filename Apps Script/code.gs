@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v16-2026-10-11";
+var CODE_VERSION = "publik-v17-2026-10-11";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -83,6 +83,18 @@ function buildNotifMailOptions(to, subject, body) {
 // yang hanya mengembalikan Pengumuman & Kegiatan ber-Publik "Ya".
 function getAdminToken() {
   return PropertiesService.getScriptProperties().getProperty('ADMIN_TOKEN') || '';
+}
+
+// Alamat email admin (Script Property "ADMIN_EMAIL"): penerima notifikasi
+// pengajuan surat. Dibaca untuk ditampilkan & diubah dari panel Pengaturan.
+function getAdminEmail() {
+  var v = PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL');
+  return (v == null) ? '' : String(v).trim();
+}
+
+// Validasi sederhana format alamat email (cukup untuk mencegah salah ketik).
+function isValidEmail(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v == null ? '' : v).trim());
 }
 
 // Perbandingan string konstan (tidak membocorkan panjang/posisi karakter).
@@ -175,8 +187,9 @@ function doGet(e) {
     // Cari profil warga berdasarkan NIK (bantu isi form surat). Tanpa token.
     payload = handleLookupWarga(params);
   } else if (params.action === 'sendTestEmail') {
-    // Kirim email uji notifikasi (butuh token admin).
-    payload = isAuthorized(params.token) ? handleSendTestEmail() : unauthorized();
+    // Kirim email uji notifikasi (butuh token admin). Bila params.email diisi,
+    // alamat itu dipakai sebagai penerima sekaligus disimpan ke ADMIN_EMAIL.
+    payload = isAuthorized(params.token) ? handleSendTestEmail(params) : unauthorized();
   } else if (params.action === 'version') {
     payload = { "result": "success", "version": CODE_VERSION };
   } else {
@@ -437,7 +450,7 @@ function readAllSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "adminEmail": getAdminEmail(), "data": data };
 }
 
 // Baca hanya data yang boleh tampil di portal publik:
@@ -491,6 +504,14 @@ function doPost(e) {
       }
       var enabled = setPortalEnabled(data.enabled === true || String(data.enabled) === 'true');
       return respond({ "result": "success", "portalEnabled": enabled });
+    }
+
+    // Aksi khusus: mengubah alamat email admin (ADMIN_EMAIL, butuh token admin).
+    if (data.action === 'setAdminEmail') {
+      if (!isAuthorized(data.token)) {
+        return respond(unauthorized());
+      }
+      return respond(handleSetAdminEmail(data));
     }
 
     // Aksi publik: kirim pengajuan surat (TANPA token, hanya menambah baris baru).
@@ -682,8 +703,7 @@ function checkAndRecordSuratRate(nik) {
 // Kirim email notifikasi ke admin. TIDAK pernah menggagalkan penyimpanan.
 function notifyAdminNewSurat(r) {
   try {
-    var props = PropertiesService.getScriptProperties();
-    var to = props.getProperty('ADMIN_EMAIL');
+    var to = getAdminEmail();
     if (!to) return;
     var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
     var subject = getNotifSubjectPrefix() + ' Pengajuan Surat Baru: ' + r.jenisSurat + ' - ' + r.nama;
@@ -707,18 +727,38 @@ function notifyAdminNewSurat(r) {
   }
 }
 
+// Aksi admin (token): simpan alamat email admin ke Script Property ADMIN_EMAIL.
+function handleSetAdminEmail(data) {
+  var email = (data && data.email != null) ? String(data.email).trim() : '';
+  if (!email) {
+    return { "result": "error", "code": "invalid_email", "message": "Alamat email admin tidak boleh kosong." };
+  }
+  if (!isValidEmail(email)) {
+    return { "result": "error", "code": "invalid_email", "message": "Format email tidak valid: " + email };
+  }
+  PropertiesService.getScriptProperties().setProperty('ADMIN_EMAIL', email);
+  return { "result": "success", "adminEmail": email, "message": "Email admin disimpan: " + email + "." };
+}
+
 // Aksi admin (token): kirim email uji ke ADMIN_EMAIL untuk memverifikasi
-// konfigurasi notifikasi. Mengembalikan error yang jelas bila belum diatur.
-function handleSendTestEmail() {
+// konfigurasi notifikasi. Bila params.email diisi, alamat itu yang dipakai
+// sebagai penerima (sekaligus disimpan sebagai ADMIN_EMAIL). Mengembalikan
+// pesan error yang jelas bila belum diatur.
+function handleSendTestEmail(params) {
   var props = PropertiesService.getScriptProperties();
-  var to = props.getProperty('ADMIN_EMAIL');
+  var override = (params && params.email != null) ? String(params.email).trim() : '';
+  var to = override || props.getProperty('ADMIN_EMAIL');
   if (!to) {
     return {
       "result": "error",
       "code": "no_admin_email",
-      "message": "Script Property ADMIN_EMAIL belum diatur. Buka Project Settings > Script Properties, tambahkan ADMIN_EMAIL berisi alamat email admin, lalu coba lagi."
+      "message": "Email admin belum diatur. Isi kolom Admin Email (ADMIN_EMAIL) di panel Pengaturan, atau tambahkan Script Property ADMIN_EMAIL, lalu coba lagi."
     };
   }
+  if (!isValidEmail(to)) {
+    return { "result": "error", "code": "invalid_email", "message": "Format email tidak valid: " + to };
+  }
+  if (override) props.setProperty('ADMIN_EMAIL', to);
   try {
     var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
     MailApp.sendEmail(buildNotifMailOptions(

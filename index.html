@@ -514,10 +514,6 @@
                     <p class="text-sm text-slate-500">Permohonan surat pengantar / keterangan dari warga via Portal Publik</p>
                 </div>
                 <div class="flex flex-col sm:flex-row gap-2">
-                    <button onclick="testAdminEmail()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2" title="Kirim email uji ke ADMIN_EMAIL">
-                        <i class="fa-solid fa-envelope-circle-check"></i>
-                        <span>Tes Email Admin</span>
-                    </button>
                     <button onclick="openAddSurat()" class="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-plus-circle"></i>
                         <span>Isi Manual</span>
@@ -616,6 +612,22 @@
                         </button>
                     </div>
                     <p class="text-xs text-slate-500">Required to save, edit, and delete data. Must match <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_TOKEN</code> in <i>Project Settings &gt; Script Properties</i> in Apps Script. Without this token, write operations are rejected by the server.</p>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-slate-700">Admin Email (ADMIN_EMAIL)</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="email" id="admin-email-input" autocomplete="off" placeholder="admin@example.com" class="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="saveAdminEmail()" class="bg-slate-900 hover:bg-black text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm whitespace-nowrap">
+                            Save Email
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-500">Recipient for letter-request notification emails. Saved as <code class="bg-slate-100 px-1 py-0.5 rounded">ADMIN_EMAIL</code> in <i>Project Settings &gt; Script Properties</i>. Run <code class="bg-slate-100 px-1 py-0.5 rounded">authorizeMail</code> once so the script may send email.</p>
+                    <div class="pt-1">
+                        <button onclick="testAdminEmail()" title="Kirim email uji ke alamat Admin Email" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                            <i class="fa-solid fa-envelope-circle-check text-slate-400"></i>Test Email Admin
+                        </button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1205,7 +1217,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v16-2026-10-11';
+        const EXPECTED_BACKEND_VERSION = 'publik-v17-2026-10-11';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1215,7 +1227,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-10';
+        const APP_BUILD = '2026-10-11-11';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1591,6 +1603,7 @@
             kegiatan: JSON.parse(localStorage.getItem('rt_kegiatan')) || initialKegiatan,
             surat: JSON.parse(localStorage.getItem('rt_surat')) || [],
             adminToken: localStorage.getItem('rt_admin_token') || '',
+            adminEmail: localStorage.getItem('rt_admin_email') || '',
             backendVersion: '',
             activeBase: '',
             portalEnabled: true
@@ -1629,6 +1642,7 @@
             setDateInput('pengumuman-tanggal', todayLocalISO());
             setDateInput('kegiatan-tanggal', todayLocalISO());
             if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
+            if (document.getElementById('admin-email-input')) document.getElementById('admin-email-input').value = appState.adminEmail;
 
             // Switch to dashboard tab by default (tanpa menambah entri riwayat)
             switchTab('dashboard', { fromHistory: true });
@@ -3395,8 +3409,42 @@
             });
         }
 
-        // Kirim email uji ke ADMIN_EMAIL (Script Property) untuk memverifikasi
-        // notifikasi pengajuan. Memakai JSONP agar bisa menampilkan hasilnya.
+        // Validasi sederhana format email (cukup untuk mencegah salah ketik).
+        function isValidEmail(v) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v == null ? '' : v).trim());
+        }
+
+        // Simpan alamat email admin (ADMIN_EMAIL): disimpan lokal & dikirim ke
+        // backend (Script Property) bila koneksi + token tersedia.
+        function saveAdminEmail() {
+            const input = document.getElementById('admin-email-input');
+            const email = input ? input.value.trim() : '';
+            if (!email) {
+                showToast('Alamat email admin tidak boleh kosong.', 'error');
+                return;
+            }
+            if (!isValidEmail(email)) {
+                showToast('Format email tidak valid: ' + email, 'error');
+                return;
+            }
+
+            appState.adminEmail = email;
+            localStorage.setItem('rt_admin_email', email);
+
+            if (apiBases().length && appState.adminToken) {
+                fetch(getApiBase() || getDirectBase(), {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'setAdminEmail', email: email, token: appState.adminToken })
+                }).catch(() => {});
+            }
+
+            showToast('Email admin disimpan: ' + email, 'success');
+        }
+
+        // Kirim email uji ke alamat Admin Email untuk memverifikasi notifikasi.
+        // Bila kolom terisi, alamat itu dipakai & sekaligus disimpan ke ADMIN_EMAIL.
         function testAdminEmail() {
             if (!apiBases().length) {
                 showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan.', 'error');
@@ -3407,16 +3455,27 @@
                 return;
             }
 
-            showToast('Mengirim email uji ke admin...', 'info');
+            const input = document.getElementById('admin-email-input');
+            const email = input ? input.value.trim() : (appState.adminEmail || '');
+            if (email && !isValidEmail(email)) {
+                showToast('Format email tidak valid: ' + email, 'error');
+                return;
+            }
+
+            showToast('Mengirim email uji...', 'info');
 
             const callbackName = '__rtTestEmail_' + Date.now();
             loadApiJsonp(
-                () => 'action=sendTestEmail&token=' + encodeURIComponent(appState.adminToken) + '&callback=' + callbackName,
+                () => 'action=sendTestEmail&token=' + encodeURIComponent(appState.adminToken) + (email ? '&email=' + encodeURIComponent(email) : '') + '&callback=' + callbackName,
                 callbackName,
                 {
                     timeout: 15000,
                     onSuccess: (res) => {
                         if (res && res.result === 'success') {
+                            if (email) {
+                                appState.adminEmail = email;
+                                localStorage.setItem('rt_admin_email', email);
+                            }
                             showToast(res.message || 'Email uji terkirim.', 'success');
                         } else if (res && res.code === 'unauthorized') {
                             promptForAdminToken('Email uji ditolak: token admin tidak valid atau belum diatur di pengaturan.');
@@ -3831,6 +3890,12 @@
             saveLocalState();
             appState.portalEnabled = res.portalEnabled !== false;
             updatePublicPortalUI();
+            if (typeof res.adminEmail === 'string' && res.adminEmail) {
+                appState.adminEmail = res.adminEmail;
+                localStorage.setItem('rt_admin_email', res.adminEmail);
+                const emailInput = document.getElementById('admin-email-input');
+                if (emailInput && !emailInput.value) emailInput.value = res.adminEmail;
+            }
             renderWargaTable();
             renderKasTable();
             renderPengumumanCards();

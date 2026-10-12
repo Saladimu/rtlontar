@@ -19,7 +19,7 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - **Nama:** `ADMIN_TOKEN`
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
-   - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan.
+    - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan. Dapat juga diisi/diubah dari **dashboard admin**: menu **Settings > Integrasi Google Sheets > Admin Email** (aksi `setAdminEmail`).
    - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
    - (Opsional) **Nama:** `NOTIF_REPLY_TO`, **Nilai:** alamat **Reply-To** email notifikasi. Bila kosong, default memakai nilai `ADMIN_EMAIL` (balasan otomatis mengarah ke admin).
    - (Opsional) **Nama:** `NOTIF_SUBJECT_PREFIX`, **Nilai:** prefiks subjek email notifikasi pengajuan surat. Bila kosong, default **`[SAPA-RT]`**.
@@ -185,11 +185,11 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token admin** (JSONP) |
+| `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled` + `adminEmail`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
 | `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
 | `lookupWarga` | `action=lookupWarga&nik=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **NIK (16 digit) persis** untuk mengisi otomatis **Nama, No. HP, & Alamat** pada form pengajuan surat. Ketemu → `{result:"success", found:true, nama, noHp, alamat}`; tidak → `{found:false}` (warga tetap boleh mengisi manual). Hanya 3 field itu yang dibuka (bukan seluruh data warga). Ter-gate status portal; dibatasi ≤ 20 pencarian/jam per NIK. Mendukung JSONP |
-| `sendTestEmail` | `action=sendTestEmail&token=T` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; bila scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
+| `sendTestEmail` | `action=sendTestEmail&token=T[&email=...]` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `email` diisi, alamat itu dipakai sebagai penerima **sekaligus disimpan** ke `ADMIN_EMAIL`. Bila kosong & `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; format email salah → `code:"invalid_email"`; scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
 | (default) | — | Health check: `{result:"success", message:"Web App aktif"}` |
@@ -214,8 +214,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v16-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v16-2026-10-11","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v17-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v17-2026-10-11","found":false}`
 
 **Contoh Delete:**
 ```
@@ -245,6 +245,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | Aksi | Payload | Deskripsi |
 |------|---------|-----------|
 | `setPortalStatus` | `{action:"setPortalStatus", enabled:true/false, token:T}` | Menyalakan/mematikan portal publik. Butuh token admin. Disimpan di Script Property `PUBLIC_PORTAL_ENABLED` |
+| `setAdminEmail` | `{action:"setAdminEmail", email:"admin@contoh.com", token:T}` | Menyimpan alamat email admin ke Script Property `ADMIN_EMAIL` (penerima notifikasi pengajuan surat). Butuh token admin. Validasi format: bila kosong/salah → `{result:"error", code:"invalid_email"}`; sukses → `{result:"success", adminEmail}`. Dipakai tombol **Save Email** di panel Pengaturan (`index.html`) |
 | `submitSurat` | `{action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan, ref?, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Pengajuan_Surat`. Server memaksa `Status="Pending"`, mengisi Timestamp & ID. NIK wajib 16 digit; `website` adalah honeypot; dibatasi ≤ 5 pengajuan/jam per NIK (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF. Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", id}` |
 
 > **Catatan `submitSurat`:** dipakai halaman `public.html`. ID bisa berasal dari `ref` yang dikirim warga (bila formatnya aman & belum terpakai), atau dibuat otomatis dengan format `SRT-yyMMdd-XXXX`.

@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v16-2026-10-11'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v17-2026-10-11'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -165,6 +165,7 @@ function seedData() {
   const iso = (min) => new Date(base + min * 60000).toISOString();
   return {
     portalEnabled: true,
+    adminEmail: '',
     sheets: {
       Data_Warga: [
         buildRow('Data_Warga', { nomorKK: '3201010101010001', nama: 'Budi Santoso', status: 'Kepala Keluarga', jenisKelamin: 'Laki-laki', nik: '3201010101800001', tempat: 'Bogor', tanggalLahir: '1980-01-01', pendidikan: 'SMA', pekerjaan: 'Karyawan', noHp: '081234567890', statusTinggal: 'Tetap', alamat: 'Jl. Merdeka No. 1' }, iso(0), 'id-seed-w1'),
@@ -205,6 +206,7 @@ function loadStore() {
       if (!Array.isArray(parsed.sheets[n])) parsed.sheets[n] = [];
     });
     if (typeof parsed.portalEnabled !== 'boolean') parsed.portalEnabled = true;
+    if (typeof parsed.adminEmail !== 'string') parsed.adminEmail = '';
     return parsed;
   } catch (e) {
     if (fs.existsSync(DATA_FILE)) {
@@ -249,7 +251,7 @@ function readAllSheets() {
       return out;
     });
   });
-  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, data };
+  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, adminEmail: store.adminEmail || '', data };
 }
 
 function readPublicSheets() {
@@ -352,6 +354,15 @@ function handlePost(data) {
     store.portalEnabled = data.enabled === true || String(data.enabled) === 'true';
     saveStore();
     return { result: 'success', portalEnabled: store.portalEnabled };
+  }
+
+  if (data.action === 'setAdminEmail') {
+    const email = cleanStr(data.email, 200);
+    if (!email) return { result: 'error', code: 'invalid_email', message: 'Alamat email admin tidak boleh kosong.' };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { result: 'error', code: 'invalid_email', message: 'Format email tidak valid: ' + email };
+    store.adminEmail = email;
+    saveStore();
+    return { result: 'success', adminEmail: email, message: 'Email admin disimpan: ' + email + '.' };
   }
 
   if (data.action === 'submitSurat') {
@@ -466,7 +477,22 @@ function handleApi(req, res) {
     else if (params.action === 'readPublic') payload = readPublicSheets();
     else if (params.action === 'checkSurat') payload = handleCheckSurat(params);
     else if (params.action === 'lookupWarga') payload = handleLookupWarga(params);
-    else if (params.action === 'sendTestEmail') payload = { result: 'success', message: 'Email uji tidak dikirim pada mock lokal.' };
+    else if (params.action === 'sendTestEmail') {
+      const email = cleanStr(params.email, 200);
+      if (email) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          payload = { result: 'error', code: 'invalid_email', version: CODE_VERSION, message: 'Format email tidak valid: ' + email };
+        } else {
+          store.adminEmail = email;
+          saveStore();
+          payload = { result: 'success', to: email, version: CODE_VERSION, message: 'Email uji (mock) ke ' + email + '.' };
+        }
+      } else if (!store.adminEmail) {
+        payload = { result: 'error', code: 'no_admin_email', version: CODE_VERSION, message: 'Email admin belum diatur. Isi kolom Admin Email (ADMIN_EMAIL) di panel Pengaturan.' };
+      } else {
+        payload = { result: 'success', to: store.adminEmail, version: CODE_VERSION, message: 'Email uji (mock) ke ' + store.adminEmail + '.' };
+      }
+    }
     else if (params.action === 'version') payload = { result: 'success', version: CODE_VERSION };
     else payload = { result: 'success', message: 'Web App aktif (mock lokal)', version: CODE_VERSION };
     sendJson(res, payload, 200, isJsonp, callback);
