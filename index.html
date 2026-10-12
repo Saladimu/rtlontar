@@ -561,6 +561,10 @@
                             <input type="text" id="search-surat" oninput="renderSuratTable()" placeholder="Cari nama / NIK / jenis surat..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
                         </div>
                         <button type="button" onclick="clearSuratFilters()" title="Bersihkan pencarian & filter" class="py-1.5 px-3 text-slate-400 hover:text-rose-500 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"><i class="fa-solid fa-filter-circle-xmark"></i></button>
+                        <label class="flex items-center space-x-2 text-xs font-medium text-slate-500 whitespace-nowrap cursor-pointer select-none" title="Tampilkan pengajuan surat yang diarsipkan">
+                            <input type="checkbox" id="show-archived-surat" onchange="toggleShowArchivedSurat(this.checked)" class="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500">
+                            <span>Tampilkan arsip</span>
+                        </label>
                     </div>
                 </div>
                 <div class="overflow-x-auto custom-scrollbar">
@@ -1331,7 +1335,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v17-2026-10-11';
+        const EXPECTED_BACKEND_VERSION = 'publik-v18-2026-10-11';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1341,7 +1345,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-15';
+        const APP_BUILD = '2026-10-11-16';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1738,6 +1742,7 @@
             decorateFooterBuildInfo();
             renderDashboardStats();
             initShowArchivedWarga();
+            initShowArchivedSurat();
             initWargaSort();
             renderWargaTable();
             initKasView();
@@ -2163,6 +2168,27 @@
         function initShowArchivedWarga() {
             const el = document.getElementById('show-archived-warga');
             if (el) el.checked = showArchivedWarga;
+        }
+
+        // Tampilkan pengajuan surat yang diarsipkan (disembunyikan secara default).
+        let showArchivedSurat = localStorage.getItem('rt_show_archived_surat') === '1';
+
+        function isArchivedSurat(item) {
+            if (!item) return false;
+            if (item.arsip === true) return true;
+            const s = String(item.arsip === null || item.arsip === undefined ? '' : item.arsip).trim().toLowerCase();
+            return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'arsip';
+        }
+
+        function toggleShowArchivedSurat(on) {
+            showArchivedSurat = !!on;
+            localStorage.setItem('rt_show_archived_surat', showArchivedSurat ? '1' : '0');
+            renderSuratTable();
+        }
+
+        function initShowArchivedSurat() {
+            const el = document.getElementById('show-archived-surat');
+            if (el) el.checked = showArchivedSurat;
         }
 
         // Bandingkan dua item warga menurut kolom yang dipilih (locale-aware,
@@ -3422,12 +3448,16 @@
                 keperluan: keperluan,
                 status: status,
                 noSurat: noSurat,
-                catatan: document.getElementById('surat-catatan').value.trim()
+                catatan: document.getElementById('surat-catatan').value.trim(),
+                arsip: 'Tidak'
             };
 
             if (editMode.surat !== null) {
                 const editId = editMode.surat;
                 const idx = findIndexById(appState.surat, editId);
+                // Pertahankan status arsip saat edit (jangan sampai ter-unarchive).
+                const prevArsip = idx !== -1 ? (appState.surat[idx].arsip || 'Tidak') : 'Tidak';
+                data.arsip = prevArsip;
                 if (idx !== -1) {
                     appState.surat[idx] = Object.assign({ _id: editId, waktu: appState.surat[idx].waktu }, data);
                 }
@@ -3450,10 +3480,37 @@
             document.getElementById('form-surat').reset();
         }
 
-        function deleteSurat(index) {
-            if (confirm('Hapus pengajuan surat ini?')) {
-                deleteRecord('Pengajuan_Surat', index, appState.surat, renderSuratTable, 'surat');
-            }
+        // Arsipkan pengajuan surat (alih-alih menghapus): tandai kolom "Diarsipkan",
+        // sembunyikan dari daftar utama, tetapi baris TETAP tersimpan & dapat dipulihkan.
+        function suratRowPayload(item, arsip) {
+            return {
+                nama: item.nama || '', nik: item.nik || '', noHp: item.noHp || '', alamat: item.alamat || '',
+                jenisSurat: item.jenisSurat || '', keperluan: item.keperluan || '',
+                status: item.status || 'Pending', noSurat: item.noSurat || '', catatan: item.catatan || '',
+                arsip: arsip ? 'Ya' : 'Tidak'
+            };
+        }
+
+        function updateSuratArsip(index, arsip) {
+            const item = appState.surat[index];
+            if (!item) return;
+            if (!item._id) { item._id = makeSuratRef(); }
+            item.arsip = arsip ? 'Ya' : 'Tidak';
+            saveLocalState();
+            renderSuratTable();
+            sendToGoogleSheets(Object.assign({ action: 'update', sheetName: 'Pengajuan_Surat', id: item._id }, suratRowPayload(item, arsip)));
+            showToast(arsip ? 'Pengajuan surat diarsipkan (tetap tersimpan).' : 'Pengajuan surat dipulihkan.', arsip ? 'info' : 'success');
+        }
+
+        function archiveSurat(index) {
+            const item = appState.surat[index];
+            if (!item) return;
+            const confirmMsg = `Arsipkan pengajuan surat ini?\n\n• Nama: ${item.nama || '-'}\n• No. Pengajuan: ${item._id || '-'}\n• Jenis Surat: ${item.jenisSurat || '-'}\n\nPengajuan tidak akan tampil di daftar utama, namun tetap tersimpan dan dapat dipulihkan.`;
+            if (confirm(confirmMsg)) updateSuratArsip(index, true);
+        }
+
+        function restoreSurat(index) {
+            updateSuratArsip(index, false);
         }
 
         // Ubah status cepat dari tabel (siklus Pending -> Diproses -> Selesai -> Ditolak -> Pending).
@@ -3479,7 +3536,7 @@
                 action: 'update', sheetName: 'Pengajuan_Surat', id: item._id,
                 nama: item.nama, nik: item.nik, noHp: item.noHp, alamat: item.alamat,
                 jenisSurat: item.jenisSurat, keperluan: item.keperluan, status: next,
-                noSurat: item.noSurat || '', catatan: item.catatan
+                noSurat: item.noSurat || '', catatan: item.catatan, arsip: item.arsip || 'Tidak'
             });
             showToast('Status diubah menjadi ' + next, 'success');
         }
@@ -3494,14 +3551,14 @@
 
             tbody.innerHTML = '';
 
-            // Ringkasan jumlah per status.
+            // Ringkasan jumlah per status (pengajuan yang diarsipkan tidak dihitung).
             ['Pending', 'Diproses', 'Selesai', 'Ditolak'].forEach(function (s) {
                 const el = document.getElementById('surat-count-' + s.toLowerCase());
-                if (el) el.innerText = appState.surat.filter(function (x) { return (x.status || 'Pending') === s; }).length;
+                if (el) el.innerText = appState.surat.filter(function (x) { return !isArchivedSurat(x) && (x.status || 'Pending') === s; }).length;
             });
 
             const list = appState.surat.slice().reverse(); // terbaru dahulu
-            const filtered = list.filter(function (item) {
+            const matched = list.filter(function (item) {
                 const haystack = [item._id, item.nama, item.nik, maskNik(item.nik), item.noHp, waNumber(item.noHp), item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan, item.waktu, fmtTimestamp(item.waktu)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
@@ -3509,35 +3566,72 @@
                 return matchSearch && matchStatus;
             });
 
+            // Baris yang diarsipkan disembunyikan kecuali "Tampilkan arsip" aktif.
+            // Saat tampil, pengajuan arsip dipisah ke bagian tersendiri di ATAS tabel.
+            const aktifItems = matched.filter(function (item) { return !isArchivedSurat(item); });
+            const archivedItems = showArchivedSurat ? matched.filter(function (item) { return isArchivedSurat(item); }) : [];
+            const filtered = showArchivedSurat ? archivedItems.concat(aktifItems) : aktifItems;
+            const showSections = showArchivedSurat && archivedItems.length > 0;
+            const firstArchivedPos = 0;
+            const firstActivePos = archivedItems.length;
+
             const label = document.getElementById('surat-table-label');
             if (label) label.innerText = filtered.length + ' dari ' + appState.surat.length + ' pengajuan';
 
             if (filtered.length === 0) {
                 const anyFilter = search !== '' || filterStatus !== '';
-                const msg = appState.surat.length === 0
-                    ? 'Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.'
-                    : (anyFilter ? 'Tidak ada pengajuan yang cocok dengan pencarian/filter.' : 'Belum ada pengajuan surat.');
+                let msg;
+                if (appState.surat.length === 0) {
+                    msg = 'Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.';
+                } else if (anyFilter) {
+                    msg = 'Tidak ada pengajuan yang cocok dengan pencarian/filter.';
+                } else if (!showArchivedSurat && appState.surat.some(isArchivedSurat)) {
+                    msg = 'Tidak ada pengajuan aktif. Centang "Tampilkan arsip" untuk melihat pengajuan yang diarsipkan.';
+                } else {
+                    msg = 'Belum ada pengajuan surat.';
+                }
                 const empty = document.createElement('tr');
                 empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
                 return;
             }
 
+            // Judul pemisah bagian (arsip vs aktif) saat "Tampilkan arsip" aktif.
+            const appendSectionRow = (kind, count) => {
+                const tr = document.createElement('tr');
+                if (kind === 'archived') {
+                    tr.className = 'bg-amber-100 text-amber-800';
+                    tr.innerHTML = `<td colspan="7" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider"><i class="fa-solid fa-box-archive mr-1"></i>Pengajuan Diarsipkan (${count}) <span class="font-normal normal-case tracking-normal">- tidak tampil di daftar utama</span></td>`;
+                } else {
+                    tr.className = 'bg-slate-100 text-slate-600';
+                    tr.innerHTML = `<td colspan="7" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider"><i class="fa-solid fa-envelope-open-text mr-1"></i>Pengajuan Aktif (${count})</td>`;
+                }
+                tbody.appendChild(tr);
+            };
+
             filtered.forEach(function (item, rowIdx) {
+                if (showSections && rowIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
+                if (showSections && rowIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
                 const originalIndex = appState.surat.indexOf(item);
+                const archived = isArchivedSurat(item);
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-cyan-50';
                 const tr = document.createElement('tr');
-                tr.className = `${zebra} hover:bg-cyan-100 cursor-pointer transition`;
+                tr.className = archived
+                    ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer transition'
+                    : `${zebra} hover:bg-cyan-100 cursor-pointer transition`;
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editSurat(originalIndex);
                 const hpCell = escAttr(fmtPhone(item.noHp) || '-');
+                const archiveBadge = archived
+                    ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>'
+                    : '';
                 tr.innerHTML = `
                     <td class="p-4 whitespace-nowrap">
                         <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
                         <div class="text-slate-700 text-xs font-semibold mt-0.5">${escAttr(item._id || '-')}</div>
                     </td>
                     <td class="p-4">
-                        <div class="font-semibold text-slate-800">${escAttr(item.nama || '-')}</div>
+                        <div class="font-semibold text-slate-800">${escAttr(item.nama || '-')}${archiveBadge}</div>
                         <div class="text-slate-500 text-xs mt-0.5" title="${escAttr(item.nik || '')}">${escAttr(maskNik(item.nik) || '-')}</div>
                     </td>
                     <td class="p-4">
@@ -3553,7 +3647,9 @@
                     <td class="p-4 text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); cycleSuratStatus(${originalIndex})" class="text-cyan-600 hover:text-cyan-800 p-1 rounded mr-1" title="Ubah status"><i class="fa-solid fa-rotate"></i></button>
                         <button onclick="event.stopPropagation(); editSurat(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="event.stopPropagation(); deleteSurat(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
+                        ${archived
+                            ? `<button onclick="event.stopPropagation(); restoreSurat(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan dari arsip"><i class="fa-solid fa-box-open"></i></button>`
+                            : `<button onclick="event.stopPropagation(); archiveSurat(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Arsipkan"><i class="fa-solid fa-box-archive"></i></button>`}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -4036,7 +4132,7 @@
                 _id: r[r.length - 1], timestamp: r[0], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7]
             })));
             appState.surat = applyLocalDeletes('surat', (d.Pengajuan_Surat || []).map(r => ({
-                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9]
+                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9], arsip: r[10]
             })));
             saveLocalState();
             appState.portalEnabled = res.portalEnabled !== false;

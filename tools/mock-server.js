@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v17-2026-10-11'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v18-2026-10-11'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -39,7 +39,7 @@ const DATA_FIELDS = {
   Iuran_Kas: 7,
   Pengumuman: 7,
   Kegiatan_Warga: 8,
-  Pengajuan_Surat: 10,
+  Pengajuan_Surat: 11,
 };
 
 const PUBLIK_SET = ['tidak', 'no', 'false', '0', 'draft'];
@@ -148,7 +148,8 @@ function buildRow(sheetName, data, tsIso, id) {
     row.push(
       blank(data.nama), blank(data.nik), blank(data.noHp), blank(data.alamat),
       blank(data.jenisSurat), blank(data.keperluan),
-      data.status ? String(data.status) : 'Pending', blank(data.noSurat), blank(data.catatan)
+      data.status ? String(data.status) : 'Pending', blank(data.noSurat), blank(data.catatan),
+      normalizeArsip(data.arsip)
     );
   } else {
     return null;

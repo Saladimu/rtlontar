@@ -120,6 +120,7 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 | Status Pengurusan | String | Pending / Diproses / Selesai / Ditolak |
 | No. Surat | String | 474/017-RT/RW.06/X/2026 (nomor surat resmi; **wajib** bila status `Selesai`) |
 | Catatan Pengurus | String | (opsional, diisi pengurus) |
+| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengajuan dari daftar utama (tetap tersimpan, dapat dipulihkan) |
 
 > Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan.
 >
@@ -214,8 +215,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v17-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v17-2026-10-11","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v18-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v18-2026-10-11","found":false}`
 
 **Contoh Delete:**
 ```
@@ -238,7 +239,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
-| `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `catatan` |
+| `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `noSurat`, `catatan`, `arsip` (`Ya`/`Tidak`) |
 
 **Aksi khusus (bukan per-sheet):**
 
