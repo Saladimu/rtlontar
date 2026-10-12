@@ -1021,25 +1021,6 @@
             </div>
             <form id="form-surat" onsubmit="submitSurat(event)" class="space-y-3">
                 <div id="surat-form-error" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></div>
-                <div id="surat-tanggal-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. Pengajuan</label>
-                        <input type="text" id="surat-ref-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pengajuan</label>
-                        <input type="text" id="surat-tanggal-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">No. Surat <span id="surat-nosurat-req" class="hidden text-rose-500">*</span></label>
-                    <input type="text" id="surat-nosurat" maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" data-rt-placeholder="suratNo" placeholder="mis. 474/RT/RW/X/2026">
-                    <p class="text-[11px] text-slate-400 mt-1">Nomor surat resmi. Wajib diisi bila status pengurusan <b>Selesai</b>.</p>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Pemohon *</label>
-                    <input type="text" id="surat-nama" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Budi Santoso">
-                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">NIK (16 digit) *</label>
@@ -1057,6 +1038,10 @@
                 </div>
                 <p id="surat-nikhp-locked-hint" class="hidden text-xs text-slate-400 -mt-1"><i class="fa-solid fa-lock mr-1"></i>NIK & No. HP tidak dapat diubah karena dipakai warga untuk Cek Status.</p>
                 <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap Pemohon *</label>
+                    <input type="text" id="surat-nama" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Budi Santoso">
+                </div>
+                <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat / No. Rumah *</label>
                     <input type="text" id="surat-alamat" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" data-rt-placeholder="alamat" placeholder="Alamat lengkap / No. Rumah">
                 </div>
@@ -1070,6 +1055,11 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Keperluan / Alasan Pengajuan *</label>
                     <textarea id="surat-keperluan" required rows="3" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="Contoh: untuk perpanjangan KTP-el"></textarea>
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">No. Surat <span id="surat-nosurat-req" class="hidden text-rose-500">*</span></label>
+                    <input type="text" id="surat-nosurat" maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" data-rt-placeholder="suratNo" placeholder="mis. 474/RT/RW/X/2026">
+                    <p class="text-[11px] text-slate-400 mt-1">Nomor surat resmi. Wajib diisi bila status pengurusan <b>Selesai</b>.</p>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status Pengurusan</label>
@@ -1080,6 +1070,16 @@
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Pengurus</label>
                         <input type="text" id="surat-catatan" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="mis. menunggu tanda tangan">
+                    </div>
+                </div>
+                <div id="surat-tanggal-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. Pengajuan</label>
+                        <input type="text" id="surat-ref-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pengajuan</label>
+                        <input type="text" id="surat-tanggal-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
                     </div>
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
@@ -1341,7 +1341,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-13';
+        const APP_BUILD = '2026-10-11-14';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
