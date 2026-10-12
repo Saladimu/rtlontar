@@ -371,6 +371,15 @@ Halaman juga memakai `preconnect` ke Google Fonts, cdnjs, dan `script.google.com
 - **Caching aset (`_headers`):** berkas **`_headers`** (Cloudflare Pages) memberi `Cache-Control` lama (7 hari) untuk ikon statis ber-cache-buster (`rt-icon.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`), dan `must-revalidate` untuk `/config.js`, `/version.json`, `/sw.js` agar deteksi versi tetap akurat.
 - **Ikon dioptimalkan** (palet 256 warna): `rt-icon.png` 190 KB → 27 KB, `icon-192.png` 44 KB → 8 KB, `apple-touch-icon.png` 40 KB → 8 KB, `favicon.ico` 17 KB → 8 KB (multi-ukuran 16/32/48/64).
 
+### Keandalan penyimpanan & koneksi
+
+- **Verifikasi tulis (anti "sukses palsu"):** saat memakai proxy same-origin (`/api`), hasil simpan **dibaca dari respons backend** dan baru dianggap sukses bila `{"result":"success"}`. Bila proxy gagal menjangkau Apps Script (`proxy_fetch_failed`/respons tak terduga), permintaan otomatis dicoba ke URL Apps Script langsung.
+- **Fallback antar sumber:** pembacaan & penulisan mencoba **proxy dulu**, lalu URL langsung bila proxy gagal/timeout (tiap sumber punya batas waktu sendiri, tidak lagi bergantung pada satu sumber).
+- **Anti klik ganda:** permintaan tulis identik yang masih diproses diabaikan agar tidak menghasilkan baris dobel.
+- **Sadar offline:** indikator header berubah menjadi **Offline** saat perangkat tanpa internet; Portal Publik menampilkan banner offline. Begitu kembali online, data disinkronkan ulang otomatis.
+- **Tombol "Cek Koneksi"** melakukan pemeriksaan versi backend nyata (`action=version`), bukan sekadar mengirim uji kosong.
+- Bila token admin salah/kadaluarsa saat menyimpan, aplikasi langsung mengarahkan ke **Pengaturan → Token Admin**.
+
 ---
 
 ## 🌐 Publikasi & Kontrol Akses (Cloudflare Pages + Access)

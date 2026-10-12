@@ -1346,7 +1346,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-20';
+        const APP_BUILD = '2026-10-12-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1752,6 +1752,7 @@
             renderKegiatanCards();
             renderSuratTable();
             updateConnectionUI();
+            initNetworkStatus();
             updatePublicPortalUI();
 
             // Sinkronisasi awal dijalankan setelah config.js siap (lihat runWhenConfigReady),
@@ -3738,15 +3739,19 @@
             localStorage.setItem('rt_admin_email', email);
 
             if (apiBases().length && appState.adminToken) {
-                fetch(getApiBase() || getDirectBase(), {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ action: 'setAdminEmail', email: email, token: appState.adminToken })
-                }).catch(() => {});
+                postToSheets({ action: 'setAdminEmail', email: email, token: appState.adminToken }, {
+                    onSuccess: () => showToast('Email admin disimpan: ' + email, 'success'),
+                    onError: (reason, detail) => {
+                        if (detail && detail.code === 'unauthorized') {
+                            promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                            return;
+                        }
+                        showToast('Email admin tersimpan lokal, tetapi gagal dikirim ke Google Sheets.', 'error');
+                    }
+                });
+            } else {
+                showToast('Email admin disimpan: ' + email, 'success');
             }
-
-            showToast('Email admin disimpan: ' + email, 'success');
         }
 
         // Kirim email uji ke alamat Admin Email untuk memverifikasi notifikasi.
@@ -3874,7 +3879,15 @@
             return list;
         }
 
+        // Deteksi koneksi internet perangkat (navigator.onLine). Dipakai untuk
+        // membedakan "server tidak terjangkau" dari "perangkat sedang offline".
+        function isOnline() {
+            return (typeof navigator === 'undefined' || navigator.onLine !== false);
+        }
+
         // Muat respons JSONP dari Apps Script dengan fallback berurutan antar base.
+        // Setiap base punya batas waktunya sendiri: bila timeout atau gagal, langsung
+        // lanjut ke base berikutnya (proxy -> direct) alih-alih menyerah di base pertama.
         // buildQuery() mengembalikan query string (termasuk parameter callback).
         function loadApiJsonp(buildQuery, callbackName, handlers) {
             handlers = handlers || {};
@@ -3883,26 +3896,39 @@
                 if (handlers.onError) handlers.onError('no_base');
                 return false;
             }
-            const timeoutMs = handlers.timeout || 15000;
+            const perBaseTimeout = handlers.timeout || 15000;
             const script = document.createElement('script');
             let idx = 0;
             let settled = false;
+            let timer = null;
 
             const cleanup = () => {
+                if (timer) clearTimeout(timer);
                 delete window[callbackName];
                 if (script.parentNode) script.parentNode.removeChild(script);
             };
-            const timer = setTimeout(() => {
+            const fail = (reason) => {
                 if (settled) return;
                 settled = true;
                 cleanup();
-                if (handlers.onError) handlers.onError('timeout');
-            }, timeoutMs);
+                if (handlers.onError) handlers.onError(reason);
+            };
+            const loadBase = () => {
+                const b = bases[idx];
+                if (!b) { fail('all_failed'); return; }
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => {
+                    if (settled) return;
+                    idx += 1;
+                    if (idx < bases.length) loadBase();
+                    else fail('timeout');
+                }, perBaseTimeout);
+                script.src = b + (b.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+            };
 
             window[callbackName] = function (res) {
                 if (settled) return;
                 settled = true;
-                clearTimeout(timer);
                 cleanup();
                 if (typeof appState !== 'undefined' && appState) {
                     appState.activeBase = bases[idx];
@@ -3914,19 +3940,11 @@
             script.onerror = function () {
                 if (settled) return;
                 idx += 1;
-                if (idx < bases.length) {
-                    const b = bases[idx];
-                    script.src = b + (b.indexOf('?') === -1 ? '?' : '&') + buildQuery();
-                } else {
-                    settled = true;
-                    clearTimeout(timer);
-                    cleanup();
-                    if (handlers.onError) handlers.onError('all_failed');
-                }
+                if (idx < bases.length) loadBase();
+                else fail('all_failed');
             };
 
-            const first = bases[0];
-            script.src = first + (first.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+            loadBase();
             document.body.appendChild(script);
             return true;
         }
@@ -3952,7 +3970,11 @@
             const deskPill = document.getElementById('desk-status-pill');
             const mobPill = document.getElementById('mob-status-pill');
 
-            if (apiBases().length) {
+            if (!isOnline()) {
+                deskPill.className = "inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-medium";
+                deskPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400 mr-1.5"></span> Offline`;
+                if(mobPill) mobPill.innerText = "Mode Offline";
+            } else if (apiBases().length) {
                 deskPill.className = "inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium";
                 deskPill.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5"></span> Connected`;
                 if(mobPill) mobPill.innerText = "Connected to Google Sheets";
@@ -3963,6 +3985,21 @@
             }
             updatePublicPortalUI();
             updateConnectionInfo();
+        }
+
+        // Reaksi saat koneksi internet perangkat berubah: perbarui indikator dan,
+        // saat kembali online, otomatis sinkronkan ulang data dari Google Sheets.
+        function initNetworkStatus() {
+            if (!window || typeof window.addEventListener !== 'function') return;
+            window.addEventListener('online', function () {
+                updateConnectionUI();
+                showToast('Kembali online. Menyinkronkan data...', 'success');
+                if (apiBases().length) syncFromGoogleSheets();
+            });
+            window.addEventListener('offline', function () {
+                updateConnectionUI();
+                showToast('Anda sedang offline. Perubahan tersimpan lokal.', 'error');
+            });
         }
 
         // Tampilkan sumber data aktif (transport, URL Web App, versi backend) di
@@ -4014,16 +4051,21 @@
             appState.portalEnabled = enabled;
             updatePublicPortalUI();
 
-            fetch(getApiBase() || getDirectBase(), {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'setPortalStatus', enabled: enabled, token: appState.adminToken })
-            }).catch(() => {
-                showToast('Gagal mengirim status portal ke Google Sheets.', 'error');
+            postToSheets({ action: 'setPortalStatus', enabled: enabled, token: appState.adminToken }, {
+                onSuccess: () => {
+                    showToast(enabled ? 'Portal Publik diaktifkan!' : 'Portal Publik dinonaktifkan.', enabled ? 'success' : 'info');
+                },
+                onError: (reason, detail) => {
+                    // Kembalikan tampilan ke status sebelumnya saat gagal agar tidak menyesatkan.
+                    appState.portalEnabled = !enabled;
+                    updatePublicPortalUI();
+                    if (detail && detail.code === 'unauthorized') {
+                        promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        return;
+                    }
+                    showToast('Gagal mengirim status portal ke Google Sheets.', 'error');
+                }
             });
-
-            showToast(enabled ? 'Portal Publik diaktifkan!' : 'Portal Publik dinonaktifkan.', enabled ? 'success' : 'info');
         }
 
         // Tautan Portal Publik: bila config.js mengisi publicPortalUrl, pakai URL itu
@@ -4078,9 +4120,93 @@
             }
         }
 
+        // True bila base adalah proxy same-origin (bukan URL absolut lintas-situs).
+        // Proxy same-origin mengembalikan JSON yang bisa dibaca browser sehingga hasil
+        // tulis benar-benar bisa diverifikasi (bukan sekadar asumsi berhasil).
+        function isSameOriginBase(base) {
+            if (!base) return false;
+            if (base.charAt(0) === '/') return true;
+            try {
+                return new URL(base, window.location.href).origin === window.location.origin;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Kirim payload tulis ke backend.
+        // - Base same-origin (proxy "/api"): respons JSON dibaca; sukses HANYA bila
+        //   backend membalas {result:"success"}. Ini menghapus "false positive" lama
+        //   (mode no-cors selalu tampak sukses walau proxy 404/502).
+        // - Base lintas-situs (URL Apps Script langsung): respons opaque (no-cors),
+        //   tidak bisa dibaca -> diperlakukan optimistis sebagai terkirim.
+        // Setiap base di-retry sekali saat gagal jaringan sebelum pindah base berikutnya.
+        function postToSheets(payload, options) {
+            options = options || {};
+            const body = JSON.stringify(payload);
+            const bases = apiBases();
+            if (!bases.length) {
+                if (options.onError) options.onError('no_base', null);
+                return;
+            }
+            const maxRetry = (options.retries == null) ? 1 : options.retries;
+            let idx = 0;
+            let attempt = 0;
+
+            const nextBase = () => {
+                idx += 1;
+                attempt = 0;
+                if (idx < bases.length) send();
+                else if (options.onError) options.onError('all_failed', null);
+            };
+
+            function send() {
+                const base = bases[idx];
+                const sameOrigin = isSameOriginBase(base);
+                const init = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: body
+                };
+                if (!sameOrigin) init.mode = 'no-cors';
+                fetch(base, init).then(function (res) {
+                    if (!sameOrigin) {
+                        if (typeof appState !== 'undefined' && appState) appState.activeBase = base;
+                        if (options.onSuccess) options.onSuccess(null, base);
+                        return;
+                    }
+                    return res.text().then(function (txt) {
+                        let json = null;
+                        try { json = txt ? JSON.parse(txt) : null; } catch (e) { json = null; }
+                        if (res.ok && json && json.result === 'success') {
+                            if (typeof appState !== 'undefined' && appState) appState.activeBase = base;
+                            if (options.onSuccess) options.onSuccess(json, base);
+                        } else if (json && json.result === 'error' && json.code === 'proxy_fetch_failed') {
+                            // Proxy hidup tapi gagal menjangkau Apps Script: coba base berikutnya.
+                            nextBase();
+                        } else if (json && json.result === 'error') {
+                            // Penolakan nyata dari backend (mis. token salah / validasi).
+                            if (options.onError) options.onError('server_error', json);
+                        } else {
+                            // Respons tak terduga (mis. halaman error HTML): coba base berikutnya.
+                            nextBase();
+                        }
+                    });
+                }).catch(function (err) {
+                    if (attempt < maxRetry) { attempt += 1; send(); return; }
+                    if (idx + 1 < bases.length) nextBase();
+                    else if (options.onError) options.onError('network', err);
+                });
+            }
+
+            send();
+        }
+
+        // Lacak signature payload tulis yang sedang dikirim, agar klik ganda pada aksi
+        // yang sama tidak menghasilkan baris/permintaan duplikat sebelum respons tiba.
+        const _inflightWrites = {};
+
         function sendToGoogleSheets(payload) {
-            const base = getApiBase() || getDirectBase();
-            if (!base) {
+            if (!apiBases().length) {
                 console.log("Local mode active: Google Apps Script URL not configured.");
                 return;
             }
@@ -4092,22 +4218,34 @@
             }
 
             const body = Object.assign({}, payload, { token: appState.adminToken });
+            const signature = JSON.stringify(body);
 
-            // Send async POST request. Use text/plain so this stays a CORS
-            // "simple request" (no preflight); Apps Script doPost reads the raw
-            // JSON via e.postData.contents.
-            fetch(base, {
-                method: 'POST',
-                mode: 'no-cors', // Required because Apps Script does not return CORS headers
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(body)
-            })
-            .then(() => {
-                showToast('Data tersinkronkan ke Google Sheets!', 'success');
-            })
-            .catch(err => {
-                console.error("Error sending to Google Sheets:", err);
-                showToast('Gagal terhubung ke Google Sheets (Tersimpan Lokal)', 'error');
+            // Abaikan kiriman identik yang masih dalam proses (anti klik ganda).
+            if (_inflightWrites[signature]) return;
+            _inflightWrites[signature] = true;
+            const done = () => { delete _inflightWrites[signature]; };
+
+            postToSheets(body, {
+                onSuccess: () => {
+                    done();
+                    showToast('Data tersinkronkan ke Google Sheets!', 'success');
+                },
+                onError: (reason, detail) => {
+                    done();
+                    if (detail && detail.code === 'unauthorized') {
+                        promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        return;
+                    }
+                    if (reason === 'no_base') {
+                        console.log("Local mode active: Google Apps Script URL not configured.");
+                        return;
+                    }
+                    if (reason === 'server_error') {
+                        showToast((detail && detail.message) ? detail.message : 'Google Sheets menolak permintaan.', 'error');
+                        return;
+                    }
+                    showToast('Gagal menyimpan ke Google Sheets (tersimpan lokal).', 'error');
+                }
             });
         }
 
@@ -4117,7 +4255,19 @@
                 return;
             }
             showToast('Menguji koneksi ke Google Apps Script...', 'info');
-            sendToGoogleSheets({ test: true });
+            const callbackName = '__rtTestConn_' + Date.now();
+            loadApiJsonp(
+                () => 'action=version&callback=' + callbackName,
+                callbackName,
+                {
+                    timeout: 10000,
+                    onSuccess: (res) => {
+                        const v = (res && res.version) ? res.version : 'aktif';
+                        showToast('Koneksi berhasil! Versi backend: ' + v, 'success');
+                    },
+                    onError: () => showToast('Gagal terhubung ke Google Apps Script.', 'error')
+                }
+            );
         }
 
         // Baca / muat data dari Google Sheets memakai JSONP (bebas kendala CORS).

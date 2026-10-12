@@ -120,6 +120,11 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans min-h-screen transition-colors">
 
+    <!-- Banner offline (dikendalikan oleh initNetworkStatus) -->
+    <div id="offline-banner" class="hidden fixed top-0 inset-x-0 z-[60] bg-rose-600 text-white text-center text-xs py-1.5 px-3">
+        <i class="fa-solid fa-wifi mr-1"></i> Anda sedang offline. Data mungkin belum terbaru.
+    </div>
+
     <!-- Header -->
     <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700">
         <div class="max-w-5xl mx-auto px-4 py-4">
@@ -974,7 +979,8 @@
             return list;
         }
 
-        // Muat respons JSONP dengan fallback berurutan antar base.
+        // Muat respons JSONP dengan fallback berurutan antar base. Setiap base punya
+        // batas waktunya sendiri: bila timeout/gagal, langsung lanjut ke base berikutnya.
         function loadApiJsonp(buildQuery, callbackName, handlers) {
             handlers = handlers || {};
             const bases = apiBases();
@@ -982,26 +988,39 @@
                 if (handlers.onError) handlers.onError('no_base');
                 return false;
             }
-            const timeoutMs = handlers.timeout || 15000;
+            const perBaseTimeout = handlers.timeout || 15000;
             const script = document.createElement('script');
             let idx = 0;
             let settled = false;
+            let timer = null;
 
             const cleanup = () => {
+                if (timer) clearTimeout(timer);
                 delete window[callbackName];
                 if (script.parentNode) script.parentNode.removeChild(script);
             };
-            const timer = setTimeout(() => {
+            const fail = (reason) => {
                 if (settled) return;
                 settled = true;
                 cleanup();
-                if (handlers.onError) handlers.onError('timeout');
-            }, timeoutMs);
+                if (handlers.onError) handlers.onError(reason);
+            };
+            const loadBase = () => {
+                const b = bases[idx];
+                if (!b) { fail('all_failed'); return; }
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => {
+                    if (settled) return;
+                    idx += 1;
+                    if (idx < bases.length) loadBase();
+                    else fail('timeout');
+                }, perBaseTimeout);
+                script.src = b + (b.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+            };
 
             window[callbackName] = function (res) {
                 if (settled) return;
                 settled = true;
-                clearTimeout(timer);
                 cleanup();
                 if (handlers.onSuccess) handlers.onSuccess(res);
             };
@@ -1009,21 +1028,101 @@
             script.onerror = function () {
                 if (settled) return;
                 idx += 1;
-                if (idx < bases.length) {
-                    const b = bases[idx];
-                    script.src = b + (b.indexOf('?') === -1 ? '?' : '&') + buildQuery();
-                } else {
-                    settled = true;
-                    clearTimeout(timer);
-                    cleanup();
-                    if (handlers.onError) handlers.onError('all_failed');
-                }
+                if (idx < bases.length) loadBase();
+                else fail('all_failed');
             };
 
-            const first = bases[0];
-            script.src = first + (first.indexOf('?') === -1 ? '?' : '&') + buildQuery();
+            loadBase();
             document.body.appendChild(script);
             return true;
+        }
+
+        // True bila base adalah proxy same-origin (bukan URL Apps Script lintas-situs).
+        function isSameOriginBase(base) {
+            if (!base) return false;
+            if (base.charAt(0) === '/') return true;
+            try {
+                return new URL(base, window.location.href).origin === window.location.origin;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Kirim payload tulis. Pada proxy same-origin respons JSON dibaca sehingga
+        // sukses benar-benar terverifikasi; pada URL Apps Script langsung (opaque,
+        // no-cors) diperlakukan optimistis. Tiap base di-retry sekali saat gagal jaringan.
+        function postToSheets(payload, options) {
+            options = options || {};
+            const body = JSON.stringify(payload);
+            const bases = apiBases();
+            if (!bases.length) {
+                if (options.onError) options.onError('no_base', null);
+                return;
+            }
+            const maxRetry = (options.retries == null) ? 1 : options.retries;
+            let idx = 0;
+            let attempt = 0;
+
+            const nextBase = () => {
+                idx += 1;
+                attempt = 0;
+                if (idx < bases.length) send();
+                else if (options.onError) options.onError('all_failed', null);
+            };
+
+            function send() {
+                const base = bases[idx];
+                const sameOrigin = isSameOriginBase(base);
+                const init = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: body
+                };
+                if (!sameOrigin) init.mode = 'no-cors';
+                fetch(base, init).then(function (res) {
+                    if (!sameOrigin) {
+                        if (options.onSuccess) options.onSuccess(null, base);
+                        return;
+                    }
+                    return res.text().then(function (txt) {
+                        let json = null;
+                        try { json = txt ? JSON.parse(txt) : null; } catch (e) { json = null; }
+                        if (res.ok && json && json.result === 'success') {
+                            if (options.onSuccess) options.onSuccess(json, base);
+                        } else if (json && json.result === 'error' && json.code === 'proxy_fetch_failed') {
+                            nextBase();
+                        } else if (json && json.result === 'error') {
+                            if (options.onError) options.onError('server_error', json);
+                        } else {
+                            nextBase();
+                        }
+                    });
+                }).catch(function (err) {
+                    if (attempt < maxRetry) { attempt += 1; send(); return; }
+                    if (idx + 1 < bases.length) nextBase();
+                    else if (options.onError) options.onError('network', err);
+                });
+            }
+
+            send();
+        }
+
+        // Deteksi koneksi internet perangkat (navigator.onLine).
+        function isOnline() {
+            return (typeof navigator === 'undefined' || navigator.onLine !== false);
+        }
+
+        // Tampilkan/sembunyikan banner offline dan, saat kembali online, muat ulang data.
+        function initNetworkStatus() {
+            if (!window || typeof window.addEventListener !== 'function') return;
+            const banner = document.getElementById('offline-banner');
+            const apply = () => { if (banner) banner.classList.toggle('hidden', isOnline()); };
+            window.addEventListener('online', function () {
+                apply();
+                if (apiBases().length) loadPublicData();
+            });
+            window.addEventListener('offline', apply);
+            apply();
         }
 
         let WEB_APP_URL = '';
@@ -1036,7 +1135,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-12-02';
+        const APP_BUILD = '2026-10-12-03';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1323,6 +1422,7 @@
         // Init
         document.addEventListener('DOMContentLoaded', function() {
             updateThemeToggleUI(currentTheme() === 'dark');
+            initNetworkStatus();
             try { history.replaceState({ rtPub: 1, modal: null }, ''); } catch (e) { /* abaikan */ }
 
             whenConfigReady(function () {
@@ -1710,7 +1810,8 @@
             box.classList.remove('hidden');
         }
 
-        // Kirim pengajuan via POST no-cors (respons opaque, jadi optimistis).
+        // Kirim pengajuan. Lewat proxy same-origin hasilnya terverifikasi dari respons
+        // backend; bila jatuh ke URL Apps Script langsung (opaque) barulah optimistis.
         function submitSuratWarga(e) {
             e.preventDefault();
             if (!apiBases().length) {
@@ -1742,26 +1843,28 @@
             };
 
             setSuratBusy(true);
-            fetch(getApiBase() || WEB_APP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
-            })
-            .then(function () {
-                setSuratBusy(false);
-                document.getElementById('surat-form').reset();
-                setSuratNIKHint('surat-nik-hint', '', '');
-                setSuratNikLookup('', '');
-                releaseWargaFillIfLocked();
-                showSuratMessage('success',
-                    '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
-                    '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');
-            })
-            .catch(function (err) {
-                console.error('submitSurat gagal:', err);
-                setSuratBusy(false);
-                showSuratMessage('error', 'Gagal mengirim pengajuan. Periksa koneksi lalu coba lagi.');
+            postToSheets(payload, {
+                onSuccess: function () {
+                    setSuratBusy(false);
+                    document.getElementById('surat-form').reset();
+                    setSuratNIKHint('surat-nik-hint', '', '');
+                    setSuratNikLookup('', '');
+                    releaseWargaFillIfLocked();
+                    showSuratMessage('success',
+                        '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
+                        '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');
+                },
+                onError: function (reason, detail) {
+                    console.error('submitSurat gagal:', reason, detail);
+                    setSuratBusy(false);
+                    var msg = 'Gagal mengirim pengajuan. Periksa koneksi lalu coba lagi.';
+                    if (reason === 'server_error' && detail && detail.message) {
+                        msg = detail.message;
+                    } else if (!isOnline()) {
+                        msg = 'Anda sedang offline. Sambungkan internet lalu coba lagi.';
+                    }
+                    showSuratMessage('error', escapeHtml(msg));
+                }
             });
             return false;
         }
