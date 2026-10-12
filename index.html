@@ -1187,6 +1187,120 @@
         </div>
     </div>
 
+    <!-- ================= PANDUAN PASANG APLIKASI (PWA) ================= -->
+    <div id="modal-install" onclick="if(event.target===this)closeInstallGuide()" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
+            <!-- Header brand -->
+            <div class="relative bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-900 text-white rounded-t-2xl p-6 overflow-hidden">
+                <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-cyan-500/10"></div>
+                <div class="absolute -right-4 top-16 w-24 h-24 rounded-full bg-cyan-400/10"></div>
+                <button onclick="closeInstallGuide()" aria-label="Tutup" class="absolute top-4 right-4 z-10 text-slate-300 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+                <div class="relative flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center flex-shrink-0">
+                        <i class="fa-solid fa-download text-2xl text-cyan-200"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h2 class="text-2xl font-bold leading-tight">Pasang Aplikasi</h2>
+                        <p class="text-sm text-cyan-200">Jadikan <span data-rt="appName">SAPA RT</span> seperti aplikasi: ikon di layar utama &amp; akses lebih cepat.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Isi -->
+            <div class="p-6 space-y-4">
+                <!-- Status sudah terpasang -->
+                <div id="install-guide-installed" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-start gap-3">
+                    <i class="fa-solid fa-circle-check text-emerald-600 text-lg mt-0.5"></i>
+                    <p class="text-sm text-emerald-800">Aplikasi <b>sudah terpasang</b> di perangkat ini. Buka lewat ikon aplikasinya di layar utama / daftar aplikasi.</p>
+                </div>
+
+                <!-- Langkah pemasangan -->
+                <div id="install-guide-steps" class="space-y-4">
+                    <!-- Android -->
+                    <div data-install-card="android" class="border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+                            <i class="fa-brands fa-android text-emerald-600"></i>
+                            <h3 class="font-semibold text-sm text-slate-800">Android (Chrome / Edge)</h3>
+                            <span data-install-badge="android" class="ml-auto hidden text-[10px] font-bold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full px-2 py-0.5">Perangkat ini</span>
+                        </div>
+                        <ol class="p-4 space-y-2.5">
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Buka halaman ini di <b>Chrome</b> atau <b>Edge</b>, lalu ketuk menu <b>tiga titik (&#8942;)</b> di kanan atas.</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Pilih <b>Install app</b> / <b>Tambahkan ke Layar Utama</b>.</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Ketuk <b>Install</b> untuk konfirmasi. Ikon aplikasi muncul di layar utama.</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <!-- iPhone / iPad -->
+                    <div data-install-card="ios" class="border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+                            <i class="fa-brands fa-apple text-slate-700"></i>
+                            <h3 class="font-semibold text-sm text-slate-800">iPhone / iPad (Safari)</h3>
+                            <span data-install-badge="ios" class="ml-auto hidden text-[10px] font-bold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full px-2 py-0.5">Perangkat ini</span>
+                        </div>
+                        <ol class="p-4 space-y-2.5">
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Buka halaman ini di <b>Safari</b>, lalu ketuk ikon <b>Bagikan</b> (kotak dengan panah ke atas).</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Gulir daftar, lalu pilih <b>Tambahkan ke Layar Utama</b> (Add to Home Screen).</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">3</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Ketuk <b>Tambah</b> di kanan atas.</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <!-- Desktop -->
+                    <div data-install-card="desktop" class="border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+                            <i class="fa-solid fa-desktop text-slate-600"></i>
+                            <h3 class="font-semibold text-sm text-slate-800">Komputer (Chrome / Edge)</h3>
+                            <span data-install-badge="desktop" class="ml-auto hidden text-[10px] font-bold uppercase tracking-wide bg-cyan-100 text-cyan-700 rounded-full px-2 py-0.5">Perangkat ini</span>
+                        </div>
+                        <ol class="p-4 space-y-2.5">
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Klik ikon <b>Install</b> (monitor dengan panah) di bilah alamat, atau buka menu <b>&#8942;</b> &gt; <b>Install <span data-rt="appName">SAPA RT</span></b>.</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                                <span class="text-sm text-slate-700 leading-relaxed">Klik <b>Install</b> pada dialog yang muncul. Aplikasi terbuka di jendela tersendiri.</span>
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Tips bila opsi tidak muncul -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-slate-700 mb-1"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>Jika opsi pemasangan tidak muncul</p>
+                    <ul class="text-xs text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Gunakan <b>Chrome</b>/<b>Edge</b> (Android &amp; komputer) atau <b>Safari</b> (iPhone/iPad).</li>
+                        <li>Keluar dari mode <b>penjelajahan privat / incognito</b>, lalu muat ulang halaman.</li>
+                        <li>Pastikan situs diakses lewat <b>HTTPS</b> (bukan http).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-slate-100 flex justify-end">
+                <button onclick="closeInstallGuide()" class="px-4 py-2 text-sm bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-sm"><i class="fa-solid fa-check mr-1.5"></i>Mengerti</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT APP LOGIC ================= -->
     <script>
         // Default Initial Data (kosong - mulai dari tampilan bersih)
@@ -1227,7 +1341,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-12';
+        const APP_BUILD = '2026-10-11-13';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1665,7 +1779,7 @@
         // Simpan snapshot tampilan (tab aktif + modal terbuka) ke History API agar
         // gestur "Back" pada perangkat mobile menutup modal atau kembali ke tab
         // sebelumnya, bukan langsung keluar dari aplikasi.
-        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-warga-surat', 'modal-about'];
+        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-warga-surat', 'modal-about', 'modal-install'];
         let currentTab = 'dashboard';
 
         function getOpenModal() {
@@ -2614,6 +2728,40 @@
         // Modal "Tentang Aplikasi" (visi & misi SAPA RT).
         function openAbout(opts) { openModal('modal-about', opts); }
         function closeAbout(opts) { closeModal('modal-about', opts); }
+
+        // Modal "Pasang Aplikasi" (panduan PWA) — menandai perangkat pengguna.
+        function detectInstallPlatform() {
+            var ua = navigator.userAgent || '';
+            if (/iphone|ipad|ipod/i.test(ua) && !window.MSStream) return 'ios';
+            if (/android/i.test(ua)) return 'android';
+            return 'desktop';
+        }
+        function openInstallGuide(opts) {
+            opts = opts || {};
+            var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+            var installed = opts.installed === true || standalone;
+            var steps = document.getElementById('install-guide-steps');
+            var note = document.getElementById('install-guide-installed');
+            if (installed) {
+                if (steps) steps.classList.add('hidden');
+                if (note) note.classList.remove('hidden');
+            } else {
+                if (steps) steps.classList.remove('hidden');
+                if (note) note.classList.add('hidden');
+                var plat = detectInstallPlatform();
+                document.querySelectorAll('[data-install-badge]').forEach(function (b) {
+                    b.classList.toggle('hidden', b.getAttribute('data-install-badge') !== plat);
+                });
+                document.querySelectorAll('[data-install-card]').forEach(function (c) {
+                    var on = c.getAttribute('data-install-card') === plat;
+                    c.classList.toggle('border-cyan-300', on);
+                    c.classList.toggle('ring-1', on);
+                    c.classList.toggle('ring-cyan-200', on);
+                });
+            }
+            openModal('modal-install', opts);
+        }
+        function closeInstallGuide(opts) { closeModal('modal-install', opts); }
 
         // Tutup modal yang sedang terbuka dengan tombol Escape (modal teratas).
         if (document.addEventListener) {
@@ -4049,14 +4197,10 @@
                 return;
             }
             if (standalone) {
-                alert('Aplikasi sudah terpasang di perangkat ini.');
+                openInstallGuide({ installed: true });
                 return;
             }
-            if (isIOS) {
-                alert('Untuk memasang di iPhone/iPad:\n1) Ketuk ikon Bagikan (Share)\n2) Pilih "Tambahkan ke Layar Utama" (Add to Home Screen)');
-                return;
-            }
-            alert('Untuk memasang: buka menu browser (tanda \u22EE) lalu pilih "Install app" / "Tambahkan ke Layar Utama". Jika pilihan itu tidak ada, coba lewat Chrome/Edge (Android/desktop).');
+            openInstallGuide();
         };
 
         if (standalone) setBtns(false);
