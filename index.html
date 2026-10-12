@@ -372,7 +372,7 @@
                             <tr>
                                 <th class="px-3 py-2.5 cursor-pointer select-none whitespace-nowrap" onclick="toggleWargaSort('nomorKK')" title="Klik untuk urutkan No. KK (naik / turun / tanpa urutan)">No. KK <span id="warga-count" class="text-xs font-normal text-slate-500"></span><i id="sort-warga-kk" class="fa-solid fa-sort text-xs ml-1 text-slate-400"></i></th>
                                 <th class="px-3 py-2.5 cursor-pointer select-none whitespace-nowrap" onclick="toggleWargaSort('nama')" title="Klik untuk urutkan Nama Lengkap (naik / turun / tanpa urutan)"><span class="block">Nama Lengkap /<i id="sort-warga-nama" class="fa-solid fa-sort text-xs ml-1 text-slate-400"></i></span><span class="block">Usia</span></th>
-                                <th class="px-3 py-2.5"><span class="block">NIK /</span><span class="block">No. HP</span></th>
+                                <th class="px-3 py-2.5"><span class="block">NIK <span id="warga-count-nik" class="text-xs font-normal text-slate-500"></span> /</span><span class="block">No. HP</span></th>
                                 <th class="px-3 py-2.5">Tempat / Tgl Lahir</th>
                                 <th class="px-3 py-2.5">Status / Jenis Kelamin</th>
                                 <th class="px-3 py-2.5">Pendidikan / Pekerjaan</th>
@@ -1207,7 +1207,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-07';
+        const APP_BUILD = '2026-10-11-08';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2164,9 +2164,20 @@
 
             const anyFilter = search !== '' || filterStatus !== '';
 
-            // Jumlah record yang ditemukan, tampil di samping header "No. KK".
+            // Jumlah di header: "No. KK (N)" = banyaknya Nomor KK UNIK pada data
+            // yang sedang tampil (hasil pencarian/filter); "NIK (N)" = banyaknya
+            // NIK unik (jiwa) pada data tersebut. Arsip dihitung hanya saat
+            // "Tampilkan arsip" aktif (karena ikut masuk daftar `filtered`).
             const countEl = document.getElementById('warga-count');
-            if (countEl) countEl.textContent = '(' + filtered.length + ')';
+            if (countEl) {
+                const uniqKK = new Set(filtered.map(item => String(item.nomorKK == null ? '' : item.nomorKK).trim()).filter(Boolean)).size;
+                countEl.textContent = '(' + uniqKK + ')';
+            }
+            const countNikEl = document.getElementById('warga-count-nik');
+            if (countNikEl) {
+                const uniqNik = new Set(filtered.map(item => String(item.nik == null ? '' : item.nik).replace(/\D/g, '')).filter(Boolean)).size;
+                countNikEl.textContent = '(' + uniqNik + ')';
+            }
 
             // Setiap perubahan pencarian/filter mengembalikan tampilan ke halaman pertama.
             const filterSig = [search, filterStatus, showArchivedWarga ? '1' : '0', wargaSort.key || '', wargaSort.dir].join('\u0001');
