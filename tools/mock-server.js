@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v18-2026-10-11'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v19-2026-10-12'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -425,6 +425,10 @@ function handlePost(data) {
   // ADD
   const ts = nowIso();
   const id = data.id ? String(data.id) : genId(sheetName, ts);
+  // Idempotensi seperti backend: ID yang sudah ada tidak ditambahkan dua kali.
+  if (data.id && findRowIndex(sheetName, id) !== -1) {
+    return { result: 'success', id, duplicate: true };
+  }
   store.sheets[sheetName].push(buildRow(sheetName, data, ts, id));
   saveStore();
   return { result: 'success', id };

@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v18-2026-10-11";
+var CODE_VERSION = "publik-v19-2026-10-12";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -571,6 +571,11 @@ function doPost(e) {
     // ADD: tambahkan baris baru. Timestamp = waktu server (GMT+7), ID dari frontend bila ada.
     // Untuk Pengajuan_Surat, bawaan ID memakai format No. Pengajuan (SRT-...).
     var addId = data.id ? String(data.id) : (sheetName === "Pengajuan_Surat" ? makeSuratId() : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
+    // Idempotensi: bila ID dari frontend sudah ada (mis. pengiriman ulang setelah koneksi
+    // putus lewat antrean/outbox), JANGAN tambah baris duplikat — cukup laporkan sukses.
+    if (data.id && findRowById(sheet, sheetName, addId) !== -1) {
+      return respond({ "result": "success", "id": addId, "duplicate": true });
+    }
     var rowData = buildRowData(sheetName, data, new Date(), addId);
     sheet.appendRow(rowData);
     sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);

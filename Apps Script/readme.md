@@ -215,8 +215,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v18-2026-10-11","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v18-2026-10-11","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v19-2026-10-12","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v19-2026-10-12","found":false}`
 
 **Contoh Delete:**
 ```
@@ -232,6 +232,8 @@ GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Wa
 Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request).
 
 `action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris. **Semua POST admin wajib menyertakan `token` admin** (field `token` di body) — kecuali aksi publik `submitSurat` (lihat di bawah).
+
+> **Idempotensi `add`:** bila payload `add` menyertakan `id` dan baris dengan ID itu **sudah ada** (mis. pengiriman ulang dari antrean/outbox setelah koneksi putus), server **tidak menambah baris baru** dan membalas `{"result":"success","id":...,"duplicate":true}`. Aman dikirim ulang.
 
 | Sheet | Payload Fields |
 |-------|----------------|
