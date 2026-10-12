@@ -636,26 +636,34 @@
                 <hr class="border-slate-100">
 
                 <!-- Mode Demo (Offline) -->
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2">
-                    <h4 class="font-bold text-sm text-amber-800 flex items-center gap-2">
-                        <i class="fa-solid fa-flask"></i> Demo Mode (Offline) — without Apps Script
-                    </h4>
-                    <p class="text-xs text-amber-800 leading-relaxed">
-                        For a <b>demo / trial</b> without connecting to Google Sheets, leave <code class="bg-amber-100 px-1 py-0.5 rounded">publicApiUrl</code> and <code class="bg-amber-100 px-1 py-0.5 rounded">apiBase</code> empty in <b>config.js</b>. The app then runs in <b>local mode</b>: all data (residents, dues, announcements, activities, requests) is stored only in this browser (<i>localStorage</i>) and is not sent to the server.
-                    </p>
-                    <ul class="list-disc list-inside text-xs text-amber-800 space-y-1">
-                        <li>The public portal does <b>not</b> show local-mode data — it only reads from Google Sheets.</li>
-                        <li>After the demo, click <b>Reset Demo Data (Local)</b> to clear the data &amp; display.</li>
-                        <li>Data in Google Sheets is <b>never</b> deleted by this button.</li>
-                    </ul>
-                </div>
+                <details class="bg-amber-50 border border-amber-200 rounded-xl group">
+                    <summary class="p-4 font-bold text-sm text-amber-800 flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                        <i class="fa-solid fa-flask"></i>
+                        <span>Demo Mode (Offline) — without Apps Script</span>
+                        <i class="fa-solid fa-chevron-down ml-auto text-amber-600 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 space-y-2">
+                        <p class="text-xs text-amber-800 leading-relaxed">
+                            For a <b>demo / trial</b> without connecting to Google Sheets, leave <code class="bg-amber-100 px-1 py-0.5 rounded">publicApiUrl</code> and <code class="bg-amber-100 px-1 py-0.5 rounded">apiBase</code> empty in <b>config.js</b>. The app then runs in <b>local mode</b>: all data (residents, dues, announcements, activities, requests) is stored only in this browser (<i>localStorage</i>) and is not sent to the server.
+                        </p>
+                        <ul class="list-disc list-inside text-xs text-amber-800 space-y-1">
+                            <li>The public portal does <b>not</b> show local-mode data — it only reads from Google Sheets.</li>
+                            <li>After the demo, click <b>Reset Demo Data (Local)</b> to clear the data &amp; display.</li>
+                            <li>Data in Google Sheets is <b>never</b> deleted by this button.</li>
+                        </ul>
+                    </div>
+                </details>
 
                 <hr class="border-slate-100">
 
                 <!-- Tutorial Accordion / Guide -->
-                <div class="space-y-3">
-                    <h4 class="font-bold text-sm text-slate-800">Google Sheets & Apps Script Setup Guide:</h4>
-                    <ol class="list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
+                <details class="group">
+                    <summary class="font-bold text-sm text-slate-800 flex items-center gap-2 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                        <i class="fa-solid fa-book text-slate-400"></i>
+                        <span>Google Sheets &amp; Apps Script Setup Guide:</span>
+                        <i class="fa-solid fa-chevron-down ml-auto text-slate-400 transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <ol class="mt-3 list-decimal list-inside text-xs text-slate-600 space-y-2 leading-relaxed">
                         <li>Create a new <b>Google Sheets</b> file. Tabs &amp; headers are created/fixed automatically on first run: <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Data_Warga</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Iuran_Kas</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengumuman</code>, <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Kegiatan_Warga</code>, and <code class="bg-slate-100 px-1 py-0.5 rounded text-rose-600">Pengajuan_Surat</code>.</li>
                         <li>Open the <b>Extensions &gt; Apps Script</b> menu in your Google Sheets.</li>
                         <li>Copy the entire contents of the <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> file (in this project's <b>Apps Script</b> folder), then paste it to replace the editor's contents.</li>
@@ -665,7 +673,7 @@
                         <li>Copy the <b>Web App URL</b> (ending in <code class="bg-slate-100 px-1 py-0.5 rounded">/exec</code>) into <code class="bg-slate-100 px-1 py-0.5 rounded">publicApiUrl</code> in <b>config.js</b> — and into <code class="bg-slate-100 px-1 py-0.5 rounded">APPS_SCRIPT_URL</code> in Cloudflare Pages if using the <code class="bg-slate-100 px-1 py-0.5 rounded">/api</code> proxy. Then enter the same value in <b>Admin Token</b> and click <b>Save Token</b>.</li>
                         <li>Redeploy as <b>New version</b> whenever <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> changes.</li>
                     </ol>
-                </div>
+                </details>
             </div>
         </section>
 
@@ -1207,7 +1215,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-11-09';
+        const APP_BUILD = '2026-10-11-10';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
