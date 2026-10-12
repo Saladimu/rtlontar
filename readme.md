@@ -2,6 +2,8 @@
 
 SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & Dashboard Management RT (Rukun Tetangga) berbasis web yang responsif, modern, dan mudah digunakan. Didesain khusus untuk pengurus dan warga RT di wilayah Tanjung Duren Utara. Sistem ini menggunakan **Google Sheets** sebagai *database* tanpa memerlukan *server/backend* yang rumit.
 
+> 📘 **Baru memakai aplikasi?** Baca **[`panduan.md`](panduan.md)** — panduan pemakaian untuk **Pengurus RT** (dashboard), **warga** (portal publik & pengajuan surat), plus setup awal, pemeliharaan, dan troubleshooting. Dokumen di bawah ini adalah dokumentasi teknis/fitur lengkap.
+
 ---
 
 ## 🚀 Fitur Utama
