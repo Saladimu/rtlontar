@@ -77,7 +77,11 @@
 <body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col md:flex-row">
 
     <!-- Sidebar Navigation for Desktop -->
-    <aside class="hidden md:flex flex-col w-64 bg-slate-900 text-white min-h-screen p-4 flex-shrink-0">
+    <aside id="admin-sidebar" class="hidden md:flex flex-col w-64 bg-slate-900 text-white min-h-screen p-4 flex-shrink-0">
+        <button type="button" id="sidebar-hide-btn" onclick="toggleSidebar()" class="mb-3 w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-xl bg-black/50 hover:bg-black/70 text-slate-200 shadow-inner border border-white/10 backdrop-blur-sm transition" title="Sembunyikan menu kiri agar area kerja lebih lebar">
+            <i class="fa-solid fa-angles-left"></i>
+            <span class="text-xs font-medium tracking-wide">&lt;&lt;&lt; Sembunyikan menu</span>
+        </button>
         <div class="flex items-center justify-between px-3 py-4 border-b border-slate-800">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 rounded-xl shadow-lg overflow-hidden bg-white flex-shrink-0">
@@ -168,6 +172,10 @@
         </div>
     </aside>
 
+    <button type="button" id="sidebar-show-btn" onclick="toggleSidebar()" class="hidden fixed left-3 top-20 z-40 items-center justify-center w-10 h-10 rounded-xl bg-slate-900 text-white shadow-lg border border-slate-700 hover:bg-slate-800 transition" title="Tampilkan menu kiri" aria-label="Tampilkan menu kiri">
+        <i class="fa-solid fa-angles-right"></i>
+    </button>
+
     <!-- Mobile Top Navigation Header -->
     <header class="md:hidden bg-slate-900 text-white p-4 sticky top-0 z-30 shadow-md flex justify-between items-center">
         <div class="flex items-center space-x-3">
@@ -228,7 +236,7 @@
     </div>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
+    <main id="admin-main" class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full overflow-x-hidden">
         
         <!-- Notification Banner -->
         <div id="toast-banner" class="hidden mb-6 p-4 rounded-xl shadow-sm border flex items-center justify-between transition-all duration-300">
@@ -1359,7 +1367,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-12-05';
+        const APP_BUILD = '2026-10-12-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1767,6 +1775,7 @@
             updateConnectionUI();
             initNetworkStatus();
             initOutbox();
+            initSidebar();
             updatePublicPortalUI();
 
             // Sinkronisasi awal dijalankan setelah config.js siap (lihat runWhenConfigReady),
@@ -1863,6 +1872,36 @@
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             menu.classList.toggle('hidden');
+        }
+
+        // Sembunyikan/tampilkan menu kiri (desktop) agar area kerja full-width.
+        // Pilihan diingat di localStorage (`rt_sidebar_hidden`).
+        const SIDEBAR_HIDDEN_KEY = 'rt_sidebar_hidden';
+        function isSidebarHidden() {
+            try { return localStorage.getItem(SIDEBAR_HIDDEN_KEY) === '1'; } catch (e) { return false; }
+        }
+        function applySidebarState(hidden) {
+            const aside = document.getElementById('admin-sidebar');
+            const showBtn = document.getElementById('sidebar-show-btn');
+            const main = document.getElementById('admin-main');
+            if (!aside || !showBtn) return;
+            if (hidden) {
+                aside.classList.remove('md:flex');
+                showBtn.classList.add('md:flex');
+                if (main) { main.classList.remove('max-w-7xl', 'mx-auto'); }
+            } else {
+                aside.classList.add('md:flex');
+                showBtn.classList.remove('md:flex');
+                if (main) { main.classList.add('max-w-7xl', 'mx-auto'); }
+            }
+        }
+        function toggleSidebar() {
+            const next = !isSidebarHidden();
+            try { localStorage.setItem(SIDEBAR_HIDDEN_KEY, next ? '1' : '0'); } catch (e) { /* abaikan */ }
+            applySidebarState(next);
+        }
+        function initSidebar() {
+            applySidebarState(isSidebarHidden());
         }
 
         // Grup "Setting" di sidebar: buka/tutup submenu (Integrasi Google Sheets,
