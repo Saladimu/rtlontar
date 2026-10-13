@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v19-2026-10-12'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v20-2026-10-13'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -316,13 +316,15 @@ function handleCheckSurat(params) {
   const hpNorm = normalizeSuratHp(hp);
   const rows = store.sheets.Pengajuan_Surat || [];
   const results = [];
+  let archivedCount = 0;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
     const rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
     if (rNik === nik && normalizeSuratHp(rHp) === hpNorm) {
+      if (isArsip(row[10])) { archivedCount++; continue; } // pengajuan diarsipkan tidak dapat diambil publik
       results.push({
-        ref: String(row[10] === undefined || row[10] === null ? '' : row[10]),
+        ref: String(row[row.length - 1] === undefined || row[row.length - 1] === null ? '' : row[row.length - 1]),
         tanggal: displayTimestamp(row[0]),
         jenisSurat: cleanStr(row[5], 120),
         status: cleanStr(row[7], 20) || 'Pending',
@@ -332,7 +334,7 @@ function handleCheckSurat(params) {
     }
   }
   results.reverse();
-  return { result: 'success', version: CODE_VERSION, count: results.length, data: results };
+  return { result: 'success', version: CODE_VERSION, count: results.length, archived: archivedCount, data: results };
 }
 
 function handleDelete(params) {

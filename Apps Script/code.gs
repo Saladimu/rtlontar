@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v19-2026-10-12";
+var CODE_VERSION = "publik-v20-2026-10-13";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -842,6 +842,8 @@ function checkAndRecordSuratCheckRate(key) {
 
 // Handler aksi publik `checkSurat`: warga cek status dengan NIK + No. HP.
 // Hanya mengembalikan pengajuan yang NIK sama dan No. HP cocok (setelah dinormalisasi).
+// Indeks kolom Pengajuan_Surat (termasuk kolom A Timestamp): 10 = Diarsipkan.
+var PENGAJUAN_SURAT_COL_ARSIP = 10;
 // Normalisasi nomor HP Indonesia menjadi format internasional "62..." agar
 // variasi penulisan ("0812...", "62812...", "+62 812...", "812...") saling cocok.
 function normalizeSuratHp(value) {
@@ -875,6 +877,7 @@ function handleCheckSurat(params) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Pengajuan_Surat');
   var results = [];
+  var archivedCount = 0; // pengajuan yang cocok tapi sudah diarsipkan (disembunyikan)
 
   if (sheet) {
     ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
@@ -884,6 +887,9 @@ function handleCheckSurat(params) {
       var rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
       var rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
       if (rNik === nik && normalizeSuratHp(rHp) === hpNorm) {
+        // Pengajuan yang sudah diarsipkan tidak lagi dapat diambil publik;
+        // cukup dihitung agar frontend bisa memberi tahu bahwa sudah diarsipkan.
+        if (isArsip(row[PENGAJUAN_SURAT_COL_ARSIP])) { archivedCount++; continue; }
         results.push({
           "ref": String(row[row.length - 1] === undefined || row[row.length - 1] === null ? '' : row[row.length - 1]),
           "tanggal": formatTimestampCell(row[0]),
@@ -898,7 +904,7 @@ function handleCheckSurat(params) {
 
   results.reverse(); // terbaru lebih dahulu
 
-  return { "result": "success", "version": CODE_VERSION, "count": results.length, "data": results };
+  return { "result": "success", "version": CODE_VERSION, "count": results.length, "archived": archivedCount, "data": results };
 }
 
 // ================= LOOKUP WARGA (bantu isi form surat) =================

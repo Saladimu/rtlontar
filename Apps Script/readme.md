@@ -120,7 +120,7 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 | Status Pengurusan | String | Pending / Diproses / Selesai / Ditolak |
 | No. Surat | String | 474/017-RT/RW.06/X/2026 (nomor surat resmi; **wajib** bila status `Selesai`) |
 | Catatan Pengurus | String | (opsional, diisi pengurus) |
-| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengajuan dari daftar utama (tetap tersimpan, dapat dipulihkan) |
+| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengajuan dari daftar utama **dan** dari hasil `checkSurat` publik (tetap tersimpan, dapat dipulihkan) |
 
 > Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan.
 >
@@ -188,7 +188,7 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 |--------|-----------|-----------|
 | `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled` + `adminEmail`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
-| `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
+| `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Pengajuan ber-`Diarsipkan=Ya` **tidak dikembalikan**; jumlahnya dilaporkan pada field `archived` sehingga UI dapat menampilkan keterangan "sudah diarsipkan". Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
 | `lookupWarga` | `action=lookupWarga&nik=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **NIK (16 digit) persis** untuk mengisi otomatis **Nama, No. HP, & Alamat** pada form pengajuan surat. Ketemu → `{result:"success", found:true, nama, noHp, alamat}`; tidak → `{found:false}` (warga tetap boleh mengisi manual). Hanya 3 field itu yang dibuka (bukan seluruh data warga). Ter-gate status portal; dibatasi ≤ 20 pencarian/jam per NIK. Mendukung JSONP |
 | `sendTestEmail` | `action=sendTestEmail&token=T[&email=...]` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `email` diisi, alamat itu dipakai sebagai penerima **sekaligus disimpan** ke `ADMIN_EMAIL`. Bila kosong & `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; format email salah → `code:"invalid_email"`; scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
@@ -359,7 +359,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
 | `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` (token) + `submitSurat` (publik) |
 | `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
-| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}` |
+| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
 | `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |

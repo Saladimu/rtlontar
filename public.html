@@ -1132,7 +1132,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-12-07';
+        const APP_BUILD = '2026-10-13-01';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1916,11 +1916,16 @@
                 return;
             }
             const items = res.data || [];
+            const archived = Number(res.archived || 0);
             if (items.length === 0) {
+                if (archived > 0) {
+                    box.innerHTML = '<div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-xl p-3 text-sm flex items-start gap-2"><i class="fa-solid fa-box-archive mt-0.5"></i><span>Pengajuan yang cocok sudah <b class="font-semibold">diarsipkan</b> oleh pengurus RT, sehingga tidak lagi ditampilkan. Silakan hubungi pengurus RT bila memerlukan informasi lebih lanjut.</span></div>';
+                    return;
+                }
                 box.innerHTML = '<div class="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl p-3 text-sm">Tidak ada pengajuan yang cocok dengan NIK & No. HP tersebut.</div>';
                 return;
             }
-            box.innerHTML = items.map(function (it) {
+            let html = items.map(function (it) {
                 return '' +
                     '<div class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 mb-2">' +
                         '<div class="flex items-center justify-between mb-1 gap-2">' +
@@ -1935,6 +1940,10 @@
                         (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
                     '</div>';
             }).join('');
+            if (archived > 0) {
+                html += '<div class="text-[11px] text-amber-600 dark:text-amber-300 mt-1 flex items-center gap-1"><i class="fa-solid fa-box-archive"></i><span>' + archived + ' pengajuan lain sudah diarsipkan.</span></div>';
+            }
+            box.innerHTML = html;
         }
 
         function showPortalDisabled() {
