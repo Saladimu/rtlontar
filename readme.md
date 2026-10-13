@@ -41,7 +41,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 - **🔢 Hitungan unik di header Data Warga:** header **No. KK (N)** menampilkan **banyaknya Nomor KK unik** dan header **NIK (N)** menampilkan **banyaknya NIK unik (jiwa)** pada data yang sedang tampil (mengikuti pencarian/filter; arsip ikut terhitung hanya saat "Tampilkan arsip" aktif). NIK kosong tidak dihitung.
 - **📱 Tombol Integrasi Google Sheets responsif:** empat tombol di panel **Integrasi Google Sheets** (**Test Connection**, **Load Data from Sheets**, **Check Backend Version**, **Reset Demo Data** (Local)) kini tersusun rapi — **satu kolom penuh di ponsel**, dua kolom di layar lebih besar — dengan ikon dan warna berbeda per fungsi (biru = aksi utama muat data, abu garis = aksi sekunder, merah lembut = reset data lokal).
 - **↩️ Tombol "Back" Android menutup modal / kembali tab (bukan keluar aplikasi):** tombol/swipe **Back** di perangkat Android kini memakai History API — menekan Back saat ada modal terbuka akan **menutup modal** itu, di halaman admin Back berikutnya **kembali ke tab sebelumnya**, dan baru keluar saat sudah di tab utama tanpa modal. Berlaku di halaman admin (`index.html`) dan Portal Publik (`public.html`, untuk modal Siaga / Panduan Surat / Tentang).
-- **⚡ Loading Cepat:** CSS Tailwind dibangun statis (`tailwind.css`, ~35 KB) alih-alih memuat Play CDN yang berat, plus `preconnect` ke font/CDN/endpoint data. Lihat bagian **Performa (Tailwind CSS Statis)**.
+- **⚡ Loading Cepat:** CSS Tailwind dibangun statis (`tailwind.css`, ~35 KB) alih-alih memuat Play CDN yang berat; ikon & font juga **di-self-host** (subset Font Awesome 6 + Inter) sehingga tidak ada lagi permintaan ke CDN pihak ketiga. Lihat bagian **Performa (Tailwind CSS Statis)**.
 
 ---
 
@@ -366,14 +366,23 @@ Berkas terkait:
 npx tailwindcss@3 -c tailwind.config.js -i tailwind.input.css -o tailwind.css --minify
 ```
 
-Halaman juga memakai `preconnect` ke Google Fonts, cdnjs, dan `script.google.com`/`script.googleusercontent.com` (endpoint data) agar koneksi awal lebih cepat.
+Halaman hanya memakai `preconnect` ke `script.google.com`/`script.googleusercontent.com` (endpoint data). Ikon & font sudah **self-hosted**, jadi tidak ada koneksi ke CDN ikon/font.
+
+### Font & ikon self-hosted (tanpa CDN)
+
+Dulu halaman memuat **Font Awesome 6 dari cdnjs** (~102 KB CSS) dan **Inter dari Google Fonts** (CSS + berkas font) sebagai *render-blocking* di `<head>`. Sekarang keduanya **di-host lokal** dan hanya memuat yang dipakai:
+
+- **Font Awesome 6 (subset):** dari 87+ ikon yang dipakai, dibuat subset webfont (`fonts/fa-solid.woff2` ~9 KB, `fa-regular.woff2` ~3 KB, `fa-brands.woff2` ~1 KB) + aturan gaya ringkas di **`fonts.css`** (~5 KB). Total turun dari ~283 KB berkas FA menjadi ~13 KB.
+- **Inter (subset variabel):** hanya glyph Latin, sumbu bobot dipangkas ke **400–700** (bobot 300 tidak dipakai) → `fonts/inter-latin.woff2` ~36 KB. Didefinisikan `font-display: swap`, dan `inter-latin.woff2` + `fa-solid.woff2` di-`preload`.
+
+Berkas terkait: `fonts.css` (induk `@font-face` + kelas ikon FA yang dipakai) dan folder `fonts/`. **Saat mengganti isi berkas font**, naikkan `?v=` pada `fonts.css`, `<link rel="preload">`, dan `sw.js`; `fonts.css` sendiri selalu revalidasi.
 
 ### Optimasi jaringan
 
-- **Ikon WhatsApp pakai SVG inline** (bukan Font Awesome Brands), sehingga browser tidak lagi mengunduh `fa-brands-400.woff2` (~108 KB) hanya untuk satu ikon.
+- **Ikon & font self-hosted (tanpa CDN):** Font Awesome 6 di-subset ke ikon yang benar-benar dipakai (`fonts/fa-*.woff2`, total ~13 KB) dan Inter di-subset Latin/bobot 400–700 (`fonts/inter-latin.woff2` ~36 KB), dimuat lewat `fonts.css` same-origin. Tidak ada lagi koneksi ke `cdnjs.cloudflare.com` / `fonts.googleapis.com`.
 - **Pemeriksaan update hemat kuota:** versi build HTML dibaca dari **`version.json`** yang kecil (dengan `cache: 'no-cache'` → respons **304 tanpa body** bila tidak berubah), bukan mengunduh ulang seluruh `index.html` tiap 60 detik.
-- **Caching aset (`_headers`):** berkas **`_headers`** (Cloudflare Pages) memberi `Cache-Control` lama (7 hari) untuk ikon statis ber-cache-buster (`rt-icon.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`), dan `must-revalidate` untuk `/config.js`, `/version.json`, `/sw.js` agar deteksi versi tetap akurat.
-- **Ikon dioptimalkan** (palet 256 warna): `rt-icon.png` 190 KB → 27 KB, `icon-192.png` 44 KB → 8 KB, `apple-touch-icon.png` 40 KB → 8 KB, `favicon.ico` 17 KB → 8 KB (multi-ukuran 16/32/48/64).
+- **Caching aset (`_headers`):** berkas **`_headers`** (Cloudflare Pages) memberi `Cache-Control` lama (7 hari) untuk ikon statis ber-cache-buster (`rt-icon.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`) dan untuk `/fonts/*`, serta `must-revalidate` untuk `/config.js`, `/version.json`, `/sw.js`, dan `/fonts.css` agar deteksi versi tetap akurat.
+- **Gambar dioptimalkan & anti-CLS:** semua `<img>` memakai `width`/`height` + `decoding="async"`, gambar QR `loading="lazy"`. Ukuran berkas: `qr-public.png` 49,5 KB → 17,3 KB (QR tetap valid), `rt-icon.png` 26 KB → 24 KB, `icon-192.png` 8,3 KB → 8 KB, `apple-touch-icon.png` 7,8 KB → 7,5 KB. Tautan ikon diberi cache-buster `?v=`.
 
 ### Keandalan penyimpanan & koneksi
 
@@ -468,4 +477,6 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 
 > Deteksi update memeriksa **dua sinyal**: versi `config.js` dan `APP_BUILD` (dibaca dari `version.json` kecil — bukan lagi mengunduh seluruh HTML, agar hemat kuota). Karena itu, mengubah `index.html`/`public.html` tanpa menaikkan `APP_BUILD` **dan** `version.json` yang sesuai **tidak** akan memunculkan tombol **Muat Ulang** pada pengguna yang membuka halaman lama. `version.json` memuat kunci `index` (untuk halaman admin) dan `public` (untuk portal publik). Di portal publik penanda hanya berkedip (label **"Versi Baru"**) tanpa reload paksa, agar warga yang sedang mengisi form tidak terganggu.
 
-> **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server.
+> **Performa gambar:** semua `<img>` memakai atribut `width`/`height` (mencegah layout bergeser saat memuat) + `decoding="async"`; gambar QR dimuat `loading="lazy"`. Aset `qr-public.png`, `rt-icon.png`, `icon-192.png`, dan `apple-touch-icon.png` sudah dikompres (QR dari ~50 KB menjadi ~17 KB, tetap dapat dipindai). Bila mengganti berkas gambar, naikkan query `?v=` pada tautan ikon agar cache browser terbarui.
+
+> **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server. Selain itu, seluruh teks yang berasal dari Google Sheets **di-escape** sebelum ditampilkan (Pengumuman/Kegiatan di Portal Publik, kartu Ringkasan di admin) sehingga karakter `<`/`&` tidak dapat menyuntikkan markup.

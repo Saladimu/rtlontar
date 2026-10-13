@@ -1,7 +1,7 @@
 // Service worker SAPA RT — cache "app shell" statis agar aplikasi tetap terbuka
 // (walau data dari Google Sheets butuh koneksi). PENTING: respons API (/api),
 // Apps Script, dan pembacaan data TIDAK pernah di-cache; data selalu dari jaringan.
-const CACHE = 'sapa-rt-static-v2';
+const CACHE = 'sapa-rt-static-v3';
 
 // Berkas inti (app shell) yang di-precache saat instalasi.
 const SHELL = [
@@ -9,6 +9,11 @@ const SHELL = [
   './index.html',
   './public.html',
   './tailwind.css',
+  './fonts.css?v=1',
+  './fonts/inter-latin.woff2?v=1',
+  './fonts/fa-solid.woff2?v=1',
+  './fonts/fa-regular.woff2?v=1',
+  './fonts/fa-brands.woff2?v=1',
   './config.js',
   './rt-icon.png',
   './icon-192.png',
@@ -19,7 +24,8 @@ const SHELL = [
 ];
 
 // Host aset statis lintas-situs yang aman di-cache (font/ikon).
-const STATIC_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com'];
+// Ikon & font kini self-hosted (same-origin), sehingga tidak ada host CDN di sini.
+const STATIC_HOSTS = [];
 // Host yang harus selalu langsung ke jaringan (jangan pernah di-cache).
 const BYPASS_HOSTS = ['script.google.com', 'script.googleusercontent.com'];
 
