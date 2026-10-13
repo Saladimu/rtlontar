@@ -879,6 +879,11 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat / No. Rumah *</label>
                     <input type="text" id="warga-alamat" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" data-rt-placeholder="alamat" placeholder="Alamat lengkap / No. Rumah">
                 </div>
+                <div id="warga-timestamp-group" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Timestamp</label>
+                    <div id="warga-timestamp" class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 cursor-default select-all"></div>
+                    <p class="mt-1 text-xs text-slate-400">Waktu pencatatan otomatis (hanya tampilan, tidak dapat diubah).</p>
+                </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-warga')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
                     <button type="submit" id="btn-save-warga" class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Warga</button>
@@ -1354,7 +1359,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-12-04';
+        const APP_BUILD = '2026-10-12-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2741,7 +2746,7 @@
                 if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
                 if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
                 if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
-                if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
+                if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); if (editMode.warga === null) hideWargaTimestamp(); }
                 if (id === 'modal-surat') updateSuratHpActions();
             }
             document.getElementById(id).classList.remove('hidden');
@@ -2751,7 +2756,7 @@
             opts = opts || {};
             document.getElementById(id).classList.add('hidden');
             // Reset edit mode and modal UI
-            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); }
+            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); hideWargaTimestamp(); }
             else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
@@ -2991,6 +2996,7 @@
             document.getElementById('warga-hp').value = item.hp || '';
             document.getElementById('warga-status').value = item.statusTinggal || 'Tetap';
             document.getElementById('warga-alamat').value = item.alamat || '';
+            showWargaTimestamp(item.timestamp);
             document.getElementById('btn-save-warga').textContent = 'Perbarui Warga';
             openModal('modal-warga');
         }
@@ -4515,6 +4521,47 @@
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const p2 = n => String(n).padStart(2, '0');
             return p2(d) + '-' + months[mo - 1] + '-' + y + ' ' + p2(hh) + ':' + p2(mi);
+        }
+
+        // Format kolom Timestamp untuk ditampilkan (hanya baca) pada form Data Warga:
+        // "dd-Mmm-yyyy HH:mm" zona GMT+7. Menerima ISO dari browser (mis.
+        // "2026-10-13T04:00:00.000Z") maupun string server "yyyy-MM-dd HH:mm".
+        function fmtTimestampDisplay(v) {
+            if (v === null || v === undefined || v === '') return '';
+            const s = String(v).trim();
+            if (!s) return '';
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const p2 = n => String(n).padStart(2, '0');
+            // ISO berzona (…Z atau ±hh:mm): konversi ke Asia/Jakarta.
+            if (/\dT\d{2}:\d{2}/.test(s) && /([zZ]|[+-]\d{2}:\d{2})$/.test(s)) {
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    const parts = {};
+                    new Intl.DateTimeFormat('en-GB', {
+                        timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit',
+                        hour: '2-digit', minute: '2-digit', hour12: false
+                    }).formatToParts(d).forEach(function (p) { parts[p.type] = p.value; });
+                    if (parts.year && parts.month && parts.day) {
+                        return parts.day + '-' + months[parseInt(parts.month, 10) - 1] + '-' + parts.year + ' ' + parts.hour + ':' + parts.minute;
+                    }
+                }
+            }
+            // Sudah "yyyy-MM-dd HH:mm[:ss]" (nilai server zona GMT+7).
+            return fmtTimestamp(s);
+        }
+
+        // Tampilkan/sembunyikan baris Timestamp (hanya pada mode Edit Data Warga).
+        function showWargaTimestamp(v) {
+            const group = document.getElementById('warga-timestamp-group');
+            const el = document.getElementById('warga-timestamp');
+            if (el) el.textContent = fmtTimestampDisplay(v) || '-';
+            if (group) group.classList.remove('hidden');
+        }
+        function hideWargaTimestamp() {
+            const group = document.getElementById('warga-timestamp-group');
+            const el = document.getElementById('warga-timestamp');
+            if (el) el.textContent = '';
+            if (group) group.classList.add('hidden');
         }
 
         // Revoke semua record lokal agar tampilan kembali bersih

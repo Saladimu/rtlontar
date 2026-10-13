@@ -1135,7 +1135,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-12-03';
+        const APP_BUILD = '2026-10-12-04';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1561,6 +1561,9 @@
                     if (key && key > latest) latest = key;
                 });
             });
+            // Bila belum ada Pengumuman/Kegiatan sama sekali, tetap tampilkan
+            // tanggal hari ini (GMT+7) agar baris "Terakhir diperbarui" tidak kosong.
+            if (!latest) latest = jakartaDateKey(new Date().toISOString());
             el.innerText = latest ? formatDateDDMMMYYYY(latest) : '-';
         }
 
