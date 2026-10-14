@@ -262,7 +262,7 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga �
 ### Memproses pengaduan
 
 1. Klik baris (atau ikon pensil) untuk membuka **Edit**.
-2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`; bisa juga dipilih lewat kalender). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**.
+2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`; bisa juga dipilih lewat tombol kalender). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**. Tanggal dapat **diketik langsung** pada fieldnya, atau dipilih lewat **tombol kalender** di sampingnya. **Tanggal Penyelesaian tidak boleh lebih awal** dari **Tanggal Kejadian** maupun **tanggal laporan** (Timestamp) — sistem akan menolak bila terbalik.
 3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga. Lampiran **Foto / Bukti Pendukung** warga tampil sebagai **pratinjau** — tautannya **dikunci** (tidak dapat diubah) dan bisa dibuka ukuran asli lewat tombol **“Buka foto asli”**.
 4. Klik **Simpan**. Ikon **ubah status cepat** (putar) juga bisa dipakai untuk menggilir status tanpa membuka modal.
 

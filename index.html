@@ -1266,7 +1266,10 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Kejadian</label>
-                        <input type="text" id="lapor-admin-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('lapor-admin-tanggal')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                        <div class="flex gap-2">
+                            <input type="text" id="lapor-admin-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="flex-1 px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                            <button type="button" onclick="openDatePicker('lapor-admin-tanggal')" title="Pilih tanggal dari kalender" aria-label="Pilih tanggal dari kalender" class="px-3 rounded-xl border text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-calendar"></i></button>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -1293,7 +1296,10 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Penyelesaian <span id="lapor-tanggal-selesai-req" class="hidden text-rose-500">*</span></label>
-                        <input type="text" id="lapor-admin-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('lapor-admin-tanggal-selesai')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                        <div class="flex gap-2">
+                            <input type="text" id="lapor-admin-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="flex-1 px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                            <button type="button" onclick="openDatePicker('lapor-admin-tanggal-selesai')" title="Pilih tanggal dari kalender" aria-label="Pilih tanggal dari kalender" class="px-3 rounded-xl border text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-calendar"></i></button>
+                        </div>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Tindak Lanjut</label>
@@ -1570,7 +1576,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-05';
+        const APP_BUILD = '2026-10-14-06';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1647,6 +1653,22 @@
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
 
+        // Ambil tanggal ISO (yyyy-MM-dd) dari nilai Timestamp tampilan
+        // ("dd-Mmm-yyyy HH:mm") maupun string ISO/waktu server ("yyyy-MM-dd ...").
+        function timestampRefISO(v) {
+            const s = String(v == null ? '' : v).trim();
+            if (!s) return '';
+            const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (iso) return iso[0];
+            const months = ['jan', 'feb', 'mar', 'apr', 'mei', 'jun', 'jul', 'agu', 'sep', 'okt', 'nov', 'des'];
+            const m = s.match(/^(\d{2})-([A-Za-z]{3})-(\d{4})/);
+            if (m) {
+                const mi = months.indexOf(m[2].toLowerCase());
+                if (mi >= 0) return m[3] + '-' + String(mi + 1).padStart(2, '0') + '-' + m[1];
+            }
+            return '';
+        }
+
         // Buka kalender native saat field tanggal diklik. Tampilan teks tetap
         // dd-mm-yyyy (mask), sedangkan pemilihan lewat kalender mengisi nilainya.
         var rtDateHelper = null;
@@ -1678,11 +1700,13 @@
             var r = el.getBoundingClientRect();
             helper.style.left = r.left + 'px';
             helper.style.top = (r.top + r.height) + 'px';
+            var opened = false;
             try {
-                if (typeof helper.showPicker === 'function') helper.showPicker();
-                else helper.focus();
-            } catch (e) {
-                try { helper.focus(); } catch (e2) { /* abaikan */ }
+                if (typeof helper.showPicker === 'function') { helper.showPicker(); opened = true; }
+            } catch (e) { opened = false; }
+            if (!opened) {
+                // Browser tanpa showPicker(): kembalikan fokus ke input teks supaya tetap bisa diketik manual.
+                try { el.focus(); } catch (e2) { /* abaikan */ }
             }
         }
 
@@ -4221,6 +4245,22 @@
             if (status === 'Selesai' && !tanggalSelesai) {
                 showLaporFormError('Isi Tanggal Penyelesaian sebelum menandai status Selesai.', 'lapor-admin-tanggal-selesai');
                 return;
+            }
+
+            // Tanggal Penyelesaian tidak boleh mendahului Tanggal Kejadian maupun tanggal laporan (Timestamp).
+            if (tanggalSelesai) {
+                if (tanggalKejadian && tanggalSelesai < tanggalKejadian) {
+                    showLaporFormError('Tanggal Penyelesaian tidak boleh lebih awal dari Tanggal Kejadian.', 'lapor-admin-tanggal-selesai');
+                    return;
+                }
+                const refItem = editMode.lapor !== null
+                    ? appState.lapor[findIndexById(appState.lapor, editMode.lapor)]
+                    : null;
+                const minLapor = (refItem && timestampRefISO(refItem.waktu)) || todayLocalISO();
+                if (tanggalSelesai < minLapor) {
+                    showLaporFormError('Tanggal Penyelesaian tidak boleh lebih awal dari tanggal laporan (Timestamp).', 'lapor-admin-tanggal-selesai');
+                    return;
+                }
             }
 
             const data = {
