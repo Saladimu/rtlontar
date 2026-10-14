@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v23-2026-10-14";
+var CODE_VERSION = "publik-v24-2026-10-14";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -66,16 +66,44 @@ function getNotifReplyTo(adminEmail) {
 }
 
 // Susun opsi MailApp.sendEmail dengan nama pengirim & Reply-To terparameter.
-function buildNotifMailOptions(to, subject, body) {
+// htmlBody opsional: bila diisi, email dikirim sebagai HTML (body tetap dipakai
+// sebagai fallback teks biasa).
+function buildNotifMailOptions(to, subject, body, htmlBody) {
   var opts = {
     to: to,
     subject: subject,
     body: body,
     name: getNotifSenderName()
   };
+  if (htmlBody) opts.htmlBody = htmlBody;
   var replyTo = getNotifReplyTo(to);
   if (replyTo) opts.replyTo = replyTo;
   return opts;
+}
+
+// Escape teks agar aman dipakai di dalam body HTML notifikasi.
+function escapeNotifHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Bangun body HTML dari daftar baris teks; baris kontrol `linkLine` diganti
+// menjadi tautan <a> ke `linkUrl` dengan teks `linkText`.
+function buildNotifHtmlLines(lines, linkLine, linkUrl, linkText) {
+  var out = [];
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    if (linkLine && ln === linkLine) {
+      out.push(escapeNotifHtml(ln.slice(0, ln.length - linkUrl.length)) +
+        '<a href="' + escapeNotifHtml(linkUrl) + '">' + escapeNotifHtml(linkText || linkUrl) + '</a>');
+    } else {
+      out.push(escapeNotifHtml(ln));
+    }
+  }
+  return out.join('<br>');
 }
 
 // ================= KEAMANAN / TOKEN ADMIN =================
@@ -1279,6 +1307,7 @@ function notifyAdminNewLapor(r) {
     if (!to) return;
     var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
     var subject = getNotifSubjectPrefix() + ' Laporan/Aspirasi Baru: ' + r.jenisPengaduan + ' - ' + r.nama;
+    var fotoUrl = (r.foto && typeof r.foto === 'string') ? String(r.foto).trim() : '';
     var lines = [
       'Laporan / aspirasi baru masuk melalui Portal Publik.',
       '',
@@ -1291,11 +1320,17 @@ function notifyAdminNewLapor(r) {
       'Judul            : ' + r.judul,
       'Lokasi Kejadian  : ' + (r.lokasi || '-'),
       'Tanggal Kejadian : ' + (r.tanggalKejadian || '-'),
-      'Detail           : ' + r.detail,
-      '',
-      'Buka panel "Lapor & Aspirasi" di dashboard admin untuk menindaklanjuti.'
+      'Detail           : ' + r.detail
     ];
-    MailApp.sendEmail(buildNotifMailOptions(to, subject, lines.join('\n')));
+    var fotoLine = '';
+    if (fotoUrl) {
+      fotoLine = 'Bukti pendukung  : ' + fotoUrl;
+      lines.push(fotoLine);
+    }
+    lines.push('');
+    lines.push('Buka panel "Lapor & Aspirasi" di dashboard admin untuk menindaklanjuti.');
+    var htmlBody = fotoUrl ? buildNotifHtmlLines(lines, fotoLine, fotoUrl, 'View foto') : '';
+    MailApp.sendEmail(buildNotifMailOptions(to, subject, lines.join('\n'), htmlBody));
   } catch (err) {
     console.log('notifyAdminNewLapor gagal: ' + err);
   }
@@ -1438,7 +1473,8 @@ function handleSubmitLapor(data) {
 
   notifyAdminNewLapor({
     noPengaduan: noPengaduan, nama: warga.nama, noHp: warga.noHp || noHpRaw, alamat: warga.alamat,
-    jenisPengaduan: jenis, judul: judul, detail: detail, lokasi: lokasi, tanggalKejadian: tanggalKejadian
+    jenisPengaduan: jenis, judul: judul, detail: detail, lokasi: lokasi, tanggalKejadian: tanggalKejadian,
+    foto: fotoUrl
   });
 
   return { "result": "success", "noPengaduan": noPengaduan, "fotoSaved": fotoSaved, "message": 'Laporan berhasil dikirim.' };

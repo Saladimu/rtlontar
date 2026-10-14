@@ -419,7 +419,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `saveLaporFoto(data, folder)` | Decode base64 → simpan ke Drive (`Utilities.newBlob`/`createFile`) → kembalikan URL; cap ukuran |
 | `getLaporFolder()` | Ambil folder Drive `Lapor`: dari Script Property `LAPOR_FOLDER_ID`, atau cari berdasarkan nama, atau **buat otomatis** lalu bagikan ke `ADMIN_EMAIL` |
 | `authorizeDrive()` | Jalankan **sekali** dari editor (Run) untuk memicu izin scope Google Drive; sekaligus membuat folder `Lapor` |
-| `notifyAdminNewLapor(row)` | Email notifikasi pengaduan baru ke `ADMIN_EMAIL` (gagal email tidak membatalkan simpan) |
+| `notifyAdminNewLapor(row)` | Email notifikasi pengaduan baru ke `ADMIN_EMAIL`; bila ada lampiran foto, email memuat baris **"Bukti pendukung : View foto"** dengan tautan ke foto Drive (gagal email tidak membatalkan simpan) |
 | `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |

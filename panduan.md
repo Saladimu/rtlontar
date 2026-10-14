@@ -276,7 +276,7 @@ Pengaduan yang sudah tuntas bisa **diarsipkan** (ikon kotak arsip) — data teta
 
 ### Notifikasi email
 
-Sama seperti Pengajuan Surat, bila **Admin Email** diisi di Setting, setiap pengaduan baru dari portal mengirim email notifikasi ke pengurus.
+Sama seperti Pengajuan Surat, bila **Admin Email** diisi di Setting, setiap pengaduan baru dari portal mengirim email notifikasi ke pengurus. Bila warga melampirkan foto, email memuat baris **"Bukti pendukung : View foto"** dengan tautan **View foto** ke lampiran di Google Drive.
 
 ## Portal Publik: Menyalakan dan Mematikan
 
