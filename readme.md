@@ -134,7 +134,7 @@ Lihat `Apps Script/readme.md` untuk:
 3. Atur *Execute as*: **Me** (Email Anda).
 4. Atur *Who has access*: **Anyone** (Siapa saja).
 5. Klik **Deploy**, lalu salin **Web App URL** yang didapat.
-6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda. (Opsional) tambahkan **`ADMIN_EMAIL`** berisi email admin — bila diisi, setiap pengajuan surat baru dari portal publik akan dikirimkan notifikasi email. Bila mengisi `ADMIN_EMAIL`, jalankan fungsi **`authorizeMail`** sekali dari editor (Run > Review permissions > Allow) lalu deploy **New version** agar izin email aktif (lihat bagian **Notifikasi Email ke Admin**).
+6. Di Apps Script, buka **Project Settings > Script Properties**, tambahkan properti **`ADMIN_TOKEN`** dengan nilai rahasia pilihan Anda. (Opsional) tambahkan **`ADMIN_EMAIL`** berisi email admin — bila diisi, setiap pengajuan surat baru dari portal publik akan dikirimkan notifikasi email. Bila mengisi `ADMIN_EMAIL`, jalankan fungsi **`authorizeMail`** sekali dari editor (Run > Review permissions > Allow) lalu deploy **New version** agar izin email aktif (lihat bagian **Notifikasi Email ke Admin**). Untuk lampiran foto pada **Lapor & Aspirasi**, jalankan juga fungsi **`authorizeDrive`** sekali (izin Google Drive; sekaligus membuat folder `Lapor`).
 7. Buka aplikasi web RT, masuk ke tab **Integrasi Google Sheets**, isi **Token Admin** dengan nilai `ADMIN_TOKEN` yang sama lalu klik **Simpan Token**. URL sumber data tidak lagi diisi dari UI — atur lewat **`publicApiUrl` di `config.js`** (dan proxy `/api` bila memakai Cloudflare Pages).
 
 > **Penting:** setiap kali `code.gs` diubah, buat versi baru melalui **Deploy > Manage deployments > Edit (ikon pensil) > Version: New version > Deploy**. Tanpa ini, Web App masih menjalankan kode lama.
@@ -210,7 +210,7 @@ Menu **Lapor & Aspirasi** berada **di bawah Layanan Surat** pada Portal Publik. 
 - **Jenis Pengaduan (wajib):** daftar 13 kategori dari `RT_CONFIG.jenisPengaduan` (mis. Lingkungan & Kebersihan, Penerangan Jalan, Saluran Air/Drainase, Jalan & Fasilitas Umum, Keamanan Lingkungan, Sampah, Aspirasi/Saran, Lainnya).
 - **Judul Pengaduan (wajib)** dan **Detail Pengaduan (wajib)**.
 - **Lokasi Kejadian**, **Tanggal Kejadian**, dan **Harapan/Solusi** bersifat opsional.
-- **Foto/Bukti Pendukung (opsional):** hanya berkas gambar (maks. 8 MB); dikompres di browser (sisi terpanjang 1600 px, kualitas 0.7) lalu diunggah ke folder Google Drive **`Lapor`** melalui Apps Script, dan tautannya disimpan di Sheets. Kegagalan unggah foto **tidak menggagalkan** pengiriman pengaduan.
+- **Foto/Bukti Pendukung (opsional):** hanya berkas gambar (maks. 8 MB); dikompres di browser (sisi terpanjang 1600 px, kualitas 0.7) lalu diunggah ke folder Google Drive **`Lapor`** melalui Apps Script, dan tautannya disimpan di Sheets. Folder `Lapor` **dibuat otomatis** (atau memakai Script Property `LAPOR_FOLDER_ID`) dan dibagikan ke `ADMIN_EMAIL`. Untuk mengaktifkan unggahan, jalankan fungsi **`authorizeDrive`** sekali di editor Apps Script (memberi izin Drive) lalu deploy **New version**. Kegagalan unggah foto **tidak menggagalkan** pengiriman pengaduan.
 - **Persetujuan Data** (centang) wajib dicentang.
 
 Setelah terkirim, warga menerima **Nomor Pengaduan** (format **`ADU/2026-001`**) dan pesan terima kasih untuk menyimpannya.

@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v21-2026-10-14";
+var CODE_VERSION = "publik-v22-2026-10-14";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -824,6 +824,20 @@ function authorizeMail() {
   Logger.log('Izin email OK. Sisa kuota email hari ini: ' + quota);
 }
 
+// Jalankan SEKALI dari editor Apps Script (pilih fungsi ini di dropdown lalu
+// klik Run) untuk memicu dialog izin scope Google Drive pada akun pemilik.
+// Diperlukan agar foto bukti Lapor & Aspirasi dapat disimpan ke Drive.
+// Mengembalikan folder "Lapor" (dibuat bila belum ada) sekaligus memicu izin.
+function authorizeDrive() {
+  var folder = getLaporFolder();
+  if (folder) {
+    Logger.log('Izin Drive OK. Folder "Lapor": ' + folder.getName() + ' (' + folder.getId() + ')');
+  } else {
+    Logger.log('Izin Drive diberikan, tetapi folder "Lapor" belum dapat dibuat. Periksa akses Drive.');
+  }
+  return folder ? folder.getId() : '';
+}
+
 // Format nilai Timestamp sheet menjadi "dd-mm-yyyy HH:mm" untuk respons publik.
 // Java SimpleDateFormat: 'MM' = bulan (bukan 'mm' yang berarti menit).
 function formatTimestampCell(v) {
@@ -1211,7 +1225,8 @@ function checkAndRecordLaporCheckRate(key) {
 }
 
 // Folder Google Drive tujuan foto bukti: Script Property "LAPOR_FOLDER_ID";
-// bila kosong, cari folder bernama "Lapor" (dibagikan ke ADMIN_EMAIL oleh pengurus).
+// bila kosong, cari folder bernama "Lapor"; bila belum ada, BUAT otomatis lalu
+// bagikan ke ADMIN_EMAIL (bila diatur) agar mudah dipantau dari akun admin.
 function getLaporFolder() {
   var id = PropertiesService.getScriptProperties().getProperty('LAPOR_FOLDER_ID');
   id = (id == null) ? '' : String(id).trim();
@@ -1222,7 +1237,21 @@ function getLaporFolder() {
     var it = DriveApp.getFoldersByName('Lapor');
     if (it.hasNext()) return it.next();
   } catch (e2) { /* abaikan */ }
-  return null;
+  try {
+    var folder = DriveApp.createFolder('Lapor');
+    try {
+      var admin = getAdminEmail();
+      if (admin) {
+        admin.split(',').forEach(function (em) {
+          em = String(em || '').trim();
+          if (em) { try { folder.addViewer(em); } catch (eShare) { /* abaikan */ } }
+        });
+      }
+    } catch (e3) { /* berbagi gagal: folder tetap milik pemilik skrip */ }
+    return folder;
+  } catch (e4) {
+    return null;
+  }
 }
 
 // Simpan foto bukti (base64) ke folder Drive, kembalikan URL tampilan publik

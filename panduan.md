@@ -542,6 +542,8 @@ Buka **Project Settings → Script Properties** di Apps Script dan tambahkan:
 
 Bila baru mengaktifkan email, jalankan izin sekali: pilih fungsi **`authorizeMail`** pada dropdown editor Apps Script → **Run** → **Review permissions** → **Allow** → lalu deploy **New version**.
 
+Untuk fitur **Lapor & Aspirasi** dengan lampiran foto, jalankan sekali fungsi **`authorizeDrive`** (dropdown editor → **Run** → **Review permissions** → **Allow**) agar izin Google Drive diberikan; fungsi ini sekaligus membuat folder **`Lapor`** di Drive dan membagikannya ke `ADMIN_EMAIL`. Tanpa langkah ini, foto lampiran tidak tersimpan (pengaduan tetap masuk tanpa foto). Setelah itu deploy ulang sebagai **New version**.
+
 > Kuota email mengikuti akun Google pemilik: Gmail pribadi ±100 penerima/hari, Google Workspace ±1.500/hari. Email dikirim **atas nama akun pemilik skrip**, bukan atas nama warga.
 
 ## Tautkan Aplikasi ke Backend
@@ -706,6 +708,7 @@ Server ini menyajikan halaman admin & portal publik sekaligus meniru seluruh end
 | Warga tidak menemukan pengajuannya di **Cek Status** | NIK/No. HP berbeda saat mengajukan | Pengurus membuka **Edit** pengajuan; NIK & No. HP memang terkunci. Bila perlu perbaikan, catat pengajuan baru/Isi Manual dengan data yang benar |
 | Status **Selesai** tidak bisa disimpan | **No. Surat** belum diisi | Isi No. Surat pada modal (server menolak `Selesai` tanpa nomor surat) |
 | Warga kena batas pengajuan | Batas aman 5 pengajuan per NIK per jam (global 60/jam) | Tunggu satu jam, atau catat manual lewat **Isi Manual** bila mendesak |
+| Foto lampiran laporan **tidak muncul di Drive** | Izin Google Drive belum diberikan, atau folder `Lapor` belum ada | Jalankan fungsi **`authorizeDrive`** di editor Apps Script → **Allow** → deploy **New version**. Folder `Lapor` dibuat otomatis (dan dibagikan ke `ADMIN_EMAIL`). Bisa juga set Script Property `LAPOR_FOLDER_ID` ke folder yang sudah ada |
 | Data tetap ada padahal sudah “dihapus” | Data warga & pengajuan memang **diarsipkan**, bukan dihapus | Centang **Tampilkan arsip**, lalu gunakan **Pulihkan** bila salah arsip |
 | Dashboard lambat / data lama | Cache browser | Klik tombol 🔄 **Muat Ulang** (hard refresh) |
 | Nomor HP muncul aneh di tabel | Itu format tampilan 3-3-4 | Normal — nilai tersimpan tetap digit asli |

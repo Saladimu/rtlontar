@@ -25,6 +25,7 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - (Opsional) **Nama:** `NOTIF_SUBJECT_PREFIX`, **Nilai:** prefiks subjek email notifikasi pengajuan surat. Bila kosong, default **`[SAPA-RT]`**.
    - (Opsional) **Nama:** `LAPOR_FOLDER_ID`, **Nilai:** ID folder Google Drive untuk menyimpan **foto/bukti pengaduan** Lapor & Aspirasi. Bila kosong, script mencari folder bernama **`Lapor`** (dibuat otomatis bila belum ada). Folder perlu dibagikan ke akun admin (mis. `admin.rt017@gmail.com`).
    - Setelah `ADMIN_EMAIL` diisi, jalankan fungsi **`authorizeMail`** sekali dari editor Apps Script (dropdown fungsi > Run > Review permissions > Allow) agar scope `script.send_mail` diberikan, lalu deploy ulang sebagai **New version**. Tanpa langkah ini, pengiriman email gagal dengan pesan *"You do not have permission to call MailApp.sendEmail"*.
+   - Untuk foto **Lapor & Aspirasi**, jalankan fungsi **`authorizeDrive`** sekali dari editor (Run > Review permissions > Allow) agar scope Google Drive diberikan — fungsi ini sekaligus membuat folder **`Lapor`** (bila belum ada) dan membagikannya ke `ADMIN_EMAIL`. Lalu deploy ulang sebagai **New version**. Tanpa izin ini, unggahan foto gagal (pengaduan tetap tersimpan tanpa foto).
 
 ---
 
@@ -247,8 +248,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v21-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v21-2026-10-14","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v22-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v22-2026-10-14","found":false}`
 
 **Contoh Lookup Warga berdasarkan No. HP (form Lapor & Aspirasi):**
 ```
@@ -416,7 +417,8 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `handleCheckLapor(params)` | Aksi publik `checkLapor`: cari berdasar No. Pengaduan, kembalikan `{nomor, tanggal, jenisPengaduan, judul, status, petugas, catatan, tanggalSelesai}`; arsip dilewati & dihitung ke `archived` |
 | `makeNomorPengaduan(sheet)` | Hasilkan No. Pengaduan berurutan `ADU/<tahun>-NNN` |
 | `saveLaporFoto(data, folder)` | Decode base64 → simpan ke Drive (`Utilities.newBlob`/`createFile`) → kembalikan URL; cap ukuran |
-| `getLaporFolder()` | Ambil/buat folder Drive `Lapor` (Script Property `LAPOR_FOLDER_ID` bila ada) |
+| `getLaporFolder()` | Ambil folder Drive `Lapor`: dari Script Property `LAPOR_FOLDER_ID`, atau cari berdasarkan nama, atau **buat otomatis** lalu bagikan ke `ADMIN_EMAIL` |
+| `authorizeDrive()` | Jalankan **sekali** dari editor (Run) untuk memicu izin scope Google Drive; sekaligus membuat folder `Lapor` |
 | `notifyAdminNewLapor(row)` | Email notifikasi pengaduan baru ke `ADMIN_EMAIL` (gagal email tidak membatalkan simpan) |
 | `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
