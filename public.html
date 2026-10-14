@@ -1265,7 +1265,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-14-02';
+        const APP_BUILD = '2026-10-14-03';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2508,7 +2508,7 @@
                         '<div class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1 flex-wrap">' +
                             '<i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal || '') +
                             (it.nomor ? ' &middot; ' + escapeHtml(it.nomor) +
-                                ' <button type="button" onclick="copyLaporNomor(\'' + escJsStr(it.nomor) + '\', this)" class="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-100"><i class="fa-solid fa-copy mr-0.5"></i>Salin</button>' : '') +
+                                ' <button type="button" onclick="copyLaporNomor(\'' + escJsStr(it.nomor) + '\', this)" class="text-[10px] px-1.5 py-0.5 rounded bg-teal-600 hover:bg-teal-700 text-white align-middle"><i class="fa-solid fa-copy mr-0.5"></i>Salin</button>' : '') +
                         '</div>' +
                         (it.petugas ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300"><i class="fa-solid fa-user-gear mr-1"></i>Petugas: ' + escapeHtml(it.petugas) + '</div>' : '') +
                         (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
