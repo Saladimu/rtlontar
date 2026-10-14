@@ -319,6 +319,139 @@
             </div>
         </section>
 
+        <!-- ================= LAPOR & ASPIRASI ================= -->
+        <section id="lapor-section">
+            <div class="flex items-center space-x-2 mb-4">
+                <i class="fa-solid fa-comment-dots text-teal-600 dark:text-teal-400 text-xl"></i>
+                <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Lapor &amp; Aspirasi</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Form laporan / aspirasi -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button type="button" id="lapor-toggle-lapor" onclick="toggleLaporCard('lapor')" aria-expanded="false" aria-controls="lapor-panel-lapor"
+                        class="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                        <span class="flex items-start space-x-3">
+                            <span class="w-9 h-9 rounded-lg bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </span>
+                            <span>
+                                <span class="block font-bold text-slate-800 dark:text-slate-100">Lapor / Aspirasi Warga</span>
+                                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sampaikan pengaduan, keluhan, atau aspirasi Anda kepada Pengurus RT. Isi data dengan jelas dan benar.</span>
+                            </span>
+                        </span>
+                        <i id="lapor-chevron-lapor" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0 rotate-180"></i>
+                    </button>
+                    <div id="lapor-panel-lapor" class="px-5 pb-5 hidden">
+                    <form id="lapor-form" class="space-y-3" onsubmit="return submitLaporWarga(event)" oninput="clearLaporMessage()">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. WhatsApp</label>
+                            <input id="lapor-hp" type="tel" required inputmode="numeric" maxlength="15" autocomplete="tel" oninput="onPhoneInput(this); onLaporHpInput(this)"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                            <p id="lapor-hp-hint" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500"></p>
+                            <p id="lapor-hp-lookup" class="text-xs mt-1 leading-snug hidden"></p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Nama Warga</label>
+                            <input id="lapor-nama" type="text" readonly maxlength="100"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Alamat / Blok / No. Rumah</label>
+                            <input id="lapor-alamat" type="text" readonly maxlength="200"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jenis Pengaduan</label>
+                            <select id="lapor-jenis" required
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                                <option value="">-- Pilih jenis pengaduan --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Judul Pengaduan</label>
+                            <input id="lapor-judul" type="text" required maxlength="150"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Detail Pengaduan</label>
+                            <textarea id="lapor-detail" required maxlength="2000" rows="4"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                                placeholder="Jelaskan permasalahan secara rinci: apa, di mana, sejak kapan, dan dampaknya."></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Lokasi Kejadian <span class="text-slate-400">(opsional)</span></label>
+                                <input id="lapor-lokasi" type="text" maxlength="200"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Tanggal Kejadian <span class="text-slate-400">(opsional)</span></label>
+                                <input id="lapor-tanggal" type="date"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Foto / Bukti Pendukung <span class="text-slate-400">(opsional)</span></label>
+                            <input id="lapor-foto" type="file" accept="image/*" onchange="onLaporFotoChange(this)"
+                                class="block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-teal-50 dark:file:bg-teal-900/40 file:text-teal-700 dark:file:text-teal-300 hover:file:bg-teal-100">
+                            <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">Format gambar (JPG/PNG). Akan dikompres otomatis sebelum dikirim.</p>
+                            <div id="lapor-foto-preview" class="hidden mt-2"></div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Harapan / Solusi <span class="text-slate-400">(opsional)</span></label>
+                            <textarea id="lapor-harapan" maxlength="1000" rows="3"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                                placeholder="Saran atau harapan Anda terkait penyelesaian masalah ini."></textarea>
+                        </div>
+                        <label class="flex items-start space-x-2 text-xs text-slate-600 dark:text-slate-300">
+                            <input id="lapor-setuju" type="checkbox" required class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                            <span>Saya menyatakan data yang saya sampaikan benar dan setuju data ini digunakan oleh Pengurus RT untuk menindaklanjuti laporan.</span>
+                        </label>
+                        <!-- Honeypot anti-bot: disembunyikan dari manusia -->
+                        <input id="lapor-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">
+                        <button id="lapor-submit-btn" type="submit"
+                            class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> Kirim Laporan
+                        </button>
+                    </form>
+                    <div id="lapor-result" class="hidden mt-3"></div>
+                    </div>
+                </div>
+
+                <!-- Cek status pengaduan -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <button type="button" id="lapor-toggle-cek" onclick="toggleLaporCard('cek')" aria-expanded="false" aria-controls="lapor-panel-cek"
+                        class="w-full flex items-center justify-between gap-3 p-5 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
+                        <span class="flex items-start space-x-3">
+                            <span class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center flex-shrink-0">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </span>
+                            <span>
+                                <span class="block font-bold text-slate-800 dark:text-slate-100">Cek Status Pengaduan</span>
+                                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masukkan No. Pengaduan yang Anda terima setelah mengirim laporan (mis. ADU/2026-001).</span>
+                            </span>
+                        </span>
+                        <i id="lapor-chevron-cek" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0 rotate-180"></i>
+                    </button>
+                    <div id="lapor-panel-cek" class="px-5 pb-5 hidden">
+                    <form id="lapor-check-form" class="space-y-3" onsubmit="return cekStatusPengaduan(event)">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. Pengaduan</label>
+                            <input id="cek-nomor" type="text" required maxlength="40" autocomplete="off" placeholder="ADU/2026-001" oninput="onLaporNomorInput(this)"
+                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 uppercase tracking-wide focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
+                        </div>
+                        <button id="lapor-check-btn" type="submit"
+                            class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/40 hover:bg-teal-100 dark:hover:bg-teal-900/60 rounded-lg transition">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i> Cek Status
+                        </button>
+                    </form>
+                    <div id="lapor-check-result" class="mt-3"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer class="text-center text-xs text-slate-400 dark:text-slate-500 py-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
             <p data-rt="footerPublic">&copy; 2026 SAPA RT - Portal Publik &middot; v1.0.0</p>
@@ -1126,13 +1259,13 @@
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '9';
+        const EXPECTED_CONFIG_VERSION = '10';
 
         // Versi build aplikasi (public.html). NAIKKAN setiap kali mengubah
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-13-02';
+        const APP_BUILD = '2026-10-14-01';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1427,6 +1560,7 @@
                 WEB_APP_URL = getWebAppUrl();
                 decorateFooterBuildInfo();
                 initSuratForm();
+                initLaporForm();
                 startUpdateWatcher();
 
                 if (apiBases().length) {
@@ -1946,6 +2080,345 @@
             box.innerHTML = html;
         }
 
+        // ===== Lapor & Aspirasi (portal publik) =====
+        function toggleLaporCard(which) {
+            const panel = document.getElementById('lapor-panel-' + which);
+            const chevron = document.getElementById('lapor-chevron-' + which);
+            const button = document.getElementById('lapor-toggle-' + which);
+            if (!panel) return;
+            const willHide = !panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', willHide);
+            if (chevron) chevron.classList.toggle('rotate-180', willHide);
+            if (button) button.setAttribute('aria-expanded', willHide ? 'false' : 'true');
+        }
+
+        function hideLaporSection() {
+            const s = document.getElementById('lapor-section');
+            if (s) s.classList.add('hidden');
+        }
+
+        // Isi dropdown "Jenis Pengaduan" dari RT_CONFIG.jenisPengaduan (config.js).
+        function initLaporForm() {
+            const sel = document.getElementById('lapor-jenis');
+            if (!sel) return;
+            const list = (window.RT_CONFIG && Array.isArray(window.RT_CONFIG.jenisPengaduan)) ? window.RT_CONFIG.jenisPengaduan : [];
+            let html = '<option value="">-- Pilih jenis pengaduan --</option>';
+            for (let i = 0; i < list.length; i++) {
+                const v = escapeHtml(list[i]);
+                html += '<option value="' + v + '">' + v + '</option>';
+            }
+            sel.innerHTML = html;
+        }
+
+        // --- Lookup data warga dari No. WhatsApp (hanya nomor terdaftar boleh melapor) ---
+        let laporWarga = null;
+        let laporHpTimer = null;
+        let laporHpSeq = 0;
+
+        function setLaporHpHint(msg, kind) {
+            const el = document.getElementById('lapor-hp-hint');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = 'text-xs mt-1 leading-snug ' + (kind === 'warn'
+                ? 'text-amber-600 dark:text-amber-300'
+                : kind === 'ok' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500');
+        }
+
+        function setLaporLookup(kind, html) {
+            const el = document.getElementById('lapor-hp-lookup');
+            if (!el) return;
+            if (!html) { el.textContent = ''; el.className = 'text-xs mt-1 leading-snug hidden'; return; }
+            el.className = 'text-xs mt-1 leading-snug ' + (kind === 'warn'
+                ? 'text-amber-600 dark:text-amber-300'
+                : kind === 'ok' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500');
+            el.innerHTML = html;
+        }
+
+        function lockLaporIdentity(on) {
+            setSuratFieldLock('lapor-nama', !!on);
+            setSuratFieldLock('lapor-alamat', !!on);
+        }
+
+        function resetLaporWarga() {
+            laporWarga = null;
+            lockLaporIdentity(false);
+            const n = document.getElementById('lapor-nama');
+            const a = document.getElementById('lapor-alamat');
+            if (n) n.value = '';
+            if (a) a.value = '';
+        }
+
+        function onLaporHpInput(el) {
+            const digits = String((el && el.value) || '').replace(/\D/g, '');
+            laporHpSeq += 1;
+            const seq = laporHpSeq;
+            if (laporHpTimer) { clearTimeout(laporHpTimer); laporHpTimer = null; }
+            if (digits.length < 9 || digits.length > 15) {
+                resetLaporWarga();
+                setLaporHpHint(digits ? 'Nomor WhatsApp tidak valid.' : '', digits ? 'warn' : '');
+                setLaporLookup('', '');
+                return;
+            }
+            setLaporHpHint('', '');
+            setLaporLookup('', '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mencari data warga...');
+            laporHpTimer = setTimeout(function () { lookupWargaByHp(digits, seq); }, 500);
+        }
+
+        function lookupWargaByHp(hp, seq) {
+            if (!apiBases().length) { setLaporLookup('', ''); return; }
+            const callbackName = '__laporHp_' + Date.now() + '_' + seq;
+            loadApiJsonp(
+                function () { return 'action=lookupWargaHp&hp=' + encodeURIComponent(hp) + '&callback=' + callbackName; },
+                callbackName,
+                {
+                    timeout: 12000,
+                    onSuccess: function (res) {
+                        if (seq !== laporHpSeq) return;
+                        if (!res || res.result !== 'success') { setLaporLookup('', ''); return; }
+                        if (res.found) {
+                            laporWarga = res;
+                            const n = document.getElementById('lapor-nama');
+                            const a = document.getElementById('lapor-alamat');
+                            if (n) n.value = res.nama || '';
+                            if (a) a.value = res.alamat || '';
+                            lockLaporIdentity(true);
+                            setLaporLookup('ok', '<i class="fa-solid fa-circle-check mr-1"></i> Data warga ditemukan: <b>' + escapeHtml(res.nama || '') + '</b>. Nama &amp; Alamat terisi otomatis &amp; tidak dapat diubah.');
+                        } else {
+                            resetLaporWarga();
+                            setLaporLookup('warn', '<i class="fa-solid fa-circle-info mr-1"></i> Nomor WhatsApp belum terdaftar pada data warga RT. Hubungi pengurus RT untuk mendaftarkan nomor Anda terlebih dahulu.');
+                        }
+                    },
+                    onError: function () { if (seq === laporHpSeq) setLaporLookup('', ''); }
+                }
+            );
+        }
+
+        // --- Foto bukti (opsional): kompres di browser sebelum dikirim ---
+        let laporFotoData = '';
+        let laporFotoName = '';
+
+        function onLaporFotoChange(input) {
+            const box = document.getElementById('lapor-foto-preview');
+            if (!input || !input.files || !input.files[0]) {
+                laporFotoData = ''; laporFotoName = '';
+                if (box) { box.className = 'hidden mt-2'; box.innerHTML = ''; }
+                return;
+            }
+            const file = input.files[0];
+            if (!/^image\//.test(file.type)) {
+                showLaporMessage('error', 'Berkas harus berupa gambar (JPG/PNG).');
+                input.value = '';
+                return;
+            }
+            if (file.size > 8 * 1024 * 1024) {
+                showLaporMessage('error', 'Ukuran gambar terlalu besar (maks 8 MB).');
+                input.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function () {
+                compressImage(String(reader.result), 1600, 0.7, function (dataUrl) {
+                    laporFotoData = dataUrl || '';
+                    laporFotoName = file.name || 'lapor.jpg';
+                    if (box && dataUrl) {
+                        box.className = 'mt-2';
+                        box.innerHTML = '<div class="relative inline-block"><img src="' + escapeHtml(dataUrl) + '" alt="Pratinjau bukti" width="96" height="96" decoding="async" class="w-24 h-24 object-cover rounded-lg border border-slate-200 dark:border-slate-600"><button type="button" onclick="clearLaporFoto()" class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full bg-rose-600 text-white text-xs" title="Hapus foto"><i class="fa-solid fa-xmark"></i></button></div>';
+                    }
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearLaporFoto() {
+            laporFotoData = ''; laporFotoName = '';
+            const input = document.getElementById('lapor-foto');
+            if (input) input.value = '';
+            const box = document.getElementById('lapor-foto-preview');
+            if (box) { box.className = 'hidden mt-2'; box.innerHTML = ''; }
+        }
+
+        // Kompres gambar ke JPEG (max sisi `maxDim` px, kualitas `q`).
+        function compressImage(dataUrl, maxDim, q, cb) {
+            try {
+                const img = new Image();
+                img.onload = function () {
+                    let w = img.width, h = img.height;
+                    if (w > h && w > maxDim) { h = Math.round(h * maxDim / w); w = maxDim; }
+                    else if (h >= w && h > maxDim) { w = Math.round(w * maxDim / h); h = maxDim; }
+                    const c = document.createElement('canvas');
+                    c.width = w; c.height = h;
+                    c.getContext('2d').drawImage(img, 0, 0, w, h);
+                    let out;
+                    try { out = c.toDataURL('image/jpeg', q); } catch (e) { out = dataUrl; }
+                    cb(out);
+                };
+                img.onerror = function () { cb(dataUrl); };
+                img.src = dataUrl;
+            } catch (e) { cb(dataUrl); }
+        }
+
+        // --- Submit laporan ---
+        function setLaporBusy(busy) {
+            const btn = document.getElementById('lapor-submit-btn');
+            if (!btn) return;
+            btn.disabled = busy;
+            btn.innerHTML = busy
+                ? '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mengirim...'
+                : '<i class="fa-solid fa-paper-plane mr-1"></i> Kirim Laporan';
+        }
+
+        function clearLaporMessage() {
+            const box = document.getElementById('lapor-result');
+            if (!box) return;
+            box.className = 'hidden mt-3';
+            box.innerHTML = '';
+        }
+
+        function showLaporMessage(kind, html) {
+            const box = document.getElementById('lapor-result');
+            if (!box) return;
+            const styles = {
+                success: 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200',
+                error: 'bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-700 text-rose-800 dark:text-rose-200',
+                info: 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200'
+            };
+            box.className = 'mt-3 border rounded-xl p-3 text-sm ' + (styles[kind] || styles.info);
+            box.innerHTML = html;
+            box.classList.remove('hidden');
+        }
+
+        function submitLaporWarga(e) {
+            e.preventDefault();
+            if (!apiBases().length) { showLaporMessage('error', 'Portal belum dikonfigurasi. Hubungi admin RT.'); return false; }
+            clearLaporMessage();
+
+            const noHp = (document.getElementById('lapor-hp').value || '').trim();
+            const hpDigits = noHp.replace(/\D/g, '');
+            const jenis = (document.getElementById('lapor-jenis').value || '').trim();
+            const judul = (document.getElementById('lapor-judul').value || '').trim();
+            const detail = (document.getElementById('lapor-detail').value || '').trim();
+            const lokasi = (document.getElementById('lapor-lokasi').value || '').trim();
+            const tanggalKejadian = (document.getElementById('lapor-tanggal').value || '').trim();
+            const harapan = (document.getElementById('lapor-harapan').value || '').trim();
+            const setuju = !!(document.getElementById('lapor-setuju').checked);
+            const website = (document.getElementById('lapor-website').value || '').trim();
+
+            if (hpDigits.length < 9) { showLaporMessage('error', 'Nomor WhatsApp tidak valid.'); return false; }
+            if (!laporWarga) { showLaporMessage('error', 'Nomor WhatsApp belum terdaftar pada data warga RT. Hubungi pengurus RT untuk mendaftarkan nomor Anda terlebih dahulu.'); return false; }
+            if (!jenis) { showLaporMessage('error', 'Pilih jenis pengaduan terlebih dahulu.'); return false; }
+            if (judul.length < 3) { showLaporMessage('error', 'Isi judul pengaduan.'); return false; }
+            if (detail.length < 10) { showLaporMessage('error', 'Isi detail pengaduan (minimal 10 karakter).'); return false; }
+            if (!setuju) { showLaporMessage('error', 'Centang persetujuan penggunaan data terlebih dahulu.'); return false; }
+
+            const payload = {
+                action: 'submitLapor', noHp: hpDigits, nama: laporWarga.nama || '',
+                alamat: laporWarga.alamat || '', jenisPengaduan: jenis, judul: judul, detail: detail,
+                lokasi: lokasi, tanggalKejadian: tanggalKejadian, harapan: harapan,
+                foto: laporFotoData || '', fotoName: laporFotoName || '', setuju: true, website: website
+            };
+
+            setLaporBusy(true);
+            postToSheets(payload, {
+                onSuccess: function (res) {
+                    setLaporBusy(false);
+                    document.getElementById('lapor-form').reset();
+                    resetLaporWarga();
+                    clearLaporFoto();
+                    setLaporLookup('', '');
+                    const no = (res && res.noPengaduan && res.noPengaduan !== 'ok') ? res.noPengaduan : '';
+                    let html = '<b>Terima kasih, pengaduan Anda telah diterima.</b><br>Pengurus RT akan meninjau dan menindaklanjuti laporan Anda.';
+                    if (no) html += '<br>Nomor Pengaduan Anda: <b>' + escapeHtml(no) + '</b><br><span class="text-xs">Simpan Nomor Pengaduan ini untuk mengetahui perkembangan laporan.</span>';
+                    else html += '<br><span class="text-xs">Simpan data laporan Anda. Pengurus RT akan menghubungi Anda melalui WhatsApp.</span>';
+                    showLaporMessage('success', html);
+                },
+                onError: function (reason, detail) {
+                    setLaporBusy(false);
+                    let msg = 'Gagal mengirim laporan. Periksa koneksi lalu coba lagi.';
+                    if (reason === 'server_error' && detail && detail.message) msg = detail.message;
+                    else if (!isOnline()) msg = 'Anda sedang offline. Sambungkan internet lalu coba lagi.';
+                    showLaporMessage('error', escapeHtml(msg));
+                }
+            });
+            return false;
+        }
+
+        // --- Cek status pengaduan (action=checkLapor) ---
+        function onLaporNomorInput(el) {
+            if (!el) return;
+            const v = String(el.value || '').toUpperCase().replace(/[^A-Z0-9\/-]/g, '');
+            if (v !== el.value) el.value = v;
+        }
+
+        function pengaduanStatusBadge(status) {
+            const map = {
+                'Diterima': 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
+                'Diproses': 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+                'Selesai': 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+            };
+            return map[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
+        }
+
+        function cekStatusPengaduan(e) {
+            e.preventDefault();
+            const box = document.getElementById('lapor-check-result');
+            if (!apiBases().length) { box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Portal belum dikonfigurasi.</div>'; return false; }
+            const nomor = (document.getElementById('cek-nomor').value || '').trim();
+            if (!nomor) { box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Masukkan No. Pengaduan.</div>'; return false; }
+
+            box.innerHTML = '<div class="flex justify-center py-4"><i class="fa-solid fa-circle-notch fa-spin text-slate-300 dark:text-slate-600"></i></div>';
+            const callbackName = '__cekLapor_' + Date.now();
+            loadApiJsonp(
+                function () { return 'action=checkLapor&nomor=' + encodeURIComponent(nomor) + '&callback=' + callbackName; },
+                callbackName,
+                {
+                    timeout: 15000,
+                    onSuccess: function (res) { renderPengaduanResult(res, box); },
+                    onError: function () { box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Gagal menghubungi server. Coba lagi.</div>'; }
+                }
+            );
+            return false;
+        }
+
+        function renderPengaduanResult(res, box) {
+            if (!res || res.result !== 'success') {
+                const msg = (res && res.code === 'portal_disabled') ? 'Portal publik sedang dinonaktifkan.'
+                    : (res && res.message) ? res.message : 'Gagal memeriksa status.';
+                box.innerHTML = '<div class="bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-700 text-rose-700 dark:text-rose-300 rounded-xl p-3 text-sm">' + escapeHtml(msg) + '</div>';
+                return;
+            }
+            const items = res.data || [];
+            const archived = Number(res.archived || 0);
+            if (items.length === 0) {
+                if (archived > 0) {
+                    box.innerHTML = '<div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-xl p-3 text-sm flex items-start gap-2"><i class="fa-solid fa-box-archive mt-0.5"></i><span>Pengaduan ini sudah <b class="font-semibold">diarsipkan</b> oleh pengurus RT, sehingga tidak lagi ditampilkan. Silakan hubungi pengurus RT bila memerlukan informasi lebih lanjut.</span></div>';
+                    return;
+                }
+                box.innerHTML = '<div class="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl p-3 text-sm">No. Pengaduan tidak ditemukan. Periksa kembali nomor Anda.</div>';
+                return;
+            }
+            let html = items.map(function (it) {
+                return '' +
+                    '<div class="border border-slate-200 dark:border-slate-700 rounded-xl p-3 mb-2">' +
+                        '<div class="flex items-center justify-between mb-1 gap-2">' +
+                            '<span class="text-xs font-medium text-slate-700 dark:text-slate-200">' + escapeHtml(it.jenisPengaduan || '-') + '</span>' +
+                            '<span class="text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ' + pengaduanStatusBadge(it.status) + '">' + escapeHtml(it.status) + '</span>' +
+                        '</div>' +
+                        '<div class="text-sm font-semibold text-slate-800 dark:text-slate-100">' + escapeHtml(it.judul || '-') + '</div>' +
+                        '<div class="text-[11px] text-slate-400 dark:text-slate-500 mt-1">' +
+                            '<i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal || '') +
+                            (it.nomor ? ' &middot; ' + escapeHtml(it.nomor) : '') +
+                        '</div>' +
+                        (it.petugas ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300"><i class="fa-solid fa-user-gear mr-1"></i>Petugas: ' + escapeHtml(it.petugas) + '</div>' : '') +
+                        (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
+                        (it.tanggalSelesai ? '<div class="mt-2 text-[11px] text-emerald-700 dark:text-emerald-300"><i class="fa-solid fa-circle-check mr-1"></i>Selesai: ' + escapeHtml(it.tanggalSelesai) + '</div>' : '') +
+                    '</div>';
+            }).join('');
+            if (archived > 0) {
+                html += '<div class="text-[11px] text-amber-600 dark:text-amber-300 mt-1 flex items-center gap-1"><i class="fa-solid fa-box-archive"></i><span>' + archived + ' pengaduan lain sudah diarsipkan.</span></div>';
+            }
+            box.innerHTML = html;
+        }
+
         function showPortalDisabled() {
             const html = `
                 <div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-2xl p-6 text-center">
@@ -1959,6 +2432,7 @@
             document.getElementById('count-pengumuman').textContent = '-';
             document.getElementById('count-kegiatan').textContent = '-';
             hideSuratSection();
+            hideLaporSection();
         }
 
         function showLoadError() {
@@ -1995,6 +2469,7 @@
             document.getElementById('count-pengumuman').textContent = '-';
             document.getElementById('count-kegiatan').textContent = '-';
             hideSuratSection();
+            hideLaporSection();
         }
     </script>
     <script>

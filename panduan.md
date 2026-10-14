@@ -21,8 +21,8 @@ Dokumen ini adalah **buku petunjuk pemakaian** aplikasi SAPA RT (Sistem Administ
 
 ### Daftar isi
 
-- **Bagian 1 — Pengurus RT:** [Masuk](#masuk-ke-dashboard-admin) · [Tampilan admin](#mengenal-tampilan-admin) · [Ringkasan](#ringkasan-dashboard) · [Data Warga](#data-warga) · [Iuran & Kas](#iuran-dan-kas-rt) · [Pengumuman](#pengumuman) · [Kegiatan](#kegiatan-warga) · [Pengajuan Surat](#pengajuan-surat) · [Portal Publik](#portal-publik-menyalakan-dan-mematikan) · [Setting](#setting-integrasi-google-sheets) · [Rutinitas](#rutinitas-pengurus-rt)
-- **Bagian 2 — Warga:** [Buka portal](#cara-membuka-portal-publik) · [Pengumuman & agenda](#melihat-pengumuman-dan-agenda) · [Ajukan surat](#mengajukan-surat) · [Cek status](#cek-status-pengajuan-surat) · [Tema & offline](#tema-muat-ulang-dan-mode-offline) · [Nomor darurat](#nomor-siaga-darurat) · [Pasang di HP](#pasang-aplikasi-di-hp) · [FAQ](#pertanyaan-yang-sering-ditanyakan-warga)
+- **Bagian 1 — Pengurus RT:** [Masuk](#masuk-ke-dashboard-admin) · [Tampilan admin](#mengenal-tampilan-admin) · [Ringkasan](#ringkasan-dashboard) · [Data Warga](#data-warga) · [Iuran & Kas](#iuran-dan-kas-rt) · [Pengumuman](#pengumuman) · [Kegiatan](#kegiatan-warga) · [Pengajuan Surat](#pengajuan-surat) · [Lapor & Aspirasi](#lapor-dan-aspirasi) · [Portal Publik](#portal-publik-menyalakan-dan-mematikan) · [Setting](#setting-integrasi-google-sheets) · [Rutinitas](#rutinitas-pengurus-rt)
+- **Bagian 2 — Warga:** [Buka portal](#cara-membuka-portal-publik) · [Pengumuman & agenda](#melihat-pengumuman-dan-agenda) · [Ajukan surat](#mengajukan-surat) · [Lapor & aspirasi](#menyampaikan-lapor-dan-aspirasi) · [Cek status](#cek-status-pengajuan-surat) · [Tema & offline](#tema-muat-ulang-dan-mode-offline) · [Nomor darurat](#nomor-siaga-darurat) · [Pasang di HP](#pasang-aplikasi-di-hp) · [FAQ](#pertanyaan-yang-sering-ditanyakan-warga)
 - **Bagian 3 — Setup & pemeliharaan:** [Persiapan](#yang-perlu-disiapkan) · [Google Sheets](#siapkan-google-sheets) · [Apps Script](#pasang-apps-script-dan-deploy-web-app) · [Script Properties](#script-properties) · [config.js](#tautkan-aplikasi-ke-backend) · [Cloudflare Pages](#publikasikan-ke-cloudflare-pages) · [Cloudflare Access](#kunci-halaman-admin-dengan-cloudflare-access) · [Checklist deploy](#checklist-setiap-perubahan) · [Backup](#backup-dan-pemulihan-data) · [Troubleshooting](#troubleshooting)
 
 ---
@@ -57,6 +57,7 @@ Catatan penting:
 | **Pengumuman** | Terbitkan papan informasi RT. |
 | **Kegiatan Warga** | Agenda kerja bakti, posyandu, siskamling, dll. |
 | **Pengajuan Surat** | Kelola permohonan surat dari warga (dan pencatatan manual). |
+| **Lapor & Aspirasi** | Kelola pengaduan/aspirasi warga (proses, arsip, cari). |
 | **Portal Publik** | Nyalakan/matikan akses portal untuk warga. |
 | **Setting → Integrasi Google Sheets** | Token admin, email notifikasi, tes koneksi, muat data. |
 | **Setting → Pasang Aplikasi** | Panduan memasang aplikasi ke layar utama HP/komputer. |
@@ -248,20 +249,49 @@ Untuk permohonan yang disampaikan lisan/datang langsung:
 
 Bila pengurus sudah mengisi **Admin Email** di Setting, setiap pengajuan **baru dari portal publik** akan mengirim email notifikasi ke alamat itu (pengajuan yang dicatat manual tidak mengirim email). Cara mengaktifkan/mengujinya ada di [Setting](#setting-integrasi-google-sheets) dan [Script Properties](#script-properties).
 
+## Lapor dan Aspirasi
+
+Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga — misalnya sampah menumpuk, lampu jalan mati, atau usulan kegiatan. Warga mengirimnya dari Portal Publik; pengurus memprosesnya di sini.
+
+### Daftar pengaduan
+
+- Baris terbaru tampil di atas. Setiap baris memperlihatkan **No. Pengaduan** (format `ADU/2026-001`), tanggal, nama & No. HP warga, jenis, judul, status, dan aksi.
+- **Kartu ringkasan status** di atas tabel: jumlah **Diterima**, **Diproses**, dan **Selesai**.
+- **Filter status** dan **kotak pencarian** (nomor, nama, atau judul) membantu menemukan pengaduan tertentu.
+
+### Memproses pengaduan
+
+1. Klik baris (atau ikon pensil) untuk membuka **Edit**.
+2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian**.
+3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga.
+4. Klik **Simpan**. Ikon **ubah status cepat** (putar) juga bisa dipakai untuk menggilir status tanpa membuka modal.
+
+### Mencatat pengaduan manual
+
+Untuk pengaduan yang diterima lisan/lewat telepon, klik **Isi Manual**. Bila **No. Pengaduan** dibiarkan kosong, sistem mengisinya otomatis berurutan.
+
+### Arsip, bukan hapus
+
+Pengaduan yang sudah tuntas bisa **diarsipkan** (ikon kotak arsip) — data tetap tersimpan, hanya disembunyikan dari daftar & ringkasan. Centang **“Tampilkan arsip”** untuk melihatnya **terpisah di atas** tabel; klik ikon kotak terbuka untuk **memulihkan**. Pengaduan terarsip tidak lagi muncul pada **Cek Status Pengaduan** warga.
+
+### Notifikasi email
+
+Sama seperti Pengajuan Surat, bila **Admin Email** diisi di Setting, setiap pengaduan baru dari portal mengirim email notifikasi ke pengurus.
+
 ## Portal Publik: Menyalakan dan Mematikan
 
 Menu **Portal Publik** mengatur halaman yang dilihat warga.
 
 - **Toggle Portal Publik** dengan badge **AKTIF** / non-aktif:
-  - **AKTIF** — warga bisa membuka portal, membaca pengumuman/kegiatan, dan mengajukan surat.
-  - **non-aktif** — server menolak permintaan portal, form pengajuan & cek status otomatis disembunyikan. Data benar-benar tidak bisa diakses, bukan sekadar tautannya disembunyikan.
+  - **AKTIF** — warga bisa membuka portal, membaca pengumuman/kegiatan, mengajukan surat, dan menyampaikan **Lapor & Aspirasi**.
+  - **non-aktif** — server menolak permintaan portal, form pengajuan surat, lapor/aspirasi & cek status otomatis disembunyikan. Data benar-benar tidak bisa diakses, bukan sekadar tautannya disembunyikan.
 - **Buka Portal** — membuka portal publik di tab baru untuk memeriksa tampilannya.
 - Ringkasan **“Apa yang Bisa Dilihat Warga?”**:
-  - **Bisa dilihat:** Pengumuman RT, Agenda Kegiatan Warga, informasi resmi RT, form pengajuan surat & cek status.
+  - **Bisa dilihat:** Pengumuman RT, Agenda Kegiatan Warga, informasi resmi RT, form pengajuan surat, form lapor/aspirasi, & cek status.
   - **Tidak bisa dilihat:** data pribadi warga, rekening/kas RT, tombol tambah/edit/hapus.
 - Hanya pengumuman & kegiatan yang ditandai **Publik** yang tampil. Gunakan ikon 👁️ pada kartu untuk menampilkan/menyembunyikan.
 
-> **Kapan portal dimatikan?** Misalnya saat migrasi data atau ada gangguan. Ingat: saat OFF, warga **tidak bisa mengajukan surat**.
+> **Kapan portal dimatikan?** Misalnya saat migrasi data atau ada gangguan. Ingat: saat OFF, warga **tidak bisa mengajukan surat** maupun **mengirim lapor/aspirasi**.
 
 ## Setting: Integrasi Google Sheets
 
@@ -286,6 +316,7 @@ Menu **Setting → Integrasi Google Sheets**. Halaman ini untuk memastikan aplik
 - [ ] Buka dashboard (atau cek notifikasi email) dan lihat **Pengajuan Surat** ber-status **Pending**.
 - [ ] Proses pengajuan: ubah ke **Diproses**, hubungi warga bila ada yang kurang, catat di **Catatan Pengurus**.
 - [ ] Setelah surat ditandatangani, isi **No. Surat** dan ubah status ke **Selesai**.
+- [ ] Cek menu **Lapor & Aspirasi**: tindak lanjuti pengaduan ber-status **Diterima/Diproses**, isi **Petugas** & **Catatan Tindak Lanjut**, lalu arsipkan yang sudah **Selesai**.
 
 **Mingguan**
 
@@ -343,6 +374,29 @@ Yang perlu diketahui:
 - Batas aman pemakaian: maksimal **5 pengajuan per NIK per jam**. Bila Anda mendapat pesan batas tercapai, tunggu satu jam atau hubungi pengurus.
 - Tulis **satu keperluan per pengajuan** supaya pengurus mudah memproses.
 - Butuh panduan di tempat? Klik ikon **ⓘ** di samping judul **Layanan Surat** — muncul jendela **Panduan Layanan Surat** berisi langkah-langkah yang sama.
+
+## Menyampaikan Lapor dan Aspirasi
+
+Menu **Lapor & Aspirasi** ada **di bawah Layanan Surat** pada Portal Publik. Gunakan untuk menyampaikan **pengaduan, keluhan, atau aspirasi** — misalnya sampah menumpuk, lampu jalan mati, saluran air tersumbat, atau usulan perbaikan fasilitas. Kartunya **diklik dahulu** untuk membuka formulir.
+
+1. **Klik judul “Lapor / Aspirasi Warga”** untuk membuka formulir.
+2. **Isi No. WhatsApp lebih dulu.** Hanya nomor yang **terdaftar di data warga** yang bisa mengirim:
+   - Bila nomor terdaftar, **Nama Warga** dan **Alamat / Blok / No Rumah** terisi otomatis dan **terkunci** (hanya tampilan).
+   - Bila nomor belum terdaftar, muncul keterangan — hubungi pengurus RT untuk didaftarkan agar bisa mengirim.
+3. Pilih **Jenis Pengaduan** (mis. Lingkungan & Kebersihan, Penerangan Jalan, Saluran Air/Drainase, Keamanan Lingkungan, Sampah, Aspirasi/Saran, dan lainnya).
+4. Tulis **Judul Pengaduan** dan **Detail** kejadian selengkap mungkin.
+5. (Opsional) Isi **Lokasi Kejadian**, **Tanggal Kejadian**, dan **Harapan / Solusi**.
+6. (Opsional) Lampirkan **Foto/Bukti Pendukung** (gambar, maks. 8 MB) — foto otomatis dikompres sebelum diunggah.
+7. Centang **persetujuan penggunaan data**, lalu klik **Kirim**.
+8. **Catat Nomor Pengaduan** yang muncul, mis. `ADU/2026-001`. Nomor ini dipakai untuk memantau status.
+
+**Cek Status Pengaduan:** klik judul **“Cek Status Pengaduan”** di bawahnya, masukkan **No. Pengaduan**, lalu klik **Cek**. Anda akan melihat status (**Diterima / Diproses / Selesai**), petugas yang menangani, catatan tindak lanjut, dan tanggal penyelesaian (bila sudah selesai).
+
+Yang perlu diketahui:
+
+- Status awal pengaduan adalah **Diterima**; pengurus akan mengembangkannya menjadi **Diproses** lalu **Selesai**.
+- Batas aman pemakaian: maksimal **5 pengaduan per nomor per jam**.
+- Satu pengaduan untuk satu masalah agar mudah ditindaklanjuti.
 
 ## Cek Status Pengajuan Surat
 
@@ -456,6 +510,7 @@ Judul kolom yang dipakai:
 | `Pengumuman` | Timestamp · Tanggal · Judul Pengumuman · Isi Pengumuman · Kategori · Penanggung Jawab · Publik · ID |
 | `Kegiatan_Warga` | Timestamp · Nama Kegiatan · Tanggal Pelaksanaan · Waktu · Lokasi · Penanggung Jawab · Keterangan · Publik · ID |
 | `Pengajuan_Surat` | Dibuat otomatis oleh backend (Tanggal, No. Pengajuan, NIK, Nama, No. HP, Alamat, Jenis Surat, Keperluan, No. Surat, Status, Catatan, Diarsipkan, dll.) |
+| `Lapor_Aspirasi` | Dibuat otomatis oleh backend (No. Pengaduan, Nama, No. HP, Alamat, Jenis Pengaduan, Judul, Detail, Lokasi, Tanggal Kejadian, Foto, Harapan, Status, Petugas, Catatan Tindak Lanjut, Tanggal Penyelesaian, Diarsipkan, dll.) |
 
 > **Kolom `Publik`** mengatur apakah data tampil di portal warga (`Ya`/`Tidak`). **Kolom `Diarsipkan`** mengatur data yang disembunyikan tanpa dihapus (`Ya`/`Tidak`).
 
@@ -479,10 +534,11 @@ Buka **Project Settings → Script Properties** di Apps Script dan tambahkan:
 | Properti | Wajib | Isi |
 |---|---|---|
 | `ADMIN_TOKEN` | ✅ | Kata sandi rahasia RT (mis. `rt017-rahasia-2026`). Dipakai aplikasi untuk semua operasi tulis. **Jangan ditulis di dalam kode.** |
-| `ADMIN_EMAIL` | Opsional | Alamat email penerima notifikasi pengajuan surat baru. |
+| `ADMIN_EMAIL` | Opsional | Alamat email penerima notifikasi pengajuan surat **dan** pengaduan Lapor & Aspirasi baru. |
 | `NOTIF_SENDER_NAME` | Opsional | Nama pengirim yang tampil di kotak masuk (default `Pengajuan surat`). |
 | `NOTIF_REPLY_TO` | Opsional | Alamat balasan (default `ADMIN_EMAIL`). |
 | `NOTIF_SUBJECT_PREFIX` | Opsional | Prefiks subjek email (default `[SAPA-RT]`). |
+| `LAPOR_FOLDER_ID` | Opsional | ID folder Google Drive untuk menyimpan foto pengaduan. Bila kosong, backend mencari/membuat folder bernama `Lapor`. |
 
 Bila baru mengaktifkan email, jalankan izin sekali: pilih fungsi **`authorizeMail`** pada dropdown editor Apps Script → **Run** → **Review permissions** → **Allow** → lalu deploy **New version**.
 
@@ -684,6 +740,7 @@ Server ini menyajikan halaman admin & portal publik sekaligus meniru seluruh end
 | **Cloudflare Access** | Sistem login email + PIN untuk membuka dashboard admin. |
 | **No. Pengajuan** | Kode bukti pengajuan warga, mis. `SRT-261006-AB12`. |
 | **No. Surat** | Nomor surat resmi RT (mis. `474/017-RT/RW.06/X/2026`), diisi saat status `Selesai`. |
+| **No. Pengaduan** | Kode bukti lapor/aspirasi warga, mis. `ADU/2026-001`. |
 | **Arsip** | Menyembunyikan data dari daftar tanpa menghapusnya. |
 | **PWA** | Cara memasang aplikasi ke layar utama HP/komputer. |
 

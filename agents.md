@@ -124,10 +124,15 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled`. **Butuh token** |
+| `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`adminEmail`. **Butuh token** |
 | `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya`. **Tanpa token**. Bila portal OFF → `{result:"error", code:"portal_disabled"}` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris di sheet X (JSONP callback). **Butuh token** |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
+| `lookupWarga` | `action=lookupWarga&nik=...` | Cari 1 warga di `Data_Warga` → `{found, nama, noHp, alamat}` saja. **Tanpa token**, ikut gate portal & rate-limit |
+| `checkSurat` | `action=checkSurat&nik=...&hp=...` | Cek status pengajuan publik → `{result, count, archived, data:[...]}`. **Tanpa token** |
+| `lookupWargaHp` | `action=lookupWargaHp&hp=...` | Cari 1 warga di `Data_Warga` lewat **No. HP** → `{found, nama, alamat}` saja (dipakai form Lapor). **Tanpa token** |
+| `checkLapor` | `action=checkLapor&nomor=...` | Cek status pengaduan berdasar **No. Pengaduan** → `{result, count, archived, data:[...]}`. **Tanpa token** |
+| `sendTestEmail` | `action=sendTestEmail&token=T[&email=...]` | Kirim email uji ke `ADMIN_EMAIL` (atau `email`). **Butuh token** |
 
 **Contoh:**
 ```
@@ -151,6 +156,9 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 | `update` | `{ action:"update", sheetName, token, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
 | `delete` | `{ action:"delete", sheetName, token, id }` | Hapus baris dengan `id` tersebut |
 | `setPortalStatus` | `{ action:"setPortalStatus", enabled:true/false, token }` | Nyalakan/matikan portal publik (Script Property `PUBLIC_PORTAL_ENABLED`). Bukan operasi per-sheet |
+| `submitSurat` | `{ action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan }` | Intake pengajuan surat dari portal publik. **Tanpa token**: validasi, honeypot, rate limit, paksa `Pending`, notifikasi email |
+| `submitLapor` | `{ action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju }` | Intake pengaduan dari portal publik. **Tanpa token**: No. HP wajib terdaftar, honeypot, rate limit, paksa `Diterima`, No. Pengaduan `ADU/<tahun>-NNN`, notifikasi email |
+| `setAdminEmail` | `{ action:"setAdminEmail", email, token }` | Simpan Script Property `ADMIN_EMAIL` |
 
 > **Token wajib:** semua POST ditolak (`code:"unauthorized"`) bila `token` tidak cocok dengan `ADMIN_TOKEN`. Karena request POST memakai `mode:'no-cors'` (respons tidak terbaca), frontend mencegah pengiriman bila token kosong via `sendToGoogleSheets()` (memanggil `promptForAdminToken()`).
 
@@ -159,10 +167,12 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 > **Penting:** Operasi `update` **wajib** menyertakan `action:"update"`. Tanpa itu `doPost` menganggapnya `add` dan menambahkan baris duplikat.
 
 > **Field per sheet:**
-> - `Data_Warga`: `nomorKK, nama, status, jenisKelamin, nik, tempat, tanggalLahir, pendidikan, pekerjaan, noHp, statusTinggal, alamat`
+> - `Data_Warga`: `nomorKK, nama, status, jenisKelamin, nik, tempat, tanggalLahir, pendidikan, pekerjaan, noHp, statusTinggal, alamat` (+ `Diarsipkan`)
 > - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan`
 > - `Pengumuman`: `tanggal, judul, isi, kategori, pj, publik` (`Ya`/`Tidak`)
 > - `Kegiatan_Warga`: `namaKegiatan, tanggal, waktu, lokasi, pj, keterangan, publik` (`Ya`/`Tidak`)
+> - `Pengajuan_Surat`: `nama, nik, noHp, alamat, jenisSurat, keperluan, status, noSurat, catatan` (+ `Diarsipkan`)
+> - `Lapor_Aspirasi`: `noPengaduan, nama, noHp, alamat, jenisPengaduan, judul, detail, lokasi, tanggalKejadian, foto, harapan, status, petugas, catatanTindakLanjut, tanggalPenyelesaian` (+ `Diarsipkan`)
 
 > **Publik (Portal Publik):** kolom `Publik` pada `Pengumuman` & `Kegiatan_Warga` menentukan apakah record tampil di `public.html` (`Ya` = tampil). Di admin, tombol toggle ikon mata (`togglePublikPengumuman` / `togglePublikKegiatan`) membalik nilainya lalu mengirim `action:"update"`. Nilai kosong dinormalisasi menjadi `Ya` oleh `normalizePublik()`.
 
@@ -333,6 +343,10 @@ Tombol refresh di:
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 
 ---
+
+## 🔧 Recent Changes (2026-10-14)
+
+- ✅ **Fitur baru: Lapor & Aspirasi (pengaduan warga) — publik, backend, & panel admin** — menu baru **di bawah Layanan Surat** pada Portal Publik. **Backend `code.gs` (`CODE_VERSION` → `publik-v21-2026-10-14`):** tab baru **`Lapor_Aspirasi`** (17 kolom: `Timestamp, No. Pengaduan, Nama, No. HP, Alamat, Jenis Pengaduan, Judul, Detail, Lokasi, Tanggal Kejadian, Foto, Harapan, Status, Petugas, Catatan Tindak Lanjut, Tanggal Penyelesaian, Diarsipkan`, + kolom bantu `ID`); `EXPECTED_FIELDS.Lapor_Aspirasi=17`; `DESIRED_HEADERS` + `readAllSheets` (format kolom `0,9,15`); `buildRowData` branch. Aksi **publik** (tanpa token): `submitLapor` (wajib No. HP terdaftar di `Data_Warga` via `findWargaByHpNorm`, status dipaksa `Diterima`, honeypot, rate limit `LAPOR_RATE` ≤5/jam per HP + ≤60 global, foto opsional ke folder Drive `Lapor` — `getLaporFolder`/`saveLaporFoto` cap 6 MB, gagal foto tidak membatalkan), `lookupWargaHp` (hanya Nama+Alamat, rate `LAPOR_LOOKUP`), `checkLapor` (berdasar No. Pengaduan, rate `LAPOR_CHECK_RATE`). **No. Pengaduan `ADU/<tahun>-NNN`** dibuat `makeNomorPengaduan()` — otomatis saat submit **dan** saat admin `add` manual tanpa nomor; id internal `ADU-<yyMMdd>-XXXX`. Notifikasi email via `notifyAdminNewLapor()` (mengikuti `ADMIN_EMAIL`, sender/Reply-To/prefix yang sama). **Mock `tools/mock-server.js`** disamakan (endpoint + `genId` `ADU-...` + auto-nomor). **`config.js`**: `version` → `'10'`, tambah `jenisPengaduan` (13 opsi) & `statusPengaduan` `['Diterima','Diproses','Selesai']`. **`public.html`**: kartu **Lapor / Aspirasi Warga** (No. WhatsApp wajib → lookup Nama/Alamat terkunci; Jenis, Judul, Detail, Lokasi, Tanggal Kejadian, Foto dikompres `compressImage` maxDim 1600 q0.7 ≤8 MB, Harapan, centang persetujuan) + **Cek Status Pengaduan** (No. Pengaduan). **`index.html`**: menu `#nav-lapor`, `#panel-lapor` (ringkasan status, filter/cari, arsip), `#modal-lapor`, KPI `#stat-lapor` (grid desktop 6 kolom), `appState.lapor`/`rt_lapor`, `renderLaporTable`, `submitLaporAdmin`, `cycleLaporStatus`, `archiveLapor`/`restoreLapor`, `openAddLapor`/`editLapor`, `initLaporForm`. `EXPECTED_BACKEND_VERSION`/`EXPECTED_CONFIG_VERSION` → `publik-v21-2026-10-14`/`10`; `APP_BUILD` index & public → `2026-10-14-01` (+ `version.json`). Ikon baru `fa-comment-dots`/`fa-pen-to-square` ditambahkan ke subset (`fonts.css` **95** ikon). Uji baru **`test_lapor_feature.js`** (49) & perluasan `test_mock_backend.js` (31); suite **71** hijau. Dokumentasi: `readme.md`.
 
 ## 🔧 Recent Changes (2026-10-13)
 

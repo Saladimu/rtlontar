@@ -9,7 +9,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 ## 🚀 Fitur Utama
 
 - **🖥️ Sembunyikan menu kiri (tampilan penuh):** pada layar desktop, tombol **<<< Sembunyikan menu** (latar gelap) **tepat di atas Ringkasan** menyembunyikan sidebar agar area kerja **lebih lebar (full display)**. Tombol **Tampilkan menu** (ikon panah) tetap di kiri layar untuk membuka kembali. Pilihan terakhir diingat di perangkat. Tidak berlaku di ponsel (menu atas tetap).
-- **📊 Ringkasan / Dashboard:** Menampilkan statistik **Total Warga** dalam format `jiwa / No. KK unik (KK)` (mis. `12 / 4 (KK)`), saldo kas berjalan, pengumuman, agenda kegiatan, dan **Pengajuan Surat** (`aktif (Pending)` — arsip tidak dihitung). **Kartu KPI & kartu sorotan dapat diklik** untuk membuka menu terkait (Total Warga → Data Warga, Saldo Kas → Iuran & Kas, Pengumuman → Pengumuman, Agenda/Kegiatan Mendatang → Kegiatan Warga, Pengajuan Surat → Pengajuan Surat).
+- **📊 Ringkasan / Dashboard:** Menampilkan statistik **Total Warga** dalam format `jiwa / No. KK unik (KK)` (mis. `12 / 4 (KK)`), saldo kas berjalan, pengumuman, agenda kegiatan, **Pengajuan Surat** (`aktif (Pending)` — arsip tidak dihitung), dan **Lapor & Aspirasi** (`aktif (menunggu)`, yaitu pengaduan diterima/diproses; arsip & selesai tidak dihitung). **Kartu KPI & kartu sorotan dapat diklik** untuk membuka menu terkait (Total Warga → Data Warga, Saldo Kas → Iuran & Kas, Pengumuman → Pengumuman, Agenda/Kegiatan Mendatang → Kegiatan Warga, Pengajuan Surat → Pengajuan Surat, Lapor & Aspirasi → Lapor & Aspirasi).
 - **👥 Pendataan Warga:** Pengelolaan data penduduk (Nomor KK, Nama Lengkap, NIK, Tempat & Tanggal Lahir, Status dalam Keluarga & Jenis Kelamin, Pendidikan & Pekerjaan, No. HP, Status Tempat Tinggal, Alamat/No Rumah — sesuai urutan form) dilengkapi kolom **Usia** otomatis (dihitung dari Tanggal Lahir, tidak disimpan ke database). Tabel tampil **ringkas dengan kolom bertumpuk** (mis. "Nama Lengkap / Usia", "NIK / No. HP") sehingga lebih banyak data terlihat tanpa scroll horizontal, dengan fitur pencarian, filter status, **Edit & Arsip** (data warga ditandai arsip, bukan dihapus, sehingga tetap tersimpan & dapat dipulihkan) dengan warning dialog, serta **proteksi NIK ganda** (satu NIK tidak boleh terdaftar dua kali — dicek saat tambah & edit).
 - **🪪 Isi otomatis dari NIK:** saat mengisi **NIK 16 digit** di form Tambah/Edit Warga, kolom **Jenis Kelamin** & **Tanggal Lahir** otomatis terisi dari NIK (laki-laki: digit ke-7/8 = `01-31`; perempuan: `41-71` = `40 + tanggal`; tahun 2 digit ditebak `<= tahun berjalan` → `20YY`, selain itu `19YY`). Memperbaiki digit NIK (mis. salah hari) otomatis memperbarui kembali **Jenis Kelamin**/**Tanggal Lahir** selama kolom tersebut belum diubah manual; isian yang sudah dikoreksi manual **tidak** tertimpa (muncul catatan di bawah kolom NIK), dan tombol **Isi dari NIK** dapat menimpa paksa. Bila NIK 16 digit namun tanggal di dalamnya tidak valid (mis. bulan 13 / 30 Feb), muncul peringatan dan isian tidak diubah. NIK hanya menerima angka (maks. 16 digit).
 - **💬 Chat WhatsApp & Telepon dari No. HP (saat Edit):** buka detail record lewat **Edit** untuk menampilkan tombol **Chat WhatsApp** & **Telepon** di bawah kolom No. HP — berlaku pada form **Data Warga** maupun **Pengajuan Surat**. Tombol ini **hanya aktif saat mengedit** record (saat menambah record disembunyikan), dan tautan mengikuti nomor yang sedang tampil — jadi pengurus dapat langsung menghubungi warga tanpa menyalin nomor. Nomor dinormalisasi ke format `62...` (mis. `0812...` → `62812...`); bila nomor belum/kurang valid saat mengedit, muncul petunjuk singkat.
@@ -31,6 +31,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 - **📲 Pasang sebagai Aplikasi (PWA):** halaman admin maupun Portal Publik bisa dipasang ke layar utama Android/iOS atau desktop (masing-masing punya manifest sendiri — `manifest.webmanifest` untuk admin, `manifest-public.webmanifest` untuk publik — plus service worker `sw.js`). Tombol **Pasang Aplikasi** muncul otomatis di sidebar admin dan tombol **Install** di header portal publik saat browser mendukung (Chrome/Edge Android & desktop). Menekan tombol akan membuka **panduan "Pasang Aplikasi"** bergaya seragam dengan aplikasi (kartu langkah untuk **Android**, **iPhone/iPad**, & **Komputer** — kartu perangkat Anda ditandai badge **"Perangkat ini"**), lengkap dengan tips bila opsi pemasangan tidak muncul; bila browser menyediakan dialog native, dialog itulah yang langsung ditampilkan. Setelah dipasang, aplikasi dibuka layar penuh (*standalone*) dan tombol pemasangan disembunyikan. Berkas PWA portal publik (`/manifest-public.webmanifest`, `/sw.js`, `/icon-192.png`) wajib ikut di-bypass Cloudflare Access (lihat **Publikasi & Kontrol Akses**).
 - **🕵️ Portal Publik Terisolasi:** `public.html` memakai endpoint `readPublic` yang hanya mengembalikan Pengumuman & Kegiatan ber-`Publik=Ya`; data warga & kas tidak pernah dikirim ke portal publik.
 - **🧾 Isi form surat otomatis dari Data Warga (bantu warga):** pada **Layanan Surat**, kolom **NIK (16 digit)** berada di **paling atas**. Begitu NIK valid dimasukkan, sistem mencari NIK di **Data Warga** (`action=lookupWarga`) — bila ketemu, **Nama Lengkap & Alamat/No. Rumah** terisi otomatis **dan terkunci** (hanya tampilan, tidak dapat diubah), sedangkan **No. HP/WhatsApp** ditampilkan **tersamar namun tetap dapat diperiksa/diubah** (mis. `0812••••7890`; ketuk kolom untuk melihat nomor aslinya) — nomor asli tetap dikirim saat submit. Bila NIK **tidak terdaftar**, muncul info bahwa NIK tidak ada di data warga dan form **tetap dapat diisi manual** lalu dikirim.
+- **📣 Lapor & Aspirasi (Portal Publik & Admin):** menu baru **di bawah Layanan Surat** pada Portal Publik untuk menyampaikan **pengaduan, keluhan, atau aspirasi** kepada Pengurus RT. Warga memasukkan **No. WhatsApp** yang terdaftar di Data Warga (`action=lookupWargaHp`); **Nama & Alamat** terisi otomatis (hanya-baca). Warga memilih **Jenis Pengaduan** (13 kategori dari `RT_CONFIG.jenisPengaduan`), menulis **Judul** & **Detail**, plus opsional **Lokasi**, **Tanggal Kejadian**, **Foto/Bukti** (dikompres di browser lalu diunggah ke folder Google Drive `Lapor`), dan **Harapan/Solusi**. Setelah terkirim warga menerima **Nomor Pengaduan** (format `ADU/2026-001`) yang dapat dicek statusnya kapan saja. Lihat bagian **Lapor & Aspirasi**.
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🚨 Nomor Siaga Darurat (Portal Publik):** tombol ikon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama** (112, 110, 113, 118/119, 115, 117, 129, 123) lengkap dengan ikon per layanan. Setiap nomor dapat diketuk untuk langsung menelepon (`tel:`).
 - **📱 QR Buka Portal (Portal Publik):** mengeklik **logo RT** di header `public.html` (sebelah judul "Portal Publik") membuka jendela berisi gambar **`qr-public.png`** — kode QR untuk membuka Portal Publik lewat ponsel — beserta tautan URL portal (`RT_CONFIG.publicPortalUrl`) yang dapat diketuk langsung. Memudahkan membagikan akses portal antar warga tanpa mengetik alamat.
@@ -74,6 +75,16 @@ Timestamp	Tanggal	Judul Pengumuman	Isi Pengumuman	Kategori	Penanggung Jawab	Publ
 Timestamp	Nama Kegiatan	Tanggal Pelaksanaan	Waktu	Lokasi	Penanggung Jawab	Keterangan	Publik
 ```
 
+### 5. Tab `Lapor_Aspirasi` (dibuat otomatis)
+
+Tab ini **dibuat otomatis** oleh script saat pertama kali dipakai (tidak perlu disalin manual):
+
+```tsv
+Timestamp	No. Pengaduan	Nama	No. HP	Alamat	Jenis Pengaduan	Judul	Detail	Lokasi	Tanggal Kejadian	Foto	Harapan	Status	Petugas	Catatan Tindak Lanjut	Tanggal Penyelesaian	Diarsipkan
+```
+
+> Kolom **`No. Pengaduan`** memakai format `ADU/2026-001` (diisi otomatis saat pengaduan masuk atau saat admin menambah tanpa nomor). Kolom **`Foto`** berisi tautan Google Drive (folder `Lapor`). Kolom **`Diarsipkan`** menyembunyikan pengaduan tanpa menghapus. Tab ini **tidak pernah** dikirim ke Portal Publik.
+
 ---
 
 ## ⚙️ Kode Google Apps Script (`Apps Script/code.gs`)
@@ -114,6 +125,7 @@ Lihat `Apps Script/readme.md` untuk:
 - ✅ **Fitur Pengajuan Surat (backend v11)** — tab `Pengajuan_Surat` (dibuat otomatis), aksi publik `submitSurat` (tanpa token; validasi NIK 16 digit, honeypot, rate limit 5/jam per NIK), notifikasi email admin (Script Property `ADMIN_EMAIL`), `Status` default `Pending`, **No. Pengajuan konsisten `SRT-<yymmdd>-XXXX`** untuk semua jalur (publik & catat manual admin), serta **panel admin** untuk melihat/mencatat/mengubah status/menghapus & memfilter pengajuan
 - ✅ **Kolom baru `Data_Warga`**: `Nomor KK`, `Status`, `Jenis Kelamin`, `Pendidikan`, `Pekerjaan` (urutan: Nomor KK → Nama Lengkap → Status → Jenis Kelamin → NIK → Tempat/Tanggal Lahir → Pendidikan → Pekerjaan → No HP → Status Tinggal → Alamat → Diarsipkan); migrasi otomatis berbasis **nama header** (`migrateDataWargaLayout()`), aman dijalankan berulang
 - ✅ **Arsip Data Warga (bukan hapus)** — data warga tidak lagi dihapus permanen; tombol **Arsip** menandai kolom `Diarsipkan=Ya` sehingga baris disembunyikan dari tabel, datalist nama, dashboard, & `lookupWarga` publik, namun **tetap tersimpan**. Toggle **"Tampilkan arsip"** + tombol **Pulihkan** tersedia di tab Data Warga (`backend v16`)
+- ✅ **Fitur Lapor & Aspirasi (backend v21)** — tab `Lapor_Aspirasi` (dibuat otomatis), aksi publik `submitLapor` (tanpa token; wajib No. HP terdaftar, honeypot, rate limit 5/jam per no. HP, foto ke Drive), **No. Pengaduan `ADU/<tahun>-NNN`** (otomatis saat submit maupun catat manual admin), notifikasi email admin, aksi baca `lookupWargaHp` (Nama+Alamat saja) & `checkLapor`, serta **panel admin** untuk melihat/mencatat/mengubah status/mengarsipkan pengaduan
 </details>
 
 ### Langkah Deployment Web App:
@@ -185,6 +197,39 @@ Menu **Pengajuan Surat** pada dashboard admin menampilkan seluruh pengajuan (ter
 - **Ubah Status cepat**: ikon putar menggilir status `Pending → Diproses → Selesai → Ditolak → Pending`.
 - **Arsip (bukan hapus)**: ikon **kotak arsip** (`fa-box-archive`) menandai pengajuan sebagai **diarsipkan** (dengan konfirmasi) — data **tidak dihapus permanen**, hanya disembunyikan dari daftar utama **dan** dari kartu ringkasan status. Centang **"Tampilkan arsip"** di toolbar untuk menampilkan pengajuan terarsip **terpisah di bagian ATAS** tabel dengan **latar kuning (amber)** + badge **"Arsip"** serta judul pemisah **"Pengajuan Diarsipkan (N)"** / **"Pengajuan Aktif (M)"**. Ikon **kotak terbuka** (`fa-box-open`) memulihkan pengajuan kembali ke daftar aktif. Status pengurusan (mis. yang sedang diproses) tetap aman karena arsip dipertahankan saat pengajuan diedit. Pengajuan yang diarsipkan **tidak lagi tampil** pada **Cek Status** warga; bila warga memeriksa dan semua pengajuan yang cocok telah diarsipkan, akan muncul keterangan bahwa pengajuan tersebut sudah diarsipkan.
 - **Filter & cari**: saring berdasarkan status dan cari berdasarkan no. pengajuan / No. Surat / nama / NIK / jenis surat. NIK disamarkan pada tabel (contoh `3173••••••01`).
+
+Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti modul lain.
+
+### Lapor & Aspirasi (Portal Publik & Admin)
+
+Menu **Lapor & Aspirasi** berada **di bawah Layanan Surat** pada Portal Publik. Warga dapat menyampaikan **pengaduan, keluhan, atau aspirasi** kepada Pengurus RT dan memantau status penanganannya.
+
+**Form Lapor / Aspirasi Warga (Portal Publik):**
+
+- **No. WhatsApp (wajib):** hanya nomor yang **terdaftar di Data Warga** yang dapat mengirim. Begitu nomor diketik, sistem mencari (`action=lookupWargaHp`); bila **ketemu**, **Nama Warga** dan **Alamat/Blok/No Rumah** terisi otomatis dan **terkunci (hanya-baca)**; bila **tidak terdaftar** muncul keterangan bahwa nomor belum terdaftar dan form tidak dapat dikirim.
+- **Jenis Pengaduan (wajib):** daftar 13 kategori dari `RT_CONFIG.jenisPengaduan` (mis. Lingkungan & Kebersihan, Penerangan Jalan, Saluran Air/Drainase, Jalan & Fasilitas Umum, Keamanan Lingkungan, Sampah, Aspirasi/Saran, Lainnya).
+- **Judul Pengaduan (wajib)** dan **Detail Pengaduan (wajib)**.
+- **Lokasi Kejadian**, **Tanggal Kejadian**, dan **Harapan/Solusi** bersifat opsional.
+- **Foto/Bukti Pendukung (opsional):** hanya berkas gambar (maks. 8 MB); dikompres di browser (sisi terpanjang 1600 px, kualitas 0.7) lalu diunggah ke folder Google Drive **`Lapor`** melalui Apps Script, dan tautannya disimpan di Sheets. Kegagalan unggah foto **tidak menggagalkan** pengiriman pengaduan.
+- **Persetujuan Data** (centang) wajib dicentang.
+
+Setelah terkirim, warga menerima **Nomor Pengaduan** (format **`ADU/2026-001`**) dan pesan terima kasih untuk menyimpannya.
+
+**Cek Status Pengaduan (Portal Publik):** warga memasukkan **No. Pengaduan** untuk melihat **Judul, Jenis, Status, Petugas/Pengurus, Catatan Tindak Lanjut, dan Tanggal Penyelesaian**. Status mengikuti alur **🟡 Diterima → 🔵 Diproses → 🟢 Selesai**. Pengaduan yang sudah **diarsipkan** pengurus tidak lagi ditampilkan (muncul info arsip).
+
+**Pengamanan server-side:** aksi `submitLapor` hanya menerima **tambah data** (tanpa token), memaksa status awal `Diterima`, memvalidasi nomor HP terdaftar, menyaring bot via *honeypot*, dan membatasi **maksimal 5 pengaduan per No. HP per jam** (serta batas global). Pencarian data warga via `lookupWargaHp` hanya membuka **Nama & Alamat** satu warga untuk nomor yang dicari. Tab `Lapor_Aspirasi` **tidak pernah** ikut terkirim pada `readPublic`.
+
+Bila Script Property **`ADMIN_EMAIL`** diisi, setiap pengaduan baru mengirim **notifikasi email** ke pengurus. Bila Portal Publik dimatikan, form lapor & cek status otomatis disembunyikan dan ditolak server.
+
+#### Mengelola Lapor & Aspirasi di Halaman Admin
+
+Menu **Lapor & Aspirasi** pada dashboard admin menampilkan seluruh pengaduan (terbaru di atas) beserta kartu ringkasan jumlah per status.
+
+- **Isi Manual:** menambah pengaduan secara manual. Bila **No. Pengaduan** dibiarkan kosong, server **mengisi otomatis** dengan nomor berurutan (format `ADU/<tahun>-NNN`).
+- **Edit:** ubah **Status** (`RT_CONFIG.statusPengaduan`), **Petugas/Pengurus**, **Catatan Tindak Lanjut**, dan **Tanggal Penyelesaian**. Mengubah status menjadi `Selesai` menampilkan permintaan **Tanggal Penyelesaian**.
+- **Ubah Status cepat:** ikon putar menggilir status `Diterima → Diproses → Selesai → Diterima`.
+- **Arsip (bukan hapus):** ikon kotak arsip menandai pengaduan sebagai arsip (disembunyikan dari daftar & ringkasan status, tetap tersimpan). Centang **"Tampilkan arsip"** untuk menampilkannya **terpisah di ATAS** tabel dengan judul **"Pengaduan Diarsipkan (N)"** / **"Pengaduan Aktif (M)"**; ikon kotak terbuka memulihkan. Pengaduan terarsip tidak lagi tampil pada Cek Status.
+- **Filter & cari:** saring status dan cari berdasarkan nomor, nama, atau judul pengaduan.
 
 Semua operasi tulis dari admin memakai **token admin** (`ADMIN_TOKEN`) seperti modul lain.
 

@@ -12,17 +12,18 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - `Iuran_Kas`
    - `Pengumuman`
    - `Kegiatan_Warga`
-   - (Tab `Pengajuan_Surat` **dibuat otomatis** oleh script saat pertama dibaca/ditulis — opsional dibuat manual)
+   - (Tab `Pengajuan_Surat` & `Lapor_Aspirasi` **dibuat otomatis** oleh script saat pertama dibaca/ditulis — opsional dibuat manual)
 3. Buka **Ekstensi > Apps Script** di Google Sheets
 4. Salin isi `code.gs` ke editor Apps Script
 5. Buka **Project Settings > Script Properties**, tambahkan properti:
    - **Nama:** `ADMIN_TOKEN`
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
-    - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat baru** dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — pengajuan tetap tersimpan. Dapat juga diisi/diubah dari **dashboard admin**: menu **Settings > Integrasi Google Sheets > Admin Email** (aksi `setAdminEmail`).
+    - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat** dan **pengaduan Lapor & Aspirasi** baru dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — data tetap tersimpan. Dapat juga diisi/diubah dari **dashboard admin**: menu **Settings > Integrasi Google Sheets > Admin Email** (aksi `setAdminEmail`).
    - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
    - (Opsional) **Nama:** `NOTIF_REPLY_TO`, **Nilai:** alamat **Reply-To** email notifikasi. Bila kosong, default memakai nilai `ADMIN_EMAIL` (balasan otomatis mengarah ke admin).
    - (Opsional) **Nama:** `NOTIF_SUBJECT_PREFIX`, **Nilai:** prefiks subjek email notifikasi pengajuan surat. Bila kosong, default **`[SAPA-RT]`**.
+   - (Opsional) **Nama:** `LAPOR_FOLDER_ID`, **Nilai:** ID folder Google Drive untuk menyimpan **foto/bukti pengaduan** Lapor & Aspirasi. Bila kosong, script mencari folder bernama **`Lapor`** (dibuat otomatis bila belum ada). Folder perlu dibagikan ke akun admin (mis. `admin.rt017@gmail.com`).
    - Setelah `ADMIN_EMAIL` diisi, jalankan fungsi **`authorizeMail`** sekali dari editor Apps Script (dropdown fungsi > Run > Review permissions > Allow) agar scope `script.send_mail` diberikan, lalu deploy ulang sebagai **New version**. Tanpa langkah ini, pengiriman email gagal dengan pesan *"You do not have permission to call MailApp.sendEmail"*.
 
 ---
@@ -34,7 +35,7 @@ Karena Web App di-deploy sebagai **Anyone**, tanpa proteksi siapa pun yang tahu 
 - Semua operasi **tulis** (`add` / `update` / `delete`) dan **baca lengkap** (`action=read`) wajib menyertakan parameter/field `token`.
 - Token disimpan di **Script Properties** dengan key `ADMIN_TOKEN` dan **tidak** ditulis di dalam kode.
 - Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi otomatis **ditolak** (`code:"unauthorized"`).
-- Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga`, `Iuran_Kas`, dan `Pengajuan_Surat` tidak pernah dikirim keluar.
+- Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga`, `Iuran_Kas`, `Pengajuan_Surat`, dan `Lapor_Aspirasi` tidak pernah dikirim keluar.
 
 ### ON/OFF Portal Publik
 
@@ -130,6 +131,35 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 >
 > **Migrasi otomatis:** tab lama tanpa kolom `No. Surat` akan disusun ulang otomatis berdasarkan nama header saat pertama dibaca (data & ID lama tetap aman).
 
+### 6. Tab `Lapor_Aspirasi`
+
+Menampung pengaduan/aspirasi warga (fitur **Lapor & Aspirasi**). Tab ini **dibuat otomatis** oleh script beserta header-nya bila belum ada — tidak perlu dibuat manual. Data tab ini bersifat **privat**: tidak pernah ikut pada `action=readPublic`.
+
+| Kolom | Tipe | Contoh |
+|-------|------|--------|
+| Timestamp | DateTime | 2026-10-14 09:15:00 |
+| No. Pengaduan | String | ADU/2026-001 (diisi otomatis) |
+| Nama | String | Budi Santoso (diambil dari `Data_Warga` berdasarkan No. HP) |
+| No. HP | String | 081234567890 |
+| Alamat | String | Jl. Tanjung Duren No. 12 (dari `Data_Warga`) |
+| Jenis Pengaduan | String | Lingkungan & Kebersihan (lihat `jenisPengaduan` di `config.js`) |
+| Judul | String | Sampah menumpuk di depan blok A |
+| Detail | String | Uraian pengaduan |
+| Lokasi | String | (opsional) |
+| Tanggal Kejadian | String | (opsional, `yyyy-MM-dd`) |
+| Foto | String | Tautan Google Drive (folder `Lapor`), opsional |
+| Harapan | String | (opsional) |
+| Status | String | Diterima / Diproses / Selesai (default `Diterima`) |
+| Petugas | String | Nama pengurus yang menangani (opsional) |
+| Catatan Tindak Lanjut | String | (opsional) |
+| Tanggal Penyelesaian | String | (opsional, `yyyy-MM-dd`) |
+| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengaduan dari daftar utama **dan** hasil `checkLapor` (tetap tersimpan, dapat dipulihkan) |
+
+> Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan (format `ADU-<yyMMdd>-XXXX`).
+>
+> **No. Pengaduan** dibuat otomatis dengan format **`ADU/<tahun>-<urut>`** (mis. `ADU/2026-001`) baik saat pengaduan dikirim warga maupun saat admin menambah baris manual tanpa nomor.
+>
+> **Foto** disimpan ke folder Drive (`LAPOR_FOLDER_ID` atau folder bernama `Lapor`); tautannya ditulis ke kolom `Foto`. Kegagalan unggah foto **tidak** membatalkan penyimpanan pengaduan.
 
 ---
 
@@ -190,6 +220,8 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
 | `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Pengajuan ber-`Diarsipkan=Ya` **tidak dikembalikan**; jumlahnya dilaporkan pada field `archived` sehingga UI dapat menampilkan keterangan "sudah diarsipkan". Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
 | `lookupWarga` | `action=lookupWarga&nik=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **NIK (16 digit) persis** untuk mengisi otomatis **Nama, No. HP, & Alamat** pada form pengajuan surat. Ketemu → `{result:"success", found:true, nama, noHp, alamat}`; tidak → `{found:false}` (warga tetap boleh mengisi manual). Hanya 3 field itu yang dibuka (bukan seluruh data warga). Ter-gate status portal; dibatasi ≤ 20 pencarian/jam per NIK. Mendukung JSONP |
+| `lookupWargaHp` | `action=lookupWargaHp&hp=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **No. HP** (dinormalisasi `0`/`62`) untuk mengisi otomatis **Nama & Alamat** pada form **Lapor & Aspirasi**. Ketemu → `{result:"success", found:true, nama, alamat}`; tidak → `{found:false}`. Hanya warga terdaftar yang boleh mengirim pengaduan. Ter-gate status portal; dibatasi per jam. Mendukung JSONP |
+| `checkLapor` | `action=checkLapor&nomor=...` | **Publik (tanpa token).** Cek status pengaduan berdasar **No. Pengaduan** (mis. `ADU/2026-001`). Mengembalikan `{result, count, archived, data:[{nomor, tanggal, jenisPengaduan, judul, status, petugas, catatan, tanggalSelesai}]}`. Baris `Diarsipkan=Ya` tidak ditampilkan (dihitung ke `archived`). Dibatasi per jam. Mendukung JSONP |
 | `sendTestEmail` | `action=sendTestEmail&token=T[&email=...]` | **Butuh token admin (JSONP).** Kirim email uji ke `ADMIN_EMAIL` untuk memverifikasi notifikasi. Bila `email` diisi, alamat itu dipakai sebagai penerima **sekaligus disimpan** ke `ADMIN_EMAIL`. Bila kosong & `ADMIN_EMAIL` kosong → `{result:"error", code:"no_admin_email"}`; format email salah → `code:"invalid_email"`; scope email belum diizinkan → `code:"mail_scope_denied"`; kegagalan lain → `code:"email_failed"` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris dengan ID `Y` di sheet X. **Butuh token admin** (JSONP) |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (`CODE_VERSION`) |
@@ -215,8 +247,20 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v19-2026-10-12","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v19-2026-10-12","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v21-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v21-2026-10-14","found":false}`
+
+**Contoh Lookup Warga berdasarkan No. HP (form Lapor & Aspirasi):**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=lookupWargaHp&hp=081234567890&callback=myCallback
+```
+Respons (ditemukan): `{"result":"success","found":true,"nama":"Budi Santoso","alamat":"Jl. Merdeka No. 1"}`
+
+**Contoh Cek Status Pengaduan (warga):**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=checkLapor&nomor=ADU%2F2026-001&callback=myCallback
+```
+Respons: `{"result":"success","count":1,"archived":0,"data":[{"nomor":"ADU/2026-001","tanggal":"14-10-2026 09:15","jenisPengaduan":"Lingkungan & Kebersihan","judul":"Sampah menumpuk","status":"Diproses","petugas":"Ketua RT","catatan":"Sudah dijadwalkan pengangkutan","tanggalSelesai":""}]}`
 
 **Contoh Delete:**
 ```
@@ -231,7 +275,7 @@ GET https://script.google.com/macros/s/XXXX/exec?action=delete&sheetName=Data_Wa
 
 Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request).
 
-`action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris. **Semua POST admin wajib menyertakan `token` admin** (field `token` di body) — kecuali aksi publik `submitSurat` (lihat di bawah).
+`action` yang didukung: `add` (default), `update`, `delete`. Sertakan `action:"update"` atau `action:"delete"` beserta `id` untuk mengubah/menghapus baris. **Semua POST admin wajib menyertakan `token` admin** (field `token` di body) — kecuali aksi publik `submitSurat` & `submitLapor` (lihat di bawah).
 
 > **Idempotensi `add`:** bila payload `add` menyertakan `id` dan baris dengan ID itu **sudah ada** (mis. pengiriman ulang dari antrean/outbox setelah koneksi putus), server **tidak menambah baris baru** dan membalas `{"result":"success","id":...,"duplicate":true}`. Aman dikirim ulang.
 
@@ -242,6 +286,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
 | `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `noSurat`, `catatan`, `arsip` (`Ya`/`Tidak`) |
+| `Lapor_Aspirasi` | `sheetName`, `token`, `id` (wajib saat update/delete), `noPengaduan`, `nama`, `noHp`, `alamat`, `jenisPengaduan`, `judul`, `detail`, `lokasi`, `tanggalKejadian`, `foto`, `harapan`, `status` (`Diterima`/`Diproses`/`Selesai`), `petugas`, `catatanTindakLanjut`, `tanggalPenyelesaian`, `arsip` (`Ya`/`Tidak`) |
 
 **Aksi khusus (bukan per-sheet):**
 
@@ -250,6 +295,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `setPortalStatus` | `{action:"setPortalStatus", enabled:true/false, token:T}` | Menyalakan/mematikan portal publik. Butuh token admin. Disimpan di Script Property `PUBLIC_PORTAL_ENABLED` |
 | `setAdminEmail` | `{action:"setAdminEmail", email:"admin@contoh.com", token:T}` | Menyimpan alamat email admin ke Script Property `ADMIN_EMAIL` (penerima notifikasi pengajuan surat). Butuh token admin. Validasi format: bila kosong/salah → `{result:"error", code:"invalid_email"}`; sukses → `{result:"success", adminEmail}`. Dipakai tombol **Save Email** di panel Pengaturan (`index.html`) |
 | `submitSurat` | `{action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan, ref?, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Pengajuan_Surat`. Server memaksa `Status="Pending"`, mengisi Timestamp & ID. NIK wajib 16 digit; `website` adalah honeypot; dibatasi ≤ 5 pengajuan/jam per NIK (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF. Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", id}` |
+| `submitLapor` | `{action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Lapor_Aspirasi`. **No. HP wajib terdaftar** di `Data_Warga` (Nama & Alamat diambil dari sana, bukan dari klien); server memaksa `Status="Diterima"`, mengisi Timestamp, ID (`ADU-...`), & **No. Pengaduan** (`ADU/<tahun>-NNN`). `foto` (base64) opsional diunggah ke Drive; `website` honeypot; dibatasi ≤ 5/jam per No. HP (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF atau No. HP tidak terdaftar (`{result:"error", code:"not_registered"}`). Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", noPengaduan, id}` |
 
 > **Catatan `submitSurat`:** dipakai halaman `public.html`. ID bisa berasal dari `ref` yang dikirim warga (bila formatnya aman & belum terpakai), atau dibuat otomatis dengan format `SRT-yyMMdd-XXXX`.
 
@@ -331,8 +377,12 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 ────────────────────────────────         ──────────────────                    ──────────────
                                     ┌────────────────────────┐
                                     │  doGet(e)              │
-                                    │  ├── action=read  [T]  │──▶ readAllSheets() ──▶ Baca 4 sheet
+                                    │  ├── action=read  [T]  │──▶ readAllSheets() ──▶ Baca 6 sheet
                                     │  ├── action=readPublic │──▶ readPublicSheets()▶ Pengumuman+Kegiatan Ya
+                                    │  ├── action=lookupWarga│──▶ handleLookupWarga() ──▶ 1 baris Data_Warga
+                                    │  ├── action=lookupWargaHp│─▶ handleLookupWargaHp()▶ 1 baris Data_Warga (HP)
+                                    │  ├── action=checkSurat │──▶ handleCheckSurat() ──▶ Pengajuan_Surat
+                                    │  ├── action=checkLapor │──▶ handleCheckLapor() ──▶ Lapor_Aspirasi
                                     │  └── action=delete [T] │──▶ handleDelete() ───▶ deleteRow()
                                     └────────────────────────┘
                                             ▲
@@ -350,19 +400,29 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 
 | Fungsi | Deskripsi |
 |--------|-----------|
-| `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `readPublicSheets()`, `handleDelete()`, atau `version`. `read`/`delete` diverifikasi token |
+| `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `readPublicSheets()`, `handleDelete()`, `handleLookupWarga()`, `handleLookupWargaHp()`, `handleCheckSurat()`, `handleCheckLapor()`, `handleSendTestEmail()`, atau `version`. `read`/`delete`/`sendTestEmail` diverifikasi token |
 | `handleDelete(params)` | Hapus baris berdasarkan `id` (kolom bantu ID) via `findRowById()`; verifikasi token |
-| `readAllSheets()` | Baca 5 sheet lengkap (termasuk `Pengajuan_Surat`), pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, data}` |
-| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`/`Pengajuan_Surat`; ditolak (`portal_disabled`) bila portal OFF |
+| `readAllSheets()` | Baca 6 sheet lengkap (termasuk `Pengajuan_Surat` & `Lapor_Aspirasi`), pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, adminEmail, data}` |
+| `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`/`Pengajuan_Surat`/`Lapor_Aspirasi`; ditolak (`portal_disabled`) bila portal OFF |
 | `getOrCreateSheet(ss, name)` | Ambil sheet; **buat otomatis** (beserta header) bila belum ada & termasuk skema dikenal |
 | `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` (token) + `submitSurat` (publik) |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setAdminEmail` (token) + `submitSurat` & `submitLapor` (publik) |
 | `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
 | `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
+| `handleLookupWarga(params)` | Aksi publik `lookupWarga`: cari warga berdasar NIK, buka hanya Nama/No. HP/Alamat |
+| `handleLookupWargaHp(params)` | Aksi publik `lookupWargaHp`: cari warga berdasar No. HP (dinormalisasi), buka hanya Nama/Alamat (dipakai form Lapor) |
+| `handleSubmitLapor(data)` | Aksi publik `submitLapor`: gate portal, No. HP wajib terdaftar (`findWargaByHpNorm`), honeypot, rate limit, ambil Nama/Alamat dari `Data_Warga`, simpan `Status=Diterima` + No. Pengaduan, unggah foto (opsional), email admin |
+| `handleCheckLapor(params)` | Aksi publik `checkLapor`: cari berdasar No. Pengaduan, kembalikan `{nomor, tanggal, jenisPengaduan, judul, status, petugas, catatan, tanggalSelesai}`; arsip dilewati & dihitung ke `archived` |
+| `makeNomorPengaduan(sheet)` | Hasilkan No. Pengaduan berurutan `ADU/<tahun>-NNN` |
+| `saveLaporFoto(data, folder)` | Decode base64 → simpan ke Drive (`Utilities.newBlob`/`createFile`) → kembalikan URL; cap ukuran |
+| `getLaporFolder()` | Ambil/buat folder Drive `Lapor` (Script Property `LAPOR_FOLDER_ID` bila ada) |
+| `notifyAdminNewLapor(row)` | Email notifikasi pengaduan baru ke `ADMIN_EMAIL` (gagal email tidak membatalkan simpan) |
 | `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |
+| `checkAndRecordLaporRate(hp)` | Rate limit pengaduan di Script Property `LAPOR_RATE` (≤ 5/jam per No. HP, ≤ 60/jam global) |
+| `checkAndRecordLaporCheckRate(key)` | Rate limit cek pengaduan di Script Property `LAPOR_CHECK_RATE` (per key & global) |
 | `notifyAdminNewSurat(row)` | Kirim email notifikasi ke `ADMIN_EMAIL` (bila diatur) memakai `buildNotifMailOptions()`; gagal email tidak membatalkan penyimpanan |
 | `handleSendTestEmail()` | Aksi admin `sendTestEmail`: kirim email uji ke `ADMIN_EMAIL`; kembalikan `no_admin_email` / `email_failed` / `mail_scope_denied` bila gagal |
 | `getNotifSenderName()` | Nama pengirim notifikasi dari Script Property `NOTIF_SENDER_NAME` (default `Pengajuan surat`) |

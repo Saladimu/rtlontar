@@ -139,6 +139,10 @@
                 <i class="fa-solid fa-envelope-open-text w-5"></i>
                 <span class="font-medium text-sm">Pengajuan Surat</span>
             </button>
+            <button onclick="switchTab('lapor')" id="nav-lapor" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
+                <i class="fa-solid fa-comment-dots w-5"></i>
+                <span class="font-medium text-sm">Lapor &amp; Aspirasi</span>
+            </button>
             <button onclick="switchTab('publicportal')" id="nav-publicportal" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-globe w-5"></i>
                 <span class="font-medium text-sm">Portal Publik</span>
@@ -212,6 +216,9 @@
         <button onclick="switchTab('surat'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-envelope-open-text w-5 text-cyan-400"></i><span>Pengajuan Surat</span>
         </button>
+        <button onclick="switchTab('lapor'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
+            <i class="fa-solid fa-comment-dots w-5 text-teal-400"></i><span>Lapor &amp; Aspirasi</span>
+        </button>
         <button onclick="switchTab('publicportal'); toggleMobileMenu();" id="nav-publicportal-mobile" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-globe w-5 text-blue-400"></i><span>Portal Publik</span>
         </button>
@@ -257,7 +264,7 @@
             </div>
 
             <!-- Summary KPI Cards (klik = buka menu terkait) -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div role="button" tabindex="0" onclick="switchTab('warga')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('warga')}" title="Buka Data Warga" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between cursor-pointer hover:shadow-md hover:border-blue-200 transition">
                     <div>
                         <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Warga</p>
@@ -310,6 +317,17 @@
                     </div>
                     <div class="w-12 h-12 bg-cyan-50 text-cyan-600 rounded-xl flex items-center justify-center text-xl">
                         <i class="fa-solid fa-envelope-open-text"></i>
+                    </div>
+                </div>
+
+                <div role="button" tabindex="0" onclick="switchTab('lapor')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('lapor')}" title="Buka Lapor &amp; Aspirasi" class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center justify-between cursor-pointer hover:shadow-md hover:border-teal-200 transition">
+                    <div>
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Lapor &amp; Aspirasi</p>
+                        <h3 id="stat-lapor" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
+                        <p class="text-xs text-slate-500 mt-1">Aktif (baru)</p>
+                    </div>
+                    <div class="w-12 h-12 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-comment-dots"></i>
                     </div>
                 </div>
             </div>
@@ -600,6 +618,83 @@
                             </tr>
                         </thead>
                         <tbody id="table-surat-body" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Rows injected by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PANEL: LAPOR & ASPIRASI ================= -->
+        <section id="panel-lapor" class="tab-panel hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Lapor &amp; Aspirasi</h2>
+                    <p class="text-sm text-slate-500">Pengaduan, keluhan, &amp; aspirasi warga via Portal Publik</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <button onclick="openAddLapor()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-plus-circle"></i>
+                        <span>Tambah Manual</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ringkasan jumlah per status -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <p class="text-xs text-slate-500 font-semibold uppercase">Diterima</p>
+                    <p id="lapor-count-diterima" class="text-xl font-bold text-amber-600 mt-1">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <p class="text-xs text-slate-500 font-semibold uppercase">Diproses</p>
+                    <p id="lapor-count-diproses" class="text-xl font-bold text-blue-600 mt-1">0</p>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <p class="text-xs text-slate-500 font-semibold uppercase">Selesai</p>
+                    <p id="lapor-count-selesai" class="text-xl font-bold text-emerald-600 mt-1">0</p>
+                </div>
+            </div>
+
+            <!-- Tabel Pengaduan -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <div class="p-4 border-b border-slate-200 flex flex-col lg:flex-row gap-3 justify-between lg:items-center">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">Daftar Pengaduan</h3>
+                        <p id="lapor-table-label" class="text-xs text-slate-400 mt-0.5"></p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                        <select id="filter-status-lapor" onchange="renderLaporTable()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="">Semua Status</option>
+                            <option value="Diterima">Diterima</option>
+                            <option value="Diproses">Diproses</option>
+                            <option value="Selesai">Selesai</option>
+                        </select>
+                        <div class="relative w-full sm:w-64">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input type="text" id="search-lapor" oninput="renderLaporTable()" placeholder="Cari nomor / nama / judul..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
+                        </div>
+                        <button type="button" onclick="clearLaporFilters()" title="Bersihkan pencarian & filter" class="py-1.5 px-3 text-slate-400 hover:text-rose-500 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"><i class="fa-solid fa-filter-circle-xmark"></i></button>
+                        <label class="flex items-center space-x-2 text-xs font-medium text-slate-500 whitespace-nowrap cursor-pointer select-none" title="Tampilkan pengaduan yang diarsipkan">
+                            <input type="checkbox" id="show-archived-lapor" onchange="toggleShowArchivedLapor(this.checked)" class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+                            <span>Tampilkan arsip</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="p-4 whitespace-nowrap">Tanggal<br>No. Pengaduan</th>
+                                <th class="p-4"><span class="block">Nama Warga /</span><span class="block">No. HP</span></th>
+                                <th class="p-4">Alamat</th>
+                                <th class="p-4">Jenis</th>
+                                <th class="p-4">Judul / Detail</th>
+                                <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-lapor-body" class="divide-y divide-slate-100 text-slate-700">
                             <!-- Rows injected by JavaScript -->
                         </tbody>
                     </table>
@@ -1127,6 +1222,101 @@
         </div>
     </div>
 
+    <!-- ================= MODAL: LAPOR & ASPIRASI ================= -->
+    <div id="modal-lapor" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 id="modal-lapor-title" class="font-bold text-lg text-slate-800">Catat Pengaduan</h3>
+                <button onclick="closeModal('modal-lapor')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-lapor" onsubmit="submitLaporAdmin(event)" class="space-y-3">
+                <div id="lapor-form-error" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Pengaduan *</label>
+                    <select id="lapor-admin-jenis" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                        <!-- Options diisi oleh JS dari config.js -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Judul Pengaduan *</label>
+                    <input type="text" id="lapor-admin-judul" required maxlength="150" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="mis. Lampu jalan mati di depan Blok C">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Detail Pengaduan *</label>
+                    <textarea id="lapor-admin-detail" required rows="3" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Jelaskan permasalahan secara rinci."></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Warga *</label>
+                        <input type="text" id="lapor-admin-nama" required maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Nama pelapor">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. HP / WhatsApp *</label>
+                        <input type="tel" id="lapor-admin-hp" required inputmode="numeric" maxlength="15" oninput="onPhoneInput(this)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="08123456789">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Alamat / No. Rumah *</label>
+                    <input type="text" id="lapor-admin-alamat" required maxlength="200" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Alamat lengkap / No. Rumah">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Lokasi Kejadian</label>
+                        <input type="text" id="lapor-admin-lokasi" maxlength="200" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Opsional">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Kejadian</label>
+                        <input type="date" id="lapor-admin-tanggal" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Foto / Bukti Pendukung (tautan)</label>
+                    <input type="text" id="lapor-admin-foto" maxlength="500" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="https://drive.google.com/... (opsional)">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Harapan / Solusi</label>
+                    <textarea id="lapor-admin-harapan" rows="2" maxlength="1000" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Opsional"></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+                        <select id="lapor-admin-status" onchange="updateLaporTanggalSelesaiReq()" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                            <!-- Options diisi oleh JS dari config.js -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Petugas / Pengurus</label>
+                        <input type="text" id="lapor-admin-petugas" maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Nama penanggung jawab">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Penyelesaian <span id="lapor-tanggal-selesai-req" class="hidden text-rose-500">*</span></label>
+                        <input type="date" id="lapor-admin-tanggal-selesai" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Tindak Lanjut</label>
+                        <input type="text" id="lapor-admin-catatan" maxlength="300" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="mis. sudah dikoordinasikan dengan RW">
+                    </div>
+                </div>
+                <div id="lapor-tanggal-meta-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">No. Pengaduan</label>
+                        <input type="text" id="lapor-ref-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Pengaduan</label>
+                        <input type="text" id="lapor-tanggal-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
+                    </div>
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-lapor')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
+                    <button type="submit" id="btn-save-lapor" class="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Pengaduan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ================= MODAL: RIWAYAT PENGAJUAN SURAT WARGA ================= -->
     <div id="modal-warga-surat" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
         <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
@@ -1361,24 +1551,25 @@
             kas: JSON.parse(localStorage.getItem('rt_local_deletes_kas')) || [],
             pengumuman: JSON.parse(localStorage.getItem('rt_local_deletes_pengumuman')) || [],
             kegiatan: JSON.parse(localStorage.getItem('rt_local_deletes_kegiatan')) || [],
-            surat: JSON.parse(localStorage.getItem('rt_local_deletes_surat')) || []
+            surat: JSON.parse(localStorage.getItem('rt_local_deletes_surat')) || [],
+            lapor: JSON.parse(localStorage.getItem('rt_local_deletes_lapor')) || []
         };
 
         // Track which item is being edited (null = add mode)
-        let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null };
+        let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v20-2026-10-13';
+        const EXPECTED_BACKEND_VERSION = 'publik-v21-2026-10-14';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
-        const EXPECTED_CONFIG_VERSION = '9';
+        const EXPECTED_CONFIG_VERSION = '10';
 
         // Versi build aplikasi (index.html). NAIKKAN setiap kali mengubah index.html
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-13-02';
+        const APP_BUILD = '2026-10-14-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1720,6 +1911,7 @@
             if (type === 'pengumuman') return [item.tanggal || '', item.judul || '', item.isi || '', item.kategori || '', item.pj || ''].join('|');
             if (type === 'kegiatan') return [item.namaKegiatan || '', item.tanggal || '', item.waktu || '', item.lokasi || '', item.pj || '', item.keterangan || ''].join('|');
             if (type === 'surat') return [item.nama || '', item.nik || '', item.noHp || '', item.jenisSurat || '', item.keperluan || '', item.status || '', item.catatan || ''].join('|');
+            if (type === 'lapor') return [item.noPengaduan || '', item.nama || '', item.noHp || '', item.jenisPengaduan || '', item.judul || '', item.status || '', item.catatan || ''].join('|');
             return JSON.stringify(item);
         }
 
@@ -1753,6 +1945,7 @@
             pengumuman: JSON.parse(localStorage.getItem('rt_pengumuman')) || initialPengumuman,
             kegiatan: JSON.parse(localStorage.getItem('rt_kegiatan')) || initialKegiatan,
             surat: JSON.parse(localStorage.getItem('rt_surat')) || [],
+            lapor: JSON.parse(localStorage.getItem('rt_lapor')) || [],
             adminToken: localStorage.getItem('rt_admin_token') || '',
             adminEmail: localStorage.getItem('rt_admin_email') || '',
             backendVersion: '',
@@ -1776,6 +1969,7 @@
             renderDashboardStats();
             initShowArchivedWarga();
             initShowArchivedSurat();
+            initShowArchivedLapor();
             initWargaSort();
             renderWargaTable();
             initKasView();
@@ -1783,6 +1977,8 @@
             renderPengumumanCards();
             renderKegiatanCards();
             renderSuratTable();
+            initLaporForm();
+            renderLaporTable();
             updateConnectionUI();
             initNetworkStatus();
             initOutbox();
@@ -1809,6 +2005,7 @@
             runWhenConfigReady(function () {
                 if (enforceConfigVersion()) return;
                 initSuratForm();
+                initLaporForm();
                 updatePublicPortalUI();
                 updateConnectionInfo();
                 if (apiBases().length) syncFromGoogleSheets();
@@ -1821,7 +2018,7 @@
         // Simpan snapshot tampilan (tab aktif + modal terbuka) ke History API agar
         // gestur "Back" pada perangkat mobile menutup modal atau kembali ke tab
         // sebelumnya, bukan langsung keluar dari aplikasi.
-        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-warga-surat', 'modal-about', 'modal-install'];
+        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-lapor', 'modal-warga-surat', 'modal-about', 'modal-install'];
         let currentTab = 'dashboard';
 
         function getOpenModal() {
@@ -2143,6 +2340,7 @@
             localStorage.setItem('rt_pengumuman', JSON.stringify(appState.pengumuman));
             localStorage.setItem('rt_kegiatan', JSON.stringify(appState.kegiatan));
             localStorage.setItem('rt_surat', JSON.stringify(appState.surat));
+            localStorage.setItem('rt_lapor', JSON.stringify(appState.lapor));
             renderDashboardStats();
             updateLastUpdated();
         }
@@ -2175,6 +2373,11 @@
             const pendingSurat = aktifSurat.filter(function (x) { return (x.status || 'Pending') === 'Pending'; }).length;
             const statSuratEl = document.getElementById('stat-surat');
             if (statSuratEl) statSuratEl.innerHTML = aktifSurat.length + ' <span class="text-base font-semibold text-slate-400">(' + pendingSurat + ')</span>';
+
+            const aktifLapor = (appState.lapor || []).filter(function (x) { return !isArchivedLapor(x); });
+            const baruLapor = aktifLapor.filter(function (x) { return (x.status || 'Diterima') === 'Diterima'; }).length;
+            const statLaporEl = document.getElementById('stat-lapor');
+            if (statLaporEl) statLaporEl.innerHTML = aktifLapor.length + ' <span class="text-base font-semibold text-slate-400">(' + baruLapor + ')</span>';
 
             // Render Dashboard Latest Announcement & Next Activity
             const latestAnn = appState.pengumuman[appState.pengumuman.length - 1];
@@ -2815,6 +3018,7 @@
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
             else if (id === 'modal-surat') { updateSuratHpActions(); }
+            else if (id === 'modal-lapor') { editMode.lapor = null; document.getElementById('modal-lapor-title').textContent = 'Catat Pengaduan'; document.getElementById('btn-save-lapor').textContent = 'Simpan Pengaduan'; updateLaporTanggalSelesaiReq(); }
             // Hapus entri riwayat milik modal ini (bila ada) agar gestur "Back"
             // setelah menutup modal tidak membukanya kembali.
             if (!opts.fromHistory && history.state && history.state.rt && history.state.modal === id) {
@@ -3786,6 +3990,390 @@
             });
         }
 
+        // ===== Lapor & Aspirasi (admin) =============================================
+        function laporJenisOptions() {
+            return (window.RT_CONFIG && Array.isArray(window.RT_CONFIG.jenisPengaduan)) ? window.RT_CONFIG.jenisPengaduan : [];
+        }
+
+        function laporStatusOptions() {
+            const list = (window.RT_CONFIG && Array.isArray(window.RT_CONFIG.statusPengaduan)) ? window.RT_CONFIG.statusPengaduan : [];
+            return list.length ? list : ['Diterima', 'Diproses', 'Selesai'];
+        }
+
+        function laporStatusBadge(status) {
+            const map = {
+                'Diterima': 'bg-amber-100 text-amber-700',
+                'Diproses': 'bg-blue-100 text-blue-700',
+                'Selesai': 'bg-emerald-100 text-emerald-700'
+            };
+            const s = status || 'Diterima';
+            return '<span class="px-2.5 py-1 text-xs font-medium rounded-full ' + (map[s] || 'bg-slate-100 text-slate-700') + '">' + escAttr(s) + '</span>';
+        }
+
+        function isArchivedLapor(item) {
+            if (!item) return false;
+            if (item.arsip === true) return true;
+            const s = String(item.arsip === null || item.arsip === undefined ? '' : item.arsip).trim().toLowerCase();
+            return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'arsip';
+        }
+
+        let showArchivedLapor = localStorage.getItem('rt_show_archived_lapor') === '1';
+
+        function toggleShowArchivedLapor(on) {
+            showArchivedLapor = !!on;
+            localStorage.setItem('rt_show_archived_lapor', showArchivedLapor ? '1' : '0');
+            renderLaporTable();
+        }
+
+        function initShowArchivedLapor() {
+            const el = document.getElementById('show-archived-lapor');
+            if (el) el.checked = showArchivedLapor;
+        }
+
+        function clearLaporFilters() {
+            const s = document.getElementById('search-lapor');
+            const f = document.getElementById('filter-status-lapor');
+            if (s) s.value = '';
+            if (f) f.value = '';
+            renderLaporTable();
+        }
+
+        function initLaporForm() {
+            const jenisEl = document.getElementById('lapor-admin-jenis');
+            if (jenisEl) {
+                const cur = jenisEl.value;
+                jenisEl.innerHTML = laporJenisOptions().map(v => `<option value="${escAttr(v)}">${escAttr(v)}</option>`).join('');
+                if (cur) jenisEl.value = cur;
+            }
+            const statusEl = document.getElementById('lapor-admin-status');
+            if (statusEl) {
+                const cur = statusEl.value;
+                statusEl.innerHTML = laporStatusOptions().map(v => `<option value="${escAttr(v)}">${escAttr(v)}</option>`).join('');
+                if (cur) statusEl.value = cur;
+            }
+        }
+
+        // ID baris internal Lapor_Aspirasi: ADU-<yymmdd>-<4 karakter>.
+        function makeLaporId() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            const d = new Date();
+            const yy = String(d.getFullYear()).slice(2);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            let ref, tries = 0;
+            do {
+                let s = '';
+                for (let i = 0; i < 4; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+                ref = 'ADU-' + yy + mm + dd + '-' + s;
+                tries++;
+            } while (tries < 10 && (appState.lapor || []).some(function (item) { return item && item._id === ref; }));
+            return ref;
+        }
+
+        // Tandai Tanggal Penyelesaian sebagai disarankan saat status "Selesai".
+        function updateLaporTanggalSelesaiReq() {
+            const statusEl = document.getElementById('lapor-admin-status');
+            const mark = document.getElementById('lapor-tanggal-selesai-req');
+            if (mark) mark.classList.toggle('hidden', !(statusEl && statusEl.value === 'Selesai'));
+        }
+
+        function showLaporFormError(msg, fieldId) {
+            const box = document.getElementById('lapor-form-error');
+            if (box) { box.textContent = msg; box.classList.remove('hidden'); }
+            if (fieldId) {
+                const f = document.getElementById(fieldId);
+                if (f && f.focus) f.focus();
+            }
+            showToast(msg, 'error');
+        }
+
+        function clearLaporFormError() {
+            const box = document.getElementById('lapor-form-error');
+            if (box) { box.textContent = ''; box.classList.add('hidden'); }
+        }
+
+        function openAddLapor() {
+            editMode.lapor = null;
+            const form = document.getElementById('form-lapor');
+            if (form) form.reset();
+            clearLaporFormError();
+            initLaporForm();
+            const statusEl = document.getElementById('lapor-admin-status');
+            if (statusEl) statusEl.value = 'Diterima';
+            updateLaporTanggalSelesaiReq();
+            const wrap = document.getElementById('lapor-tanggal-meta-wrap');
+            if (wrap) wrap.classList.add('hidden');
+            document.getElementById('modal-lapor-title').textContent = 'Catat Pengaduan';
+            document.getElementById('btn-save-lapor').textContent = 'Simpan Pengaduan';
+            openModal('modal-lapor');
+        }
+
+        function editLapor(index) {
+            const item = appState.lapor[index];
+            if (!item) return;
+            if (!item._id) { item._id = makeLaporId(); saveLocalState(); }
+
+            editMode.lapor = item._id;
+            clearLaporFormError();
+            initLaporForm();
+            document.getElementById('modal-lapor-title').textContent = 'Edit Pengaduan';
+            const wrap = document.getElementById('lapor-tanggal-meta-wrap');
+            if (wrap) wrap.classList.remove('hidden');
+            document.getElementById('lapor-ref-info').value = item.noPengaduan || item._id || '-';
+            document.getElementById('lapor-tanggal-info').value = item.waktu || '-';
+            document.getElementById('lapor-admin-jenis').value = item.jenisPengaduan || '';
+            document.getElementById('lapor-admin-judul').value = item.judul || '';
+            document.getElementById('lapor-admin-detail').value = item.detail || '';
+            document.getElementById('lapor-admin-nama').value = item.nama || '';
+            document.getElementById('lapor-admin-hp').value = item.noHp || '';
+            document.getElementById('lapor-admin-alamat').value = item.alamat || '';
+            document.getElementById('lapor-admin-lokasi').value = item.lokasi || '';
+            document.getElementById('lapor-admin-tanggal').value = item.tanggalKejadian || '';
+            document.getElementById('lapor-admin-foto').value = item.foto || '';
+            document.getElementById('lapor-admin-harapan').value = item.harapan || '';
+            document.getElementById('lapor-admin-status').value = item.status || 'Diterima';
+            document.getElementById('lapor-admin-petugas').value = item.petugas || '';
+            document.getElementById('lapor-admin-tanggal-selesai').value = item.tanggalSelesai || '';
+            document.getElementById('lapor-admin-catatan').value = item.catatan || '';
+            updateLaporTanggalSelesaiReq();
+            document.getElementById('btn-save-lapor').textContent = 'Perbarui Pengaduan';
+            openModal('modal-lapor');
+        }
+
+        function submitLaporAdmin(e) {
+            e.preventDefault();
+            clearLaporFormError();
+            const jenis = document.getElementById('lapor-admin-jenis').value;
+            const judul = document.getElementById('lapor-admin-judul').value.trim();
+            const detail = document.getElementById('lapor-admin-detail').value.trim();
+            const nama = document.getElementById('lapor-admin-nama').value.trim();
+            const noHp = document.getElementById('lapor-admin-hp').value.trim();
+            const alamat = document.getElementById('lapor-admin-alamat').value.trim();
+            const lokasi = document.getElementById('lapor-admin-lokasi').value.trim();
+            const tanggalKejadian = document.getElementById('lapor-admin-tanggal').value.trim();
+            const foto = document.getElementById('lapor-admin-foto').value.trim();
+            const harapan = document.getElementById('lapor-admin-harapan').value.trim();
+            const status = document.getElementById('lapor-admin-status').value || 'Diterima';
+            const petugas = document.getElementById('lapor-admin-petugas').value.trim();
+            const tanggalSelesai = document.getElementById('lapor-admin-tanggal-selesai').value.trim();
+            const catatan = document.getElementById('lapor-admin-catatan').value.trim();
+
+            if (!jenis) { showLaporFormError('Jenis pengaduan wajib dipilih.', 'lapor-admin-jenis'); return; }
+            if (judul.length < 3) { showLaporFormError('Judul pengaduan wajib diisi (minimal 3 karakter).', 'lapor-admin-judul'); return; }
+            if (detail.length < 10) { showLaporFormError('Detail pengaduan wajib diisi (minimal 10 karakter).', 'lapor-admin-detail'); return; }
+            if (nama.length < 3) { showLaporFormError('Nama warga wajib diisi (minimal 3 karakter).', 'lapor-admin-nama'); return; }
+            const hpDigits = noHp.replace(/\D/g, '');
+            if (hpDigits.length < 9 || hpDigits.length > 15) { showLaporFormError('Nomor HP/WhatsApp tidak valid (harus 9-15 digit angka).', 'lapor-admin-hp'); return; }
+            if (!alamat) { showLaporFormError('Alamat / No. Rumah wajib diisi.', 'lapor-admin-alamat'); return; }
+            if (status === 'Selesai' && !tanggalSelesai) {
+                showLaporFormError('Isi Tanggal Penyelesaian sebelum menandai status Selesai.', 'lapor-admin-tanggal-selesai');
+                return;
+            }
+
+            const data = {
+                sheetName: 'Lapor_Aspirasi',
+                nama: nama, noHp: noHp, alamat: alamat,
+                jenisPengaduan: jenis, judul: judul, detail: detail,
+                lokasi: lokasi, tanggalKejadian: tanggalKejadian, foto: foto, harapan: harapan,
+                status: status, petugas: petugas, catatanTindakLanjut: catatan,
+                tanggalPenyelesaian: tanggalSelesai, arsip: 'Tidak'
+            };
+
+            if (editMode.lapor !== null) {
+                const editId = editMode.lapor;
+                const idx = findIndexById(appState.lapor, editId);
+                const prev = idx !== -1 ? appState.lapor[idx] : null;
+                data.arsip = prev ? (prev.arsip || 'Tidak') : 'Tidak';
+                data.noPengaduan = prev ? (prev.noPengaduan || '') : '';
+                if (idx !== -1) {
+                    appState.lapor[idx] = Object.assign({ _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan }, data);
+                }
+                editMode.lapor = null;
+                saveLocalState();
+                renderLaporTable();
+                sendToGoogleSheets({ action: 'update', id: editId, ...data });
+                showToast('Pengaduan diperbarui!', 'success');
+            } else {
+                const id = makeLaporId();
+                data.id = id;
+                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '' }, data));
+                saveLocalState();
+                renderLaporTable();
+                sendToGoogleSheets(data);
+                showToast('Pengaduan berhasil dicatat!', 'success');
+            }
+
+            closeModal('modal-lapor');
+            document.getElementById('form-lapor').reset();
+        }
+
+        function laporRowPayload(item, arsip) {
+            return {
+                noPengaduan: item.noPengaduan || '', nama: item.nama || '', noHp: item.noHp || '', alamat: item.alamat || '',
+                jenisPengaduan: item.jenisPengaduan || '', judul: item.judul || '', detail: item.detail || '',
+                lokasi: item.lokasi || '', tanggalKejadian: item.tanggalKejadian || '', foto: item.foto || '',
+                harapan: item.harapan || '', status: item.status || 'Diterima', petugas: item.petugas || '',
+                catatanTindakLanjut: item.catatan || '', tanggalPenyelesaian: item.tanggalSelesai || '',
+                arsip: arsip ? 'Ya' : 'Tidak'
+            };
+        }
+
+        function updateLaporArsip(index, arsip) {
+            const item = appState.lapor[index];
+            if (!item) return;
+            if (!item._id) { item._id = makeLaporId(); }
+            item.arsip = arsip ? 'Ya' : 'Tidak';
+            saveLocalState();
+            renderLaporTable();
+            sendToGoogleSheets(Object.assign({ action: 'update', sheetName: 'Lapor_Aspirasi', id: item._id }, laporRowPayload(item, arsip)));
+            showToast(arsip ? 'Pengaduan diarsipkan (tetap tersimpan).' : 'Pengaduan dipulihkan.', arsip ? 'info' : 'success');
+        }
+
+        function archiveLapor(index) {
+            const item = appState.lapor[index];
+            if (!item) return;
+            const confirmMsg = `Arsipkan pengaduan ini?\n\n• Nama: ${item.nama || '-'}\n• No. Pengaduan: ${item.noPengaduan || item._id || '-'}\n• Judul: ${item.judul || '-'}\n\nPengaduan tidak akan tampil di daftar utama, namun tetap tersimpan dan dapat dipulihkan.`;
+            if (confirm(confirmMsg)) updateLaporArsip(index, true);
+        }
+
+        function restoreLapor(index) {
+            updateLaporArsip(index, false);
+        }
+
+        // Ubah status cepat dari tabel (siklus Diterima -> Diproses -> Selesai -> Diterima).
+        function cycleLaporStatus(index) {
+            const item = appState.lapor[index];
+            if (!item) return;
+            if (!item._id) item._id = makeLaporId();
+            const list = laporStatusOptions();
+            const cur = list.indexOf(item.status);
+            const next = list[(cur + 1) % list.length];
+
+            if (next === 'Selesai' && !String(item.tanggalSelesai || '').trim()) {
+                editLapor(index);
+                showLaporFormError('Isi Tanggal Penyelesaian sebelum menandai status Selesai.', 'lapor-admin-tanggal-selesai');
+                return;
+            }
+
+            item.status = next;
+            saveLocalState();
+            renderLaporTable();
+            sendToGoogleSheets(Object.assign({ action: 'update', sheetName: 'Lapor_Aspirasi', id: item._id }, laporRowPayload(item, isArchivedLapor(item))));
+            showToast('Status diubah menjadi ' + next, 'success');
+        }
+
+        function renderLaporTable() {
+            const tbody = document.getElementById('table-lapor-body');
+            if (!tbody) return;
+            const searchEl = document.getElementById('search-lapor');
+            const filterEl = document.getElementById('filter-status-lapor');
+            const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+            const filterStatus = filterEl ? filterEl.value : '';
+
+            tbody.innerHTML = '';
+
+            // Ringkasan jumlah per status (yang diarsipkan tidak dihitung).
+            ['Diterima', 'Diproses', 'Selesai'].forEach(function (s) {
+                const el = document.getElementById('lapor-count-' + s.toLowerCase());
+                if (el) el.innerText = (appState.lapor || []).filter(function (x) { return !isArchivedLapor(x) && (x.status || 'Diterima') === s; }).length;
+            });
+
+            const list = (appState.lapor || []).slice().reverse(); // terbaru dahulu
+            const matched = list.filter(function (item) {
+                const haystack = [item._id, item.noPengaduan, item.nama, item.noHp, waNumber(item.noHp), item.alamat, item.jenisPengaduan, item.judul, item.detail, item.lokasi, item.status, item.petugas, item.catatan, item.waktu, fmtTimestamp(item.waktu)]
+                    .map(v => (v == null ? '' : String(v).toLowerCase()));
+                const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
+                const matchStatus = filterStatus === '' || (item.status || 'Diterima') === filterStatus;
+                return matchSearch && matchStatus;
+            });
+
+            const aktifItems = matched.filter(function (item) { return !isArchivedLapor(item); });
+            const archivedItems = showArchivedLapor ? matched.filter(function (item) { return isArchivedLapor(item); }) : [];
+            const filtered = showArchivedLapor ? archivedItems.concat(aktifItems) : aktifItems;
+            const showSections = showArchivedLapor && archivedItems.length > 0;
+            const firstArchivedPos = 0;
+            const firstActivePos = archivedItems.length;
+
+            const label = document.getElementById('lapor-table-label');
+            if (label) label.innerText = filtered.length + ' dari ' + (appState.lapor || []).length + ' pengaduan';
+
+            if (filtered.length === 0) {
+                const anyFilter = search !== '' || filterStatus !== '';
+                let msg;
+                if ((appState.lapor || []).length === 0) {
+                    msg = 'Belum ada pengaduan. Laporan dari Portal Publik akan tampil di sini.';
+                } else if (anyFilter) {
+                    msg = 'Tidak ada pengaduan yang cocok dengan pencarian/filter.';
+                } else if (!showArchivedLapor && appState.lapor.some(isArchivedLapor)) {
+                    msg = 'Tidak ada pengaduan aktif. Centang "Tampilkan arsip" untuk melihat pengaduan yang diarsipkan.';
+                } else {
+                    msg = 'Belum ada pengaduan.';
+                }
+                const empty = document.createElement('tr');
+                empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
+                tbody.appendChild(empty);
+                return;
+            }
+
+            const appendSectionRow = (kind, count) => {
+                const tr = document.createElement('tr');
+                if (kind === 'archived') {
+                    tr.className = 'bg-amber-100 text-amber-800';
+                    tr.innerHTML = `<td colspan="7" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider"><i class="fa-solid fa-box-archive mr-1"></i>Pengaduan Diarsipkan (${count}) <span class="font-normal normal-case tracking-normal">- tidak tampil di daftar utama</span></td>`;
+                } else {
+                    tr.className = 'bg-slate-100 text-slate-600';
+                    tr.innerHTML = `<td colspan="7" class="px-3 py-2 text-xs font-semibold uppercase tracking-wider"><i class="fa-solid fa-comment-dots mr-1"></i>Pengaduan Aktif (${count})</td>`;
+                }
+                tbody.appendChild(tr);
+            };
+
+            filtered.forEach(function (item, rowIdx) {
+                if (showSections && rowIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
+                if (showSections && rowIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
+                const originalIndex = appState.lapor.indexOf(item);
+                const archived = isArchivedLapor(item);
+                const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-teal-50';
+                const tr = document.createElement('tr');
+                tr.className = archived
+                    ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer transition'
+                    : `${zebra} hover:bg-teal-100 cursor-pointer transition`;
+                tr.title = 'Klik untuk edit';
+                tr.onclick = () => editLapor(originalIndex);
+                const hpCell = escAttr(fmtPhone(item.noHp) || '-');
+                const archiveBadge = archived
+                    ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>'
+                    : '';
+                const fotoIcon = item.foto
+                    ? ` <a href="${escAttr(item.foto)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-teal-600 hover:text-teal-800" title="Lihat bukti foto"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>`
+                    : '';
+                tr.innerHTML = `
+                    <td class="p-4 whitespace-nowrap">
+                        <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
+                        <div class="text-slate-700 text-xs font-semibold mt-0.5">${escAttr(item.noPengaduan || '-')}</div>
+                    </td>
+                    <td class="p-4">
+                        <div class="font-semibold text-slate-800">${escAttr(item.nama || '-')}${archiveBadge}</div>
+                        <div class="text-slate-500 text-xs mt-0.5" title="${hpCell}">${hpCell}</div>
+                    </td>
+                    <td class="p-4 text-slate-500 text-xs" style="max-width:14rem">${escAttr(item.alamat || '-')}</td>
+                    <td class="p-4 text-xs text-slate-700">${escAttr(item.jenisPengaduan || '-')}</td>
+                    <td class="p-4 text-xs" style="max-width:18rem">
+                        <div class="text-slate-800 font-medium">${escAttr(item.judul || '-')}${fotoIcon}</div>
+                        <div class="text-slate-500 mt-0.5 line-clamp-2">${escAttr(item.detail || '-')}</div>
+                    </td>
+                    <td class="p-4 text-center">${laporStatusBadge(item.status)}</td>
+                    <td class="p-4 text-center whitespace-nowrap">
+                        <button onclick="event.stopPropagation(); cycleLaporStatus(${originalIndex})" class="text-teal-600 hover:text-teal-800 p-1 rounded mr-1" title="Ubah status"><i class="fa-solid fa-rotate"></i></button>
+                        <button onclick="event.stopPropagation(); editLapor(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        ${archived
+                            ? `<button onclick="event.stopPropagation(); restoreLapor(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan dari arsip"><i class="fa-solid fa-box-open"></i></button>`
+                            : `<button onclick="event.stopPropagation(); archiveLapor(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Arsipkan"><i class="fa-solid fa-box-archive"></i></button>`}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         // Validasi sederhana format email (cukup untuk mencegah salah ketik).
         function isValidEmail(v) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v == null ? '' : v).trim());
@@ -4501,6 +5089,12 @@
             appState.surat = applyLocalDeletes('surat', (d.Pengajuan_Surat || []).map(r => ({
                 _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9], arsip: r[10]
             })));
+            appState.lapor = applyLocalDeletes('lapor', (d.Lapor_Aspirasi || []).map(r => ({
+                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), noPengaduan: r[1], nama: r[2], noHp: r[3], alamat: r[4],
+                jenisPengaduan: r[5], judul: r[6], detail: r[7], lokasi: r[8], tanggalKejadian: fmtDate(r[9]),
+                foto: r[10], harapan: r[11], status: r[12] || 'Diterima', petugas: r[13], catatan: r[14],
+                tanggalSelesai: fmtDate(r[15]), arsip: r[16]
+            })));
             saveLocalState();
             appState.portalEnabled = res.portalEnabled !== false;
             updatePublicPortalUI();
@@ -4515,6 +5109,7 @@
             renderPengumumanCards();
             renderKegiatanCards();
             renderSuratTable();
+            renderLaporTable();
 
             if (res.version !== EXPECTED_BACKEND_VERSION) {
                 console.warn('Backend version mismatch:', res.version, 'expected:', EXPECTED_BACKEND_VERSION);
@@ -4620,7 +5215,7 @@
 
         // Revoke semua record lokal agar tampilan kembali bersih
         function resetAllData() {
-            if (!confirm('Hapus SEMUA data mode lokal/demo (warga, kas, pengumuman, kegiatan, pengajuan) dari browser ini?\n\nData di Google Sheets TIDAK terhapus. Tindakan ini tidak dapat dibatalkan.')) {
+            if (!confirm('Hapus SEMUA data mode lokal/demo (warga, kas, pengumuman, kegiatan, pengajuan, laporan) dari browser ini?\n\nData di Google Sheets TIDAK terhapus. Tindakan ini tidak dapat dibatalkan.')) {
                 return;
             }
             appState.warga = [];
@@ -4628,10 +5223,11 @@
             appState.pengumuman = [];
             appState.kegiatan = [];
             appState.surat = [];
-            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_outbox'].forEach(function (key) {
+            appState.lapor = [];
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_lapor', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_local_deletes_lapor', 'rt_outbox'].forEach(function (key) {
                 localStorage.removeItem(key);
             });
-            localDeletes = { warga: [], kas: [], pengumuman: [], kegiatan: [], surat: [] };
+            localDeletes = { warga: [], kas: [], pengumuman: [], kegiatan: [], surat: [], lapor: [] };
             updateOutboxUI();
             renderDashboardStats();
             renderWargaTable();
@@ -4639,6 +5235,7 @@
             renderPengumumanCards();
             renderKegiatanCards();
             renderSuratTable();
+            renderLaporTable();
             updateLastUpdated();
             showToast('Data demo lokal berhasil dihapus. Tampilan sudah bersih.', 'success');
         }

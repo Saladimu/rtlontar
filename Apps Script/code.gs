@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v20-2026-10-13";
+var CODE_VERSION = "publik-v21-2026-10-14";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -12,7 +12,8 @@ var EXPECTED_FIELDS = {
   "Iuran_Kas": 7,       // A Timestamp + 6 field
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
-  "Pengajuan_Surat": 11 // A Timestamp + 10 field (termasuk Status Pengurusan, No. Surat, Catatan Pengurus, & Diarsipkan)
+  "Pengajuan_Surat": 11, // A Timestamp + 10 field (termasuk Status Pengurusan, No. Surat, Catatan Pengurus, & Diarsipkan)
+  "Lapor_Aspirasi": 17  // A Timestamp + 16 field (termasuk Status, Petugas, Catatan Tindak Lanjut, Tgl Penyelesaian, & Diarsipkan)
 };
 
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
@@ -21,7 +22,8 @@ var DESIRED_HEADERS = {
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
-  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Diarsipkan", "ID"]
+  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Diarsipkan", "ID"],
+  "Lapor_Aspirasi": ["Timestamp", "No. Pengaduan", "Nama Warga", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Pengaduan", "Judul Pengaduan", "Detail Pengaduan", "Lokasi Kejadian", "Tanggal Kejadian", "Foto / Bukti Pendukung", "Harapan / Solusi", "Status", "Petugas / Pengurus", "Catatan Tindak Lanjut", "Tanggal Penyelesaian", "Diarsipkan", "ID"]
 };
 
 // Nilai default kolom Publik untuk baris lama saat migrasi.
@@ -186,6 +188,12 @@ function doGet(e) {
   } else if (params.action === 'lookupWarga') {
     // Cari profil warga berdasarkan NIK (bantu isi form surat). Tanpa token.
     payload = handleLookupWarga(params);
+  } else if (params.action === 'lookupWargaHp') {
+    // Cari profil warga berdasarkan No. HP/WhatsApp (bantu isi form Lapor & Aspirasi). Tanpa token.
+    payload = handleLookupWargaHp(params);
+  } else if (params.action === 'checkLapor') {
+    // Cek status pengaduan oleh warga dengan No. Pengaduan. Tanpa token.
+    payload = handleCheckLapor(params);
   } else if (params.action === 'sendTestEmail') {
     // Kirim email uji notifikasi (butuh token admin). Bila params.email diisi,
     // alamat itu dipakai sebagai penerima sekaligus disimpan ke ADMIN_EMAIL.
@@ -419,13 +427,14 @@ function getOrCreateSheet(ss, name) {
 
 function readAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga", "Pengajuan_Surat"];
+  var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga", "Pengajuan_Surat", "Lapor_Aspirasi"];
   var formats = {
     "Data_Warga": { 7: "yyyy-MM-dd" },
     "Iuran_Kas": { 1: "yyyy-MM-dd" },
     "Pengumuman": { 1: "yyyy-MM-dd" },
     "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" },
-    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm" }
+    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm" },
+    "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd" }
   };
   var data = {};
 
@@ -519,6 +528,11 @@ function doPost(e) {
       return respond(handleSubmitSurat(data));
     }
 
+    // Aksi publik: kirim laporan / aspirasi (TANPA token, hanya menambah baris baru).
+    if (data.action === 'submitLapor') {
+      return respond(handleSubmitLapor(data));
+    }
+
     var sheetName = data.sheetName;
     if (!EXPECTED_FIELDS[sheetName]) {
       return respond({ "result": "error", "message": "sheetName tidak dikenal: " + sheetName });
@@ -570,11 +584,18 @@ function doPost(e) {
 
     // ADD: tambahkan baris baru. Timestamp = waktu server (GMT+7), ID dari frontend bila ada.
     // Untuk Pengajuan_Surat, bawaan ID memakai format No. Pengajuan (SRT-...).
-    var addId = data.id ? String(data.id) : (sheetName === "Pengajuan_Surat" ? makeSuratId() : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)));
+    var addId = data.id ? String(data.id)
+      : (sheetName === "Pengajuan_Surat" ? makeSuratId()
+      : (sheetName === "Lapor_Aspirasi" ? ('ADU-' + Utilities.formatDate(new Date(), TZ, 'yyMMdd') + '-' + randomCode4())
+      : ('id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7))));
     // Idempotensi: bila ID dari frontend sudah ada (mis. pengiriman ulang setelah koneksi
     // putus lewat antrean/outbox), JANGAN tambah baris duplikat — cukup laporkan sukses.
     if (data.id && findRowById(sheet, sheetName, addId) !== -1) {
       return respond({ "result": "success", "id": addId, "duplicate": true });
+    }
+    // Lapor_Aspirasi: lengkapi No. Pengaduan berurutan bila admin mencatat manual tanpa nomor.
+    if (sheetName === "Lapor_Aspirasi" && !cleanStr(data.noPengaduan, 40)) {
+      data.noPengaduan = makeNomorPengaduan(sheet);
     }
     var rowData = buildRowData(sheetName, data, new Date(), addId);
     sheet.appendRow(rowData);
@@ -608,6 +629,15 @@ function buildRowData(sheetName, data, timestamp, id) {
       data.jenisSurat, data.keperluan,
       data.status || "Pending", data.noSurat || "", data.catatan || "",
       normalizeArsip(data.arsip)
+    );
+  } else if (sheetName === "Lapor_Aspirasi") {
+    rowData.push(
+      data.noPengaduan, data.nama, data.noHp, data.alamat,
+      data.jenisPengaduan, data.judul, data.detail,
+      data.lokasi || "", data.tanggalKejadian || "", data.foto || "",
+      data.harapan || "",
+      data.status || "Diterima", data.petugas || "", data.catatanTindakLanjut || "",
+      data.tanggalPenyelesaian || "", normalizeArsip(data.arsip)
     );
   } else {
     return null;
@@ -1077,6 +1107,356 @@ function handleSubmitSurat(data) {
   });
 
   return { "result": "success", "id": id, "message": 'Pengajuan surat berhasil dikirim.' };
+}
+
+// ================= LAPOR & ASPIRASI (intake publik) =================
+// Indeks kolom Lapor_Aspirasi (termasuk kolom A Timestamp):
+var LAPOR_COL_NOMOR = 1;   // No. Pengaduan
+var LAPOR_COL_HP = 3;      // No. HP / WhatsApp
+var LAPOR_COL_ARSIP = 16;  // Diarsipkan
+
+var LAPOR_RATE_MAX_PER_HP = 5;
+var LAPOR_RATE_MAX_GLOBAL = 60;
+var LAPOR_CHECK_MAX_PER_KEY = 30;
+var LAPOR_CHECK_MAX_GLOBAL = 300;
+
+// Format nilai kolom tanggal (yyyy-MM-dd) agar konsisten di respons publik.
+function formatDateCell(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  return (v === undefined || v === null) ? '' : String(v);
+}
+
+// Nomor Pengaduan berurutan per tahun: ADU/<tahun>-NNN (mis. ADU/2026-001).
+// Dipakai sebagai referensi yang dipegang warga (bukan kolom ID internal).
+function makeNomorPengaduan(sheet) {
+  var year = Utilities.formatDate(new Date(), TZ, 'yyyy');
+  var prefix = 'ADU/' + year + '-';
+  var max = 0;
+  if (sheet) {
+    var last = sheet.getLastRow();
+    if (last >= 2) {
+      var vals = sheet.getRange(2, LAPOR_COL_NOMOR + 1, last - 1, 1).getValues();
+      for (var i = 0; i < vals.length; i++) {
+        var s = String(vals[i][0] === null || vals[i][0] === undefined ? '' : vals[i][0]).trim().toUpperCase();
+        if (s.indexOf(prefix) === 0) {
+          var n = parseInt(s.substring(prefix.length), 10);
+          if (!isNaN(n) && n > max) max = n;
+        }
+      }
+    }
+  }
+  return prefix + ('000' + (max + 1)).slice(-3);
+}
+
+// Rate limit sederhana (Script Properties) untuk submit laporan (per-HP + global).
+function checkAndRecordLaporRate(key) {
+  var props = PropertiesService.getScriptProperties();
+  var now = Date.now();
+  var data;
+  try {
+    var raw = props.getProperty('LAPOR_RATE');
+    data = raw ? JSON.parse(raw) : {};
+  } catch (e) { data = {}; }
+  if (!data || typeof data !== 'object') data = {};
+
+  function prune(arr) {
+    var out = [];
+    for (var i = 0; i < (arr || []).length; i++) {
+      if (now - arr[i] < SURAT_RATE_WINDOW_MS) out.push(arr[i]);
+    }
+    return out;
+  }
+  var global = prune(data._global);
+  if (global.length >= LAPOR_RATE_MAX_GLOBAL) return false;
+  var k = 'hp:' + key;
+  var list = prune(data[k]);
+  if (list.length >= LAPOR_RATE_MAX_PER_HP) return false;
+  list.push(now);
+  global.push(now);
+  data[k] = list;
+  data._global = global;
+  props.setProperty('LAPOR_RATE', JSON.stringify(data));
+  return true;
+}
+
+// Rate limit untuk cek status pengaduan (per-nomor + global), anti-enumerasi.
+function checkAndRecordLaporCheckRate(key) {
+  var props = PropertiesService.getScriptProperties();
+  var now = Date.now();
+  var data;
+  try {
+    var raw = props.getProperty('LAPOR_CHECK_RATE');
+    data = raw ? JSON.parse(raw) : {};
+  } catch (e) { data = {}; }
+  if (!data || typeof data !== 'object') data = {};
+
+  function prune(arr) {
+    var out = [];
+    for (var i = 0; i < (arr || []).length; i++) {
+      if (now - arr[i] < SURAT_RATE_WINDOW_MS) out.push(arr[i]);
+    }
+    return out;
+  }
+  var global = prune(data._global);
+  if (global.length >= LAPOR_CHECK_MAX_GLOBAL) return false;
+  var k = 'key:' + key;
+  var list = prune(data[k]);
+  if (list.length >= LAPOR_CHECK_MAX_PER_KEY) return false;
+  list.push(now);
+  global.push(now);
+  data[k] = list;
+  data._global = global;
+  props.setProperty('LAPOR_CHECK_RATE', JSON.stringify(data));
+  return true;
+}
+
+// Folder Google Drive tujuan foto bukti: Script Property "LAPOR_FOLDER_ID";
+// bila kosong, cari folder bernama "Lapor" (dibagikan ke ADMIN_EMAIL oleh pengurus).
+function getLaporFolder() {
+  var id = PropertiesService.getScriptProperties().getProperty('LAPOR_FOLDER_ID');
+  id = (id == null) ? '' : String(id).trim();
+  if (id) {
+    try { return DriveApp.getFolderById(id); } catch (e) { /* jatuh ke pencarian nama */ }
+  }
+  try {
+    var it = DriveApp.getFoldersByName('Lapor');
+    if (it.hasNext()) return it.next();
+  } catch (e2) { /* abaikan */ }
+  return null;
+}
+
+// Simpan foto bukti (base64) ke folder Drive, kembalikan URL tampilan publik
+// atau '' bila gagal (kegagalan TIDAK membatalkan pengiriman laporan).
+function saveLaporFoto(nama, mime, base64) {
+  if (!base64) return '';
+  if (base64.length > 6 * 1024 * 1024) return ''; // batas aman ~4.5MB biner
+  var folder = getLaporFolder();
+  if (!folder) return '';
+  var bytes = Utilities.base64Decode(base64);
+  var blob = Utilities.newBlob(bytes, (mime || 'image/jpeg'), cleanStr(nama, 80) || ('lapor-' + Date.now() + '.jpg'));
+  var file = folder.createFile(blob);
+  try {
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  } catch (e) {
+    // Beberapa kebijakan Workspace melarang tautan publik; tetap simpan file-nya.
+  }
+  return 'https://drive.google.com/uc?export=view&id=' + file.getId();
+}
+
+// Kirim email notifikasi ke admin saat ada laporan/aspirasi baru.
+function notifyAdminNewLapor(r) {
+  try {
+    var to = getAdminEmail();
+    if (!to) return;
+    var ts = Utilities.formatDate(new Date(), TZ, 'dd-MM-yyyy HH:mm');
+    var subject = getNotifSubjectPrefix() + ' Laporan/Aspirasi Baru: ' + r.jenisPengaduan + ' - ' + r.nama;
+    var lines = [
+      'Laporan / aspirasi baru masuk melalui Portal Publik.',
+      '',
+      'Waktu            : ' + ts,
+      'No. Pengaduan    : ' + r.noPengaduan,
+      'Nama Warga       : ' + r.nama,
+      'No. HP/WA        : ' + r.noHp,
+      'Alamat           : ' + r.alamat,
+      'Jenis Pengaduan  : ' + r.jenisPengaduan,
+      'Judul            : ' + r.judul,
+      'Lokasi Kejadian  : ' + (r.lokasi || '-'),
+      'Tanggal Kejadian : ' + (r.tanggalKejadian || '-'),
+      'Detail           : ' + r.detail,
+      '',
+      'Buka panel "Lapor & Aspirasi" di dashboard admin untuk menindaklanjuti.'
+    ];
+    MailApp.sendEmail(buildNotifMailOptions(to, subject, lines.join('\n')));
+  } catch (err) {
+    console.log('notifyAdminNewLapor gagal: ' + err);
+  }
+}
+
+// Cari warga (aktif) berdasarkan No. HP/WhatsApp ternormalisasi (62...).
+// Mengembalikan { nama, alamat, noHp } atau null.
+function findWargaByHpNorm(hpNorm) {
+  if (!hpNorm) return null;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Data_Warga');
+  if (!sheet) return null;
+  ensureSpreadsheetFormat(ss, sheet, 'Data_Warga');
+  var rows = ensureIds(sheet, 'Data_Warga');
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    if (isArsip(row[WARGA_COL_ARSIP])) continue;
+    var hp = String(row[WARGA_COL_HP] === undefined || row[WARGA_COL_HP] === null ? '' : row[WARGA_COL_HP]);
+    if (normalizeSuratHp(hp) === hpNorm) {
+      return {
+        nama: cleanStr(row[WARGA_COL_NAMA], 100),
+        alamat: cleanStr(row[WARGA_COL_ALAMAT], 200),
+        noHp: cleanStr(row[WARGA_COL_HP], 30)
+      };
+    }
+  }
+  return null;
+}
+
+// Handler aksi publik `lookupWargaHp`: cocokkan No. HP/WhatsApp persis (dinormalisasi).
+function handleLookupWargaHp(params) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+  var hpRaw = cleanStr(params.hp, 30);
+  var hpDigits = hpRaw.replace(/\D/g, '');
+  if (hpDigits.length < 9 || hpDigits.length > 15) {
+    return { "result": "success", "version": CODE_VERSION, "found": false, "code": "invalid_hp" };
+  }
+  var hpNorm = normalizeSuratHp(hpDigits);
+
+  if (!checkAndRecordWargaLookupRate('hp:' + hpNorm)) {
+    return suratError('rate_limited', 'Terlalu banyak pencarian. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var warga = findWargaByHpNorm(hpNorm);
+  if (!warga) {
+    return { "result": "success", "version": CODE_VERSION, "found": false };
+  }
+  return {
+    "result": "success",
+    "version": CODE_VERSION,
+    "found": true,
+    "nama": warga.nama,
+    "noHp": warga.noHp,
+    "alamat": warga.alamat
+  };
+}
+
+// Handler aksi publik `submitLapor`: validasi, rate limit, simpan, notifikasi.
+function handleSubmitLapor(data) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+
+  // Honeypot: field tersembunyi yang hanya diisi bot. Pura-pura sukses.
+  if (cleanStr(data.website, 100)) {
+    return { "result": "success", "noPengaduan": 'ok', "message": 'Laporan terkirim.' };
+  }
+
+  var noHpRaw = cleanStr(data.noHp, 30);
+  var hpDigits = noHpRaw.replace(/\D/g, '');
+  if (hpDigits.length < 9 || hpDigits.length > 15) {
+    return suratError('invalid', 'Nomor WhatsApp tidak valid.');
+  }
+  var hpNorm = normalizeSuratHp(hpDigits);
+
+  var jenis = cleanStr(data.jenisPengaduan, 120);
+  var judul = cleanStr(data.judul, 150);
+  var detail = cleanStr(data.detail, 2000);
+  var lokasi = cleanStr(data.lokasi, 200);
+  var tanggalKejadian = cleanStr(data.tanggalKejadian, 20);
+  var harapan = cleanStr(data.harapan, 1000);
+  var setuju = (data.setuju === true || String(data.setuju) === 'true' || String(data.setuju) === '1');
+
+  if (!jenis) return suratError('invalid', 'Jenis pengaduan wajib dipilih.');
+  if (judul.length < 3) return suratError('invalid', 'Judul pengaduan wajib diisi (minimal 3 karakter).');
+  if (detail.length < 10) return suratError('invalid', 'Detail pengaduan wajib diisi (minimal 10 karakter).');
+  if (!setuju) return suratError('invalid', 'Persetujuan penggunaan data wajib dicentang.');
+  if (tanggalKejadian && !/^\d{4}-\d{2}-\d{2}$/.test(tanggalKejadian)) tanggalKejadian = '';
+
+  if (!checkAndRecordLaporRate(hpNorm)) {
+    return suratError('rate_limited', 'Terlalu banyak laporan. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  // Hanya nomor yang terdaftar di Data_Warga yang boleh melapor. Nama & Alamat
+  // diambil dari data (server-authoritative), bukan dari input warga.
+  var warga = findWargaByHpNorm(hpNorm);
+  if (!warga) {
+    return suratError('not_registered', 'Nomor WhatsApp belum terdaftar pada Data Warga RT. Hubungi pengurus RT untuk mendaftarkan nomor Anda terlebih dahulu.');
+  }
+
+  // Foto bukti (opsional): simpan ke Drive folder "Lapor". Kegagalan diabaikan.
+  var fotoUrl = '';
+  try {
+    if (data.foto && typeof data.foto === 'string') {
+      var m = String(data.foto).match(/^data:([^;]+);base64,([\s\S]+)$/);
+      if (m) fotoUrl = saveLaporFoto(data.fotoName, m[1], m[2]);
+    }
+  } catch (e) { fotoUrl = ''; }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getOrCreateSheet(ss, 'Lapor_Aspirasi');
+  if (!sheet) return suratError('server', 'Sheet Lapor_Aspirasi tidak tersedia.');
+
+  ensureSpreadsheetFormat(ss, sheet, 'Lapor_Aspirasi');
+
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try { locked = lock.tryLock(15000); } catch (e) { locked = false; }
+  var noPengaduan;
+  try {
+    noPengaduan = makeNomorPengaduan(sheet);
+    var id = 'ADU-' + Utilities.formatDate(new Date(), TZ, 'yyMMdd') + '-' + randomCode4();
+    var rowData = buildRowData('Lapor_Aspirasi', {
+      noPengaduan: noPengaduan,
+      nama: warga.nama, noHp: warga.noHp || noHpRaw, alamat: warga.alamat,
+      jenisPengaduan: jenis, judul: judul, detail: detail,
+      lokasi: lokasi, tanggalKejadian: tanggalKejadian, foto: fotoUrl, harapan: harapan,
+      status: 'Diterima', petugas: '', catatanTindakLanjut: '', tanggalPenyelesaian: '', arsip: 'Tidak'
+    }, new Date(), id);
+    sheet.appendRow(rowData);
+    sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);
+  } finally {
+    if (locked) { try { lock.releaseLock(); } catch (e2) { /* abaikan */ } }
+  }
+
+  notifyAdminNewLapor({
+    noPengaduan: noPengaduan, nama: warga.nama, noHp: warga.noHp || noHpRaw, alamat: warga.alamat,
+    jenisPengaduan: jenis, judul: judul, detail: detail, lokasi: lokasi, tanggalKejadian: tanggalKejadian
+  });
+
+  return { "result": "success", "noPengaduan": noPengaduan, "message": 'Laporan berhasil dikirim.' };
+}
+
+// Handler aksi publik `checkLapor`: cari pengaduan berdasarkan No. Pengaduan.
+// Pengaduan yang sudah diarsipkan tidak dikembalikan (hanya dihitung).
+function handleCheckLapor(params) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+  var nomor = cleanStr(params.nomor, 40).toUpperCase();
+  if (!nomor) {
+    return suratError('invalid', 'Masukkan No. Pengaduan (mis. ADU/2026-001).');
+  }
+
+  if (!checkAndRecordLaporCheckRate(nomor)) {
+    return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Lapor_Aspirasi');
+  var results = [];
+  var archivedCount = 0;
+
+  if (sheet) {
+    ensureSpreadsheetFormat(ss, sheet, 'Lapor_Aspirasi');
+    var rows = ensureIds(sheet, 'Lapor_Aspirasi');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      var rNomor = String(row[LAPOR_COL_NOMOR] === null || row[LAPOR_COL_NOMOR] === undefined ? '' : row[LAPOR_COL_NOMOR]).trim().toUpperCase();
+      if (rNomor === nomor) {
+        if (isArsip(row[LAPOR_COL_ARSIP])) { archivedCount++; continue; }
+        results.push({
+          "nomor": rNomor,
+          "tanggal": formatTimestampCell(row[0]),
+          "jenisPengaduan": cleanStr(row[5], 120),
+          "judul": cleanStr(row[6], 150),
+          "status": cleanStr(row[12], 20) || 'Diterima',
+          "petugas": cleanStr(row[13], 100),
+          "catatan": cleanStr(row[14], 1000),
+          "tanggalSelesai": formatDateCell(row[15])
+        });
+      }
+    }
+  }
+
+  results.reverse(); // terbaru lebih dahulu
+
+  return { "result": "success", "version": CODE_VERSION, "count": results.length, "archived": archivedCount, "data": results };
 }
 
 function respond(obj) {

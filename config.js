@@ -18,7 +18,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '9',
+    version: '10',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
 
@@ -81,7 +81,29 @@ window.RT_CONFIG = {
     ],
 
     // Daftar status pengurusan surat (diubah oleh pengurus di halaman admin).
-    statusSurat: ['Pending', 'Diproses', 'Selesai', 'Ditolak']
+    statusSurat: ['Pending', 'Diproses', 'Selesai', 'Ditolak'],
+
+    // Daftar pilihan "Jenis Pengaduan" pada fitur Lapor & Aspirasi. Dipakai oleh
+    // index.html (admin) & public.html (form warga) agar seragam. Backend
+    // (code.gs) menyimpan teksnya apa adanya.
+    jenisPengaduan: [
+        '🏠 Lingkungan & Kebersihan',
+        '💡 Penerangan Jalan',
+        '🚰 Saluran Air / Drainase',
+        '🛣️ Jalan & Fasilitas Umum',
+        '🔊 Ketertiban / Kebisingan',
+        '🚗 Parkir / Akses Jalan',
+        '🔐 Keamanan Lingkungan',
+        '🗑️ Sampah',
+        '🐕 Hewan / Gangguan Lingkungan',
+        '👥 Kegiatan Warga',
+        '📄 Administrasi RT',
+        '💬 Aspirasi / Saran',
+        'Lainnya'
+    ],
+
+    // Daftar status penanganan pengaduan (diubah oleh pengurus di halaman admin).
+    statusPengaduan: ['Diterima', 'Diproses', 'Selesai']
 };
 
 (function () {
