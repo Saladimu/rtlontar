@@ -248,8 +248,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v22-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v22-2026-10-14","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v23-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v23-2026-10-14","found":false}`
 
 **Contoh Lookup Warga berdasarkan No. HP (form Lapor & Aspirasi):**
 ```

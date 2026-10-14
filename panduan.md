@@ -262,7 +262,7 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga �
 ### Memproses pengaduan
 
 1. Klik baris (atau ikon pensil) untuk membuka **Edit**.
-2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian**.
+2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`; bisa juga dipilih lewat kalender). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**.
 3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga.
 4. Klik **Simpan**. Ikon **ubah status cepat** (putar) juga bisa dipakai untuk menggilir status tanpa membuka modal.
 
@@ -385,12 +385,12 @@ Menu **Lapor & Aspirasi** ada **di bawah Layanan Surat** pada Portal Publik. Gun
    - Bila nomor belum terdaftar, muncul keterangan — hubungi pengurus RT untuk didaftarkan agar bisa mengirim.
 3. Pilih **Jenis Pengaduan** (mis. Lingkungan & Kebersihan, Penerangan Jalan, Saluran Air/Drainase, Keamanan Lingkungan, Sampah, Aspirasi/Saran, dan lainnya).
 4. Tulis **Judul Pengaduan** dan **Detail** kejadian selengkap mungkin.
-5. (Opsional) Isi **Lokasi Kejadian**, **Tanggal Kejadian**, dan **Harapan / Solusi**.
+5. (Opsional) Isi **Lokasi Kejadian**, **Tanggal Kejadian** (format **dd-mm-yyyy**, mis. `14-10-2026`; bisa juga dipilih lewat kalender), dan **Harapan / Solusi**.
 6. (Opsional) Lampirkan **Foto/Bukti Pendukung** (gambar, maks. 8 MB) — foto otomatis dikompres sebelum diunggah.
 7. Centang **persetujuan penggunaan data**, lalu klik **Kirim**.
-8. **Catat Nomor Pengaduan** yang muncul, mis. `ADU/2026-001`. Nomor ini dipakai untuk memantau status.
+8. **Catat Nomor Pengaduan** yang muncul, mis. `ADU/2026-001` — gunakan tombol **Salin** di sebelah nomor untuk menyalinnya. Nomor ini dipakai untuk memantau status.
 
-**Cek Status Pengaduan:** klik judul **“Cek Status Pengaduan”** di bawahnya, masukkan **No. Pengaduan**, lalu klik **Cek**. Anda akan melihat status (**Diterima / Diproses / Selesai**), petugas yang menangani, catatan tindak lanjut, dan tanggal penyelesaian (bila sudah selesai).
+**Cek Status Pengaduan:** klik judul **“Cek Status Pengaduan”** di bawahnya, masukkan **No. Pengaduan**, lalu klik **Cek**. Anda akan melihat status (**Diterima / Diproses / Selesai**), petugas yang menangani, catatan tindak lanjut, dan tanggal penyelesaian (bila sudah selesai). Nomor pengaduan pada hasil juga bisa **disalin**.
 
 Yang perlu diketahui:
 

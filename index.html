@@ -20,9 +20,9 @@
          Dulu memakai Play CDN yang harus mengunduh engine + generate CSS saat runtime. -->
     <link rel="stylesheet" href="tailwind.css">
     <!-- Ikon & font self-hosted (Font Awesome 6 subset + Inter) — tanpa CDN. -->
-    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2?v=1" crossorigin>
-    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2?v=1" crossorigin>
-    <link rel="stylesheet" href="fonts.css?v=1">
+    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2?v=2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2?v=2" crossorigin>
+    <link rel="stylesheet" href="fonts.css?v=2">
     <style>
         @keyframes spin {
             from { transform: rotate(0deg); }
@@ -1266,7 +1266,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Kejadian</label>
-                        <input type="date" id="lapor-admin-tanggal" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                        <input type="text" id="lapor-admin-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('lapor-admin-tanggal')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
                     </div>
                 </div>
                 <div>
@@ -1292,7 +1292,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Penyelesaian <span id="lapor-tanggal-selesai-req" class="hidden text-rose-500">*</span></label>
-                        <input type="date" id="lapor-admin-tanggal-selesai" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
+                        <input type="text" id="lapor-admin-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('lapor-admin-tanggal-selesai')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Tindak Lanjut</label>
@@ -1559,7 +1559,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v22-2026-10-14';
+        const EXPECTED_BACKEND_VERSION = 'publik-v23-2026-10-14';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1569,7 +1569,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-02';
+        const APP_BUILD = '2026-10-14-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4128,12 +4128,12 @@
             document.getElementById('lapor-admin-hp').value = item.noHp || '';
             document.getElementById('lapor-admin-alamat').value = item.alamat || '';
             document.getElementById('lapor-admin-lokasi').value = item.lokasi || '';
-            document.getElementById('lapor-admin-tanggal').value = item.tanggalKejadian || '';
+            setDateInput('lapor-admin-tanggal', item.tanggalKejadian || '');
             document.getElementById('lapor-admin-foto').value = item.foto || '';
             document.getElementById('lapor-admin-harapan').value = item.harapan || '';
             document.getElementById('lapor-admin-status').value = item.status || 'Diterima';
             document.getElementById('lapor-admin-petugas').value = item.petugas || '';
-            document.getElementById('lapor-admin-tanggal-selesai').value = item.tanggalSelesai || '';
+            setDateInput('lapor-admin-tanggal-selesai', item.tanggalSelesai || '');
             document.getElementById('lapor-admin-catatan').value = item.catatan || '';
             updateLaporTanggalSelesaiReq();
             document.getElementById('btn-save-lapor').textContent = 'Perbarui Pengaduan';
@@ -4150,12 +4150,12 @@
             const noHp = document.getElementById('lapor-admin-hp').value.trim();
             const alamat = document.getElementById('lapor-admin-alamat').value.trim();
             const lokasi = document.getElementById('lapor-admin-lokasi').value.trim();
-            const tanggalKejadian = document.getElementById('lapor-admin-tanggal').value.trim();
+            const tanggalKejadian = readDateInput('lapor-admin-tanggal');
             const foto = document.getElementById('lapor-admin-foto').value.trim();
             const harapan = document.getElementById('lapor-admin-harapan').value.trim();
             const status = document.getElementById('lapor-admin-status').value || 'Diterima';
             const petugas = document.getElementById('lapor-admin-petugas').value.trim();
-            const tanggalSelesai = document.getElementById('lapor-admin-tanggal-selesai').value.trim();
+            const tanggalSelesai = readDateInput('lapor-admin-tanggal-selesai');
             const catatan = document.getElementById('lapor-admin-catatan').value.trim();
 
             if (!jenis) { showLaporFormError('Jenis pengaduan wajib dipilih.', 'lapor-admin-jenis'); return; }

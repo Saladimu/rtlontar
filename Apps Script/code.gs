@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v22-2026-10-14";
+var CODE_VERSION = "publik-v23-2026-10-14";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -1398,14 +1398,17 @@ function handleSubmitLapor(data) {
     return suratError('not_registered', 'Nomor WhatsApp belum terdaftar pada Data Warga RT. Hubungi pengurus RT untuk mendaftarkan nomor Anda terlebih dahulu.');
   }
 
-  // Foto bukti (opsional): simpan ke Drive folder "Lapor". Kegagalan diabaikan.
+  // Foto bukti (opsional): simpan ke Drive folder "Lapor". Kegagalan diabaikan,
+  // namun statusnya dilaporkan ke frontend via fotoSaved agar bisa diberi peringatan.
+  var adaFoto = !!(data.foto && typeof data.foto === 'string' && data.foto);
   var fotoUrl = '';
   try {
-    if (data.foto && typeof data.foto === 'string') {
+    if (adaFoto) {
       var m = String(data.foto).match(/^data:([^;]+);base64,([\s\S]+)$/);
       if (m) fotoUrl = saveLaporFoto(data.fotoName, m[1], m[2]);
     }
   } catch (e) { fotoUrl = ''; }
+  var fotoSaved = !adaFoto || !!fotoUrl;
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = getOrCreateSheet(ss, 'Lapor_Aspirasi');
@@ -1438,7 +1441,7 @@ function handleSubmitLapor(data) {
     jenisPengaduan: jenis, judul: judul, detail: detail, lokasi: lokasi, tanggalKejadian: tanggalKejadian
   });
 
-  return { "result": "success", "noPengaduan": noPengaduan, "message": 'Laporan berhasil dikirim.' };
+  return { "result": "success", "noPengaduan": noPengaduan, "fotoSaved": fotoSaved, "message": 'Laporan berhasil dikirim.' };
 }
 
 // Handler aksi publik `checkLapor`: cari pengaduan berdasarkan No. Pengaduan.

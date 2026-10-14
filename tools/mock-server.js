@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v22-2026-10-14'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v23-2026-10-14'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -480,7 +480,7 @@ function handlePost(data) {
 
   if (data.action === 'submitLapor') {
     if (store.portalEnabled === false) return portalDisabled();
-    if (cleanStr(data.website, 100)) return { result: 'success', noPengaduan: 'ok', message: 'Laporan terkirim.' };
+    if (cleanStr(data.website, 100)) return { result: 'success', noPengaduan: 'ok', fotoSaved: true, message: 'Laporan terkirim.' };
     const hpDigits = cleanStr(data.noHp, 30).replace(/\D/g, '');
     if (hpDigits.length < 9 || hpDigits.length > 15) {
       return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Nomor WhatsApp tidak valid.' };
@@ -502,17 +502,18 @@ function handlePost(data) {
     const ts = nowIso();
     const noPengaduan = makeNomorPengaduan();
     const id = 'ADU-' + jakartaYyMmDd(ts) + '-' + randomCode4();
+    const adaFoto = !!(data.foto && typeof data.foto === 'string' && data.foto);
     const row = buildRow('Lapor_Aspirasi', {
       noPengaduan, nama: warga.nama, noHp: warga.noHp || hpDigits, alamat: warga.alamat,
       jenisPengaduan: jenis, judul, detail,
       lokasi: cleanStr(data.lokasi, 200), tanggalKejadian: tglKejadian,
-      foto: data.foto ? '(mock) foto tersimpan' : '', harapan: cleanStr(data.harapan, 1000),
+      foto: adaFoto ? '(mock) foto tersimpan' : '', harapan: cleanStr(data.harapan, 1000),
       status: 'Diterima', petugas: '', catatanTindakLanjut: '', tanggalPenyelesaian: '', arsip: 'Tidak',
     }, ts, id);
     store.sheets.Lapor_Aspirasi.push(row);
     saveStore();
     console.log('[mock] submitLapor tercatat:', noPengaduan);
-    return { result: 'success', noPengaduan, id, message: 'Laporan berhasil dikirim.' };
+    return { result: 'success', noPengaduan, id, fotoSaved: true, message: 'Laporan berhasil dikirim.' };
   }
 
   if (data.test) {
