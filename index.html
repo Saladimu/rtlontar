@@ -1362,7 +1362,7 @@
                 <div class="pt-2 flex flex-wrap justify-end gap-2">
                     <button type="button" onclick="closeModal('modal-lapor')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
                     <button type="submit" id="btn-save-lapor" class="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Pengaduan</button>
-                    <button type="button" id="btn-wa-lapor" onclick="kirimWaLapor()" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-paper-plane mr-1.5"></i>Kirim WA</button>
+                    <button type="button" id="btn-wa-lapor" onclick="kirimWaLapor()" title="Pilih kontak atau grup WhatsApp" aria-label="Kirim ke WhatsApp (pilih kontak/grup)" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-paper-plane mr-1.5"></i>Kirim WA</button>
                 </div>
             </form>
         </div>
@@ -1620,7 +1620,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-10';
+        const APP_BUILD = '2026-10-14-11';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4389,11 +4389,12 @@
             renderLaporAdminFoto('');
         }
 
-        // Kirim ringkasan pengaduan yang sedang dibuka ke WhatsApp warga.
+        // Kirim ringkasan pengaduan yang sedang dibuka ke WhatsApp.
         // Isi pesan diambil dari data yang tampil pada form (record saat ini).
+        // Penerima dipilih MANUAL oleh admin (kontak warga, grup WA, atau chat lain)
+        // melalui layar pemilih WhatsApp, karena grup WhatsApp tidak punya nomor.
         function kirimWaLapor() {
             const nama = (document.getElementById('lapor-admin-nama').value || '').trim();
-            const noHp = (document.getElementById('lapor-admin-hp').value || '').trim();
             const jenis = document.getElementById('lapor-admin-jenis').value || '';
             const judul = (document.getElementById('lapor-admin-judul').value || '').trim();
             const detail = (document.getElementById('lapor-admin-detail').value || '').trim();
@@ -4403,12 +4404,6 @@
             const petugas = (document.getElementById('lapor-admin-petugas').value || '').trim();
             const catatan = (document.getElementById('lapor-admin-catatan').value || '').trim();
             const tglSelesai = readDateInput('lapor-admin-tanggal-selesai');
-
-            const num = waNumber(noHp);
-            if (!num) {
-                showLaporFormError('Nomor HP/WhatsApp warga belum valid untuk dihubungi via WhatsApp.', 'lapor-admin-hp');
-                return;
-            }
 
             let noPengaduan = '';
             if (editMode.lapor !== null) {
@@ -4431,8 +4426,27 @@
             if (catatan) lines.push('Catatan Tindak Lanjut: ' + catatan);
             if (tglSelesai) lines.push('Tanggal Penyelesaian: ' + isoToDDMMYYYY(tglSelesai));
 
-            const url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(lines.join('\n'));
+            const text = lines.join('\n');
+
+            // Tanpa nomor tujuan -> WhatsApp menampilkan layar pemilih chat sehingga
+            // admin dapat memilih kontak warga atau grup WA secara manual.
+            const url = 'https://wa.me/?text=' + encodeURIComponent(text);
             window.open(url, '_blank', 'noopener');
+
+            // Salin pesan sebagai cadangan agar bisa ditempel manual ke grup bila perlu.
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(function () {
+                        showToast('Pesan disalin. Pilih kontak/grup WhatsApp pada layar yang terbuka.', 'success');
+                    }, function () {
+                        showToast('Pilih kontak atau grup WhatsApp pada layar yang terbuka.', 'info');
+                    });
+                } else {
+                    showToast('Pilih kontak atau grup WhatsApp pada layar yang terbuka.', 'info');
+                }
+            } catch (e) {
+                showToast('Pilih kontak atau grup WhatsApp pada layar yang terbuka.', 'info');
+            }
         }
 
         function laporRowPayload(item, arsip) {
