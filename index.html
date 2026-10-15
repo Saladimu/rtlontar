@@ -1359,9 +1359,10 @@
                         <input type="text" id="lapor-tanggal-info" readonly class="w-full px-3 py-2 text-sm border rounded-xl bg-slate-50 text-slate-500 outline-none">
                     </div>
                 </div>
-                <div class="pt-2 flex justify-end space-x-2">
+                <div class="pt-2 flex flex-wrap justify-end gap-2">
                     <button type="button" onclick="closeModal('modal-lapor')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
                     <button type="submit" id="btn-save-lapor" class="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Pengaduan</button>
+                    <button type="button" id="btn-wa-lapor" onclick="kirimWaLapor()" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-paper-plane mr-1.5"></i>Kirim WA</button>
                 </div>
             </form>
         </div>
@@ -1619,7 +1620,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-07';
+        const APP_BUILD = '2026-10-14-10';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4294,7 +4295,7 @@
             setDateInput('lapor-admin-tanggal-selesai', item.tanggalSelesai || '');
             document.getElementById('lapor-admin-catatan').value = item.catatan || '';
             updateLaporTanggalSelesaiReq();
-            document.getElementById('btn-save-lapor').textContent = 'Perbarui Pengaduan';
+            document.getElementById('btn-save-lapor').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan';
             openModal('modal-lapor');
         }
 
@@ -4366,7 +4367,7 @@
                 data.arsip = prev ? (prev.arsip || 'Tidak') : 'Tidak';
                 data.noPengaduan = prev ? (prev.noPengaduan || '') : '';
                 if (idx !== -1) {
-                    appState.lapor[idx] = Object.assign({ _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan }, data);
+                    appState.lapor[idx] = Object.assign({ _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan, tanggalSelesai: tanggalSelesai }, data);
                 }
                 editMode.lapor = null;
                 saveLocalState();
@@ -4376,7 +4377,7 @@
             } else {
                 const id = makeLaporId();
                 data.id = id;
-                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '' }, data));
+                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '', tanggalSelesai: tanggalSelesai }, data));
                 saveLocalState();
                 renderLaporTable();
                 sendToGoogleSheets(data);
@@ -4386,6 +4387,52 @@
             closeModal('modal-lapor');
             document.getElementById('form-lapor').reset();
             renderLaporAdminFoto('');
+        }
+
+        // Kirim ringkasan pengaduan yang sedang dibuka ke WhatsApp warga.
+        // Isi pesan diambil dari data yang tampil pada form (record saat ini).
+        function kirimWaLapor() {
+            const nama = (document.getElementById('lapor-admin-nama').value || '').trim();
+            const noHp = (document.getElementById('lapor-admin-hp').value || '').trim();
+            const jenis = document.getElementById('lapor-admin-jenis').value || '';
+            const judul = (document.getElementById('lapor-admin-judul').value || '').trim();
+            const detail = (document.getElementById('lapor-admin-detail').value || '').trim();
+            const lokasi = (document.getElementById('lapor-admin-lokasi').value || '').trim();
+            const tglKejadian = readDateInput('lapor-admin-tanggal');
+            const status = document.getElementById('lapor-admin-status').value || '';
+            const petugas = (document.getElementById('lapor-admin-petugas').value || '').trim();
+            const catatan = (document.getElementById('lapor-admin-catatan').value || '').trim();
+            const tglSelesai = readDateInput('lapor-admin-tanggal-selesai');
+
+            const num = waNumber(noHp);
+            if (!num) {
+                showLaporFormError('Nomor HP/WhatsApp warga belum valid untuk dihubungi via WhatsApp.', 'lapor-admin-hp');
+                return;
+            }
+
+            let noPengaduan = '';
+            if (editMode.lapor !== null) {
+                const it = appState.lapor[findIndexById(appState.lapor, editMode.lapor)];
+                noPengaduan = it ? (it.noPengaduan || it._id || '') : '';
+            }
+
+            const rtShort = (window.RT && typeof window.RT.rtShort === 'function') ? window.RT.rtShort() : 'RT';
+            const lines = [];
+            lines.push('*Informasi Pengaduan / Aspirasi ' + rtShort + '*');
+            if (noPengaduan) lines.push('No. Pengaduan: ' + noPengaduan);
+            lines.push('Nama: ' + (nama || '-'));
+            if (jenis) lines.push('Jenis: ' + jenis);
+            if (judul) lines.push('Judul: ' + judul);
+            if (detail) lines.push('Detail: ' + detail);
+            if (lokasi) lines.push('Lokasi: ' + lokasi);
+            if (tglKejadian) lines.push('Tanggal Kejadian: ' + isoToDDMMYYYY(tglKejadian));
+            lines.push('Status: ' + (status || '-'));
+            if (petugas) lines.push('Petugas/Pengurus: ' + petugas);
+            if (catatan) lines.push('Catatan Tindak Lanjut: ' + catatan);
+            if (tglSelesai) lines.push('Tanggal Penyelesaian: ' + isoToDDMMYYYY(tglSelesai));
+
+            const url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(lines.join('\n'));
+            window.open(url, '_blank', 'noopener');
         }
 
         function laporRowPayload(item, arsip) {
