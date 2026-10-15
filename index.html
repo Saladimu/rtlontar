@@ -1620,7 +1620,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-12';
+        const APP_BUILD = '2026-10-14-13';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3725,7 +3725,7 @@
             const statusEl = document.getElementById('surat-status');
             if (statusEl) statusEl.value = 'Pending';
             updateSuratNoSuratReq();
-            document.getElementById('btn-save-surat').textContent = 'Simpan Pengajuan';
+            document.getElementById('btn-save-surat').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Pengajuan';
             openModal('modal-surat');
         }
 
@@ -3754,7 +3754,7 @@
             document.getElementById('surat-catatan').value = item.catatan || '';
             setSuratNikHpLocked(true);
             updateSuratNoSuratReq();
-            document.getElementById('btn-save-surat').textContent = 'Perbarui Pengajuan';
+            document.getElementById('btn-save-surat').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan';
             openModal('modal-surat');
         }
 
