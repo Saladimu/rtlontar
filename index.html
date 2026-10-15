@@ -962,7 +962,8 @@
             <form id="form-warga" onsubmit="submitWarga(event)" class="space-y-3">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nomor KK (Kartu Keluarga)</label>
-                    <input type="text" id="warga-nomorkk" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="31730...">
+                    <input type="text" id="warga-nomorkk" inputmode="numeric" maxlength="16" oninput="onKKInput(this)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="16 digit No. KK">
+                    <p id="warga-nomorkk-hint" class="text-xs text-slate-400 leading-snug mt-1"></p>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap *</label>
@@ -1620,7 +1621,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-15-01';
+        const APP_BUILD = '2026-10-15-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1800,6 +1801,72 @@
             if (!el) return;
             el.textContent = msg || '';
             el.className = 'text-xs leading-snug ' + (kind === 'err' ? 'text-rose-600' : (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400')));
+        }
+
+        // ===== Nomor KK =====
+        // Nomor KK = 16 digit. Digit ke-7 s/d ke-12 berisi tanggal penerbitan
+        // KK dalam format DDMMYY (tanpa penyesuaian jenis kelamin seperti NIK).
+        function parseKK(kk) {
+            const digits = String(kk == null ? '' : kk).replace(/\D/g, '');
+            if (digits.length !== 16) return null;
+            const dd = parseInt(digits.substr(6, 2), 10);
+            const mm = parseInt(digits.substr(8, 2), 10);
+            const yy = parseInt(digits.substr(10, 2), 10);
+            if (mm < 1 || mm > 12) return null;
+            if (dd < 1 || dd > 31) return null;
+            const curYY = new Date().getFullYear() % 100;
+            const year = yy <= curYY ? 2000 + yy : 1900 + yy;
+            const daysInMonth = new Date(year, mm, 0).getDate();
+            if (dd > daysInMonth) return null;
+            const pad = function (n) { return String(n).padStart(2, '0'); };
+            return { tanggalKK: year + '-' + pad(mm) + '-' + pad(dd) };
+        }
+
+        function setKKHint(msg, kind) {
+            const el = document.getElementById('warga-nomorkk-hint');
+            if (!el) return;
+            el.textContent = msg || '';
+            el.className = 'text-xs leading-snug mt-1 ' + (kind === 'err' ? 'text-rose-600' : (kind === 'warn' ? 'text-amber-600' : (kind === 'ok' ? 'text-emerald-600' : 'text-slate-400')));
+        }
+
+        function onKKInput(el) {
+            const digits = String(el.value || '').replace(/\D/g, '').slice(0, 16);
+            if (digits !== el.value) el.value = digits;
+            setKKHintFromValue(digits);
+        }
+
+        // Tampilkan petunjuk progres/validasi tanpa memaksa (dipakai saat mengetik).
+        function setKKHintFromValue(kk) {
+            const digits = String(kk == null ? '' : kk).replace(/\D/g, '');
+            if (!digits.length) { setKKHint('', ''); return true; }
+            if (digits.length !== 16) { setKKHint(digits.length + '/16 digit', ''); return false; }
+            if (!parseKK(digits)) {
+                setKKHint('16 digit, tetapi tanggal pada digit 7-12 (DDMMYY) tidak valid.', 'warn');
+                return false;
+            }
+            setKKHint('Nomor KK valid. Tanggal penerbitan: ' + fmtDateDisplay(parseKK(digits).tanggalKK) + '.', 'ok');
+            return true;
+        }
+
+        // Validasi Nomor KK saat menyimpan. Kosong = diizinkan (opsional).
+        function validateWargaKK(kk) {
+            const digits = String(kk == null ? '' : kk).replace(/\D/g, '');
+            if (!digits.length) return true;
+            if (digits.length !== 16) {
+                setKKHint('Nomor KK harus 16 digit (' + digits.length + '/16).', 'err');
+                const el = document.getElementById('warga-nomorkk');
+                if (el && typeof el.focus === 'function') el.focus();
+                if (typeof showToast === 'function') showToast('Nomor KK harus 16 digit angka.', 'error');
+                return false;
+            }
+            if (!parseKK(digits)) {
+                setKKHint('Digit 7-12 Nomor KK harus berupa tanggal penerbitan yang valid (DDMMYY).', 'err');
+                const el = document.getElementById('warga-nomorkk');
+                if (el && typeof el.focus === 'function') el.focus();
+                if (typeof showToast === 'function') showToast('Tanggal pada digit 7-12 Nomor KK tidak valid.', 'error');
+                return false;
+            }
+            return true;
         }
 
         // Nilai NIK dibandingkan sebagai digit saja (abaikan spasi/tanda).
@@ -3092,7 +3159,7 @@
                 if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
                 if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
                 if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
-                if (id === 'modal-warga') { setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); if (editMode.warga === null) hideWargaTimestamp(); }
+                if (id === 'modal-warga') { setNIKHint(''); setKKHint(''); resetNIKAuto(); updateWargaHpActions(); if (editMode.warga === null) hideWargaTimestamp(); }
                 if (id === 'modal-surat') updateSuratHpActions();
             }
             document.getElementById(id).classList.remove('hidden');
@@ -3102,7 +3169,7 @@
             opts = opts || {};
             document.getElementById(id).classList.add('hidden');
             // Reset edit mode and modal UI
-            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); resetNIKAuto(); updateWargaHpActions(); hideWargaTimestamp(); }
+            if (id === 'modal-warga') { editMode.warga = null; document.getElementById('modal-warga-title').textContent = 'Tambah Data Warga'; document.getElementById('btn-save-warga').textContent = 'Simpan Warga'; setNIKHint(''); setKKHint(''); resetNIKAuto(); updateWargaHpActions(); hideWargaTimestamp(); }
             else if (id === 'modal-kas') { editMode.kas = null; document.getElementById('modal-kas-title').textContent = 'Catat Transaksi Kas'; document.getElementById('btn-save-kas').textContent = 'Simpan Transaksi'; }
             else if (id === 'modal-pengumuman') { editMode.pengumuman = null; document.getElementById('modal-pengumuman-title').textContent = 'Buat Pengumuman Baru'; document.getElementById('btn-save-pengumuman').textContent = 'Terbitkan'; document.getElementById('pengumuman-publik').checked = true; }
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
@@ -3181,6 +3248,9 @@
                 statusTinggal: document.getElementById('warga-status').value,
                 alamat: document.getElementById('warga-alamat').value
             };
+
+            // Validasi Nomor KK: 16 digit & digit 7-12 = tanggal penerbitan (DDMMYY).
+            if (!validateWargaKK(data.nomorKK)) return;
 
             if (editMode.warga !== null) {
                 const editId = editMode.warga;
@@ -3346,6 +3416,7 @@
             showWargaTimestamp(item.timestamp);
             document.getElementById('btn-save-warga').textContent = 'Perbarui Warga';
             openModal('modal-warga');
+            setKKHintFromValue(item.nomorKK);
         }
 
         function editKas(index) {
