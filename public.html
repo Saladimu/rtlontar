@@ -1271,7 +1271,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-14-05';
+        const APP_BUILD = '2026-10-14-06';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2569,7 +2569,7 @@
                         '</div>' +
                         (it.petugas ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300"><i class="fa-solid fa-user-gear mr-1"></i>Petugas: ' + escapeHtml(it.petugas) + '</div>' : '') +
                         (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
-                        (it.tanggalSelesai ? '<div class="mt-2 text-[11px] text-emerald-700 dark:text-emerald-300"><i class="fa-solid fa-circle-check mr-1"></i>Selesai: ' + escapeHtml(it.tanggalSelesai) + '</div>' : '') +
+                        (it.tanggalSelesai ? '<div class="mt-2 text-[11px] text-emerald-700 dark:text-emerald-300"><i class="fa-solid fa-circle-check mr-1"></i>Selesai: ' + escapeHtml(_laporIsoToDDMMYYYY(it.tanggalSelesai) || it.tanggalSelesai) + '</div>' : '') +
                     '</div>';
             }).join('');
             if (archived > 0) {
