@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v24-2026-10-14";
+var CODE_VERSION = "publik-v25-2026-10-14";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -168,6 +168,23 @@ function isPortalEnabled() {
 function setPortalEnabled(enabled) {
   PropertiesService.getScriptProperties().setProperty(PORTAL_PROP, enabled ? 'true' : 'false');
   return isPortalEnabled();
+}
+
+// ================= STATUS FITUR LAPOR & ASPIRASI =================
+// Flag ON/OFF fitur "Lapor & Aspirasi" di portal publik, terpisah dari portal utama.
+// Disimpan di Script Properties key "LAPOR_ENABLED". Bila "false", aksi publik
+// submitLapor/lookupWargaHp/checkLapor ditolak. Bila belum diatur, dianggap AKTIF.
+var LAPOR_PROP = 'LAPOR_ENABLED';
+
+function isLaporEnabled() {
+  var v = PropertiesService.getScriptProperties().getProperty(LAPOR_PROP);
+  if (v === null || v === undefined || v === '') return true;
+  return String(v).trim().toLowerCase() !== 'false';
+}
+
+function setLaporEnabled(enabled) {
+  PropertiesService.getScriptProperties().setProperty(LAPOR_PROP, enabled ? 'true' : 'false');
+  return isLaporEnabled();
 }
 
 // True bila nilai Publik berarti tampil di portal publik.
@@ -487,7 +504,7 @@ function readAllSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "adminEmail": getAdminEmail(), "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "adminEmail": getAdminEmail(), "data": data };
 }
 
 // Baca hanya data yang boleh tampil di portal publik:
@@ -516,7 +533,7 @@ function readPublicSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "portalEnabled": true, "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": true, "laporEnabled": isLaporEnabled(), "data": data };
 }
 
 function doPost(e) {
@@ -541,6 +558,15 @@ function doPost(e) {
       }
       var enabled = setPortalEnabled(data.enabled === true || String(data.enabled) === 'true');
       return respond({ "result": "success", "portalEnabled": enabled });
+    }
+
+    // Aksi khusus: mengubah status ON/OFF fitur Lapor & Aspirasi (butuh token admin).
+    if (data.action === 'setLaporStatus') {
+      if (!isAuthorized(data.token)) {
+        return respond(unauthorized());
+      }
+      var laporOn = setLaporEnabled(data.enabled === true || String(data.enabled) === 'true');
+      return respond({ "result": "success", "laporEnabled": laporOn });
     }
 
     // Aksi khusus: mengubah alamat email admin (ADMIN_EMAIL, butuh token admin).
@@ -1365,6 +1391,9 @@ function handleLookupWargaHp(params) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
   }
+  if (!isLaporEnabled()) {
+    return suratError('lapor_disabled', 'Fitur Lapor & Aspirasi sedang dinonaktifkan oleh admin.');
+  }
   var hpRaw = cleanStr(params.hp, 30);
   var hpDigits = hpRaw.replace(/\D/g, '');
   if (hpDigits.length < 9 || hpDigits.length > 15) {
@@ -1395,6 +1424,9 @@ function handleSubmitLapor(data) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
   }
+  if (!isLaporEnabled()) {
+    return suratError('lapor_disabled', 'Fitur Lapor & Aspirasi sedang dinonaktifkan oleh admin.');
+  }
 
   // Honeypot: field tersembunyi yang hanya diisi bot. Pura-pura sukses.
   if (cleanStr(data.website, 100)) {
@@ -1421,6 +1453,9 @@ function handleSubmitLapor(data) {
   if (detail.length < 10) return suratError('invalid', 'Detail pengaduan wajib diisi (minimal 10 karakter).');
   if (!setuju) return suratError('invalid', 'Persetujuan penggunaan data wajib dicentang.');
   if (tanggalKejadian && !/^\d{4}-\d{2}-\d{2}$/.test(tanggalKejadian)) tanggalKejadian = '';
+  if (tanggalKejadian && tanggalKejadian > Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd')) {
+    return suratError('invalid', 'Tanggal Kejadian tidak boleh melebihi hari ini. Periksa kembali tanggal.');
+  }
 
   if (!checkAndRecordLaporRate(hpNorm)) {
     return suratError('rate_limited', 'Terlalu banyak laporan. Silakan coba lagi beberapa saat lagi.');
@@ -1485,6 +1520,9 @@ function handleSubmitLapor(data) {
 function handleCheckLapor(params) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+  if (!isLaporEnabled()) {
+    return suratError('lapor_disabled', 'Fitur Lapor & Aspirasi sedang dinonaktifkan oleh admin.');
   }
   var nomor = cleanStr(params.nomor, 40).toUpperCase();
   if (!nomor) {

@@ -19,6 +19,7 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - **Nama:** `ADMIN_TOKEN`
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
+   - (Opsional) **Nama:** `LAPOR_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, fitur **Lapor & Aspirasi** dianggap **aktif**. Nilai ini otomatis diubah lewat toggle **Lapor & Aspirasi** di panel Portal Publik aplikasi (aksi `setLaporStatus`).
     - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat** dan **pengaduan Lapor & Aspirasi** baru dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — data tetap tersimpan. Dapat juga diisi/diubah dari **dashboard admin**: menu **Settings > Integrasi Google Sheets > Admin Email** (aksi `setAdminEmail`).
    - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
    - (Opsional) **Nama:** `NOTIF_REPLY_TO`, **Nilai:** alamat **Reply-To** email notifikasi. Bila kosong, default memakai nilai `ADMIN_EMAIL` (balasan otomatis mengarah ke admin).
@@ -248,8 +249,8 @@ Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tangga
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=lookupWarga&nik=3173012304567890&callback=myCallback
 ```
-Respons (ditemukan): `{"result":"success","version":"publik-v23-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
-Respons (tidak terdaftar): `{"result":"success","version":"publik-v23-2026-10-14","found":false}`
+Respons (ditemukan): `{"result":"success","version":"publik-v25-2026-10-14","found":true,"nama":"Budi Santoso","noHp":"081234567890","alamat":"Jl. Merdeka No. 1"}`
+Respons (tidak terdaftar): `{"result":"success","version":"publik-v25-2026-10-14","found":false}`
 
 **Contoh Lookup Warga berdasarkan No. HP (form Lapor & Aspirasi):**
 ```
@@ -294,6 +295,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | Aksi | Payload | Deskripsi |
 |------|---------|-----------|
 | `setPortalStatus` | `{action:"setPortalStatus", enabled:true/false, token:T}` | Menyalakan/mematikan portal publik. Butuh token admin. Disimpan di Script Property `PUBLIC_PORTAL_ENABLED` |
+| `setLaporStatus` | `{action:"setLaporStatus", enabled:true/false, token:T}` | Menyalakan/mematikan fitur **Lapor & Aspirasi**. Butuh token admin. Disimpan di Script Property `LAPOR_ENABLED` |
 | `setAdminEmail` | `{action:"setAdminEmail", email:"admin@contoh.com", token:T}` | Menyimpan alamat email admin ke Script Property `ADMIN_EMAIL` (penerima notifikasi pengajuan surat). Butuh token admin. Validasi format: bila kosong/salah → `{result:"error", code:"invalid_email"}`; sukses → `{result:"success", adminEmail}`. Dipakai tombol **Save Email** di panel Pengaturan (`index.html`) |
 | `submitSurat` | `{action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan, ref?, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Pengajuan_Surat`. Server memaksa `Status="Pending"`, mengisi Timestamp & ID. NIK wajib 16 digit; `website` adalah honeypot; dibatasi ≤ 5 pengajuan/jam per NIK (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF. Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", id}` |
 | `submitLapor` | `{action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Lapor_Aspirasi`. **No. HP wajib terdaftar** di `Data_Warga` (Nama & Alamat diambil dari sana, bukan dari klien); server memaksa `Status="Diterima"`, mengisi Timestamp, ID (`ADU-...`), & **No. Pengaduan** (`ADU/<tahun>-NNN`). `foto` (base64) opsional diunggah ke Drive; `website` honeypot; dibatasi ≤ 5/jam per No. HP (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF atau No. HP tidak terdaftar (`{result:"error", code:"not_registered"}`). Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", noPengaduan, id}` |
@@ -407,8 +409,9 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`/`Pengajuan_Surat`/`Lapor_Aspirasi`; ditolak (`portal_disabled`) bila portal OFF |
 | `getOrCreateSheet(ss, name)` | Ambil sheet; **buat otomatis** (beserta header) bila belum ada & termasuk skema dikenal |
 | `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
+| `isLaporEnabled()` / `setLaporEnabled(bool)` | Baca/tulis status fitur Lapor & Aspirasi di Script Property `LAPOR_ENABLED` (default aktif) |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setAdminEmail` (token) + `submitSurat` & `submitLapor` (publik) |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setLaporStatus` / `setAdminEmail` (token) + `submitSurat` & `submitLapor` (publik) |
 | `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
 | `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
 | `handleLookupWarga(params)` | Aksi publik `lookupWarga`: cari warga berdasar NIK, buka hanya Nama/No. HP/Alamat |

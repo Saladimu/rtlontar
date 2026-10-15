@@ -69,7 +69,7 @@ Catatan penting:
   - **Connected** (hijau) = aplikasi tersambung ke Google Sheets, data tersimpan di server.
   - **Local Only** (kuning) = belum tersambung ke server; perubahan hanya tersimpan di browser ini.
   - **Offline** (merah) = perangkat tidak ada internet.
-- **Tombol 🔄 Muat Ulang** — menyegarkan aplikasi (hard refresh). Ada di header desktop, header HP, dan sidebar.
+- **Tombol 🔄 Muat Ulang** — menyegarkan aplikasi (hard refresh). Ada di header desktop, header HP, dan sidebar. **Dibatasi maksimal 1x per 3 menit**; bila ditekan terlalu cepat, muncul pesan sisa waktu tunggu.
 - **Tombol “Versi Baru — Muat Ulang”** — muncul **berkedip** hanya bila ada versi aplikasi terbaru. Aplikasi memeriksa versi secara berkala, jadi Anda tidak perlu memeriksa manual — cukup klik saat tombolnya muncul.
 - **Terakhir diperbarui** — waktu data terakhir dimuat dari server.
 
@@ -262,8 +262,8 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga �
 ### Memproses pengaduan
 
 1. Klik baris (atau ikon pensil) untuk membuka **Edit**.
-2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`; bisa juga dipilih lewat tombol kalender). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**. Tanggal dapat **diketik langsung** pada fieldnya, atau dipilih lewat **tombol kalender** di sampingnya. **Tanggal Penyelesaian tidak boleh lebih awal** dari **Tanggal Kejadian** maupun **tanggal laporan** (Timestamp) — sistem akan menolak bila terbalik.
-3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga. Lampiran **Foto / Bukti Pendukung** warga tampil sebagai **pratinjau** — tautannya **dikunci** (tidak dapat diubah) dan bisa dibuka ukuran asli lewat tombol **“Buka foto asli”**.
+2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**. Tanggal dapat **diketik langsung** pada fieldnya, atau dipilih lewat kalender saat field diklik. **Tanggal Kejadian tidak boleh melebihi hari ini**, dan **Tanggal Penyelesaian tidak boleh lebih awal** dari **Tanggal Kejadian** maupun **tanggal laporan** (Timestamp) — sistem akan menolak bila terbalik.
+3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga. **Nama Warga, No. HP, dan Alamat tidak dapat diubah** saat mengedit (dikunci karena berasal dari data warga saat melapor). Lampiran **Foto / Bukti Pendukung** warga tampil sebagai **pratinjau** — tautannya **dikunci** (tidak dapat diubah) dan bisa dibuka ukuran asli lewat tombol **“Buka foto asli”**.
 4. Klik **Simpan**. Ikon **ubah status cepat** (putar) juga bisa dipakai untuk menggilir status tanpa membuka modal.
 
 ### Mencatat pengaduan manual
@@ -285,10 +285,13 @@ Menu **Portal Publik** mengatur halaman yang dilihat warga.
 - **Toggle Portal Publik** dengan badge **AKTIF** / non-aktif:
   - **AKTIF** — warga bisa membuka portal, membaca pengumuman/kegiatan, mengajukan surat, dan menyampaikan **Lapor & Aspirasi**.
   - **non-aktif** — server menolak permintaan portal, form pengajuan surat, lapor/aspirasi & cek status otomatis disembunyikan. Data benar-benar tidak bisa diakses, bukan sekadar tautannya disembunyikan.
+- **Toggle Lapor & Aspirasi** dengan badge **AKTIF** / non-aktif — mengatur khusus fitur pengaduan/aspirasi:
+  - **AKTIF** — form lapor/aspirasi & cek status tersedia untuk warga.
+  - **non-aktif** — menu Lapor & Aspirasi disembunyikan dari Portal Publik dan server menolak pengiriman/pencarian (`lapor_disabled`). Pengumuman, kegiatan, dan layanan surat tetap berjalan normal.
 - **Buka Portal** — membuka portal publik di tab baru untuk memeriksa tampilannya.
-- Ringkasan **“Apa yang Bisa Dilihat Warga?”**:
+- Ringkasan **“Apa yang Bisa Dilihat Warga?”** (dapat dibuka/ditutup dengan mengklik judulnya):
   - **Bisa dilihat:** Pengumuman RT, Agenda Kegiatan Warga, informasi resmi RT, form pengajuan surat, form lapor/aspirasi, & cek status.
-  - **Tidak bisa dilihat:** data pribadi warga, rekening/kas RT, tombol tambah/edit/hapus.
+  - **Tidak bisa dilihat:** data pribadi warga, rekening/kas RT, data pengaduan/surat warga lain, tombol tambah/edit/hapus.
 - Hanya pengumuman & kegiatan yang ditandai **Publik** yang tampil. Gunakan ikon 👁️ pada kartu untuk menampilkan/menyembunyikan.
 
 > **Kapan portal dimatikan?** Misalnya saat migrasi data atau ada gangguan. Ingat: saat OFF, warga **tidak bisa mengajukan surat** maupun **mengirim lapor/aspirasi**.
@@ -539,6 +542,7 @@ Buka **Project Settings → Script Properties** di Apps Script dan tambahkan:
 | `NOTIF_REPLY_TO` | Opsional | Alamat balasan (default `ADMIN_EMAIL`). |
 | `NOTIF_SUBJECT_PREFIX` | Opsional | Prefiks subjek email (default `[SAPA-RT]`). |
 | `LAPOR_FOLDER_ID` | Opsional | ID folder Google Drive untuk menyimpan foto pengaduan. Bila kosong, backend mencari/membuat folder bernama `Lapor`. |
+| `LAPOR_ENABLED` | Opsional | `true`/`false` untuk menyalakan/mematikan fitur **Lapor & Aspirasi** (default **aktif** bila tidak diisi). Nilai ini biasanya diubah dari tombol **ON/OFF** di panel Portal Publik, tidak perlu diedit manual. |
 
 Bila baru mengaktifkan email, jalankan izin sekali: pilih fungsi **`authorizeMail`** pada dropdown editor Apps Script → **Run** → **Review permissions** → **Allow** → lalu deploy **New version**.
 

@@ -867,35 +867,84 @@
                 </div>
             </div>
 
-            <!-- Feature Comparison -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
-                <h4 class="font-bold text-slate-800 mb-4">Apa yang Bisa Dilihat Warga?</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
-                        <h5 class="font-semibold text-emerald-800 text-sm mb-2">
-                            <i class="fa-solid fa-check-circle mr-1"></i> Bisa Dilihat
-                        </h5>
-                        <ul class="text-xs text-emerald-700 space-y-1">
-                            <li>&bull; Pengumuman RT</li>
-                            <li>&bull; Agenda Kegiatan Warga</li>
-                            <li>&bull; Informasi resmi RT</li>
-                        </ul>
+            <!-- Lapor & Aspirasi Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-teal-100 text-teal-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-comment-dots text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">Lapor &amp; Aspirasi</h3>
+                            <p class="text-xs text-slate-500">Aktifkan agar warga dapat mengirim pengaduan/aspirasi dari Portal Publik</p>
+                        </div>
                     </div>
-                    <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl">
-                        <h5 class="font-semibold text-rose-800 text-sm mb-2">
-                            <i class="fa-solid fa-xmark-circle mr-1"></i> Tidak Bisa Dilihat
-                        </h5>
-                        <ul class="text-xs text-rose-700 space-y-1">
-                            <li>&bull; Data pribadi warga</li>
-                            <li>&bull; Rekening kas RT</li>
-                            <li>&bull; Tombol tambah/edit/hapus</li>
-                        </ul>
+                    <div class="flex items-center space-x-3">
+                        <div id="lapor-portal-status-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
+                            AKTIF
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-lapor-portal" onchange="toggleLaporPortal()" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                        </label>
                     </div>
                 </div>
-                <p class="text-[11px] text-slate-500 mt-4">
-                    <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>
-                    Hanya Pengumuman & Kegiatan yang ditandai <b>Publik</b> yang akan tampil. Gunakan tombol ikon mata pada tiap kartu untuk menampilkan/menyembunyikan.
-                </p>
+
+                <div id="lapor-portal-off" class="hidden p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p class="text-sm text-amber-800">
+                        <i class="fa-solid fa-lock mr-2"></i>
+                        Fitur <b>Lapor &amp; Aspirasi non-aktif</b>. Menu pengaduan disembunyikan dari Portal Publik dan pengiriman/carian ditolak sampai diaktifkan kembali.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Feature Comparison (collapsible) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+                <button type="button" onclick="togglePublicInfo()" id="public-info-toggle" aria-expanded="true" aria-controls="public-info-body"
+                    class="w-full flex items-center justify-between gap-3 p-6 text-left hover:bg-slate-50 transition">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-circle-info text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-slate-800">Apa yang Bisa Dilihat Warga?</h4>
+                            <p class="text-xs text-slate-500">Ringkasan fitur Portal Publik</p>
+                        </div>
+                    </div>
+                    <i id="public-info-chevron" class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                </button>
+                <div id="public-info-body" class="px-6 pb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                            <h5 class="font-semibold text-emerald-800 text-sm mb-2">
+                                <i class="fa-solid fa-check-circle mr-1"></i> Bisa Dilihat
+                            </h5>
+                            <ul class="text-xs text-emerald-700 space-y-1">
+                                <li>&bull; <b>Pengumuman RT</b> (yang ditandai Publik)</li>
+                                <li>&bull; <b>Agenda Kegiatan Warga</b> (yang ditandai Publik)</li>
+                                <li>&bull; Informasi resmi &amp; kontak pengurus RT</li>
+                                <li>&bull; <b>Layanan Surat</b> — ajukan surat pengantar/keterangan &amp; cek status (NIK + No. HP)</li>
+                                <li>&bull; <b>Lapor &amp; Aspirasi</b> — kirim pengaduan/aspirasi &amp; cek status (wajib No. WA terdaftar)</li>
+                                <li>&bull; QR &amp; tautan Portal Publik</li>
+                            </ul>
+                        </div>
+                        <div class="p-4 bg-rose-50 border border-rose-200 rounded-xl">
+                            <h5 class="font-semibold text-rose-800 text-sm mb-2">
+                                <i class="fa-solid fa-xmark-circle mr-1"></i> Tidak Bisa Dilihat
+                            </h5>
+                            <ul class="text-xs text-rose-700 space-y-1">
+                                <li>&bull; Data pribadi warga (NIK, No. KK, dll.)</li>
+                                <li>&bull; Iuran &amp; saldo kas RT</li>
+                                <li>&bull; Data pengaduan/surat warga lain</li>
+                                <li>&bull; Tombol tambah/edit/hapus</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-4">
+                        <i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>
+                        Hanya Pengumuman &amp; Kegiatan yang ditandai <b>Publik</b> yang tampil. Menu <b>Layanan Surat</b> &amp; <b>Lapor &amp; Aspirasi</b> dapat dinyalakan/dimatikan lewat tombol di panel ini.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -1266,10 +1315,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Kejadian</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="lapor-admin-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="flex-1 px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
-                            <button type="button" onclick="openDatePicker('lapor-admin-tanggal')" title="Pilih tanggal dari kalender" aria-label="Pilih tanggal dari kalender" class="px-3 rounded-xl border text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-calendar"></i></button>
-                        </div>
+                        <input type="text" id="lapor-admin-tanggal" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('lapor-admin-tanggal')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
                     </div>
                 </div>
                 <div>
@@ -1296,10 +1342,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Penyelesaian <span id="lapor-tanggal-selesai-req" class="hidden text-rose-500">*</span></label>
-                        <div class="flex gap-2">
-                            <input type="text" id="lapor-admin-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" placeholder="dd-mm-yyyy" class="flex-1 px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
-                            <button type="button" onclick="openDatePicker('lapor-admin-tanggal-selesai')" title="Pilih tanggal dari kalender" aria-label="Pilih tanggal dari kalender" class="px-3 rounded-xl border text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-calendar"></i></button>
-                        </div>
+                        <input type="text" id="lapor-admin-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('lapor-admin-tanggal-selesai')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Catatan Tindak Lanjut</label>
@@ -1566,7 +1609,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v24-2026-10-14';
+        const EXPECTED_BACKEND_VERSION = 'publik-v25-2026-10-14';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1576,7 +1619,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-06';
+        const APP_BUILD = '2026-10-14-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -1975,7 +2018,8 @@
             adminEmail: localStorage.getItem('rt_admin_email') || '',
             backendVersion: '',
             activeBase: '',
-            portalEnabled: true
+            portalEnabled: true,
+            laporEnabled: true
         };
 
         // Application Init
@@ -2171,7 +2215,26 @@
             }
         }
 
+        // Batasi refresh maksimal 1x per 3 menit untuk menghindari beban berlebih.
+        const REFRESH_COOLDOWN_MS = 3 * 60 * 1000;
+        function refreshCooldownRemaining() {
+            const last = parseInt(localStorage.getItem('rt_last_refresh') || '0', 10) || 0;
+            const remain = REFRESH_COOLDOWN_MS - (Date.now() - last);
+            return remain > 0 ? remain : 0;
+        }
+
         function refreshData() {
+            const remain = refreshCooldownRemaining();
+            if (remain > 0) {
+                const secs = Math.ceil(remain / 1000);
+                const mins = Math.floor(secs / 60);
+                const remSec = secs % 60;
+                const label = mins > 0 ? (mins + ' menit ' + remSec + ' detik') : (remSec + ' detik');
+                showToast('Mohon tunggu ' + label + ' lagi sebelum menyegarkan data.', 'info');
+                return;
+            }
+            localStorage.setItem('rt_last_refresh', String(Date.now()));
+
             const btns = [
                 document.getElementById('desktop-refresh-btn'),
                 document.getElementById('mobile-refresh-btn'),
@@ -4168,6 +4231,22 @@
             box.classList.remove('hidden');
         }
 
+        // Nama, No. HP, dan Alamat tidak boleh diubah saat mengedit pengaduan
+        // (data identitas berasal dari data warga saat warga melapor).
+        function setLaporIdentityReadonly(on) {
+            ['lapor-admin-nama', 'lapor-admin-hp', 'lapor-admin-alamat'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.readOnly = !!on;
+                el.classList.toggle('bg-slate-100', !!on);
+                el.classList.toggle('text-slate-500', !!on);
+                el.classList.toggle('cursor-default', !!on);
+                el.setAttribute('aria-readonly', on ? 'true' : 'false');
+                if (on) el.title = 'Data identitas tidak dapat diubah saat mengedit pengaduan';
+                else el.removeAttribute('title');
+            });
+        }
+
         function openAddLapor() {
             editMode.lapor = null;
             const form = document.getElementById('form-lapor');
@@ -4175,6 +4254,7 @@
             renderLaporAdminFoto('');
             clearLaporFormError();
             initLaporForm();
+            setLaporIdentityReadonly(false);
             const statusEl = document.getElementById('lapor-admin-status');
             if (statusEl) statusEl.value = 'Diterima';
             updateLaporTanggalSelesaiReq();
@@ -4193,6 +4273,7 @@
             editMode.lapor = item._id;
             clearLaporFormError();
             initLaporForm();
+            setLaporIdentityReadonly(true);
             document.getElementById('modal-lapor-title').textContent = 'Edit Pengaduan';
             const wrap = document.getElementById('lapor-tanggal-meta-wrap');
             if (wrap) wrap.classList.remove('hidden');
@@ -4244,6 +4325,12 @@
             if (!alamat) { showLaporFormError('Alamat / No. Rumah wajib diisi.', 'lapor-admin-alamat'); return; }
             if (status === 'Selesai' && !tanggalSelesai) {
                 showLaporFormError('Isi Tanggal Penyelesaian sebelum menandai status Selesai.', 'lapor-admin-tanggal-selesai');
+                return;
+            }
+
+            // Tanggal Kejadian tidak boleh melebihi hari ini.
+            if (tanggalKejadian && tanggalKejadian > todayLocalISO()) {
+                showLaporFormError('Tanggal Kejadian tidak boleh melebihi hari ini.', 'lapor-admin-tanggal');
                 return;
             }
 
@@ -4872,6 +4959,68 @@
             }
         }
 
+        // Toggle ON/OFF fitur Lapor & Aspirasi di Portal Publik (disimpan di backend).
+        function toggleLaporPortal() {
+            const checkbox = document.getElementById('toggle-lapor-portal');
+            const enabled = checkbox ? checkbox.checked : true;
+
+            if (!apiBases().length) {
+                showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan.', 'error');
+                if (checkbox) checkbox.checked = !enabled;
+                return;
+            }
+            if (!appState.adminToken) {
+                promptForAdminToken('Token admin belum diatur. Simpan token di Pengaturan sebelum mengubah status Lapor & Aspirasi.');
+                if (checkbox) checkbox.checked = !enabled;
+                return;
+            }
+
+            appState.laporEnabled = enabled;
+            updateLaporPortalUI();
+
+            postToSheets({ action: 'setLaporStatus', enabled: enabled, token: appState.adminToken }, {
+                onSuccess: () => {
+                    showToast(enabled ? 'Lapor & Aspirasi diaktifkan!' : 'Lapor & Aspirasi dinonaktifkan.', enabled ? 'success' : 'info');
+                },
+                onError: (reason, detail) => {
+                    appState.laporEnabled = !enabled;
+                    updateLaporPortalUI();
+                    if (detail && detail.code === 'unauthorized') {
+                        promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        return;
+                    }
+                    showToast('Gagal mengirim status Lapor & Aspirasi ke Google Sheets.', 'error');
+                }
+            });
+        }
+
+        function updateLaporPortalUI() {
+            const checkbox = document.getElementById('toggle-lapor-portal');
+            const badge = document.getElementById('lapor-portal-status-badge');
+            const offSection = document.getElementById('lapor-portal-off');
+            const enabled = appState.laporEnabled !== false;
+
+            if (checkbox) checkbox.checked = enabled;
+            if (badge) {
+                badge.className = enabled
+                    ? 'px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700'
+                    : 'px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700';
+                badge.textContent = enabled ? 'AKTIF' : 'NON-AKTIF';
+            }
+            if (offSection) offSection.classList.toggle('hidden', enabled);
+        }
+
+        // Collapse/expand ringkasan "Apa yang Bisa Dilihat Warga?".
+        function togglePublicInfo() {
+            const body = document.getElementById('public-info-body');
+            const chevron = document.getElementById('public-info-chevron');
+            const toggle = document.getElementById('public-info-toggle');
+            if (!body) return;
+            const hidden = body.classList.toggle('hidden');
+            if (chevron) chevron.style.transform = hidden ? 'rotate(-90deg)' : '';
+            if (toggle) toggle.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+        }
+
         // True bila base adalah proxy same-origin (bukan URL absolut lintas-situs).
         // Proxy same-origin mengembalikan JSON yang bisa dibaca browser sehingga hasil
         // tulis benar-benar bisa diverifikasi (bukan sekadar asumsi berhasil).
@@ -5191,7 +5340,9 @@
             })));
             saveLocalState();
             appState.portalEnabled = res.portalEnabled !== false;
+            appState.laporEnabled = res.laporEnabled !== false;
             updatePublicPortalUI();
+            updateLaporPortalUI();
             if (typeof res.adminEmail === 'string' && res.adminEmail) {
                 appState.adminEmail = res.adminEmail;
                 localStorage.setItem('rt_admin_email', res.adminEmail);

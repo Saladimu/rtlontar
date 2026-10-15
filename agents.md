@@ -124,14 +124,14 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`adminEmail`. **Butuh token** |
-| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya`. **Tanpa token**. Bila portal OFF → `{result:"error", code:"portal_disabled"}` |
+| `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`laporEnabled`/`adminEmail`. **Butuh token** |
+| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya` + `laporEnabled`. **Tanpa token**. Bila portal OFF → `{result:"error", code:"portal_disabled"}` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris di sheet X (JSONP callback). **Butuh token** |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
 | `lookupWarga` | `action=lookupWarga&nik=...` | Cari 1 warga di `Data_Warga` → `{found, nama, noHp, alamat}` saja. **Tanpa token**, ikut gate portal & rate-limit |
 | `checkSurat` | `action=checkSurat&nik=...&hp=...` | Cek status pengajuan publik → `{result, count, archived, data:[...]}`. **Tanpa token** |
-| `lookupWargaHp` | `action=lookupWargaHp&hp=...` | Cari 1 warga di `Data_Warga` lewat **No. HP** → `{found, nama, alamat}` saja (dipakai form Lapor). **Tanpa token** |
-| `checkLapor` | `action=checkLapor&nomor=...` | Cek status pengaduan berdasar **No. Pengaduan** → `{result, count, archived, data:[...]}`. **Tanpa token** |
+| `lookupWargaHp` | `action=lookupWargaHp&hp=...` | Cari 1 warga di `Data_Warga` lewat **No. HP** → `{found, nama, alamat}` saja (dipakai form Lapor). **Tanpa token**; ikut gate portal & Lapor |
+| `checkLapor` | `action=checkLapor&nomor=...` | Cek status pengaduan berdasar **No. Pengaduan** → `{result, count, archived, data:[...]}`. **Tanpa token**; ikut gate portal & Lapor |
 | `sendTestEmail` | `action=sendTestEmail&token=T[&email=...]` | Kirim email uji ke `ADMIN_EMAIL` (atau `email`). **Butuh token** |
 
 **Contoh:**
@@ -156,6 +156,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 | `update` | `{ action:"update", sheetName, token, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
 | `delete` | `{ action:"delete", sheetName, token, id }` | Hapus baris dengan `id` tersebut |
 | `setPortalStatus` | `{ action:"setPortalStatus", enabled:true/false, token }` | Nyalakan/matikan portal publik (Script Property `PUBLIC_PORTAL_ENABLED`). Bukan operasi per-sheet |
+| `setLaporStatus` | `{ action:"setLaporStatus", enabled:true/false, token }` | Nyalakan/matikan fitur **Lapor & Aspirasi** (Script Property `LAPOR_ENABLED`). Bukan operasi per-sheet |
 | `submitSurat` | `{ action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan }` | Intake pengajuan surat dari portal publik. **Tanpa token**: validasi, honeypot, rate limit, paksa `Pending`, notifikasi email |
 | `submitLapor` | `{ action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju }` | Intake pengaduan dari portal publik. **Tanpa token**: No. HP wajib terdaftar, honeypot, rate limit, paksa `Diterima`, No. Pengaduan `ADU/<tahun>-NNN`, notifikasi email |
 | `setAdminEmail` | `{ action:"setAdminEmail", email, token }` | Simpan Script Property `ADMIN_EMAIL` |
@@ -177,6 +178,8 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 > **Publik (Portal Publik):** kolom `Publik` pada `Pengumuman` & `Kegiatan_Warga` menentukan apakah record tampil di `public.html` (`Ya` = tampil). Di admin, tombol toggle ikon mata (`togglePublikPengumuman` / `togglePublikKegiatan`) membalik nilainya lalu mengirim `action:"update"`. Nilai kosong dinormalisasi menjadi `Ya` oleh `normalizePublik()`.
 
 > **ON/OFF Portal Publik:** toggle di tab **Portal Publik** (`#toggle-public-portal`, handler `togglePublicPortal()`) mengirim `setPortalStatus` dan menyimpan status server-side di Script Property `PUBLIC_PORTAL_ENABLED` (`isPortalEnabled()` / `setPortalEnabled()`). Saat OFF, `readPublicSheets()` mengembalikan `code:"portal_disabled"` dan `public.html` menampilkan pesan non-aktif — jadi blokir ini nyata (bukan sekadar menyembunyikan tautan). Status juga disertakan pada respons `read` (`portalEnabled`) untuk menyinkronkan UI admin.
+
+> **ON/OFF Lapor & Aspirasi:** toggle terpisah (`#toggle-lapor-portal`, handler `toggleLaporPortal()`) mengirim `setLaporStatus` dan menyimpan status di Script Property `LAPOR_ENABLED` (`isLaporEnabled()` / `setLaporEnabled()`, default aktif). Saat OFF, `handleLookupWargaHp`/`handleCheckLapor`/`handleSubmitLapor` mengembalikan `code:"lapor_disabled"`; `public.html` menyembunyikan `#lapor-section` (dari `laporEnabled` pada respons `readPublic`). Portal, pengumuman, kegiatan, dan layanan surat tetap berjalan.
 
 ### 🔐 Keamanan & Otorisasi (Token Admin)
 

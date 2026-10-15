@@ -1271,7 +1271,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-14-04';
+        const APP_BUILD = '2026-10-14-05';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1716,10 +1716,49 @@
         // Membuka ulang halaman dengan cache-buster (?_rtcache=<ts>) agar HTML &
         // config.js terbaru benar-benar diambil ulang dari server (melewati cache
         // browser). Saat load, init menjalankan loadPublicData() kembali.
+        // Batasi refresh maksimal 1x per 3 menit untuk menghindari beban berlebih.
+        var REFRESH_COOLDOWN_MS = 3 * 60 * 1000;
+        function refreshCooldownRemaining() {
+            var last = parseInt(localStorage.getItem('rt_last_refresh') || '0', 10) || 0;
+            var remain = REFRESH_COOLDOWN_MS - (Date.now() - last);
+            return remain > 0 ? remain : 0;
+        }
+
+        // Notifikasi ringan sementara (menggantikan alert()).
+        function showPublicToast(msg, type) {
+            try {
+                var el = document.getElementById('public-toast');
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'public-toast';
+                    el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 rounded-xl text-sm font-medium shadow-lg transition-opacity duration-300 opacity-0 pointer-events-none';
+                    document.body.appendChild(el);
+                }
+                var color = type === 'error' ? 'bg-rose-600 text-white'
+                    : (type === 'success' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-white');
+                el.className = 'fixed bottom-4 left-1/2 -translate-x-1/2 z-[9999] px-4 py-2 rounded-xl text-sm font-medium shadow-lg transition-opacity duration-300 ' + color;
+                el.textContent = msg;
+                el.style.opacity = '1';
+                clearTimeout(el._hideTimer);
+                el._hideTimer = setTimeout(function () { el.style.opacity = '0'; }, 4000);
+            } catch (e) { /* noop */ }
+        }
+
         function refreshPublicData() {
             const btn = document.getElementById('refresh-btn');
             const icon = document.getElementById('refresh-icon');
             if (btn && btn.disabled) return;
+
+            const remain = refreshCooldownRemaining();
+            if (remain > 0) {
+                const secs = Math.ceil(remain / 1000);
+                const mins = Math.floor(secs / 60);
+                const remSec = secs % 60;
+                const label = mins > 0 ? (mins + ' menit ' + remSec + ' detik') : (remSec + ' detik');
+                showPublicToast('Mohon tunggu ' + label + ' lagi sebelum menyegarkan data.', 'info');
+                return;
+            }
+            localStorage.setItem('rt_last_refresh', String(Date.now()));
 
             if (btn) btn.disabled = true;
             if (icon) icon.classList.add('fa-spin');
@@ -1763,6 +1802,9 @@
                             renderPengumuman(pengumuman);
                             renderKegiatan(kegiatan);
                             updateLastUpdated(pengumuman, kegiatan);
+
+                            // Sembunyikan Lapor & Aspirasi bila dinonaktifkan admin.
+                            if (res.laporEnabled === false) hideLaporSection();
                         } else if (res && res.code === 'portal_disabled') {
                             showPortalDisabled();
                         } else {
@@ -2410,6 +2452,7 @@
             if (!jenis) { showLaporMessage('error', 'Pilih jenis pengaduan terlebih dahulu.'); return false; }
             if (judul.length < 3) { showLaporMessage('error', 'Isi judul pengaduan.'); return false; }
             if (detail.length < 10) { showLaporMessage('error', 'Isi detail pengaduan (minimal 10 karakter).'); return false; }
+            if (tanggalKejadian && tanggalKejadian > _laporTodayLocalISO()) { showLaporMessage('error', 'Tanggal kejadian tidak boleh melebihi hari ini.'); return false; }
             if (!setuju) { showLaporMessage('error', 'Centang persetujuan penggunaan data terlebih dahulu.'); return false; }
 
             const payload = {

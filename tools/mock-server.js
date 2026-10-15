@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v24-2026-10-14'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v25-2026-10-14'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -116,6 +116,12 @@ function displayTimestamp(iso) {
   return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}`;
 }
 
+// Tanggal hari ini (GMT+7) dalam format ISO yyyy-MM-dd.
+function jakartaDateToday() {
+  const p = jakartaParts(nowIso());
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
 function randomCode4() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let out = '';
@@ -176,6 +182,7 @@ function seedData() {
   const iso = (min) => new Date(base + min * 60000).toISOString();
   return {
     portalEnabled: true,
+    laporEnabled: true,
     adminEmail: '',
     sheets: {
       Data_Warga: [
@@ -218,6 +225,7 @@ function loadStore() {
       if (!Array.isArray(parsed.sheets[n])) parsed.sheets[n] = [];
     });
     if (typeof parsed.portalEnabled !== 'boolean') parsed.portalEnabled = true;
+    if (typeof parsed.laporEnabled !== 'boolean') parsed.laporEnabled = true;
     if (typeof parsed.adminEmail !== 'string') parsed.adminEmail = '';
     return parsed;
   } catch (e) {
@@ -263,7 +271,7 @@ function readAllSheets() {
       return out;
     });
   });
-  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, adminEmail: store.adminEmail || '', data };
+  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, laporEnabled: store.laporEnabled !== false, adminEmail: store.adminEmail || '', data };
 }
 
 function readPublicSheets() {
@@ -276,7 +284,7 @@ function readPublicSheets() {
   ['Pengumuman', 'Kegiatan_Warga'].forEach((name) => {
     data[name] = (full.data[name] || []).filter((row) => isPublik(row[idx[name]]));
   });
-  return { result: 'success', version: CODE_VERSION, portalEnabled: true, data };
+  return { result: 'success', version: CODE_VERSION, portalEnabled: true, laporEnabled: store.laporEnabled !== false, data };
 }
 
 function handleLookupWarga(params) {
@@ -365,8 +373,13 @@ function portalDisabled() {
   return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
 }
 
+function laporDisabled() {
+  return { result: 'error', code: 'lapor_disabled', version: CODE_VERSION, message: 'Fitur Lapor & Aspirasi sedang dinonaktifkan oleh admin.' };
+}
+
 function handleLookupWargaHp(params) {
   if (store.portalEnabled === false) return portalDisabled();
+  if (store.laporEnabled === false) return laporDisabled();
   const hpDigits = cleanStr(params.hp, 30).replace(/\D/g, '');
   if (hpDigits.length < 9 || hpDigits.length > 15) {
     return { result: 'success', version: CODE_VERSION, found: false, code: 'invalid_hp' };
@@ -392,6 +405,7 @@ function makeNomorPengaduan() {
 
 function handleCheckLapor(params) {
   if (store.portalEnabled === false) return portalDisabled();
+  if (store.laporEnabled === false) return laporDisabled();
   const nomor = cleanStr(params.nomor, 40).toUpperCase();
   if (!nomor) {
     return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Masukkan No. Pengaduan (mis. ADU/2026-001).' };
@@ -441,6 +455,12 @@ function handlePost(data) {
     return { result: 'success', portalEnabled: store.portalEnabled };
   }
 
+  if (data.action === 'setLaporStatus') {
+    store.laporEnabled = data.enabled === true || String(data.enabled) === 'true';
+    saveStore();
+    return { result: 'success', laporEnabled: store.laporEnabled };
+  }
+
   if (data.action === 'setAdminEmail') {
     const email = cleanStr(data.email, 200);
     if (!email) return { result: 'error', code: 'invalid_email', message: 'Alamat email admin tidak boleh kosong.' };
@@ -480,6 +500,7 @@ function handlePost(data) {
 
   if (data.action === 'submitLapor') {
     if (store.portalEnabled === false) return portalDisabled();
+    if (store.laporEnabled === false) return laporDisabled();
     if (cleanStr(data.website, 100)) return { result: 'success', noPengaduan: 'ok', fotoSaved: true, message: 'Laporan terkirim.' };
     const hpDigits = cleanStr(data.noHp, 30).replace(/\D/g, '');
     if (hpDigits.length < 9 || hpDigits.length > 15) {
@@ -499,6 +520,9 @@ function handlePost(data) {
     if (!setuju) return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Persetujuan penggunaan data wajib dicentang.' };
     let tglKejadian = cleanStr(data.tanggalKejadian, 20);
     if (tglKejadian && !/^\d{4}-\d{2}-\d{2}$/.test(tglKejadian)) tglKejadian = '';
+    if (tglKejadian && tglKejadian > jakartaDateToday()) {
+      return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Tanggal Kejadian tidak boleh melebihi hari ini. Periksa kembali tanggal.' };
+    }
     const ts = nowIso();
     const noPengaduan = makeNomorPengaduan();
     const id = 'ADU-' + jakartaYyMmDd(ts) + '-' + randomCode4();
