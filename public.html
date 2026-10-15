@@ -324,6 +324,10 @@
             <div class="flex items-center space-x-2 mb-4">
                 <i class="fa-solid fa-comment-dots text-teal-600 dark:text-teal-400 text-xl"></i>
                 <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Lapor &amp; Aspirasi</h2>
+                <button type="button" id="lapor-guide-btn" onclick="openPanduanLapor()" title="Panduan / Cara Penggunaan" aria-label="Buka panduan Lapor &amp; Aspirasi"
+                    class="w-8 h-8 flex items-center justify-center text-teal-600 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/40 hover:bg-teal-100 dark:hover:bg-teal-900/70 rounded-full transition">
+                    <i class="fa-solid fa-circle-info"></i>
+                </button>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -606,6 +610,68 @@
             </div>
             <div class="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
                 <button onclick="closePanduanSurat()" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition"><i class="fa-solid fa-check mr-1.5"></i>Mengerti</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PANDUAN LAPOR & ASPIRASI ================= -->
+    <div id="panduan-lapor-modal" class="hidden fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="panduan-lapor-title">
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closePanduanLapor()"></div>
+        <div class="relative bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 my-8 overflow-hidden">
+            <div class="flex items-center justify-between px-5 py-4 bg-teal-600 text-white">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-book-open text-lg"></i>
+                    <h2 id="panduan-lapor-title" class="font-bold">Panduan Lapor &amp; Aspirasi</h2>
+                </div>
+                <button onclick="closePanduanLapor()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 sm:p-5 max-h-[72vh] overflow-y-auto custom-scrollbar">
+                <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">Panduan lengkap mulai dari mengirim pengaduan/aspirasi hingga memeriksa statusnya.</p>
+                <ol class="space-y-3">
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">1</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Pada bagian <b>Lapor &amp; Aspirasi</b>, klik judul <b>"Lapor / Aspirasi Warga"</b> untuk membuka formulir.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">2</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Masukkan <b>No. WhatsApp</b> lebih dulu. Hanya nomor yang <b>terdaftar di data warga</b> yang dapat mengirim — kolom <b>Nama Warga</b> &amp; <b>Alamat</b> terisi otomatis &amp; <b>terkunci</b>. Bila nomor belum terdaftar, hubungi pengurus RT untuk mendaftarkan nomor Anda.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">3</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Pilih <b>Jenis Pengaduan</b>, lalu tulis <b>Judul</b> dan <b>Detail</b> secara jelas dan rinci (apa, di mana, sejak kapan, dan dampaknya). Isi <b>Lokasi</b> &amp; <b>Tanggal Kejadian</b> bila ada (opsional; tanggal tidak boleh melebihi hari ini).</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">4</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Lampirkan <b>Foto / Bukti Pendukung</b> bila ada (opsional, format JPG/PNG, akan dikompres otomatis), lalu tulis <b>Harapan / Solusi</b> bila perlu (opsional).</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">5</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Centang pernyataan persetujuan, lalu klik <b>"Kirim Laporan"</b>. Setelah berhasil, akan muncul <b>Nomor Pengaduan</b> (contoh <span class="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">ADU/2026-001</span>). <b>Catat/simpan nomor ini.</b></span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">6</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Status awal laporan adalah <b>Diterima</b>. Pengurus RT akan menindaklanjutinya (status berubah menjadi <b>Diproses</b>, lalu <b>Selesai</b>) beserta catatan tindak lanjut.</span>
+                    </li>
+                    <li class="flex gap-3">
+                        <span class="w-7 h-7 flex-shrink-0 rounded-full bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 font-bold text-sm flex items-center justify-center">7</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Untuk memeriksa status, buka kartu <b>"Cek Status Pengaduan"</b>, masukkan <b>No. Pengaduan</b> (mis. <span class="font-mono text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">ADU/2026-001</span>), lalu klik <b>"Cek Status"</b>. Bila <b>Selesai</b>, tanggal penyelesaian akan ikut tampil.</span>
+                    </li>
+                </ol>
+                <div class="mt-4 bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3">
+                    <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>Tips</p>
+                    <ul class="text-xs text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
+                        <li>Hanya <b>No. WhatsApp yang terdaftar</b> di data warga yang dapat mengirim laporan.</li>
+                        <li><b>Nama &amp; Alamat</b> terisi otomatis dari data warga dan <b>tidak dapat diubah</b>.</li>
+                        <li>Lampirkan <b>foto bukti</b> agar pengurus RT lebih mudah menindaklanjuti laporan.</li>
+                        <li>Simpan <b>No. Pengaduan</b> Anda untuk memeriksa status (contoh ADU/2026-001).</li>
+                        <li>Data aman: hasil cek status hanya menampilkan laporan dengan nomor yang cocok.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="px-4 py-3 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                <button onclick="closePanduanLapor()" class="px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg transition"><i class="fa-solid fa-check mr-1.5"></i>Mengerti</button>
             </div>
         </div>
     </div>
@@ -1271,7 +1337,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-14-06';
+        const APP_BUILD = '2026-10-14-07';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1422,7 +1488,7 @@
         // ===== Riwayat navigasi (tombol / gestur "Back") =====
         // Simpan status modal ke History API agar gestur "Back" mobile menutup
         // modal yang terbuka, bukan langsung keluar dari aplikasi.
-        const PUBLIC_MODAL_IDS = ['siaga-modal', 'panduan-surat-modal', 'modal-about', 'install-modal', 'qr-modal'];
+        const PUBLIC_MODAL_IDS = ['siaga-modal', 'panduan-surat-modal', 'panduan-lapor-modal', 'modal-about', 'install-modal', 'qr-modal'];
         let openPublicModalId = null;
 
         function getOpenPublicModal() { return openPublicModalId; }
@@ -1479,6 +1545,10 @@
         // ===== Panduan Layanan Surat =====
         function openPanduanSurat(opts) { openPublicModal('panduan-surat-modal', opts); }
         function closePanduanSurat(opts) { closePublicModal('panduan-surat-modal', opts); }
+
+        // ===== Panduan Lapor & Aspirasi =====
+        function openPanduanLapor(opts) { openPublicModal('panduan-lapor-modal', opts); }
+        function closePanduanLapor(opts) { closePublicModal('panduan-lapor-modal', opts); }
 
         // ===== Tentang Aplikasi (visi & misi) =====
         function openAbout(opts) { openPublicModal('modal-about', opts); }
