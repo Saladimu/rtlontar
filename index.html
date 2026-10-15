@@ -1620,7 +1620,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-14-11';
+        const APP_BUILD = '2026-10-14-12';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4395,6 +4395,7 @@
         // melalui layar pemilih WhatsApp, karena grup WhatsApp tidak punya nomor.
         function kirimWaLapor() {
             const nama = (document.getElementById('lapor-admin-nama').value || '').trim();
+            const alamat = (document.getElementById('lapor-admin-alamat').value || '').trim();
             const jenis = document.getElementById('lapor-admin-jenis').value || '';
             const judul = (document.getElementById('lapor-admin-judul').value || '').trim();
             const detail = (document.getElementById('lapor-admin-detail').value || '').trim();
@@ -4404,6 +4405,7 @@
             const petugas = (document.getElementById('lapor-admin-petugas').value || '').trim();
             const catatan = (document.getElementById('lapor-admin-catatan').value || '').trim();
             const tglSelesai = readDateInput('lapor-admin-tanggal-selesai');
+            const foto = (document.getElementById('lapor-admin-foto').value || '').trim();
 
             let noPengaduan = '';
             if (editMode.lapor !== null) {
@@ -4416,6 +4418,7 @@
             lines.push('*Informasi Pengaduan / Aspirasi ' + rtShort + '*');
             if (noPengaduan) lines.push('No. Pengaduan: ' + noPengaduan);
             lines.push('Nama: ' + (nama || '-'));
+            lines.push('Alamat: ' + (alamat || '-'));
             if (jenis) lines.push('Jenis: ' + jenis);
             if (judul) lines.push('Judul: ' + judul);
             if (detail) lines.push('Detail: ' + detail);
@@ -4425,6 +4428,7 @@
             if (petugas) lines.push('Petugas/Pengurus: ' + petugas);
             if (catatan) lines.push('Catatan Tindak Lanjut: ' + catatan);
             if (tglSelesai) lines.push('Tanggal Penyelesaian: ' + isoToDDMMYYYY(tglSelesai));
+            if (foto) lines.push('Foto: ' + foto);
 
             const text = lines.join('\n');
 
