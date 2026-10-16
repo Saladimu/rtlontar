@@ -1121,7 +1121,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Saldo Awal (Rp) *</label>
                     <input type="number" id="saldo-awal-input" required min="0" step="1" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="mis. 1500000">
-                    <p class="text-xs text-slate-400 mt-1">Saldo kas sebelum transaksi dicatat. <strong>Saldo Akhir = Saldo Awal + Pemasukan - Pengeluaran.</strong></p>
+                    <p class="text-xs text-slate-400 mt-1">Saldo <strong>dasar</strong> sebelum transaksi pertama dicatat. Pada tampilan <strong>Per Bulan</strong>/<strong>Per Tanggal</strong>, kartu Saldo Awal menampilkan saldo ini <strong>ditambah akumulasi arus kas periode-periode sebelumnya</strong> (running balance), dan <strong>Saldo Akhir = Saldo Awal periode + Pemasukan − Pengeluaran</strong>.</p>
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-saldo-awal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
@@ -1653,7 +1653,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-16-02';
+        const APP_BUILD = '2026-10-16-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3009,6 +3009,31 @@
             return '';
         }
 
+        // Awal periode aktif sebagai ISO (yyyy-MM-dd). '' berarti tanpa batas (Semua Data).
+        function kasPeriodStartISO() {
+            if (kasView.mode === 'month' && /^\d{4}-\d{2}$/.test(kasView.month)) return kasView.month + '-01';
+            if (kasView.mode === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(kasView.date)) return kasView.date;
+            return '';
+        }
+
+        // Saldo Awal periode berjalan = Saldo Awal (dasar) + akumulasi arus kas
+        // SEBELUM periode yang dipilih (dibawa dari bulan/tanggal sebelumnya).
+        // Untuk mode "Semua Data", nilainya = Saldo Awal dasar.
+        function kasOpeningBalance() {
+            const base = Number(appState.saldoAwal) || 0;
+            const startIso = kasPeriodStartISO();
+            if (!startIso) return base;
+            let net = 0;
+            appState.kas.forEach(item => {
+                if (isArchivedKas(item)) return;
+                const iso = fmtDate(item && item.tanggal);
+                if (!iso || iso >= startIso) return;
+                if (isKasKeluar(item)) net -= Number(item.jumlah) || 0;
+                else net += Number(item.jumlah) || 0;
+            });
+            return base + net;
+        }
+
         // Render Kas Table & Balances
         function renderKasTable() {
             const tbody = document.getElementById('table-kas-body');
@@ -3027,12 +3052,19 @@
                 else totalMasuk += Number(item.jumlah) || 0;
             });
 
-            const saldoAwal = Number(appState.saldoAwal) || 0;
+            // Saldo Awal = dibawa dari periode sebelumnya (running balance);
+            // Saldo Akhir = Saldo Awal periode + arus kas periode ini.
+            const opening = kasOpeningBalance();
             document.getElementById('total-pemasukan').innerText = formatRupiah(totalMasuk);
             document.getElementById('total-pengeluaran').innerText = formatRupiah(totalKeluar);
-            document.getElementById('saldo-kas-total').innerText = formatRupiah(saldoAwal + totalMasuk - totalKeluar);
+            document.getElementById('saldo-kas-total').innerText = formatRupiah(opening + totalMasuk - totalKeluar);
             const saldoAwalEl = document.getElementById('saldo-awal-kas');
-            if (saldoAwalEl) saldoAwalEl.innerText = formatRupiah(saldoAwal);
+            if (saldoAwalEl) {
+                saldoAwalEl.innerText = formatRupiah(opening);
+                saldoAwalEl.title = kasView.mode === 'all'
+                    ? 'Saldo dasar sebelum semua transaksi'
+                    : 'Saldo dibawa dari periode sebelumnya + arus kas sebelum periode ini';
+            }
 
             const periodLabelEl = document.getElementById('kas-period-label');
             if (periodLabelEl) periodLabelEl.textContent = kasPeriodLabel();

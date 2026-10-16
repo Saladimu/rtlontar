@@ -162,10 +162,10 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 ### Mengatur Saldo Awal
 
 1. Buka menu **Iuran & Kas RT** → pada kartu **Saldo Awal** (paling kiri) klik ikon ✏️ **pensil**.
-2. Isi **Saldo Awal (Rp)** — saldo kas **sebelum** transaksi mulai dicatat (mis. saldo sisa tahun lalu). Nilai harus angka `>= 0`.
+2. Isi **Saldo Awal (Rp)** — **saldo dasar sebelum transaksi pertama** mulai dicatat (mis. saldo sisa tahun lalu). Nilai harus angka `>= 0`.
 3. Klik **Simpan**. Nilai disimpan ke backend (Script Property `SALDO_AWAL`) sehingga berlaku di semua perangkat.
 
-**Rumus saldo:** **Saldo Akhir = Saldo Awal + Total Pemasukan − Total Pengeluaran**. Saldo Awal adalah nilai tetap yang ditambahkan pada setiap periode (per bulan/tanggal/semua data).
+**Saldo berjalan (running balance):** kartu **Saldo Awal** menampilkan saldo **ditambah akumulasi arus kas periode-periode sebelumnya** untuk periode yang sedang dipilih (Per Bulan/Per Tanggal); pada **Semua Data** ia sama dengan saldo dasar. **Saldo Akhir = Saldo Awal periode + Total Pemasukan − Total Pengeluaran.**
 
 ### Membaca dan menyaring laporan kas
 
