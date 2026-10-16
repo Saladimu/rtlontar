@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v26-2026-10-16";
+var CODE_VERSION = "publik-v27-2026-10-16";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -125,6 +125,30 @@ function getAdminEmail() {
 // Validasi sederhana format alamat email (cukup untuk mencegah salah ketik).
 function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v == null ? '' : v).trim());
+}
+
+// ================= SALDO AWAL KAS (Script Property "SALDO_AWAL") =================
+// Saldo pembukaan kas RT yang menjadi nilai dasar perhitungan saldo akhir:
+//   Saldo Akhir = Saldo Awal + Total Pemasukan - Total Pengeluaran.
+// Dibaca untuk ditampilkan & diubah dari panel Iuran & Kas.
+var SALDO_AWAL_PROP = 'SALDO_AWAL';
+
+function getSaldoAwal() {
+  var v = PropertiesService.getScriptProperties().getProperty(SALDO_AWAL_PROP);
+  var n = Number(v);
+  return (isFinite(n) && n >= 0) ? n : 0;
+}
+
+// Aksi admin (token): simpan Saldo Awal ke Script Property SALDO_AWAL.
+function handleSetSaldoAwal(data) {
+  var raw = (data && data.saldoAwal != null) ? data.saldoAwal : '';
+  var n = Number(String(raw).replace(/[^0-9.-]/g, ''));
+  if (!isFinite(n) || n < 0) {
+    return { "result": "error", "code": "invalid", "message": "Saldo awal harus berupa angka >= 0." };
+  }
+  n = Math.round(n);
+  PropertiesService.getScriptProperties().setProperty(SALDO_AWAL_PROP, String(n));
+  return { "result": "success", "saldoAwal": n, "message": "Saldo awal disimpan." };
 }
 
 // Perbandingan string konstan (tidak membocorkan panjang/posisi karakter).
@@ -504,7 +528,7 @@ function readAllSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "adminEmail": getAdminEmail(), "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "adminEmail": getAdminEmail(), "saldoAwal": getSaldoAwal(), "data": data };
 }
 
 // Baca hanya data yang boleh tampil di portal publik:
@@ -575,6 +599,14 @@ function doPost(e) {
         return respond(unauthorized());
       }
       return respond(handleSetAdminEmail(data));
+    }
+
+    // Aksi khusus: mengubah Saldo Awal kas (SALDO_AWAL, butuh token admin).
+    if (data.action === 'setSaldoAwal') {
+      if (!isAuthorized(data.token)) {
+        return respond(unauthorized());
+      }
+      return respond(handleSetSaldoAwal(data));
     }
 
     // Aksi publik: kirim pengajuan surat (TANPA token, hanya menambah baris baru).

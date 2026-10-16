@@ -439,7 +439,14 @@
             </div>
 
             <!-- Kas Cards Balance Overview -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Saldo Awal</p>
+                        <button type="button" onclick="openSaldoAwalModal()" class="text-slate-400 hover:text-emerald-600 p-1 rounded" title="Ubah saldo awal"><i class="fa-solid fa-pen"></i></button>
+                    </div>
+                    <p id="saldo-awal-kas" class="text-xl font-bold text-slate-700 mt-1">Rp 0</p>
+                </div>
                 <div class="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
                     <p class="text-xs text-slate-500 font-semibold uppercase">Total Pemasukan</p>
                     <p id="total-pemasukan" class="text-xl font-bold text-emerald-600 mt-1">Rp 0</p>
@@ -1103,6 +1110,27 @@
         </div>
     </div>
 
+    <!-- Modal Saldo Awal Kas -->
+    <div id="modal-saldo-awal" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-xl space-y-4 my-auto">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-lg text-slate-800">Saldo Awal Kas</h3>
+                <button onclick="closeModal('modal-saldo-awal')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form id="form-saldo-awal" onsubmit="saveSaldoAwal(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Saldo Awal (Rp) *</label>
+                    <input type="number" id="saldo-awal-input" required min="0" step="1" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="mis. 1500000">
+                    <p class="text-xs text-slate-400 mt-1">Saldo kas sebelum transaksi dicatat. <strong>Saldo Akhir = Saldo Awal + Pemasukan - Pengeluaran.</strong></p>
+                </div>
+                <div class="pt-2 flex justify-end space-x-2">
+                    <button type="button" onclick="closeModal('modal-saldo-awal')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Datalist Nama Warga (untuk lookup pada Iuran & Kas) -->
     <datalist id="warga-nama-list"></datalist>
 
@@ -1615,7 +1643,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v26-2026-10-16';
+        const EXPECTED_BACKEND_VERSION = 'publik-v27-2026-10-16';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1625,7 +1653,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-16-01';
+        const APP_BUILD = '2026-10-16-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2101,6 +2129,7 @@
             lapor: JSON.parse(localStorage.getItem('rt_lapor')) || [],
             adminToken: localStorage.getItem('rt_admin_token') || '',
             adminEmail: localStorage.getItem('rt_admin_email') || '',
+            saldoAwal: Number(localStorage.getItem('rt_saldo_awal')) || 0,
             backendVersion: '',
             activeBase: '',
             portalEnabled: true,
@@ -2173,7 +2202,7 @@
         // Simpan snapshot tampilan (tab aktif + modal terbuka) ke History API agar
         // gestur "Back" pada perangkat mobile menutup modal atau kembali ke tab
         // sebelumnya, bukan langsung keluar dari aplikasi.
-        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-lapor', 'modal-warga-surat', 'modal-about', 'modal-install'];
+        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-saldo-awal', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-lapor', 'modal-warga-surat', 'modal-about', 'modal-install'];
         let currentTab = 'dashboard';
 
         function getOpenModal() {
@@ -2515,6 +2544,7 @@
             localStorage.setItem('rt_kegiatan', JSON.stringify(appState.kegiatan));
             localStorage.setItem('rt_surat', JSON.stringify(appState.surat));
             localStorage.setItem('rt_lapor', JSON.stringify(appState.lapor));
+            localStorage.setItem('rt_saldo_awal', String(Number(appState.saldoAwal) || 0));
             renderDashboardStats();
             updateLastUpdated();
         }
@@ -2536,7 +2566,7 @@
                 if (isKasKeluar(item)) totalKeluar += Number(item.jumlah) || 0;
                 else totalMasuk += Number(item.jumlah) || 0;
             });
-            const saldo = totalMasuk - totalKeluar;
+            const saldo = (Number(appState.saldoAwal) || 0) + totalMasuk - totalKeluar;
             document.getElementById('stat-kas').innerText = formatRupiah(saldo);
             // Pengumuman & Agenda Kegiatan: angka utama = jumlah yang tampil (publik),
             // lalu "(N)" = jumlah yang disembunyikan dari portal publik.
@@ -2997,9 +3027,12 @@
                 else totalMasuk += Number(item.jumlah) || 0;
             });
 
+            const saldoAwal = Number(appState.saldoAwal) || 0;
             document.getElementById('total-pemasukan').innerText = formatRupiah(totalMasuk);
             document.getElementById('total-pengeluaran').innerText = formatRupiah(totalKeluar);
-            document.getElementById('saldo-kas-total').innerText = formatRupiah(totalMasuk - totalKeluar);
+            document.getElementById('saldo-kas-total').innerText = formatRupiah(saldoAwal + totalMasuk - totalKeluar);
+            const saldoAwalEl = document.getElementById('saldo-awal-kas');
+            if (saldoAwalEl) saldoAwalEl.innerText = formatRupiah(saldoAwal);
 
             const periodLabelEl = document.getElementById('kas-period-label');
             if (periodLabelEl) periodLabelEl.textContent = kasPeriodLabel();
@@ -3483,6 +3516,43 @@
             document.getElementById('btn-save-warga').textContent = 'Perbarui Warga';
             openModal('modal-warga');
             setKKHintFromValue(item.nomorKK);
+        }
+
+        // Ubah Saldo Awal kas (nilai dasar perhitungan saldo akhir:
+        // Saldo Akhir = Saldo Awal + Pemasukan - Pengeluaran).
+        function openSaldoAwalModal() {
+            const input = document.getElementById('saldo-awal-input');
+            if (input) input.value = String(Number(appState.saldoAwal) || 0);
+            openModal('modal-saldo-awal');
+        }
+
+        function saveSaldoAwal(e) {
+            if (e) e.preventDefault();
+            const input = document.getElementById('saldo-awal-input');
+            const value = Number(input ? input.value : 0);
+            if (!isFinite(value) || value < 0) {
+                showToast('Saldo awal harus berupa angka >= 0.', 'error');
+                return;
+            }
+            const rounded = Math.round(value);
+            appState.saldoAwal = rounded;
+            saveLocalState();
+            renderKasTable();
+            closeModal('modal-saldo-awal');
+            if (apiBases().length && appState.adminToken) {
+                postToSheets({ action: 'setSaldoAwal', saldoAwal: rounded, token: appState.adminToken }, {
+                    onSuccess: () => showToast('Saldo awal disimpan: ' + formatRupiah(rounded), 'success'),
+                    onError: (reason, detail) => {
+                        if (detail && detail.code === 'unauthorized') {
+                            promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                            return;
+                        }
+                        showToast('Saldo awal tersimpan lokal, tetapi gagal dikirim ke Google Sheets.', 'error');
+                    }
+                });
+            } else {
+                showToast('Saldo awal disimpan: ' + formatRupiah(rounded), 'success');
+            }
         }
 
         function editKas(index) {
@@ -5579,6 +5649,10 @@
                 const emailInput = document.getElementById('admin-email-input');
                 if (emailInput && !emailInput.value) emailInput.value = res.adminEmail;
             }
+            if (res.saldoAwal !== undefined && res.saldoAwal !== null && isFinite(Number(res.saldoAwal))) {
+                appState.saldoAwal = Math.round(Number(res.saldoAwal)) || 0;
+                localStorage.setItem('rt_saldo_awal', String(appState.saldoAwal));
+            }
             renderWargaTable();
             renderKasTable();
             renderPengumumanCards();
@@ -5699,7 +5773,8 @@
             appState.kegiatan = [];
             appState.surat = [];
             appState.lapor = [];
-            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_lapor', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_local_deletes_lapor', 'rt_outbox'].forEach(function (key) {
+            appState.saldoAwal = 0;
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_lapor', 'rt_saldo_awal', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_local_deletes_lapor', 'rt_outbox'].forEach(function (key) {
                 localStorage.removeItem(key);
             });
             localDeletes = { warga: [], kas: [], pengumuman: [], kegiatan: [], surat: [], lapor: [] };

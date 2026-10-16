@@ -83,9 +83,12 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
   "noRumah": "String (Optional)",
   "jenis": "String [Pemasukan | Pengeluaran]",
   "jumlah": "Number (Required)",
-  "keterangan": "String (Optional)"
+  "keterangan": "String (Optional)",
+  "arsip": "String [Ya | Tidak] (Optional - default Tidak)"
 }
 ```
+
+> **Saldo Awal (bukan baris sheet):** nilai pembukaan kas disimpan di **Script Property `SALDO_AWAL`** (default `0`), dibaca `readAllSheets()` sebagai field **`saldoAwal`**, dan diubah lewat aksi admin **`setSaldoAwal`**. Rumus: **Saldo Akhir = Saldo Awal + Total Pemasukan − Total Pengeluaran** (baris `Diarsipkan=Ya` dikecualikan). Saldo Awal adalah konstanta yang ditambahkan pada setiap periode (per bulan/tanggal/semua).
 
 ### 3. Modul Pengumuman (`sheetName: "Pengumuman"`)
 ```json
@@ -160,6 +163,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 | `submitSurat` | `{ action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan }` | Intake pengajuan surat dari portal publik. **Tanpa token**: validasi, honeypot, rate limit, paksa `Pending`, notifikasi email |
 | `submitLapor` | `{ action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju }` | Intake pengaduan dari portal publik. **Tanpa token**: No. HP wajib terdaftar, honeypot, rate limit, paksa `Diterima`, No. Pengaduan `ADU/<tahun>-NNN`, notifikasi email |
 | `setAdminEmail` | `{ action:"setAdminEmail", email, token }` | Simpan Script Property `ADMIN_EMAIL` |
+| `setSaldoAwal` | `{ action:"setSaldoAwal", saldoAwal, token }` | Simpan Script Property `SALDO_AWAL` (saldo pembukaan kas, angka `>= 0`) |
 
 > **Token wajib:** semua POST ditolak (`code:"unauthorized"`) bila `token` tidak cocok dengan `ADMIN_TOKEN`. Karena request POST memakai `mode:'no-cors'` (respons tidak terbaca), frontend mencegah pengiriman bila token kosong via `sendToGoogleSheets()` (memanggil `promptForAdminToken()`).
 
@@ -169,7 +173,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 > **Field per sheet:**
 > - `Data_Warga`: `nomorKK, nama, status, jenisKelamin, nik, tempat, tanggalLahir, pendidikan, pekerjaan, noHp, statusTinggal, alamat` (+ `Diarsipkan`)
-> - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan`
+> - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan` (+ `Diarsipkan`)
 > - `Pengumuman`: `tanggal, judul, isi, kategori, pj, publik` (`Ya`/`Tidak`)
 > - `Kegiatan_Warga`: `namaKegiatan, tanggal, waktu, lokasi, pj, keterangan, publik` (`Ya`/`Tidak`)
 > - `Pengajuan_Surat`: `nama, nik, noHp, alamat, jenisSurat, keperluan, status, noSurat, catatan` (+ `Diarsipkan`)
@@ -349,6 +353,7 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-16)
 
+- ✅ **Fitur Saldo Awal pada Iuran & Kas + penyesuaian rumus saldo** — kartu ringkasan kas kini **empat** (Saldo Awal, Total Pemasukan, Total Pengeluaran, Saldo Akhir) dan rumus berubah menjadi **Saldo Akhir = Saldo Awal + Total Pemasukan − Total Pengeluaran** (dipakai di `renderKasTable()` dan `renderDashboardStats()`). Nilai Saldo Awal diubah lewat ikon pensil pada kartu (`openSaldoAwalModal()` + `#modal-saldo-awal`/`#saldo-awal-input`, handler `saveSaldoAwal()`), disimpan ke backend sebagai Script Property **`SALDO_AWAL`** melalui aksi token-gated **`setSaldoAwal`** (fallback lokal `localStorage` `rt_saldo_awal` bila token/koneksi belum ada). Backend `code.gs`: helper baru **`getSaldoAwal()` / `handleSetSaldoAwal()`**, `readAllSheets()` mengembalikan field **`saldoAwal`**, route `doPost` **`setSaldoAwal`**. Mock `tools/mock-server.js` disamakan (`store.saldoAwal`, seed `1500000`, aksi `setSaldoAwal`). `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v27-2026-10-16`** (redeploy **New version**); `APP_BUILD` index → `2026-10-16-02` (+ `version.json`; public tetap `2026-10-15-01`); cache SW → **`sapa-rt-static-v19`**; `tailwind.css` diregenerasi. Uji `test_kas_feature.js` diperluas (saldo awal: kartu, formula, aksi backend token-gated, default `0`) — suite **72** hijau. Dokumentasi: `readme.md`, `panduan.md`, `Apps Script/readme.md`.
 - ✅ **Perbaikan menyeluruh modul Iuran & Kas (klasifikasi, validasi, arsip, isi otomatis No. Rumah)** — lima perbaikan sekaligus. (1) **Klasifikasi pemasukan/pengeluaran**: sebelumnya kode membandingkan `item.jenis === 'Pemasukan'`, sehingga jenis seperti `"Iuran Bulanan"`/`"Sumbangan"` salah dihitung & diberi badge **Pengeluaran**. Ditambahkan helper **`isKasKeluar(item)`** (hanya `"Pengeluaran"` yang dihitung keluar, sisanya masuk) dan dipakai di **`renderDashboardStats()`** dan **`renderKasTable()`** (kartu ringkasan + badge + warna nominal). (2) **Validasi nominal**: `#kas-jumlah` diubah dari `min="0" step="5000"` (yang memblokir angka bukan kelipatan 5000) menjadi **`min="1" step="1"`**, plus validasi eksplisit di `submitKas()` — nominal `<= 0` ditolak dengan toast *"Jumlah nominal harus lebih dari 0."*. (3) **Arsip alih-alih hapus permanen**: kolom **`Diarsipkan`** ditambahkan pada sheet **`Iuran_Kas`** (sebelum kolom bantu `ID`; `EXPECTED_FIELDS` **7 → 8**, `DESIRED_HEADERS` diperbarui, `migrateLayout` kini menyusun ulang **`Iuran_Kas`** berbasis **nama header** sehingga kolom `ID` aman bergeser, `buildRowData('Iuran_Kas')` menulis `normalizeArsip(data.arsip)`). Di `index.html`, tombol **Hapus** diganti tombol **Arsip** (`fa-box-archive`) / **Pulihkan** (`fa-box-open`); helper baru **`isArchivedKas`, `kasRowPayload`, `updateKasArsip`, `archiveKas`, `restoreKas`, `toggleShowArchivedKas`, `initShowArchivedKas`**, checkbox **`#show-archived-kas`** (`localStorage` `rt_show_archived_kas`), fungsi lama **`deleteKas` dihapus**. Baris terarsip memakai **latar amber + badge "Arsip"**, **dikecualikan dari kartu ringkasan/saldo** (`periodActive`), dan hanya **tampil bila toggle aktif**; pemetaan `applySheetsData` mengisi `arsip: r[7]`; `submitKas()` mempertahankan `arsip` saat edit. Mock `tools/mock-server.js` ikut disesuaikan (`DATA_FIELDS.Iuran_Kas=8`, `buildRow` menulis kolom arsip, + 1 contoh transaksi terarsip). (4) **Isi otomatis No. Rumah**: `onKasNamaInput()` (dipasang pada `#kas-nama`) mengekstrak nomor dari `Alamat/No Rumah` `Data_Warga` (regex `No.?\s*([0-9]+[A-Za-z]?)`) saat nama warga terdaftar dipilih. (5) **Versi rilis**: `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v26-2026-10-16`** (perlu redeploy **New version**); `APP_BUILD` index → `2026-10-16-01` (+ `version.json`; public tetap `2026-10-15-01`); cache SW → **`sapa-rt-static-v18`**. Uji baru **`test_kas_feature.js`** (34); `test_row_ux.js` disesuaikan (kas: arsip/pulihkan) — suite **72** hijau. Dokumentasi: `readme.md`, `panduan.md`, `Apps Script/readme.md`.
 
 ## 🔧 Recent Changes (2026-10-14)

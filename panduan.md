@@ -159,9 +159,17 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 3. Klik **Simpan Transaksi**.
 4. Untuk memperbaiki, gunakan ikon ✏️ **Edit**. Untuk membatalkan, gunakan ikon 📦 **Arsip** pada baris transaksi (transaksi **tidak dihapus**, hanya disembunyikan dan tidak dihitung dalam saldo; selalu meminta konfirmasi).
 
+### Mengatur Saldo Awal
+
+1. Buka menu **Iuran & Kas RT** → pada kartu **Saldo Awal** (paling kiri) klik ikon ✏️ **pensil**.
+2. Isi **Saldo Awal (Rp)** — saldo kas **sebelum** transaksi mulai dicatat (mis. saldo sisa tahun lalu). Nilai harus angka `>= 0`.
+3. Klik **Simpan**. Nilai disimpan ke backend (Script Property `SALDO_AWAL`) sehingga berlaku di semua perangkat.
+
+**Rumus saldo:** **Saldo Akhir = Saldo Awal + Total Pemasukan − Total Pengeluaran**. Saldo Awal adalah nilai tetap yang ditambahkan pada setiap periode (per bulan/tanggal/semua data).
+
 ### Membaca dan menyaring laporan kas
 
-- Tiga kartu ringkasan di atas tabel: **Total Pemasukan**, **Total Pengeluaran**, dan **Saldo Akhir**.
+- Empat kartu ringkasan di atas tabel: **Saldo Awal**, **Total Pemasukan**, **Total Pengeluaran**, dan **Saldo Akhir**.
 - Pilihan periode di kanan atas tabel: **Per Bulan** (default), **Per Tanggal**, atau **Semua Data**. Kartu ringkasan **ikut berubah** mengikuti periode yang dipilih — jadi laporan bulanan tinggal memilih bulannya saja. Pilihan ini tersimpan di browser Anda.
 - **Baris filter per kolom** tepat di bawah judul kolom (Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan) untuk menyaring sangat spesifik. Tombol **🚫 filter** mengosongkan semua filter sekaligus.
 - Kotak **Cari transaksi** untuk pencarian cepat.

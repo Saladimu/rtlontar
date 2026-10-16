@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v26-2026-10-16'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v27-2026-10-16'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -184,6 +184,7 @@ function seedData() {
     portalEnabled: true,
     laporEnabled: true,
     adminEmail: '',
+    saldoAwal: 1500000,
     sheets: {
       Data_Warga: [
         buildRow('Data_Warga', { nomorKK: '3201010101010001', nama: 'Budi Santoso', status: 'Kepala Keluarga', jenisKelamin: 'Laki-laki', nik: '3201010101800001', tempat: 'Bogor', tanggalLahir: '1980-01-01', pendidikan: 'SMA', pekerjaan: 'Karyawan', noHp: '081234567890', statusTinggal: 'Tetap', alamat: 'Jl. Merdeka No. 1' }, iso(0), 'id-seed-w1'),
@@ -261,6 +262,8 @@ function loadStore() {
     if (typeof parsed.portalEnabled !== 'boolean') parsed.portalEnabled = true;
     if (typeof parsed.laporEnabled !== 'boolean') parsed.laporEnabled = true;
     if (typeof parsed.adminEmail !== 'string') parsed.adminEmail = '';
+    if (!isFinite(Number(parsed.saldoAwal)) || Number(parsed.saldoAwal) < 0) parsed.saldoAwal = 0;
+    else parsed.saldoAwal = Math.round(Number(parsed.saldoAwal));
     return parsed;
   } catch (e) {
     if (fs.existsSync(DATA_FILE)) {
@@ -305,7 +308,7 @@ function readAllSheets() {
       return out;
     });
   });
-  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, laporEnabled: store.laporEnabled !== false, adminEmail: store.adminEmail || '', data };
+  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, laporEnabled: store.laporEnabled !== false, adminEmail: store.adminEmail || '', saldoAwal: Number(store.saldoAwal) || 0, data };
 }
 
 function readPublicSheets() {
@@ -502,6 +505,14 @@ function handlePost(data) {
     store.adminEmail = email;
     saveStore();
     return { result: 'success', adminEmail: email, message: 'Email admin disimpan: ' + email + '.' };
+  }
+
+  if (data.action === 'setSaldoAwal') {
+    const n = Number(String(data.saldoAwal == null ? '' : data.saldoAwal).replace(/[^0-9.-]/g, ''));
+    if (!isFinite(n) || n < 0) return { result: 'error', code: 'invalid', message: 'Saldo awal harus berupa angka >= 0.' };
+    store.saldoAwal = Math.round(n);
+    saveStore();
+    return { result: 'success', saldoAwal: store.saldoAwal, message: 'Saldo awal disimpan.' };
   }
 
   if (data.action === 'submitSurat') {
