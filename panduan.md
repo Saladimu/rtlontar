@@ -174,6 +174,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 - **Baris filter per kolom** tepat di bawah judul kolom (Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan) untuk menyaring sangat spesifik. Tombol **🚫 filter** mengosongkan semua filter sekaligus.
 - Kotak **Cari transaksi** untuk pencarian cepat.
 - Centang **Tampilkan arsip** di toolbar untuk menampilkan transaksi yang diarsipkan (latar kuning + badge “Arsip”). Ikon **Pulihkan** mengembalikannya ke daftar aktif dan ke perhitungan saldo.
+- Ikon **print** (🖨️) di samping judul **Riwayat Transaksi** membuka jendela cetak berisi **laporan kas sederhana**: identitas RT, periode terpilih, ringkasan Saldo Awal/Pemasukan/Pengeluaran/Saldo Akhir, serta tabel transaksi + totalnya. Laporan mengikuti **periode, pencarian, dan filter** yang sedang aktif — jadi cetak dulu setelah menyaring bila ingin laporan spesifik, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser (URL, tanggal, dan nomor halaman) tidak ikut tercetak.
 
 **Contoh pemakaian:** tutup buku bulanan = pilih **Per Bulan** → pilih bulan berjalan → catat **Total Pemasukan** dan **Total Pengeluaran** → laporkan di pengumuman/rapat RT.
 

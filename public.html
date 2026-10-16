@@ -20,9 +20,9 @@
          Dulu memakai Play CDN yang harus mengunduh engine + generate CSS saat runtime. -->
     <link rel="stylesheet" href="tailwind.css">
     <!-- Ikon & font self-hosted (Font Awesome 6 subset + Inter) — tanpa CDN. -->
-    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2?v=2" crossorigin>
-    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2?v=2" crossorigin>
-    <link rel="stylesheet" href="fonts.css?v=2">
+    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2?v=3" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2?v=3" crossorigin>
+    <link rel="stylesheet" href="fonts.css?v=3">
     <!-- Terapkan tema sebelum render untuk mencegah kedipan (FOUC).
          Prioritas: pilihan tersimpan (localStorage) -> preferensi sistem. -->
     <script>
@@ -1337,7 +1337,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-15-01';
+        const APP_BUILD = '2026-10-15-02';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {

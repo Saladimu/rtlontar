@@ -20,9 +20,9 @@
          Dulu memakai Play CDN yang harus mengunduh engine + generate CSS saat runtime. -->
     <link rel="stylesheet" href="tailwind.css">
     <!-- Ikon & font self-hosted (Font Awesome 6 subset + Inter) — tanpa CDN. -->
-    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2?v=2" crossorigin>
-    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2?v=2" crossorigin>
-    <link rel="stylesheet" href="fonts.css?v=2">
+    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2?v=3" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2?v=3" crossorigin>
+    <link rel="stylesheet" href="fonts.css?v=3">
     <style>
         @keyframes spin {
             from { transform: rotate(0deg); }
@@ -465,7 +465,12 @@
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                 <div class="p-4 border-b border-slate-200 flex flex-col lg:flex-row gap-3 justify-between lg:items-center">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-base">Riwayat Transaksi</h3>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-slate-800 text-base">Riwayat Transaksi</h3>
+                            <button type="button" onclick="printKasReport()" title="Cetak laporan kas" class="text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-lg transition">
+                                <i class="fa-solid fa-print"></i>
+                            </button>
+                        </div>
                         <p id="kas-period-label" class="text-xs text-slate-400 mt-0.5"></p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
@@ -1653,7 +1658,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-16-03';
+        const APP_BUILD = '2026-10-16-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3034,10 +3039,33 @@
             return base + net;
         }
 
+        // Susun daftar transaksi kas yang tampil: ikut periode + pencarian + filter kolom.
+        // Dipakai bersama oleh renderKasTable() dan printKasReport() agar konsisten.
+        function computeKasFilter() {
+            const search = (document.getElementById('search-kas') ? document.getElementById('search-kas').value : '').toLowerCase();
+            const periodItems = appState.kas.filter(item => kasMatchesPeriod(item) && (showArchivedKas || !isArchivedKas(item)));
+            const filtered = periodItems.filter(item => {
+                const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
+                    .map(v => (v == null ? '' : String(v).toLowerCase()));
+                const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
+                const tanggal = (item.tanggal || '') + ' ' + fmtDateDisplay(item.tanggal);
+                const jumlah = String(item.jumlah == null ? '' : item.jumlah) + ' ' + formatRupiah(item.jumlah);
+                const matchCols =
+                    matchFilter(tanggal, filterValue('fw-kas-tanggal')) &&
+                    matchFilter(item.nama, filterValue('fw-kas-nama')) &&
+                    matchFilter(item.noRumah, filterValue('fw-kas-norumah')) &&
+                    matchFilter(item.jenis, filterValue('fw-kas-jenis')) &&
+                    matchFilter(jumlah, filterValue('fw-kas-jumlah')) &&
+                    matchFilter(item.keterangan, filterValue('fw-kas-keterangan'));
+                return matchSearch && matchCols;
+            });
+            return { search, filtered };
+        }
+
         // Render Kas Table & Balances
         function renderKasTable() {
             const tbody = document.getElementById('table-kas-body');
-            const search = document.getElementById('search-kas').value.toLowerCase();
+            const { search, filtered } = computeKasFilter();
 
             tbody.innerHTML = '';
 
@@ -3068,25 +3096,6 @@
 
             const periodLabelEl = document.getElementById('kas-period-label');
             if (periodLabelEl) periodLabelEl.textContent = kasPeriodLabel();
-
-            // Tabel: ikut periode; baris arsip hanya tampil bila "Tampilkan arsip" aktif.
-            const periodItems = appState.kas.filter(item => kasMatchesPeriod(item) && (showArchivedKas || !isArchivedKas(item)));
-
-            const filtered = periodItems.filter(item => {
-                const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
-                    .map(v => (v == null ? '' : String(v).toLowerCase()));
-                const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
-                const tanggal = (item.tanggal || '') + ' ' + fmtDateDisplay(item.tanggal);
-                const jumlah = String(item.jumlah == null ? '' : item.jumlah) + ' ' + formatRupiah(item.jumlah);
-                const matchCols =
-                    matchFilter(tanggal, filterValue('fw-kas-tanggal')) &&
-                    matchFilter(item.nama, filterValue('fw-kas-nama')) &&
-                    matchFilter(item.noRumah, filterValue('fw-kas-norumah')) &&
-                    matchFilter(item.jenis, filterValue('fw-kas-jenis')) &&
-                    matchFilter(jumlah, filterValue('fw-kas-jumlah')) &&
-                    matchFilter(item.keterangan, filterValue('fw-kas-keterangan'));
-                return matchSearch && matchCols;
-            });
 
             if (filtered.length === 0) {
                 const searchEl = document.getElementById('search-kas');
@@ -3151,6 +3160,128 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Cetak laporan Iuran & Kas sederhana (baris yang sedang tampil) lewat jendela print.
+        function printKasReport() {
+            const { filtered } = computeKasFilter();
+            if (filtered.length === 0) {
+                showToast('Tidak ada transaksi untuk dicetak.', 'error');
+                return;
+            }
+
+            const cfg = window.RT_CONFIG || {};
+            const appName = cfg.appName || 'SAPA RT';
+            const appVersion = cfg.appVersion || '';
+            const rtRw = (cfg.rt || cfg.rw) ? ('RT ' + (cfg.rt || '') + ' / RW ' + (cfg.rw || '')) : '';
+            const headerLine2 = [rtRw, cfg.alamatrt].filter(Boolean).join(', ');
+            const headerLine3 = [cfg.kelurahan, cfg.kecamatan].filter(Boolean).join(', ');
+            const periodLabel = kasPeriodLabel() || 'Semua Data';
+            // Judul dokumen (dipakai juga sebagai header cetak bawaan browser) tidak
+            // mengulang kata "Periode:" — cukup nilainya saja, karena label periode
+            // sudah ditampilkan sekali di baris meta.
+            const periodBare = /:/.test(periodLabel) ? periodLabel.replace(/^[^:]*:\s*/, '') : 'Semua Data';
+            const docTitle = 'Laporan Iuran & Kas - ' + periodBare;
+
+            let totalMasuk = 0;
+            let totalKeluar = 0;
+            filtered.forEach(item => {
+                if (isKasKeluar(item)) totalKeluar += Number(item.jumlah) || 0;
+                else totalMasuk += Number(item.jumlah) || 0;
+            });
+            const opening = kasOpeningBalance();
+            const closing = opening + totalMasuk - totalKeluar;
+
+            const esc = v => String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+
+            const rows = filtered
+                .map(item => ({ item, key: (fmtDate(item.tanggal) || '') + ' ' + (item.timestamp || '') }))
+                .sort((a, b) => a.key.localeCompare(b.key))
+                .map((entry, idx) => {
+                    const item = entry.item;
+                    const keluar = isKasKeluar(item);
+                    const arsip = isArchivedKas(item) ? ' <span class="tag">Arsip</span>' : '';
+                    return `<tr>
+                        <td class="c">${idx + 1}</td>
+                        <td>${esc(fmtDateDisplay(item.tanggal))}</td>
+                        <td>${esc(item.nama)}${arsip}</td>
+                        <td class="c">${esc(item.noRumah || '-')}</td>
+                        <td class="c">${keluar ? 'Pengeluaran' : 'Pemasukan'}</td>
+                        <td class="r">${esc(formatRupiah(item.jumlah))}</td>
+                        <td>${esc(item.keterangan || '-')}</td>
+                    </tr>`;
+                }).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><title>${esc(docTitle)}</title>
+<style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:12mm;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .head{text-align:center;border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:14px}
+    .head h1{margin:0;font-size:18px}
+    .head .sub{margin:2px 0;font-size:12px;color:#334155}
+    .meta{display:flex;justify-content:space-between;margin:8px 0 12px;font-size:12px;color:#334155}
+    .cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+    .card{flex:1 1 22%;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px}
+    .card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+    .card .val{font-size:14px;font-weight:700;margin-top:2px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #cbd5e1;padding:5px 7px;vertical-align:top}
+    th{background:#f1f5f9;text-align:left;font-size:11px}
+    td.r,th.r{text-align:right}
+    td.c,th.c{text-align:center}
+    tfoot td{font-weight:700;background:#f8fafc}
+    .tag{font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px}
+    .foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}
+    @page{size:A4 portrait;margin:0}
+</style></head>
+<body>
+    <div class="head">
+        <h1>Laporan Iuran &amp; Kas</h1>
+        ${headerLine2 ? '<p class="sub">' + esc(headerLine2) + '</p>' : ''}
+        ${headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : ''}
+    </div>
+    <div class="meta"><span>${esc(periodLabel)}</span><span>Dicetak: ${esc(fmtTimestamp(new Date()))}</span></div>
+    <div class="cards">
+        <div class="card"><div class="lbl">Saldo Awal</div><div class="val">${esc(formatRupiah(opening))}</div></div>
+        <div class="card"><div class="lbl">Pemasukan</div><div class="val">${esc(formatRupiah(totalMasuk))}</div></div>
+        <div class="card"><div class="lbl">Pengeluaran</div><div class="val">${esc(formatRupiah(totalKeluar))}</div></div>
+        <div class="card"><div class="lbl">Saldo Akhir</div><div class="val">${esc(formatRupiah(closing))}</div></div>
+    </div>
+    <table>
+        <thead><tr>
+            <th class="c" style="width:32px">No</th>
+            <th style="width:84px">Tanggal</th>
+            <th>Nama Warga</th>
+            <th class="c" style="width:64px">No. Rumah</th>
+            <th class="c" style="width:86px">Jenis</th>
+            <th class="r" style="width:96px">Jumlah (Rp)</th>
+            <th>Catatan</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+            <tr><td colspan="5" class="r">Total Pemasukan</td><td class="r">${esc(formatRupiah(totalMasuk))}</td><td></td></tr>
+            <tr><td colspan="5" class="r">Total Pengeluaran</td><td class="r">${esc(formatRupiah(totalKeluar))}</td><td></td></tr>
+            <tr><td colspan="5" class="r">Saldo Akhir</td><td class="r">${esc(formatRupiah(closing))}</td><td></td></tr>
+        </tfoot>
+    </table>
+    <div class="foot"><span>Jumlah transaksi: ${filtered.length}</span><span>${esc(appName)}${appVersion ? ' ' + esc(appVersion) : ''}</span></div>
+</body></html>`;
+
+            const w = window.open('', '_blank');
+            if (!w) {
+                showToast('Izinkan pop-up untuk mencetak laporan.', 'error');
+                return;
+            }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            const doPrint = () => { try { w.print(); } catch (e) { /* diabaikan */ } };
+            if (w.document.readyState === 'complete') setTimeout(doPrint, 200);
+            else w.onload = () => setTimeout(doPrint, 200);
         }
 
         // Render Pengumuman Cards
