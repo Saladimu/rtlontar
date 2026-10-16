@@ -17,7 +17,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 - **🔢 Format No. HP (tampilan):** pada tabel record (**Data Warga** & **Pengajuan Surat**), No. HP ditampilkan berkelompok **3-3-4** agar mudah dibaca, mis. `0812345678` → `081-234-5678` (nomor lebih panjang melanjutkan grup berikutnya). Ini **hanya tampilan** — nilai yang tersimpan di Sheets dan tautan WhatsApp/Telepon tetap memakai digit asli.
 - **🔒 Input No. HP hanya angka:** semua kolom **No. HP / WhatsApp** (form Warga & Pengajuan Surat di admin, serta form pengajuan & cek status di Portal Publik) hanya menerima **angka** (maks. 15 digit); huruf dan simbol otomatis dibuang saat diketik/di-tempel, sehingga nomor tidak bisa diisi karakter yang tidak valid.
 - **🕘 Riwayat Pengajuan Surat per Warga:** pada kolom **Aksi** tabel **Data Warga** tersedia ikon riwayat (`clock-rotate-left`). Mengekliknya membuka modal berisi **seluruh pengajuan surat milik warga tersebut** — dicocokkan lewat **NIK** (bila salah satu NIK kosong, jatuh ke pencocokan nama) — menampilkan **Tanggal (tanpa jam), No. Surat, Jenis Surat, & Status** (terbaru di atas), beserta nama, NIK tersamar, dan jumlah pengajuan. Bila belum ada pengajuan, muncul pesan bahwa warga ini belum memiliki pengajuan surat. Bersifat **hanya tampilan** (tidak mengubah data).
-- **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Hapus** tersedia.
+- **💰 Iuran & Kas RT:** Pencatatan arus kas (Pemasukan & Pengeluaran) beserta akumulasi saldo akhir secara terotomatisasi. **Edit & Arsip** tersedia (transaksi ditandai arsip, bukan dihapus, agar jejak keuangan tetap aman). Nama warga yang dipilih otomatis mengisi **No. Rumah** dari Data Warga.
 - **🗓️ Filter Periode Kas:** Riwayat transaksi dapat ditampilkan **per bulan** (default), **per tanggal**, atau **semua data**. Kartu ringkasan (Total Pemasukan, Total Pengeluaran, Saldo Akhir) mengikuti periode yang dipilih. Pilihan tersimpan di browser.
 - **📢 Pengumuman RT:** Papan informasi digital resmi untuk menyebarkan imbauan dan berita penting. **Edit & Hapus** tersedia.
 - **📅 Kegiatan Warga:** Agenda kerja bakti, posyandu, siskamling, dan acara komunitas RT. **Edit & Hapus** tersedia.
@@ -62,8 +62,10 @@ Timestamp	Nomor KK	Nama Lengkap	Status	Jenis Kelamin	NIK	Tempat Lahir	Tanggal La
 
 ### 2. Tab `Iuran_Kas`
 ```tsv
-Timestamp	Tanggal	Nama Warga	No Rumah	Jenis Transaksi	Jumlah (Rp)	Keterangan
+Timestamp	Tanggal	Nama Warga	No Rumah	Jenis Transaksi	Jumlah (Rp)	Keterangan	Diarsipkan
 ```
+
+> Kolom **`Diarsipkan`** menandai transaksi kas yang disembunyikan dari daftar **dan** tidak dihitung dalam saldo tanpa dihapus: isi `Ya` untuk mengarsipkan, `Tidak`/kosong untuk transaksi aktif. Baris ber-`Diarsipkan=Ya` **tetap tersimpan** dan dapat dipulihkan lewat tombol **Pulihkan**.
 
 ### 3. Tab `Pengumuman`
 ```tsv
@@ -159,9 +161,10 @@ Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (memakai `publ
 > | `Not configured (local mode)` | `apiBase` & `publicApiUrl` sama-sama kosong; aplikasi berjalan dalam mode lokal (localStorage). |
 
 ### Edit, Hapus & Arsip Data
-Semua modul (Warga, Kas, Pengumuman, Kegiatan) memiliki tombol **Edit** ✏️. Modul **Kas, Pengumuman, & Kegiatan** juga memiliki tombol **Hapus** 🗑️, sedangkan **Data Warga memakai tombol Arsip** 📦 (bukan hapus).
+Semua modul (Warga, Kas, Pengumuman, Kegiatan) memiliki tombol **Edit** ✏️. Modul **Pengumuman & Kegiatan** juga memiliki tombol **Hapus** 🗑️, sedangkan **Data Warga & Iuran/Kas memakai tombol Arsip** 📦 (bukan hapus).
 - **Arsip (Data Warga)**: alih-alih menghapus, data warga **ditandai arsip**, disembunyikan dari tabel/dashboard/datalist, tetapi **tetap tersimpan** di Google Sheets. Centang **"Tampilkan arsip"** di atas tabel: data terarsip lalu tampil **terpisah di bagian atas** dengan **latar kuning (amber)** dan judul **"Data Diarsipkan (N)"**, diikuti bagian **"Data Aktif (M)"** — klik **Pulihkan** untuk mengaktifkannya kembali.
-- **Hapus (Kas/Pengumuman/Kegiatan)**: menampilkan dialog konfirmasi sebelum data benar-benar dihapus dari Google Sheets.
+- **Arsip (Iuran & Kas)**: transaksi kas **ditandai arsip**, disembunyikan dari tabel **dan dikecualikan dari perhitungan Total Pemasukan/Pengeluaran/Saldo** (tetap tersimpan sebagai jejak audit). Centang **"Tampilkan arsip"** di toolbar Riwayat Transaksi untuk menampilkan baris terarsip dengan **latar kuning (amber)** + badge **"Arsip"**; ikon **Pulihkan** mengembalikannya ke daftar aktif sekaligus ke perhitungan saldo.
+- **Hapus (Pengumuman/Kegiatan)**: menampilkan dialog konfirmasi sebelum data benar-benar dihapus dari Google Sheets.
 - **Edit**: Modal akan terbuka dengan data yang sudah terisi, klik simpan untuk menyimpan perubahan.
 - **Delete Sync**: Penghapusan dilakukan di Google Sheets dulu, jika gagal data lokal tidak berubah.
 

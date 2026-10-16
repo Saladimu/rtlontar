@@ -152,12 +152,12 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 2. Isi:
    - **Tanggal Transaksi** \* — format `dd-mm-yyyy` (klik kolom untuk memilih dari kalender).
    - **Jenis Transaksi** \* — **Pemasukan (Iuran / Donasi)** atau **Pengeluaran (Operasional / Kebersihan)**.
-   - **Nama Warga / Pembayar** \* — mulai mengetik, muncul daftar nama warga (untuk pengeluaran, tulis keterangan mis. “Biaya kebersihan”).
-   - **No. Rumah** — mis. `12B`.
-   - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma.
+   - **Nama Warga / Pembayar** \* — mulai mengetik, muncul daftar nama warga (untuk pengeluaran, tulis keterangan mis. “Biaya kebersihan”). Memilih nama warga yang terdaftar otomatis mengisi **No. Rumah**.
+   - **No. Rumah** — mis. `12B` (terisi otomatis bila nama warga dipilih).
+   - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma, harus **lebih dari 0**.
    - **Keterangan / Catatan** — mis. “Iuran kebersihan Oktober”.
 3. Klik **Simpan Transaksi**.
-4. Untuk memperbaiki atau membatalkan, gunakan ikon ✏️ **Edit** dan 🗑️ **Hapus** pada baris transaksi (hapus selalu meminta konfirmasi).
+4. Untuk memperbaiki, gunakan ikon ✏️ **Edit**. Untuk membatalkan, gunakan ikon 📦 **Arsip** pada baris transaksi (transaksi **tidak dihapus**, hanya disembunyikan dan tidak dihitung dalam saldo; selalu meminta konfirmasi).
 
 ### Membaca dan menyaring laporan kas
 
@@ -165,6 +165,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 - Pilihan periode di kanan atas tabel: **Per Bulan** (default), **Per Tanggal**, atau **Semua Data**. Kartu ringkasan **ikut berubah** mengikuti periode yang dipilih — jadi laporan bulanan tinggal memilih bulannya saja. Pilihan ini tersimpan di browser Anda.
 - **Baris filter per kolom** tepat di bawah judul kolom (Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan) untuk menyaring sangat spesifik. Tombol **🚫 filter** mengosongkan semua filter sekaligus.
 - Kotak **Cari transaksi** untuk pencarian cepat.
+- Centang **Tampilkan arsip** di toolbar untuk menampilkan transaksi yang diarsipkan (latar kuning + badge “Arsip”). Ikon **Pulihkan** mengembalikannya ke daftar aktif dan ke perhitungan saldo.
 
 **Contoh pemakaian:** tutup buku bulanan = pilih **Per Bulan** → pilih bulan berjalan → catat **Total Pemasukan** dan **Total Pengeluaran** → laporkan di pengumuman/rapat RT.
 

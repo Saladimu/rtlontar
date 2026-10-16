@@ -83,6 +83,7 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | Jenis Transaksi | String | Pemasukan / Pengeluaran |
 | Jumlah (Rp) | Number | 50000 |
 | Keterangan | String | Iuran Kebersihan Bulan Oktober |
+| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan transaksi dari daftar **dan** dari perhitungan saldo (tetap tersimpan, dapat dipulihkan) |
 
 ### 3. Tab `Pengumuman`
 | Kolom | Tipe | Contoh |
@@ -284,7 +285,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | Sheet | Payload Fields |
 |-------|----------------|
 | `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nomorKK`, `nama`, `status`, `jenisKelamin`, `nik`, `tempat`, `tanggalLahir`, `pendidikan`, `pekerjaan`, `noHp`, `statusTinggal`, `alamat`, `arsip` (`Ya`/`Tidak`) |
-| `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan` |
+| `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan`, `arsip` (`Ya`/`Tidak`) |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
 | `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `noSurat`, `catatan`, `arsip` (`Ya`/`Tidak`) |

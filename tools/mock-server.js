@@ -30,13 +30,13 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v25-2026-10-14'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v26-2026-10-16'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
 const DATA_FIELDS = {
   Data_Warga: 14,
-  Iuran_Kas: 7,
+  Iuran_Kas: 8,
   Pengumuman: 7,
   Kegiatan_Warga: 8,
   Pengajuan_Surat: 11,
@@ -147,7 +147,7 @@ function buildRow(sheetName, data, tsIso, id) {
       normalizeArsip(data.arsip)
     );
   } else if (sheetName === 'Iuran_Kas') {
-    row.push(blank(data.tanggal), blank(data.nama), blank(data.noRumah), blank(data.jenis), blank(data.jumlah), blank(data.keterangan));
+    row.push(blank(data.tanggal), blank(data.nama), blank(data.noRumah), blank(data.jenis), blank(data.jumlah), blank(data.keterangan), normalizeArsip(data.arsip));
   } else if (sheetName === 'Pengumuman') {
     row.push(blank(data.tanggal), blank(data.judul), blank(data.isi), blank(data.kategori), blank(data.pj), normalizePublik(data.publik));
   } else if (sheetName === 'Kegiatan_Warga') {
@@ -208,6 +208,7 @@ function seedData() {
         buildRow('Iuran_Kas', { tanggal: '2026-10-10', nama: 'Bendahara', noRumah: '', jenis: 'Pengeluaran', jumlah: 75000, keterangan: 'Beli lampu jalan gang' }, iso(42), 'id-seed-k6'),
         buildRow('Iuran_Kas', { tanggal: '2026-10-11', nama: 'Ahmad Fauzi', noRumah: '3', jenis: 'Iuran Bulanan', jumlah: 50000, keterangan: 'Iuran Oktober' }, iso(43), 'id-seed-k7'),
         buildRow('Iuran_Kas', { tanggal: '2026-10-12', nama: 'Bendahara', noRumah: '', jenis: 'Pengeluaran', jumlah: 250000, keterangan: 'Perbaikan pos ronda' }, iso(44), 'id-seed-k8'),
+        buildRow('Iuran_Kas', { tanggal: '2026-09-10', nama: 'Bendahara', noRumah: '', jenis: 'Pengeluaran', jumlah: 40000, keterangan: 'Beli spanduk (salah input, dibatalkan)', arsip: 'Ya' }, iso(45), 'id-seed-k9'),
       ],
       Pengumuman: [
         buildRow('Pengumuman', { tanggal: '2026-10-07', judul: 'Kerja Bakti Minggu Ini', isi: 'Kerja bakti akan dilaksanakan hari Minggu pukul 07.00 di lapangan RT.', kategori: 'Kegiatan', pj: 'Pak RT', publik: 'Ya' }, iso(5), 'id-seed-p1'),

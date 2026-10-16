@@ -469,6 +469,10 @@
                         </select>
                         <input type="month" id="kas-view-month" onchange="onKasViewPeriodChange()" class="hidden px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
                         <input type="date" id="kas-view-date" onchange="onKasViewPeriodChange()" class="hidden px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <label class="flex items-center space-x-2 text-xs font-medium text-slate-500 whitespace-nowrap cursor-pointer select-none" title="Tampilkan transaksi kas yang diarsipkan">
+                            <input type="checkbox" id="show-archived-kas" onchange="toggleShowArchivedKas(this.checked)" class="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                            <span>Tampilkan arsip</span>
+                        </label>
                         <div class="relative w-full sm:w-56">
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                             <input type="text" id="search-kas" oninput="renderKasTable()" placeholder="Cari transaksi..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
@@ -1077,7 +1081,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Warga / Pembayar *</label>
-                    <input type="text" id="kas-nama" list="warga-nama-list" required class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Nama atau Keterangan Pengeluaran">
+                    <input type="text" id="kas-nama" list="warga-nama-list" required oninput="onKasNamaInput(this)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Nama atau Keterangan Pengeluaran">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">No. Rumah</label>
@@ -1085,7 +1089,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Jumlah Nominal (Rp) *</label>
-                    <input type="number" id="kas-jumlah" required min="0" step="5000" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="50000">
+                    <input type="number" id="kas-jumlah" required min="1" step="1" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="50000">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan / Catatan</label>
@@ -1611,7 +1615,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v25-2026-10-14';
+        const EXPECTED_BACKEND_VERSION = 'publik-v26-2026-10-16';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1621,7 +1625,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-15-02';
+        const APP_BUILD = '2026-10-16-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2030,6 +2034,19 @@
             dl.innerHTML = names.map(n => `<option value="${escAttr(n)}"></option>`).join('');
         }
 
+        // Saat nama warga dipilih/diketik pada Iuran & Kas, isi otomatis No. Rumah
+        // dari Data_Warga (nomor diekstrak dari "Alamat/No Rumah"). Tidak menyentuh
+        // field bila nama bukan warga terdaftar (mis. nama pengeluaran bebas).
+        function onKasNamaInput(el) {
+            const name = String((el && el.value) || '').trim().toLowerCase();
+            const noRumahEl = document.getElementById('kas-norumah');
+            if (!name || !noRumahEl) return;
+            const match = appState.warga.find(w => !isArchivedWarga(w) && String((w && w.nama) || '').trim().toLowerCase() === name);
+            if (!match) return;
+            const m = String(match.alamat || '').match(/No\.?\s*([0-9]+[A-Za-z]?)/i);
+            noRumahEl.value = m ? m[1] : String(match.alamat || '');
+        }
+
         // Apakah record boleh tampil di portal publik. Default: tampil.
         function isPublikVal(v) {
             if (v === true) return true;
@@ -2107,6 +2124,7 @@
             initShowArchivedWarga();
             initShowArchivedSurat();
             initShowArchivedLapor();
+            initShowArchivedKas();
             initWargaSort();
             renderWargaTable();
             initKasView();
@@ -2514,8 +2532,9 @@
             let totalMasuk = 0;
             let totalKeluar = 0;
             appState.kas.forEach(item => {
-                if (item.jenis === 'Pemasukan') totalMasuk += Number(item.jumlah);
-                else totalKeluar += Number(item.jumlah);
+                if (isArchivedKas(item)) return;
+                if (isKasKeluar(item)) totalKeluar += Number(item.jumlah) || 0;
+                else totalMasuk += Number(item.jumlah) || 0;
             });
             const saldo = totalMasuk - totalKeluar;
             document.getElementById('stat-kas').innerText = formatRupiah(saldo);
@@ -2598,6 +2617,34 @@
         function initShowArchivedWarga() {
             const el = document.getElementById('show-archived-warga');
             if (el) el.checked = showArchivedWarga;
+        }
+
+        // Tampilkan transaksi kas yang diarsipkan (disembunyikan secara default).
+        let showArchivedKas = localStorage.getItem('rt_show_archived_kas') === '1';
+
+        // True bila jenis transaksi menandai uang KELUAR. Selain "Pengeluaran"
+        // (termasuk "Iuran Bulanan", "Sumbangan", dst.) dihitung sebagai pemasukan.
+        function isKasKeluar(item) {
+            return String((item && item.jenis) || '').trim().toLowerCase() === 'pengeluaran';
+        }
+
+        function isArchivedKas(item) {
+            if (!item) return false;
+            if (item.arsip === true) return true;
+            const s = String(item.arsip === null || item.arsip === undefined ? '' : item.arsip).trim().toLowerCase();
+            return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'arsip';
+        }
+
+        function toggleShowArchivedKas(on) {
+            showArchivedKas = !!on;
+            localStorage.setItem('rt_show_archived_kas', showArchivedKas ? '1' : '0');
+            kasPage = 1;
+            renderKasTable();
+        }
+
+        function initShowArchivedKas() {
+            const el = document.getElementById('show-archived-kas');
+            if (el) el.checked = showArchivedKas;
         }
 
         // Tampilkan pengajuan surat yang diarsipkan (disembunyikan secara default).
@@ -2939,15 +2986,15 @@
 
             tbody.innerHTML = '';
 
-            // Ringkasan (kartu) mengikuti periode yang dipilih.
-            const periodItems = appState.kas.filter(kasMatchesPeriod);
+            // Ringkasan (kartu) mengikuti periode yang dipilih; baris arsip tidak dihitung.
+            const periodActive = appState.kas.filter(item => kasMatchesPeriod(item) && !isArchivedKas(item));
 
             let totalMasuk = 0;
             let totalKeluar = 0;
 
-            periodItems.forEach(item => {
-                if (item.jenis === 'Pemasukan') totalMasuk += Number(item.jumlah);
-                else totalKeluar += Number(item.jumlah);
+            periodActive.forEach(item => {
+                if (isKasKeluar(item)) totalKeluar += Number(item.jumlah) || 0;
+                else totalMasuk += Number(item.jumlah) || 0;
             });
 
             document.getElementById('total-pemasukan').innerText = formatRupiah(totalMasuk);
@@ -2956,6 +3003,9 @@
 
             const periodLabelEl = document.getElementById('kas-period-label');
             if (periodLabelEl) periodLabelEl.textContent = kasPeriodLabel();
+
+            // Tabel: ikut periode; baris arsip hanya tampil bila "Tampilkan arsip" aktif.
+            const periodItems = appState.kas.filter(item => kasMatchesPeriod(item) && (showArchivedKas || !isArchivedKas(item)));
 
             const filtered = periodItems.filter(item => {
                 const haystack = [item.tanggal, item.nama, item.noRumah, item.jenis, item.jumlah, item.keterangan]
@@ -2979,6 +3029,7 @@
                 let msg;
                 if (appState.kas.length === 0) msg = 'Belum ada riwayat transaksi. Klik "Catat Transaksi Kas" untuk menambahkan.';
                 else if (anyFilter) msg = 'Tidak ada transaksi yang cocok dengan pencarian/filter.';
+                else if (!showArchivedKas && appState.kas.some(isArchivedKas)) msg = 'Tidak ada transaksi aktif. Centang "Tampilkan arsip" untuk melihat transaksi yang diarsipkan.';
                 else msg = 'Tidak ada transaksi pada periode ini.';
                 const empty = document.createElement('tr');
                 empty.innerHTML = `<td colspan="7" class="px-3 py-3 text-center text-slate-400">${msg}</td>`;
@@ -2988,7 +3039,7 @@
             }
 
             // Setiap perubahan pencarian/filter/periode mengembalikan tampilan ke halaman pertama.
-            const filterSig = [search, kasView.mode, kasView.month, kasView.date]
+            const filterSig = [search, kasView.mode, kasView.month, kasView.date, showArchivedKas ? '1' : '0']
                 .concat(KAS_FILTER_IDS.map(id => filterValue(id))).join('\u0001');
             if (filterSig !== kasFilterSig) { kasFilterSig = filterSig; kasPage = 1; }
 
@@ -3001,27 +3052,36 @@
 
             pageItems.forEach((item, rowIdx) => {
                 const originalIndex = appState.kas.indexOf(item);
-                const jenisBadge = item.jenis === 'Pemasukan'
-                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Pemasukan</span>'
-                    : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">Pengeluaran</span>';
+                const archived = isArchivedKas(item);
+                const keluar = isKasKeluar(item);
+                const jenisBadge = keluar
+                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">Pengeluaran</span>'
+                    : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Pemasukan</span>';
+                const archiveBadge = archived
+                    ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>'
+                    : '';
 
-                const amountClass = item.jenis === 'Pemasukan' ? 'text-emerald-600 font-semibold' : 'text-rose-600 font-semibold';
+                const amountClass = keluar ? 'text-rose-600 font-semibold' : 'text-emerald-600 font-semibold';
 
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
                 const tr = document.createElement('tr');
-                tr.className = `${zebra} hover:bg-emerald-100 cursor-pointer transition`;
+                tr.className = archived
+                    ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer transition'
+                    : `${zebra} hover:bg-emerald-100 cursor-pointer transition`;
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editKas(originalIndex);
                 tr.innerHTML = `
                     <td class="px-3 py-2 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
-                    <td class="px-3 py-2 font-medium text-slate-800">${item.nama}</td>
+                    <td class="px-3 py-2 font-medium text-slate-800">${item.nama}${archiveBadge}</td>
                     <td class="px-3 py-2 text-slate-600 text-xs">${item.noRumah || '-'}</td>
                     <td class="px-3 py-2">${jenisBadge}</td>
                     <td class="px-3 py-2 text-right ${amountClass}">${formatRupiah(item.jumlah)}</td>
                     <td class="px-3 py-2 text-slate-500 text-xs">${item.keterangan || '-'}</td>
-                    <td class="px-3 py-2 text-center">
+                    <td class="px-3 py-2 text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="event.stopPropagation(); deleteKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus"><i class="fa-solid fa-trash-can"></i></button>
+                        ${archived
+                            ? `<button onclick="event.stopPropagation(); restoreKas(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan dari arsip"><i class="fa-solid fa-box-open"></i></button>`
+                            : `<button onclick="event.stopPropagation(); archiveKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Arsipkan"><i class="fa-solid fa-box-archive"></i></button>`}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -3286,13 +3346,18 @@
 
         function submitKas(e) {
             e.preventDefault();
+            const jumlah = Number(document.getElementById('kas-jumlah').value);
+            if (!(jumlah > 0)) {
+                showToast('Jumlah nominal harus lebih dari 0.', 'error');
+                return;
+            }
             const data = {
                 sheetName: "Iuran_Kas",
                 tanggal: readDateInput('kas-tanggal'),
                 nama: document.getElementById('kas-nama').value,
                 noRumah: document.getElementById('kas-norumah').value,
                 jenis: document.getElementById('kas-jenis').value,
-                jumlah: Number(document.getElementById('kas-jumlah').value),
+                jumlah: jumlah,
                 keterangan: document.getElementById('kas-keterangan').value
             };
 
@@ -3300,6 +3365,7 @@
                 const editId = editMode.kas;
                 const idx = findIndexById(appState.kas, editId);
                 const prev = idx !== -1 ? appState.kas[idx] : null;
+                data.arsip = prev ? (prev.arsip || 'Tidak') : 'Tidak';
                 if (idx !== -1) appState.kas[idx] = Object.assign({ _id: editId, timestamp: (prev && prev.timestamp) || new Date().toISOString() }, data);
                 editMode.kas = null;
                 saveLocalState();
@@ -3540,13 +3606,41 @@
             updateWargaArsip(index, false);
         }
 
-        // Deletion Functions
-
-        function deleteKas(index) {
-            if(confirm('Hapus catatan kas ini?')) {
-                deleteRecord('Iuran_Kas', index, appState.kas, renderKasTable, 'kas');
-            }
+        // Arsipkan transaksi kas (alih-alih menghapus): tandai kolom "Diarsipkan",
+        // sembunyikan dari daftar & perhitungan saldo, tetapi baris TETAP tersimpan
+        // dan dapat dipulihkan (menjaga jejak audit keuangan).
+        function kasRowPayload(item, arsip) {
+            return {
+                sheetName: 'Iuran_Kas',
+                tanggal: item.tanggal || '', nama: item.nama || '', noRumah: item.noRumah || '',
+                jenis: item.jenis || 'Pemasukan', jumlah: item.jumlah,
+                keterangan: item.keterangan || '', arsip: arsip ? 'Ya' : 'Tidak'
+            };
         }
+
+        function updateKasArsip(index, arsip) {
+            const item = appState.kas[index];
+            if (!item) return;
+            if (!item._id) { item._id = newId(); }
+            item.arsip = arsip ? 'Ya' : 'Tidak';
+            saveLocalState();
+            renderKasTable();
+            sendToGoogleSheets(Object.assign({ action: 'update', id: item._id }, kasRowPayload(item, arsip)));
+            showToast(arsip ? 'Transaksi kas diarsipkan (tetap tersimpan).' : 'Transaksi kas dipulihkan.', arsip ? 'info' : 'success');
+        }
+
+        function archiveKas(index) {
+            const item = appState.kas[index];
+            if (!item) return;
+            const confirmMsg = `Arsipkan transaksi kas ini?\n\n• Tanggal: ${fmtDateDisplay(item.tanggal) || '-'}\n• Nama: ${item.nama || '-'}\n• Jumlah: ${formatRupiah(item.jumlah)}\n\nTransaksi tidak akan ditampilkan dan tidak dihitung dalam saldo, namun tetap tersimpan dan dapat dipulihkan.`;
+            if (confirm(confirmMsg)) updateKasArsip(index, true);
+        }
+
+        function restoreKas(index) {
+            updateKasArsip(index, false);
+        }
+
+        // Deletion Functions
 
         function deletePengumuman(index) {
             if(confirm('Hapus pengumuman ini?')) {
@@ -5457,7 +5551,7 @@
                 _id: r[r.length - 1], timestamp: r[0], nomorKK: r[1], nama: r[2], status: r[3], jenisKelamin: r[4], nik: r[5], tempat: r[6], tanggalLahir: fmtDate(r[7]), pendidikan: r[8], pekerjaan: r[9], hp: r[10], statusTinggal: r[11], alamat: r[12], arsip: r[13]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
-                _id: r[r.length - 1], timestamp: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6]
+                _id: r[r.length - 1], timestamp: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6], arsip: r[7]
             })));
             appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
                 _id: r[r.length - 1], timestamp: r[0], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]
