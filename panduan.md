@@ -224,9 +224,11 @@ Warga cek status di portal & mengambil surat
 
 ### Daftar pengajuan
 
-- Empat kartu ringkasan di atas tabel menunjukkan jumlah pengajuan per status: **Pending, Diproses, Selesai, Ditolak**.
+- Empat kartu ringkasan di atas tabel menunjukkan jumlah pengajuan per status: **Pending, Diproses, Selesai, Ditolak** (seluruh pengajuan aktif, tidak terpengaruh periode).
 - Tabel terbaru di atas, dengan kolom **Tanggal / No. Pengajuan**, **Nama Pemohon / NIK** (NIK disamarkan, mis. `3173••••••01`), **No. HP / Alamat**, **Jenis Surat**, **Keperluan**, **Status**, dan **Aksi**.
+- **Filter periode** di kanan atas tabel: **Per Bulan** (default = bulan berjalan), **Per Tanggal**, atau **Semua Data** (pola sama dengan Iuran & Kas). Pilihan tersimpan di browser. Label di samping judul **Daftar Pengajuan** menampilkan jumlah baris + periode aktif.
 - **Filter** berdasarkan status dan **kotak cari** (nama, NIK, jenis surat, no. pengajuan, atau No. Surat).
+- **Cetak daftar:** ikon **print** (🖨️) di samping judul **Daftar Pengajuan** membuka jendela cetak berisi **laporan pengajuan sederhana** (kop RT, periode, waktu cetak, ringkasan jumlah per status, dan tabel pengajuan + jumlahnya). Laporan mengikuti **periode, pencarian, & filter status** yang sedang tampil, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser tidak ikut tercetak.
 - Centang **Tampilkan arsip** bila ingin melihat pengajuan yang sudah diarsipkan.
 
 ### Mencatat pengajuan manual (Isi Manual)
