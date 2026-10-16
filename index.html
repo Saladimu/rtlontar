@@ -1670,7 +1670,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-16-11';
+        const APP_BUILD = '2026-10-16-12';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4626,8 +4626,7 @@
                         <td class="c">${idx + 1}</td>
                         <td class="nw">${esc(tgl)}</td>
                         <td>${esc(item.nama || '-')}${arsip}${noSurat}</td>
-                        <td class="nw">${esc(maskNik(item.nik) || '-')}</td>
-                        <td class="nw sm">${esc(fmtPhone(item.noHp) || '-')}</td>
+                        <td><div class="nw">${esc(maskNik(item.nik) || '-')}</div><div class="nw mut">${esc(fmtPhone(item.noHp) || '-')}</div></td>
                         <td>${esc(item.jenisSurat || '-')}<div class="mut">${esc(item.keperluan || '-')}</div></td>
                         <td class="c">${esc(item.status || 'Pending')}</td>
                     </tr>`;
@@ -4653,7 +4652,6 @@
     td.nw,th.nw{white-space:nowrap}
     .tag{font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px}
     .mut{color:#64748b;font-size:9px}
-    .sm{font-size:10px}
     .foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}
     @page{size:A4 portrait;margin:0}
 </style></head>
@@ -4673,13 +4671,12 @@
     </div>
     <table>
         <thead><tr>
-            <th class="c" style="width:32px">No</th>
-            <th class="nw" style="width:100px">Tanggal</th>
-            <th>Nama Pemohon</th>
-            <th class="nw" style="width:96px">NIK</th>
-            <th class="nw sm" style="width:76px">No. HP</th>
-            <th style="width:210px">Jenis Surat /<br>Keperluan</th>
-            <th class="c" style="width:64px">Status</th>
+            <th class="c" style="width:30px">No</th>
+            <th class="nw" style="width:78px">Tanggal</th>
+            <th style="width:220px">Nama Pemohon</th>
+            <th style="width:104px">NIK /<br>No. HP</th>
+            <th style="width:200px">Jenis Surat /<br>Keperluan</th>
+            <th class="c" style="width:60px">Status</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>
