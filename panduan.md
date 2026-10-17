@@ -157,7 +157,20 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
    - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma, harus **lebih dari 0**.
    - **Keterangan / Catatan** — mis. “Iuran kebersihan Oktober”.
 3. Klik **Simpan Transaksi**.
-4. Untuk memperbaiki, gunakan ikon ✏️ **Edit**. Untuk membatalkan, gunakan ikon 📦 **Arsip** pada baris transaksi (transaksi **tidak dihapus**, hanya disembunyikan dan tidak dihitung dalam saldo; selalu meminta konfirmasi).
+4. Untuk memperbaiki salah ketik, gunakan ikon ✏️ **Edit**. Untuk membatalkan transaksi, gunakan ikon 🔄 **Batalkan** pada baris transaksi.
+
+### Membatalkan transaksi (Reversal)
+
+Pembatalan **tidak menghapus** data. Saat Anda menekan ikon 🔄 **Batalkan**, sistem otomatis menambahkan **satu entri Reversal** dengan nominal yang sama tetapi arah berlawanan:
+
+- Transaksi **pemasukan** → entri **Reversal Keluar** (mengurangi saldo).
+- Transaksi **pengeluaran** → entri **Reversal Masuk** (menambah saldo).
+
+Pasangan **transaksi asli + Reversal** selalu berjumlah **nol**, sehingga saldo kembali seperti sebelum transaksi dicatat. Transaksi asli tetap tampil dengan badge **“Dibatalkan”**, dan entri Reversal diberi badge **“Reversal”**. Keduanya tetap muncul di laporan/cetak agar jejak audit terlihat; kolom **Total Pemasukan** dan **Total Pengeluaran** memuat keduanya (selisihnya nol).
+
+- **Salah membatalkan?** Klik ikon 🔄 **Pulihkan** pada baris yang berbadge “Dibatalkan”. Entri Reversal akan dihapus dan transaksi asli kembali dihitung.
+- **Entri Reversal tidak bisa diedit.** Untuk mengubah transaksi, pulihkan dulu pembatalannya, edit, lalu batalkan lagi bila perlu.
+- Tanggal entri Reversal mengikuti tanggal transaksi asli (agar pasangan tetap berada di periode laporan yang sama). Waktu pembuatan tetap tercatat di kolom **Timestamp** pada Google Sheets.
 
 ### Mengatur Saldo Awal
 
@@ -173,7 +186,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 - Pilihan periode di kanan atas tabel: **Per Bulan** (default), **Per Tanggal**, atau **Semua Data**. Kartu ringkasan **ikut berubah** mengikuti periode yang dipilih — jadi laporan bulanan tinggal memilih bulannya saja. Pilihan ini tersimpan di browser Anda.
 - **Baris filter per kolom** tepat di bawah judul kolom (Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan) untuk menyaring sangat spesifik. Tombol **🚫 filter** mengosongkan semua filter sekaligus.
 - Kotak **Cari transaksi** untuk pencarian cepat.
-- Centang **Tampilkan arsip** di toolbar untuk menampilkan transaksi yang diarsipkan (latar kuning + badge “Arsip”). Ikon **Pulihkan** mengembalikannya ke daftar aktif dan ke perhitungan saldo.
+- Centang **Tampilkan arsip** di toolbar untuk menampilkan transaksi lama yang diarsipkan (latar kuning + badge “Arsip”). Ikon **Pulihkan** mengembalikannya ke daftar aktif dan ke perhitungan saldo. Untuk transaksi yang **dibatalkan**, gunakan badge **Dibatalkan** + ikon **Pulihkan** (menghapus entri Reversal).
 - Ikon **print** (🖨️) di samping judul **Riwayat Transaksi** membuka jendela cetak berisi **laporan kas sederhana**: identitas RT, periode terpilih, ringkasan Saldo Awal/Pemasukan/Pengeluaran/Saldo Akhir, serta tabel transaksi + totalnya. Laporan mengikuti **periode, pencarian, dan filter** yang sedang aktif — jadi cetak dulu setelah menyaring bila ingin laporan spesifik, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser (URL, tanggal, dan nomor halaman) tidak ikut tercetak.
 
 **Contoh pemakaian:** tutup buku bulanan = pilih **Per Bulan** → pilih bulan berjalan → catat **Total Pemasukan** dan **Total Pengeluaran** → laporkan di pengumuman/rapat RT.
@@ -514,20 +527,20 @@ Bagian ini untuk pengurus RT yang memegang **akses teknis**: menyiapkan sistem, 
    - `Pengumuman`
    - `Kegiatan_Warga`
    - `Pengajuan_Surat` (dibuat otomatis saat pertama dipakai bila belum ada)
-3. **Header boleh ditempel manual atau dibiarkan** — backend membuat/memperbaiki tab dan judul kolom secara otomatis, termasuk kolom bantu `ID`, kolom `Publik`, dan kolom `Diarsipkan`.
+3. **Header boleh ditempel manual atau dibiarkan** — backend membuat/memperbaiki tab dan judul kolom secara otomatis, termasuk kolom bantu `ID`, kolom `Publik`, kolom `Diarsipkan`, dan kolom `Reversal Dari`.
 
 Judul kolom yang dipakai:
 
 | Tab | Kolom |
 |---|---|
 | `Data_Warga` | Timestamp · Nomor KK · Nama Lengkap · Status · Jenis Kelamin · NIK · Tempat Lahir · Tanggal Lahir · Pendidikan · Pekerjaan · No HP · Status Tempat Tinggal · Alamat/No Rumah · Diarsipkan · ID |
-| `Iuran_Kas` | Timestamp · Tanggal · Nama Warga · No Rumah · Jenis Transaksi · Jumlah (Rp) · Keterangan · ID |
+| `Iuran_Kas` | Timestamp · Tanggal · Nama Warga · No Rumah · Jenis Transaksi · Jumlah (Rp) · Keterangan · Diarsipkan · Reversal Dari · ID |
 | `Pengumuman` | Timestamp · Tanggal · Judul Pengumuman · Isi Pengumuman · Kategori · Penanggung Jawab · Publik · ID |
 | `Kegiatan_Warga` | Timestamp · Nama Kegiatan · Tanggal Pelaksanaan · Waktu · Lokasi · Penanggung Jawab · Keterangan · Publik · ID |
 | `Pengajuan_Surat` | Dibuat otomatis oleh backend (Tanggal, No. Pengajuan, NIK, Nama, No. HP, Alamat, Jenis Surat, Keperluan, No. Surat, Status, Catatan, Diarsipkan, dll.) |
 | `Lapor_Aspirasi` | Dibuat otomatis oleh backend (No. Pengaduan, Nama, No. HP, Alamat, Jenis Pengaduan, Judul, Detail, Lokasi, Tanggal Kejadian, Foto, Harapan, Status, Petugas, Catatan Tindak Lanjut, Tanggal Penyelesaian, Diarsipkan, dll.) |
 
-> **Kolom `Publik`** mengatur apakah data tampil di portal warga (`Ya`/`Tidak`). **Kolom `Diarsipkan`** mengatur data yang disembunyikan tanpa dihapus (`Ya`/`Tidak`).
+> **Kolom `Publik`** mengatur apakah data tampil di portal warga (`Ya`/`Tidak`). **Kolom `Diarsipkan`** mengatur data yang disembunyikan tanpa dihapus (`Ya`/`Tidak`). **Kolom `Reversal Dari`** menyimpan ID transaksi asal untuk entri pembatalan otomatis (pasangan Reversal) di `Iuran_Kas`.
 
 ## Pasang Apps Script dan Deploy Web App
 
@@ -676,7 +689,7 @@ Data RT ada sepenuhnya di Google Sheets, sehingga pencadangan sangat mudah:
 **Backup otomatis (sudah ada):**
 
 - Google Sheets menyimpan **riwayat versi**. Buka **File → Version history → See version history** untuk melihat/mengembalikan kondisi sebelumnya.
-- Hapus data di aplikasi umumnya bersifat **arsip**, bukan hapus permanen — jadi kesalahan bisa dipulihkan sendiri lewat tombol **Pulihkan**.
+- Penghapusan data di aplikasi umumnya bersifat **arsip** atau **pembatalan (Reversal)**, bukan hapus permanen — jadi kesalahan bisa dipulihkan sendiri lewat tombol **Pulihkan**.
 
 **Backup manual (disarankan tiap bulan):**
 
@@ -761,6 +774,7 @@ Server ini menyajikan halaman admin & portal publik sekaligus meniru seluruh end
 | **No. Surat** | Nomor surat resmi RT (mis. `474/017-RT/RW.06/X/2026`), diisi saat status `Selesai`. |
 | **No. Pengaduan** | Kode bukti lapor/aspirasi warga, mis. `ADU/2026-001`. |
 | **Arsip** | Menyembunyikan data dari daftar tanpa menghapusnya. |
+| **Reversal** | Entri pembatalan otomatis dengan nominal sama dan arah berlawanan; pasangan transaksi asli + Reversal berjumlah nol. |
 | **PWA** | Cara memasang aplikasi ke layar utama HP/komputer. |
 
 ## B. Berkas Terkait dalam Repository

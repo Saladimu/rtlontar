@@ -65,10 +65,12 @@ Timestamp	Nomor KK	Nama Lengkap	Status	Jenis Kelamin	NIK	Tempat Lahir	Tanggal La
 
 ### 2. Tab `Iuran_Kas`
 ```tsv
-Timestamp	Tanggal	Nama Warga	No Rumah	Jenis Transaksi	Jumlah (Rp)	Keterangan	Diarsipkan
+Timestamp	Tanggal	Nama Warga	No Rumah	Jenis Transaksi	Jumlah (Rp)	Keterangan	Diarsipkan	Reversal Dari
 ```
 
-> Kolom **`Diarsipkan`** menandai transaksi kas yang disembunyikan dari daftar **dan** tidak dihitung dalam saldo tanpa dihapus: isi `Ya` untuk mengarsipkan, `Tidak`/kosong untuk transaksi aktif. Baris ber-`Diarsipkan=Ya` **tetap tersimpan** dan dapat dipulihkan lewat tombol **Pulihkan**.
+> Kolom **`Diarsipkan`** menandai transaksi kas lama yang disembunyikan dari daftar **dan** tidak dihitung dalam saldo tanpa dihapus: isi `Ya` untuk mengarsipkan, `Tidak`/kosong untuk transaksi aktif. Baris ber-`Diarsipkan=Ya` **tetap tersimpan** dan dapat dipulihkan lewat tombol **Pulihkan**.
+>
+> Kolom **`Reversal Dari`** menyimpan **ID transaksi asal** untuk entri pembatalan otomatis. Saat pengurus menekan **Batalkan**, aplikasi menambahkan satu baris **Reversal** dengan nominal sama dan arah berlawanan (`Reversal Keluar` untuk pembatalan pemasukan, `Reversal Masuk` untuk pembatalan pengeluaran). Pasangan transaksi asal + Reversal berjumlah **nol**, sehingga saldo kembali seperti semula tanpa menghapus data. Entri Reversal tidak dapat diedit; untuk mengubah transaksi, pulihkan dulu pembatalannya.
 
 ### 3. Tab `Pengumuman`
 ```tsv

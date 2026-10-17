@@ -30,13 +30,13 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v27-2026-10-16'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v28-2026-10-17'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
 const DATA_FIELDS = {
   Data_Warga: 14,
-  Iuran_Kas: 8,
+  Iuran_Kas: 9,
   Pengumuman: 7,
   Kegiatan_Warga: 8,
   Pengajuan_Surat: 11,
@@ -147,7 +147,7 @@ function buildRow(sheetName, data, tsIso, id) {
       normalizeArsip(data.arsip)
     );
   } else if (sheetName === 'Iuran_Kas') {
-    row.push(blank(data.tanggal), blank(data.nama), blank(data.noRumah), blank(data.jenis), blank(data.jumlah), blank(data.keterangan), normalizeArsip(data.arsip));
+    row.push(blank(data.tanggal), blank(data.nama), blank(data.noRumah), blank(data.jenis), blank(data.jumlah), blank(data.keterangan), normalizeArsip(data.arsip), blank(data.reversalDari));
   } else if (sheetName === 'Pengumuman') {
     row.push(blank(data.tanggal), blank(data.judul), blank(data.isi), blank(data.kategori), blank(data.pj), normalizePublik(data.publik));
   } else if (sheetName === 'Kegiatan_Warga') {
@@ -264,6 +264,12 @@ function loadStore() {
     if (typeof parsed.adminEmail !== 'string') parsed.adminEmail = '';
     if (!isFinite(Number(parsed.saldoAwal)) || Number(parsed.saldoAwal) < 0) parsed.saldoAwal = 0;
     else parsed.saldoAwal = Math.round(Number(parsed.saldoAwal));
+    // Migrasi lokal: Iuran_Kas lama belum punya kolom "Reversal Dari".
+    // Lama : [ts, tanggal, nama, noRumah, jenis, jumlah, keterangan, arsip, ID]
+    // Baru : [..., arsip, reversalDari, ID]
+    (parsed.sheets.Iuran_Kas || []).forEach((row) => {
+      if (Array.isArray(row) && row.length === 9) row.splice(8, 0, '');
+    });
     return parsed;
   } catch (e) {
     if (fs.existsSync(DATA_FILE)) {

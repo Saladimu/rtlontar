@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v27-2026-10-16";
+var CODE_VERSION = "publik-v28-2026-10-17";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -9,7 +9,7 @@ var TS_FORMAT = "dd-mm-yyyy hh:mm";
 // Jumlah kolom data (termasuk kolom A Timestamp), TIDAK termasuk kolom bantu "ID".
 var EXPECTED_FIELDS = {
   "Data_Warga": 14,     // A Timestamp + 13 field (termasuk kolom "Diarsipkan")
-  "Iuran_Kas": 8,       // A Timestamp + 7 field (termasuk kolom "Diarsipkan")
+  "Iuran_Kas": 9,       // A Timestamp + 8 field (termasuk Diarsipkan & Reversal Dari)
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
   "Pengajuan_Surat": 11, // A Timestamp + 10 field (termasuk Status Pengurusan, No. Surat, Catatan Pengurus, & Diarsipkan)
@@ -19,7 +19,7 @@ var EXPECTED_FIELDS = {
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
 var DESIRED_HEADERS = {
   "Data_Warga": ["Timestamp", "Nomor KK", "Nama Lengkap", "Status", "Jenis Kelamin", "NIK", "Tempat Lahir", "Tanggal Lahir", "Pendidikan", "Pekerjaan", "No HP", "Status Tempat Tinggal", "Alamat/No Rumah", "Diarsipkan", "ID"],
-  "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "Diarsipkan", "ID"],
+  "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "Diarsipkan", "Reversal Dari", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
   "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Diarsipkan", "ID"],
@@ -704,7 +704,7 @@ function buildRowData(sheetName, data, timestamp, id) {
       data.noHp, data.statusTinggal, data.alamat, normalizeArsip(data.arsip)
     );
   } else if (sheetName === "Iuran_Kas") {
-    rowData.push(data.tanggal, data.nama, data.noRumah, data.jenis, data.jumlah, data.keterangan, normalizeArsip(data.arsip));
+    rowData.push(data.tanggal, data.nama, data.noRumah, data.jenis, data.jumlah, data.keterangan, normalizeArsip(data.arsip), cleanStr(data.reversalDari, 120));
   } else if (sheetName === "Pengumuman") {
     rowData.push(data.tanggal, data.judul, data.isi, data.kategori, data.pj, normalizePublik(data.publik));
   } else if (sheetName === "Kegiatan_Warga") {

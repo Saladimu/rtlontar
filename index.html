@@ -472,6 +472,7 @@
                             </button>
                         </div>
                         <p id="kas-period-label" class="text-xs text-slate-400 mt-0.5"></p>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Transaksi dibatalkan tetap tersimpan sebagai pasangan Reversal; saldo kembali nol.</p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
                         <select id="kas-view-mode" onchange="onKasViewModeChange()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
@@ -1660,7 +1661,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v27-2026-10-16';
+        const EXPECTED_BACKEND_VERSION = 'publik-v28-2026-10-17';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1670,7 +1671,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-16-12';
+        const APP_BUILD = '2026-10-17-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2105,7 +2106,7 @@
         function getSignature(type, item) {
             if (!item) return '';
             if (type === 'warga') return [item.nomorKK || '', item.nama || '', item.status || '', item.jenisKelamin || '', item.nik || '', item.tempat || '', item.tanggalLahir || '', item.pendidikan || '', item.pekerjaan || '', item.hp || '', item.statusTinggal || '', item.alamat || ''].join('|');
-            if (type === 'kas') return [item.tanggal || '', item.nama || '', item.noRumah || '', item.jenis || '', item.jumlah || '', item.keterangan || ''].join('|');
+            if (type === 'kas') return [item._id || '', item.tanggal || '', item.nama || '', item.noRumah || '', item.jenis || '', item.jumlah || '', item.keterangan || '', item.reversalDari || ''].join('|');
             if (type === 'pengumuman') return [item.tanggal || '', item.judul || '', item.isi || '', item.kategori || '', item.pj || ''].join('|');
             if (type === 'kegiatan') return [item.namaKegiatan || '', item.tanggal || '', item.waktu || '', item.lokasi || '', item.pj || '', item.keterangan || ''].join('|');
             if (type === 'surat') return [item.nama || '', item.nik || '', item.noHp || '', item.jenisSurat || '', item.keperluan || '', item.status || '', item.catatan || ''].join('|');
@@ -2670,10 +2671,23 @@
         // Tampilkan transaksi kas yang diarsipkan (disembunyikan secara default).
         let showArchivedKas = localStorage.getItem('rt_show_archived_kas') === '1';
 
-        // True bila jenis transaksi menandai uang KELUAR. Selain "Pengeluaran"
-        // (termasuk "Iuran Bulanan", "Sumbangan", dst.) dihitung sebagai pemasukan.
+        // True bila jenis transaksi menandai uang KELUAR. "Pengeluaran" adalah
+        // transaksi normal; "Reversal Keluar" adalah entri pembatalan otomatis
+        // (pasangan Reversal) yang mengembalikan nominal transaksi pemasukan.
         function isKasKeluar(item) {
-            return String((item && item.jenis) || '').trim().toLowerCase() === 'pengeluaran';
+            const jenis = String((item && item.jenis) || '').trim().toLowerCase();
+            return jenis === 'pengeluaran' || jenis === 'reversal keluar';
+        }
+
+        // Entri reversal otomatis: dibuat saat transaksi dibatalkan (bukan dihapus).
+        function isKasReversal(item) {
+            return !!(item && item.reversalDari);
+        }
+
+        // Cari pasangan reversal untuk sebuah transaksi asal (null bila belum dibatalkan).
+        function kasReversalFor(item) {
+            if (!item || !item._id) return null;
+            return appState.kas.find(x => x && x.reversalDari === item._id) || null;
         }
 
         function isArchivedKas(item) {
@@ -3141,34 +3155,44 @@
                 const originalIndex = appState.kas.indexOf(item);
                 const archived = isArchivedKas(item);
                 const keluar = isKasKeluar(item);
-                const jenisBadge = keluar
-                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">Pengeluaran</span>'
-                    : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Pemasukan</span>';
+                const reversal = isKasReversal(item);
+                const reversed = !archived && !reversal && !!kasReversalFor(item);
+                const jenisBadge = reversal
+                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-medium">Reversal</span>'
+                    : (keluar
+                        ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">Pengeluaran</span>'
+                        : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Pemasukan</span>');
                 const archiveBadge = archived
                     ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>'
+                    : '';
+                const cancelBadge = reversed
+                    ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-rose-100 text-rose-700 font-medium align-middle">Dibatalkan</span>'
                     : '';
 
                 const amountClass = keluar ? 'text-rose-600 font-semibold' : 'text-emerald-600 font-semibold';
 
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
                 const tr = document.createElement('tr');
-                tr.className = archived
+                tr.className = (archived || reversal)
                     ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer transition'
                     : `${zebra} hover:bg-emerald-100 cursor-pointer transition`;
-                tr.title = 'Klik untuk edit';
+                tr.title = reversal ? 'Entri reversal (tidak dapat diedit)' : (reversed ? 'Transaksi dibatalkan' : 'Klik untuk edit');
                 tr.onclick = () => editKas(originalIndex);
                 tr.innerHTML = `
                     <td class="px-3 py-2 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
-                    <td class="px-3 py-2 font-medium text-slate-800">${item.nama}${archiveBadge}</td>
+                    <td class="px-3 py-2 font-medium text-slate-800">${item.nama}${archiveBadge}${cancelBadge}</td>
                     <td class="px-3 py-2 text-slate-600 text-xs">${item.noRumah || '-'}</td>
                     <td class="px-3 py-2">${jenisBadge}</td>
                     <td class="px-3 py-2 text-right ${amountClass}">${formatRupiah(item.jumlah)}</td>
                     <td class="px-3 py-2 text-slate-500 text-xs">${item.keterangan || '-'}</td>
                     <td class="px-3 py-2 text-center whitespace-nowrap">
-                        <button onclick="event.stopPropagation(); editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         ${archived
-                            ? `<button onclick="event.stopPropagation(); restoreKas(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan dari arsip"><i class="fa-solid fa-box-open"></i></button>`
-                            : `<button onclick="event.stopPropagation(); archiveKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Arsipkan"><i class="fa-solid fa-box-archive"></i></button>`}
+                            ? `<button onclick="event.stopPropagation(); editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button><button onclick="event.stopPropagation(); restoreKas(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan dari arsip"><i class="fa-solid fa-box-open"></i></button>`
+                            : reversal
+                                ? `<button onclick="event.stopPropagation(); deleteKasReversal(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus entri reversal"><i class="fa-solid fa-trash-can"></i></button>`
+                                : reversed
+                                    ? `<button onclick="event.stopPropagation(); unreverseKas(${originalIndex})" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Pulihkan transaksi (hapus entri reversal)"><i class="fa-solid fa-rotate-right"></i></button>`
+                                    : `<button onclick="event.stopPropagation(); editKas(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-2" title="Edit"><i class="fa-solid fa-pen"></i></button><button onclick="event.stopPropagation(); reverseKas(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Batalkan transaksi (buat entri reversal)"><i class="fa-solid fa-arrows-rotate"></i></button>`}
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -3209,19 +3233,23 @@
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;');
 
+            const reversedIds = new Set(appState.kas.filter(isKasReversal).map(x => x.reversalDari));
             const rows = filtered
                 .map(item => ({ item, key: (fmtDate(item.tanggal) || '') + ' ' + (item.timestamp || '') }))
                 .sort((a, b) => a.key.localeCompare(b.key))
                 .map((entry, idx) => {
                     const item = entry.item;
                     const keluar = isKasKeluar(item);
-                    const arsip = isArchivedKas(item) ? ' <span class="tag">Arsip</span>' : '';
+                    const reversal = isKasReversal(item);
+                    const tag = (isArchivedKas(item) ? ' <span class="tag">Arsip</span>' : '')
+                        + (reversal ? ' <span class="tag rev">Reversal</span>' : '')
+                        + (!reversal && reversedIds.has(item._id) ? ' <span class="tag cancel">Dibatalkan</span>' : '');
                     return `<tr>
                         <td class="c">${idx + 1}</td>
                         <td class="nw">${esc(fmtDateDisplay(item.tanggal))}</td>
-                        <td>${esc(item.nama)}${arsip}</td>
+                        <td>${esc(item.nama)}${tag}</td>
                         <td class="c">${esc(item.noRumah || '-')}</td>
-                        <td class="c">${keluar ? 'Pengeluaran' : 'Pemasukan'}</td>
+                        <td class="c">${reversal ? 'Reversal' : (keluar ? 'Pengeluaran' : 'Pemasukan')}</td>
                         <td class="r">${esc(formatRupiah(item.jumlah))}</td>
                         <td>${esc(item.keterangan || '-')}</td>
                     </tr>`;
@@ -3248,6 +3276,9 @@
     td.nw,th.nw{white-space:nowrap}
     tfoot td{font-weight:700;background:#f8fafc}
     .tag{font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px}
+    .tag.rev{background:#fef3c7;color:#92400e}
+    .tag.cancel{background:#ffe4e6;color:#9f1239}
+    .note{font-size:10px;color:#64748b;margin:-6px 0 10px}
     .foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}
     @page{size:A4 portrait;margin:0}
 </style></head>
@@ -3258,6 +3289,7 @@
         ${headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : ''}
     </div>
     <div class="meta"><span>${esc(periodLabel)}</span><span>Dicetak: ${esc(fmtTimestamp(new Date()))}</span></div>
+    <div class="note">Transaksi yang dibatalkan tetap ditampilkan bersama entri Reversal; saldo total tidak berubah.</div>
     <div class="cards">
         <div class="card"><div class="lbl">Saldo Awal</div><div class="val">${esc(formatRupiah(opening))}</div></div>
         <div class="card"><div class="lbl">Pemasukan</div><div class="val">${esc(formatRupiah(totalMasuk))}</div></div>
@@ -3576,6 +3608,7 @@
                 const idx = findIndexById(appState.kas, editId);
                 const prev = idx !== -1 ? appState.kas[idx] : null;
                 data.arsip = prev ? (prev.arsip || 'Tidak') : 'Tidak';
+                data.reversalDari = prev ? (prev.reversalDari || '') : '';
                 if (idx !== -1) appState.kas[idx] = Object.assign({ _id: editId, timestamp: (prev && prev.timestamp) || new Date().toISOString() }, data);
                 editMode.kas = null;
                 saveLocalState();
@@ -3736,7 +3769,15 @@
             const item = appState.kas[index];
             if (!item) return;
             if (!item._id) { item._id = newId(); saveLocalState(); }
-            
+            if (isKasReversal(item)) {
+                showToast('Entri reversal tidak bisa diedit. Hapus entri reversal untuk membatalkan pembatalan.', 'info');
+                return;
+            }
+            if (kasReversalFor(item)) {
+                showToast('Transaksi ini sudah dibatalkan. Pulihkan pembatalan dulu untuk mengedit.', 'info');
+                return;
+            }
+
             editMode.kas = item._id;
             document.getElementById('modal-kas-title').textContent = 'Edit Transaksi Kas';
             setDateInput('kas-tanggal', item.tanggal);
@@ -3853,15 +3894,18 @@
             updateWargaArsip(index, false);
         }
 
-        // Arsipkan transaksi kas (alih-alih menghapus): tandai kolom "Diarsipkan",
-        // sembunyikan dari daftar & perhitungan saldo, tetapi baris TETAP tersimpan
-        // dan dapat dipulihkan (menjaga jejak audit keuangan).
+        // Arsip (opsional, untuk data lama): tandai kolom "Diarsipkan", sembunyikan
+        // dari daftar & perhitungan saldo, tetapi baris TETAP tersimpan.
+        // Pembatalan transaksi baru memakai entri Reversal (lihat reverseKas()).
+        // Payload baris kas. Kolom "Reversal Dari" menyimpan ID transaksi asal
+        // untuk entri pembatalan otomatis (pasangan Reversal).
         function kasRowPayload(item, arsip) {
             return {
                 sheetName: 'Iuran_Kas',
                 tanggal: item.tanggal || '', nama: item.nama || '', noRumah: item.noRumah || '',
                 jenis: item.jenis || 'Pemasukan', jumlah: item.jumlah,
-                keterangan: item.keterangan || '', arsip: arsip ? 'Ya' : 'Tidak'
+                keterangan: item.keterangan || '', arsip: arsip ? 'Ya' : 'Tidak',
+                reversalDari: item.reversalDari || ''
             };
         }
 
@@ -3876,11 +3920,79 @@
             showToast(arsip ? 'Transaksi kas diarsipkan (tetap tersimpan).' : 'Transaksi kas dipulihkan.', arsip ? 'info' : 'success');
         }
 
-        function archiveKas(index) {
+        // Batalkan transaksi TANPA menghapus: tambahkan entri Reversal senilai sama
+        // dengan arah berlawanan, sehingga pasangan (asal + reversal) berjumlah nol.
+        // Transaksi asal tetap tersimpan dan tetap tampil dengan badge "Dibatalkan".
+        function reverseKas(index) {
             const item = appState.kas[index];
             if (!item) return;
-            const confirmMsg = `Arsipkan transaksi kas ini?\n\n• Tanggal: ${fmtDateDisplay(item.tanggal) || '-'}\n• Nama: ${item.nama || '-'}\n• Jumlah: ${formatRupiah(item.jumlah)}\n\nTransaksi tidak akan ditampilkan dan tidak dihitung dalam saldo, namun tetap tersimpan dan dapat dipulihkan.`;
-            if (confirm(confirmMsg)) updateKasArsip(index, true);
+            // Kolom "Reversal Dari" hanya dikenal backend v28+. Cegah pembatalan
+            // setengah jalan bila Apps Script belum di-redeploy.
+            if (appState.backendVersion && appState.backendVersion !== EXPECTED_BACKEND_VERSION) {
+                showToast('Backend masih versi lama. Redeploy code.gs > New version sebelum membatalkan transaksi.', 'error');
+                return;
+            }
+            if (isArchivedKas(item)) {
+                showToast('Transaksi yang diarsipkan tidak perlu dibatalkan.', 'info');
+                return;
+            }
+            if (isKasReversal(item)) {
+                showToast('Entri reversal tidak bisa dibatalkan. Hapus entri reversal-nya.', 'info');
+                return;
+            }
+            if (kasReversalFor(item)) {
+                showToast('Transaksi ini sudah dibatalkan.', 'info');
+                return;
+            }
+            if (!item._id) { item._id = newId(); saveLocalState(); }
+
+            const nominal = Number(item.jumlah) || 0;
+            const confirmMsg = `Batalkan transaksi ini dengan entri Reversal?\n\n• Tanggal: ${fmtDateDisplay(item.tanggal) || '-'}\n• Nama: ${item.nama || '-'}\n• Jumlah: ${formatRupiah(nominal)}\n\nSistem akan menambahkan entri Reversal senilai ${formatRupiah(nominal)} sehingga saldo kembali nol. Data asli tetap tersimpan.`;
+            if (!confirm(confirmMsg)) return;
+
+            const revId = newId();
+            const rev = {
+                _id: revId,
+                timestamp: new Date().toISOString(),
+                tanggal: item.tanggal || todayLocalISO(),
+                nama: item.nama || '',
+                noRumah: item.noRumah || '',
+                jenis: isKasKeluar(item) ? 'Reversal Masuk' : 'Reversal Keluar',
+                jumlah: nominal,
+                keterangan: 'Reversal: ' + (item.keterangan || item.jenis || 'transaksi'),
+                arsip: 'Tidak',
+                reversalDari: item._id
+            };
+            appState.kas.push(rev);
+            saveLocalState();
+            renderKasTable();
+            sendToGoogleSheets({
+                sheetName: 'Iuran_Kas', id: revId,
+                tanggal: rev.tanggal, nama: rev.nama, noRumah: rev.noRumah,
+                jenis: rev.jenis, jumlah: rev.jumlah, keterangan: rev.keterangan,
+                arsip: rev.arsip, reversalDari: rev.reversalDari
+            });
+            showToast('Transaksi dibatalkan. Entri Reversal ditambahkan.', 'success');
+        }
+
+        // Pulihkan pembatalan = hapus hanya baris reversal (transaksi asal kembali dihitung).
+        function unreverseKas(index) {
+            const item = appState.kas[index];
+            if (!item) return;
+            const rev = kasReversalFor(item);
+            if (!rev) return;
+            const revIndex = appState.kas.indexOf(rev);
+            if (revIndex === -1) return;
+            deleteKasReversal(revIndex);
+        }
+
+        function deleteKasReversal(index) {
+            const item = appState.kas[index];
+            if (!item || !isKasReversal(item)) return;
+            const confirmMsg = `Hapus entri Reversal ini?\n\n• Jumlah: ${formatRupiah(item.jumlah)}\n\nTransaksi asal akan kembali dihitung dalam saldo.`;
+            if (confirm(confirmMsg)) {
+                deleteRecord('Iuran_Kas', index, appState.kas, renderKasTable, 'kas');
+            }
         }
 
         function restoreKas(index) {
@@ -6004,7 +6116,7 @@
                 _id: r[r.length - 1], timestamp: r[0], nomorKK: r[1], nama: r[2], status: r[3], jenisKelamin: r[4], nik: r[5], tempat: r[6], tanggalLahir: fmtDate(r[7]), pendidikan: r[8], pekerjaan: r[9], hp: r[10], statusTinggal: r[11], alamat: r[12], arsip: r[13]
             })));
             appState.kas = applyLocalDeletes('kas', (d.Iuran_Kas || []).map(r => ({
-                _id: r[r.length - 1], timestamp: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6], arsip: r[7]
+                _id: r[r.length - 1], timestamp: r[0], tanggal: fmtDate(r[1]), nama: r[2], noRumah: r[3], jenis: r[4], jumlah: r[5], keterangan: r[6], arsip: r[7], reversalDari: (r.length > 9 ? (r[8] || '') : '')
             })));
             appState.pengumuman = applyLocalDeletes('pengumuman', (d.Pengumuman || []).map(r => ({
                 _id: r[r.length - 1], timestamp: r[0], tanggal: fmtDate(r[1]), judul: r[2], isi: r[3], kategori: r[4], pj: r[5], publik: r[6]

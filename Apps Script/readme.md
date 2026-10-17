@@ -81,10 +81,13 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | Tanggal | Date | 2026-10-01 |
 | Nama Warga | String | Budi Santoso |
 | No Rumah | String | 12A |
-| Jenis Transaksi | String | Pemasukan / Pengeluaran |
+| Jenis Transaksi | String | Pemasukan / Pengeluaran / Reversal Masuk / Reversal Keluar |
 | Jumlah (Rp) | Number | 50000 |
 | Keterangan | String | Iuran Kebersihan Bulan Oktober |
 | Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan transaksi dari daftar **dan** dari perhitungan saldo (tetap tersimpan, dapat dipulihkan) |
+| Reversal Dari | String | ID transaksi asal untuk entri pembatalan otomatis; kosong pada transaksi normal |
+
+> **Pembatalan (Reversal):** aplikasi tidak menghapus transaksi kas. Tombol **Batalkan** menambahkan baris baru dengan `Jenis Transaksi` = `Reversal Keluar` (pembatalan pemasukan) atau `Reversal Masuk` (pembatalan pengeluaran), nominal sama, dan `Reversal Dari` berisi ID transaksi asal. Pasangan asal + Reversal berjumlah nol. `isKasKeluar()` menilai `Reversal Keluar` sebagai arus keluar; `Reversal Masuk` sebagai arus masuk.
 
 ### 3. Tab `Pengumuman`
 | Kolom | Tipe | Contoh |
@@ -286,7 +289,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | Sheet | Payload Fields |
 |-------|----------------|
 | `Data_Warga` | `sheetName`, `token`, `id` (opsional saat add), `nomorKK`, `nama`, `status`, `jenisKelamin`, `nik`, `tempat`, `tanggalLahir`, `pendidikan`, `pekerjaan`, `noHp`, `statusTinggal`, `alamat`, `arsip` (`Ya`/`Tidak`) |
-| `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis`, `jumlah`, `keterangan`, `arsip` (`Ya`/`Tidak`) |
+| `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis` (`Pemasukan`/`Pengeluaran`/`Reversal Masuk`/`Reversal Keluar`), `jumlah`, `keterangan`, `arsip` (`Ya`/`Tidak`), `reversalDari` (ID transaksi asal untuk entri Reversal) |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
 | `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `noSurat`, `catatan`, `arsip` (`Ya`/`Tidak`) |

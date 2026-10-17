@@ -81,12 +81,15 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
   "tanggal": "YYYY-MM-DD",
   "nama": "String (Required)",
   "noRumah": "String (Optional)",
-  "jenis": "String [Pemasukan | Pengeluaran]",
+  "jenis": "String [Pemasukan | Pengeluaran | Reversal Masuk | Reversal Keluar]",
   "jumlah": "Number (Required)",
   "keterangan": "String (Optional)",
-  "arsip": "String [Ya | Tidak] (Optional - default Tidak)"
+  "arsip": "String [Ya | Tidak] (Optional - default Tidak)",
+  "reversalDari": "String (Optional - ID transaksi asal untuk entri Reversal)"
 }
 ```
+
+> **Pembatalan (Reversal):** bukan hapus/arsip. `reverseKas()` menambahkan baris baru dengan `jenis` berlawanan (`Reversal Keluar` untuk pemasukan, `Reversal Masuk` untuk pengeluaran), nominal sama, `reversalDari` = ID asal. `isKasKeluar()` menganggap `Reversal Keluar` sebagai arus keluar. Pasangan asal + reversal berjumlah nol; entri reversal tidak dapat diedit dan dihapus hanya lewat `unreverseKas()`/`deleteKasReversal()` (transaksi asal kembali dihitung).
 
 > **Saldo Awal (bukan baris sheet):** nilai pembukaan kas disimpan di **Script Property `SALDO_AWAL`** (default `0`), dibaca `readAllSheets()` sebagai field **`saldoAwal`**, dan diubah lewat aksi admin **`setSaldoAwal`**. Perhitungan memakai **saldo berjalan (running balance)**: **Saldo Awal periode = Saldo Awal dasar + akumulasi arus kas sebelum periode** (`kasOpeningBalance()` / `kasPeriodStartISO()`), lalu **Saldo Akhir = Saldo Awal periode + Pemasukan − Pengeluaran** periode berjalan (baris `Diarsipkan=Ya` dikecualikan). Mode **Semua Data** memakai Saldo Awal dasar tanpa akumulasi.
 
@@ -173,7 +176,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 > **Field per sheet:**
 > - `Data_Warga`: `nomorKK, nama, status, jenisKelamin, nik, tempat, tanggalLahir, pendidikan, pekerjaan, noHp, statusTinggal, alamat` (+ `Diarsipkan`)
-> - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan` (+ `Diarsipkan`)
+> - `Iuran_Kas`: `tanggal, nama, noRumah, jenis, jumlah, keterangan` (+ `Diarsipkan`, `Reversal Dari`)
 > - `Pengumuman`: `tanggal, judul, isi, kategori, pj, publik` (`Ya`/`Tidak`)
 > - `Kegiatan_Warga`: `namaKegiatan, tanggal, waktu, lokasi, pj, keterangan, publik` (`Ya`/`Tidak`)
 > - `Pengajuan_Surat`: `nama, nik, noHp, alamat, jenisSurat, keperluan, status, noSurat, catatan` (+ `Diarsipkan`)
@@ -350,6 +353,10 @@ Tombol refresh di:
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 
 ---
+
+## 🔧 Recent Changes (2026-10-17)
+
+- ✅ **Pembatalan transaksi Iuran & Kas memakai entri Reversal (pasangan), bukan arsip/hapus** — tombol **Arsip** pada baris kas diganti tombol **Batalkan** (`fa-arrows-rotate`) yang memanggil **`reverseKas()`**. Alih-alih menyembunyikan baris, sistem menambahkan **satu baris Reversal** dengan nominal sama dan arah berlawanan: pemasukan → **`Reversal Keluar`**, pengeluaran → **`Reversal Masuk`**; `reversalDari` menyimpan **ID transaksi asal**. Pasangan **asal + Reversal = nol**, dan tanggal Reversal mengikuti tanggal asal agar tetap satu periode laporan (waktu pembuatan tetap di kolom `Timestamp`). `isKasKeluar()` kini juga mengenali **`Reversal Keluar`** sebagai arus keluar. Di tabel, transaksi asal diberi badge **“Dibatalkan”** dan entri Reversal badge **“Reversal”**; entri Reversal **tidak bisa diedit**. Untuk membatalkan pembatalan, tombol **Pulihkan** (`fa-rotate-right`) memanggil **`unreverseKas()`** → **`deleteKasReversal()`** (hanya baris Reversal yang dihapus, transaksi asal kembali dihitung). `editKas()` menolak edit transaksi yang sudah dibatalkan/reversal. Laporan cetak menampilkan tag **Reversal/Dibatalkan** + catatan bahwa saldo total tidak berubah. Skema `Iuran_Kas` menambah kolom **`Reversal Dari`** sebelum `ID` (`EXPECTED_FIELDS` **8 → 9**, `DESIRED_HEADERS`, `buildRowData` menulis `cleanStr(data.reversalDari, 120)`); migrasi otomatis berbasis nama header. Mock `tools/mock-server.js` disamakan (`DATA_FIELDS.Iuran_Kas=9`, `buildRow`, migrasi data lama 9→10 kolom, `--reset`). `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v28-2026-10-17`** (perlu **redeploy New version**); `APP_BUILD` index → `2026-10-17-01` (+ `version.json`), cache SW → **`sapa-rt-static-v30`**; `public.html` tidak berubah. Uji baru **`test_kas_reversal.js`** (39) + penyesuaian `test_kas_feature.js`/`test_row_ux.js`/versi di beberapa harness — suite **74** hijau. Dokumentasi: `readme.md`, `panduan.md`, `Apps Script/readme.md`.
 
 ## 🔧 Recent Changes (2026-10-16)
 
