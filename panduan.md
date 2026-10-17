@@ -155,7 +155,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
    - **Nama Warga / Pembayar** \* — mulai mengetik, muncul daftar **Kepala Keluarga** dari Data Warga (untuk pengeluaran, tulis keterangan mis. “Biaya kebersihan”). Nama lain tetap bisa **diketik manual**, mis. nama anggota keluarga atau keterangan pengeluaran. Memilih/mengetik nama warga yang terdaftar otomatis mengisi **No. Rumah**. Bila salah pilih, klik ikon **x** di kanan field untuk mengosongkan **nama & No. Rumah** sekaligus.
    - **No. Rumah** — mis. `12B` (terisi otomatis bila nama warga dipilih).
    - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma, harus **lebih dari 0**.
-   - **Keterangan / Catatan** — klik saran **“Iuran bulan <Bulan> <Tahun>”** (mengikuti bulan berjalan) untuk mengisi cepat, lalu ubah bila perlu — atau langsung ketik catatan bebas, mis. “Iuran kebersihan Oktober”.
+   - **Keterangan / Catatan** — klik saran **“Iuran bulan <Bulan>”** (mengikuti bulan berjalan) untuk mengisi cepat, lalu ubah bila perlu — atau langsung ketik catatan bebas, mis. “Iuran kebersihan Oktober”.
 3. Klik **Simpan Transaksi**.
 4. Untuk memperbaiki salah ketik, gunakan ikon ✏️ **Edit**. Untuk membatalkan transaksi, gunakan ikon 🔄 **Batalkan** pada baris transaksi.
 

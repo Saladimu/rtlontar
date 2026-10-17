@@ -1698,7 +1698,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-07';
+        const APP_BUILD = '2026-10-17-08';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2143,13 +2143,13 @@
             noRumahEl.value = m ? m[1] : String(match.alamat || '');
         }
 
-        // Teks saran cepat keterangan kas: "Iuran bulan <Bulan> <Tahun>" menurut
-        // bulan berjalan (mengikuti tanggal lokal yang dipakai form).
+        // Teks saran cepat keterangan kas: "Iuran bulan <Bulan>" menurut bulan
+        // berjalan (mengikuti tanggal lokal yang dipakai form).
         function kasIuranSuggestionText() {
             const iso = todayLocalISO();
             const mi = parseInt(iso.slice(5, 7), 10) - 1;
             const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-            return 'Iuran bulan ' + ((mi >= 0 && mi < 12) ? names[mi] : iso.slice(5, 7)) + ' ' + iso.slice(0, 4);
+            return (mi >= 0 && mi < 12) ? ('Iuran bulan ' + names[mi]) : 'Iuran bulan ini';
         }
 
         // Segarkan label tombol saran (dipanggil saat init & setiap modal dibuka,
@@ -3236,7 +3236,7 @@
                 const reversal = isKasReversal(item);
                 const reversed = !reversal && !!kasReversalFor(item);
                 const jenisBadge = reversal
-                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-medium">Reversal</span>'
+                    ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-bold">Reversal</span>'
                     : (keluar
                         ? '<span class="px-2.5 py-0.5 text-xs rounded-full bg-rose-100 text-rose-700 font-medium">Pengeluaran</span>'
                         : '<span class="px-2.5 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 font-medium">Pemasukan</span>');
@@ -3307,11 +3307,9 @@
                 .replace(/"/g, '&quot;');
 
             const reversedIds = new Set(appState.kas.filter(isKasReversal).map(x => x.reversalDari));
+            // Urutan mengikuti computeKasFilter() (tanggal menurun) agar sama dengan tabel.
             const rows = filtered
-                .map(item => ({ item, key: (fmtDate(item.tanggal) || '') + ' ' + (item.timestamp || '') }))
-                .sort((a, b) => a.key.localeCompare(b.key))
-                .map((entry, idx) => {
-                    const item = entry.item;
+                .map((item, idx) => {
                     const keluar = isKasKeluar(item);
                     const reversal = isKasReversal(item);
                     const tag = (reversal ? ' <span class="tag rev">Reversal</span>' : '')
@@ -3321,7 +3319,7 @@
                         <td class="nw">${esc(fmtDateDisplay(item.tanggal))}</td>
                         <td>${esc(item.nama)}${tag}</td>
                         <td class="c">${esc(item.noRumah || '-')}</td>
-                        <td class="c">${reversal ? 'Reversal' : (keluar ? 'Pengeluaran' : 'Pemasukan')}</td>
+                        <td class="c">${reversal ? '<strong>Reversal</strong>' : (keluar ? 'Pengeluaran' : 'Pemasukan')}</td>
                         <td class="r">${esc(formatRupiah(item.jumlah))}</td>
                         <td>${esc(item.keterangan || '-')}</td>
                     </tr>`;
@@ -3348,7 +3346,7 @@
     td.nw,th.nw{white-space:nowrap}
     tfoot td{font-weight:700;background:#f8fafc}
     .tag{font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px}
-    .tag.rev{background:#fef3c7;color:#92400e}
+    .tag.rev{background:#fef3c7;color:#92400e;font-weight:700}
     .tag.cancel{background:#ffe4e6;color:#9f1239}
     .note{font-size:10px;color:#64748b;margin:-6px 0 10px}
     .foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}
