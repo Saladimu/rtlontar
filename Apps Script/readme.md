@@ -84,7 +84,7 @@ Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google
 | Jenis Transaksi | String | Pemasukan / Pengeluaran / Reversal Masuk / Reversal Keluar |
 | Jumlah (Rp) | Number | 50000 |
 | Keterangan | String | Iuran Kebersihan Bulan Oktober |
-| Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan transaksi dari daftar **dan** dari perhitungan saldo (tetap tersimpan, dapat dipulihkan) |
+| Diarsipkan | String | Ya / Tidak — dipertahankan untuk **data lama**; `Ya` menyembunyikan transaksi dari daftar **dan** perhitungan saldo. Fitur arsip kas sudah dipensiunkan (pembatalan memakai Reversal). |
 | Reversal Dari | String | ID transaksi asal untuk entri pembatalan otomatis; kosong pada transaksi normal |
 
 > **Pembatalan (Reversal):** aplikasi tidak menghapus transaksi kas. Tombol **Batalkan** menambahkan baris baru dengan `Jenis Transaksi` = `Reversal Keluar` (pembatalan pemasukan) atau `Reversal Masuk` (pembatalan pengeluaran), nominal sama, dan `Reversal Dari` berisi ID transaksi asal. Pasangan asal + Reversal berjumlah nol. `isKasKeluar()` menilai `Reversal Keluar` sebagai arus keluar; `Reversal Masuk` sebagai arus masuk.

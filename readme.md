@@ -68,7 +68,7 @@ Timestamp	Nomor KK	Nama Lengkap	Status	Jenis Kelamin	NIK	Tempat Lahir	Tanggal La
 Timestamp	Tanggal	Nama Warga	No Rumah	Jenis Transaksi	Jumlah (Rp)	Keterangan	Diarsipkan	Reversal Dari
 ```
 
-> Kolom **`Diarsipkan`** menandai transaksi kas lama yang disembunyikan dari daftar **dan** tidak dihitung dalam saldo tanpa dihapus: isi `Ya` untuk mengarsipkan, `Tidak`/kosong untuk transaksi aktif. Baris ber-`Diarsipkan=Ya` **tetap tersimpan** dan dapat dipulihkan lewat tombol **Pulihkan**.
+> Kolom **`Diarsipkan`** hanya dipertahankan untuk **kompatibilitas data lama**: baris ber-`Diarsipkan=Ya` disembunyikan dari daftar **dan** tidak dihitung dalam saldo. Fitur arsip kas sudah **dipensiunkan** (pembatalan memakai **Reversal**); untuk memunculkan data lama, ubah kolom ini menjadi `Tidak` langsung di Google Sheets.
 >
 > Kolom **`Reversal Dari`** menyimpan **ID transaksi asal** untuk entri pembatalan otomatis. Saat pengurus menekan **Batalkan**, aplikasi menambahkan satu baris **Reversal** dengan nominal sama dan arah berlawanan (`Reversal Keluar` untuk pembatalan pemasukan, `Reversal Masuk` untuk pembatalan pengeluaran). Pasangan transaksi asal + Reversal berjumlah **nol**, sehingga saldo kembali seperti semula tanpa menghapus data. Entri Reversal tidak dapat diedit; untuk mengubah transaksi, pulihkan dulu pembatalannya.
 
@@ -168,7 +168,7 @@ Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (memakai `publ
 ### Edit, Hapus & Arsip Data
 Semua modul (Warga, Kas, Pengumuman, Kegiatan) memiliki tombol **Edit** ✏️. Modul **Pengumuman & Kegiatan** juga memiliki tombol **Hapus** 🗑️, sedangkan **Data Warga & Iuran/Kas memakai tombol Arsip** 📦 (bukan hapus).
 - **Arsip (Data Warga)**: alih-alih menghapus, data warga **ditandai arsip**, disembunyikan dari tabel/dashboard/datalist, tetapi **tetap tersimpan** di Google Sheets. Centang **"Tampilkan arsip"** di atas tabel: data terarsip lalu tampil **terpisah di bagian atas** dengan **latar kuning (amber)** dan judul **"Data Diarsipkan (N)"**, diikuti bagian **"Data Aktif (M)"** — klik **Pulihkan** untuk mengaktifkannya kembali.
-- **Arsip (Iuran & Kas)**: transaksi kas **ditandai arsip**, disembunyikan dari tabel **dan dikecualikan dari perhitungan Total Pemasukan/Pengeluaran/Saldo** (tetap tersimpan sebagai jejak audit). Centang **"Tampilkan arsip"** di toolbar Riwayat Transaksi untuk menampilkan baris terarsip dengan **latar kuning (amber)** + badge **"Arsip"**; ikon **Pulihkan** mengembalikannya ke daftar aktif sekaligus ke perhitungan saldo.
+- **Arsip (Iuran & Kas) — dipensiunkan:** pembatalan transaksi kini memakai **entri Reversal** (pasangan bernilai nol) agar jejak audit tetap terlihat. Tidak ada lagi tombol atau toggle arsip kas. Baris lama yang masih bertanda `Diarsipkan=Ya` tetap **disembunyikan dan dikecualikan** dari Total Pemasukan/Pengeluaran/Saldo; ubah kolomnya menjadi `Tidak` di Google Sheets bila perlu dimunculkan kembali.
 - **Hapus (Pengumuman/Kegiatan)**: menampilkan dialog konfirmasi sebelum data benar-benar dihapus dari Google Sheets.
 - **Edit**: Modal akan terbuka dengan data yang sudah terisi, klik simpan untuk menyimpan perubahan.
 - **Delete Sync**: Penghapusan dilakukan di Google Sheets dulu, jika gagal data lokal tidak berubah.

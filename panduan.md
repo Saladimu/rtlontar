@@ -152,7 +152,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
 2. Isi:
    - **Tanggal Transaksi** \* — format `dd-mm-yyyy` (klik kolom untuk memilih dari kalender).
    - **Jenis Transaksi** \* — **Pemasukan (Iuran / Donasi)** atau **Pengeluaran (Operasional / Kebersihan)**.
-   - **Nama Warga / Pembayar** \* — mulai mengetik, muncul daftar nama warga (untuk pengeluaran, tulis keterangan mis. “Biaya kebersihan”). Memilih nama warga yang terdaftar otomatis mengisi **No. Rumah**.
+   - **Nama Warga / Pembayar** \* — mulai mengetik, muncul daftar **Kepala Keluarga** dari Data Warga (untuk pengeluaran, tulis keterangan mis. “Biaya kebersihan”). Nama lain tetap bisa **diketik manual**, mis. nama anggota keluarga atau keterangan pengeluaran. Memilih/mengetik nama warga yang terdaftar otomatis mengisi **No. Rumah**. Bila salah pilih, klik ikon **x** di kanan field untuk mengosongkan **nama & No. Rumah** sekaligus.
    - **No. Rumah** — mis. `12B` (terisi otomatis bila nama warga dipilih).
    - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma, harus **lebih dari 0**.
    - **Keterangan / Catatan** — mis. “Iuran kebersihan Oktober”.
@@ -186,7 +186,7 @@ Pasangan **transaksi asli + Reversal** selalu berjumlah **nol**, sehingga saldo 
 - Pilihan periode di kanan atas tabel: **Per Bulan** (default), **Per Tanggal**, atau **Semua Data**. Kartu ringkasan **ikut berubah** mengikuti periode yang dipilih — jadi laporan bulanan tinggal memilih bulannya saja. Pilihan ini tersimpan di browser Anda.
 - **Baris filter per kolom** tepat di bawah judul kolom (Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan) untuk menyaring sangat spesifik. Tombol **🚫 filter** mengosongkan semua filter sekaligus.
 - Kotak **Cari transaksi** untuk pencarian cepat.
-- Centang **Tampilkan arsip** di toolbar untuk menampilkan transaksi lama yang diarsipkan (latar kuning + badge “Arsip”). Ikon **Pulihkan** mengembalikannya ke daftar aktif dan ke perhitungan saldo. Untuk transaksi yang **dibatalkan**, gunakan badge **Dibatalkan** + ikon **Pulihkan** (menghapus entri Reversal).
+- Transaksi lama yang masih bertanda **`Diarsipkan=Ya`** otomatis disembunyikan dan tidak dihitung dalam saldo. Fitur arsip kas sudah **tidak dipakai lagi**; untuk memunculkan data lama tersebut, ubah kolom **`Diarsipkan`** menjadi `Tidak` langsung di Google Sheets. Untuk transaksi yang **dibatalkan**, gunakan badge **Dibatalkan** + ikon **Pulihkan** (menghapus entri Reversal).
 - Ikon **print** (🖨️) di samping judul **Riwayat Transaksi** membuka jendela cetak berisi **laporan kas sederhana**: identitas RT, periode terpilih, ringkasan Saldo Awal/Pemasukan/Pengeluaran/Saldo Akhir, serta tabel transaksi + totalnya. Laporan mengikuti **periode, pencarian, dan filter** yang sedang aktif — jadi cetak dulu setelah menyaring bila ingin laporan spesifik, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser (URL, tanggal, dan nomor halaman) tidak ikut tercetak.
 
 **Contoh pemakaian:** tutup buku bulanan = pilih **Per Bulan** → pilih bulan berjalan → catat **Total Pemasukan** dan **Total Pengeluaran** → laporkan di pengumuman/rapat RT.
@@ -540,7 +540,7 @@ Judul kolom yang dipakai:
 | `Pengajuan_Surat` | Dibuat otomatis oleh backend (Tanggal, No. Pengajuan, NIK, Nama, No. HP, Alamat, Jenis Surat, Keperluan, No. Surat, Status, Catatan, Diarsipkan, dll.) |
 | `Lapor_Aspirasi` | Dibuat otomatis oleh backend (No. Pengaduan, Nama, No. HP, Alamat, Jenis Pengaduan, Judul, Detail, Lokasi, Tanggal Kejadian, Foto, Harapan, Status, Petugas, Catatan Tindak Lanjut, Tanggal Penyelesaian, Diarsipkan, dll.) |
 
-> **Kolom `Publik`** mengatur apakah data tampil di portal warga (`Ya`/`Tidak`). **Kolom `Diarsipkan`** mengatur data yang disembunyikan tanpa dihapus (`Ya`/`Tidak`). **Kolom `Reversal Dari`** menyimpan ID transaksi asal untuk entri pembatalan otomatis (pasangan Reversal) di `Iuran_Kas`.
+> **Kolom `Publik`** mengatur apakah data tampil di portal warga (`Ya`/`Tidak`). **Kolom `Diarsipkan`** mengatur data yang disembunyikan tanpa dihapus (`Ya`/`Tidak`); pada `Iuran_Kas` kolom ini hanya dipertahankan untuk **data lama** (tidak ada lagi tombol arsip — pembatalan memakai Reversal). **Kolom `Reversal Dari`** menyimpan ID transaksi asal untuk entri pembatalan otomatis (pasangan Reversal) di `Iuran_Kas`.
 
 ## Pasang Apps Script dan Deploy Web App
 
