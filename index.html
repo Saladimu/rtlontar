@@ -1698,7 +1698,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-08';
+        const APP_BUILD = '2026-10-17-09';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3693,6 +3693,23 @@
             document.getElementById('form-warga').reset();
         }
 
+        // Cari transaksi lain dengan nama warga, jenis, dan nominal yang sama
+        // (abaikan huruf besar/kecil & spasi berlebih). Baris arsip, entri
+        // Reversal, dan record yang sedang diedit tidak dianggap duplikat.
+        function findDuplicateKas(data) {
+            const nama = String((data && data.nama) || '').trim().toLowerCase().replace(/\s+/g, ' ');
+            const jenis = String((data && data.jenis) || '').trim().toLowerCase();
+            const jumlah = Number(data && data.jumlah) || 0;
+            if (!nama || !jenis || jumlah <= 0) return null;
+            return appState.kas.find(item => {
+                if (!item || isArchivedKas(item) || isKasReversal(item)) return false;
+                if (editMode.kas !== null && item._id === editMode.kas) return false;
+                return String(item.nama || '').trim().toLowerCase().replace(/\s+/g, ' ') === nama &&
+                    String(item.jenis || '').trim().toLowerCase() === jenis &&
+                    (Number(item.jumlah) || 0) === jumlah;
+            }) || null;
+        }
+
         function submitKas(e) {
             e.preventDefault();
             const jumlah = Number(document.getElementById('kas-jumlah').value);
@@ -3710,6 +3727,33 @@
                 keterangan: document.getElementById('kas-keterangan').value
             };
 
+            // Peringatkan bila kombinasi nama + jenis + nominal sudah tercatat.
+            // Pengguna tetap bisa melanjutkan (mis. pembayaran ganda yang sah)
+            // atau membatalkan untuk memeriksa kembali isian.
+            const duplicate = findDuplicateKas(data);
+            if (duplicate) {
+                const editing = editMode.kas !== null;
+                openWarning({
+                    title: 'Transaksi serupa sudah ada',
+                    message: 'Transaksi ' + (data.jenis || '') + ' sebesar ' + formatRupiah(jumlah) +
+                        ' atas nama "' + (data.nama || '') + '" sudah tercatat pada ' +
+                        (fmtDateDisplay(duplicate.tanggal) || '-') + '. ' +
+                        (editing ? 'Tetap simpan perubahan ini?' : 'Tetap simpan transaksi ini juga?'),
+                    confirmLabel: 'Ya, Simpan',
+                    confirmIcon: 'fa-floppy-disk',
+                    icon: 'fa-triangle-exclamation',
+                    danger: true,
+                    onConfirm: function () { saveKasTransaction(data); }
+                });
+                return;
+            }
+
+            saveKasTransaction(data);
+        }
+
+        // Simpan transaksi Kas (tambah/ubah). Dipisah agar dapat dipanggil
+        // setelah pengguna menyetujui peringatan transaksi duplikat.
+        function saveKasTransaction(data) {
             if (editMode.kas !== null) {
                 const editId = editMode.kas;
                 const idx = findIndexById(appState.kas, editId);

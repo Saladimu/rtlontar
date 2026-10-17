@@ -156,7 +156,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
    - **No. Rumah** — mis. `12B` (terisi otomatis bila nama warga dipilih).
    - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma, harus **lebih dari 0**.
    - **Keterangan / Catatan** — klik saran **“Iuran bulan <Bulan>”** (mengikuti bulan berjalan) untuk mengisi cepat, lalu ubah bila perlu — atau langsung ketik catatan bebas, mis. “Iuran kebersihan Oktober”.
-3. Klik **Simpan Transaksi**.
+3. Klik **Simpan Transaksi**. Bila **nama warga, jenis transaksi, dan nominal** sama dengan transaksi yang sudah ada, muncul peringatan **“Transaksi serupa sudah ada”** — pilih **Ya, Simpan** untuk tetap mencatat (mis. pembayaran ganda yang sah) atau **Batal** untuk memeriksa kembali isian. Baris arsip, entri Reversal, dan record yang sedang diedit tidak dianggap duplikat.
 4. Untuk memperbaiki salah ketik, gunakan ikon ✏️ **Edit**. Untuk membatalkan transaksi, gunakan ikon 🔄 **Batalkan** pada baris transaksi.
 
 ### Membatalkan transaksi (Reversal)
