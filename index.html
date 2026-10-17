@@ -1121,6 +1121,12 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Keterangan / Catatan</label>
                     <input type="text" id="kas-keterangan" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Iuran Kebersihan Bulan Oktober">
+                    <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                        <button type="button" id="kas-ket-iuran" onclick="fillKasKeteranganIuran()" title="Isi cepat keterangan iuran bulan ini (tetap bisa diedit)" class="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full transition">
+                            <i class="fa-solid fa-lightbulb"></i><span id="kas-ket-iuran-label">Iuran bulan ini</span>
+                        </button>
+                        <span class="text-xs text-slate-400">Klik saran untuk isi cepat, atau ketik catatan bebas.</span>
+                    </div>
                 </div>
                 <div class="pt-2 flex justify-end space-x-2">
                     <button type="button" onclick="closeModal('modal-kas')" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
@@ -1692,7 +1698,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-06';
+        const APP_BUILD = '2026-10-17-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2137,6 +2143,38 @@
             noRumahEl.value = m ? m[1] : String(match.alamat || '');
         }
 
+        // Teks saran cepat keterangan kas: "Iuran bulan <Bulan> <Tahun>" menurut
+        // bulan berjalan (mengikuti tanggal lokal yang dipakai form).
+        function kasIuranSuggestionText() {
+            const iso = todayLocalISO();
+            const mi = parseInt(iso.slice(5, 7), 10) - 1;
+            const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            return 'Iuran bulan ' + ((mi >= 0 && mi < 12) ? names[mi] : iso.slice(5, 7)) + ' ' + iso.slice(0, 4);
+        }
+
+        // Segarkan label tombol saran (dipanggil saat init & setiap modal dibuka,
+        // agar tetap benar bila halaman dibiarkan terbuka melewati pergantian bulan).
+        function syncKasKeteranganSuggestion() {
+            const text = kasIuranSuggestionText();
+            const label = document.getElementById('kas-ket-iuran-label');
+            const btn = document.getElementById('kas-ket-iuran');
+            if (label) label.textContent = text;
+            if (btn) btn.title = 'Isi cepat: ' + text + ' (tetap bisa diedit)';
+        }
+
+        // Isi field keterangan dengan saran, namun pengguna tetap bebas mengubah
+        // atau mengetik teks lain.
+        function fillKasKeteranganIuran() {
+            const input = document.getElementById('kas-keterangan');
+            if (!input) return;
+            input.value = kasIuranSuggestionText();
+            if (typeof input.focus === 'function') input.focus();
+            if (typeof input.setSelectionRange === 'function') {
+                const end = input.value.length;
+                input.setSelectionRange(end, end);
+            }
+        }
+
         // Apakah record boleh tampil di portal publik. Default: tampil.
         function isPublikVal(v) {
             if (v === true) return true;
@@ -2236,6 +2274,7 @@
 
             // Default dates in forms (format dd-mm-yyyy)
             setDateInput('kas-tanggal', todayLocalISO());
+            syncKasKeteranganSuggestion();
             setDateInput('pengumuman-tanggal', todayLocalISO());
             setDateInput('kegiatan-tanggal', todayLocalISO());
             if (document.getElementById('admin-token-input')) document.getElementById('admin-token-input').value = appState.adminToken;
@@ -3117,6 +3156,16 @@
                     matchFilter(item.keterangan, filterValue('fw-kas-keterangan'));
                 return matchSearch && matchCols;
             });
+            // Riwayat selalu terbaru di atas (tanggal ISO yyyy-MM-dd). Bila tanggal
+            // sama, entri yang paling akhir dicatat tampil lebih dulu agar aksi
+            // terbaru (mis. Reversal) langsung terlihat.
+            const pos = new Map(appState.kas.map((item, i) => [item, i]));
+            filtered.sort((a, b) => {
+                const ta = a.tanggal || '';
+                const tb = b.tanggal || '';
+                if (ta !== tb) return tb.localeCompare(ta);
+                return (pos.get(b) || 0) - (pos.get(a) || 0);
+            });
             return { search, filtered };
         }
 
@@ -3485,7 +3534,7 @@
                 }
                 // Default tanggal hari ini (dd-mm-yyyy) saat menambah record baru.
                 if (id === 'modal-kas' && editMode.kas === null) setDateInput('kas-tanggal', todayLocalISO());
-                if (id === 'modal-kas') updateKasNamaClear();
+                if (id === 'modal-kas') { updateKasNamaClear(); syncKasKeteranganSuggestion(); }
                 if (id === 'modal-pengumuman' && editMode.pengumuman === null) setDateInput('pengumuman-tanggal', todayLocalISO());
                 if (id === 'modal-kegiatan' && editMode.kegiatan === null) setDateInput('kegiatan-tanggal', todayLocalISO());
                 if (id === 'modal-warga') { setNIKHint(''); setKKHint(''); resetNIKAuto(); updateWargaHpActions(); if (editMode.warga === null) hideWargaTimestamp(); }

@@ -155,7 +155,7 @@ Di kolom **Aksi** ada ikon **🕘 (riwayat)**. Klik untuk melihat **seluruh peng
    - **Nama Warga / Pembayar** \* — mulai mengetik, muncul daftar **Kepala Keluarga** dari Data Warga (untuk pengeluaran, tulis keterangan mis. “Biaya kebersihan”). Nama lain tetap bisa **diketik manual**, mis. nama anggota keluarga atau keterangan pengeluaran. Memilih/mengetik nama warga yang terdaftar otomatis mengisi **No. Rumah**. Bila salah pilih, klik ikon **x** di kanan field untuk mengosongkan **nama & No. Rumah** sekaligus.
    - **No. Rumah** — mis. `12B` (terisi otomatis bila nama warga dipilih).
    - **Jumlah Nominal (Rp)** \* — angka saja, tanpa titik/koma, harus **lebih dari 0**.
-   - **Keterangan / Catatan** — mis. “Iuran kebersihan Oktober”.
+   - **Keterangan / Catatan** — klik saran **“Iuran bulan <Bulan> <Tahun>”** (mengikuti bulan berjalan) untuk mengisi cepat, lalu ubah bila perlu — atau langsung ketik catatan bebas, mis. “Iuran kebersihan Oktober”.
 3. Klik **Simpan Transaksi**.
 4. Untuk memperbaiki salah ketik, gunakan ikon ✏️ **Edit**. Untuk membatalkan transaksi, gunakan ikon 🔄 **Batalkan** pada baris transaksi.
 
@@ -186,6 +186,7 @@ Pasangan **transaksi asli + Reversal** selalu berjumlah **nol**, sehingga saldo 
 - Pilihan periode di kanan atas tabel: **Per Bulan** (default), **Per Tanggal**, atau **Semua Data**. Kartu ringkasan **ikut berubah** mengikuti periode yang dipilih — jadi laporan bulanan tinggal memilih bulannya saja. Pilihan ini tersimpan di browser Anda.
 - **Baris filter per kolom** tepat di bawah judul kolom (Tanggal, Nama, No. Rumah, Jenis, Nominal, Catatan) untuk menyaring sangat spesifik. Tombol **🚫 filter** mengosongkan semua filter sekaligus.
 - Kotak **Cari transaksi** untuk pencarian cepat.
+- Riwayat selalu diurutkan **terbaru di atas** (tanggal menurun). Bila tanggalnya sama, entri yang **terakhir dicatat** tampil lebih dulu — termasuk entri Reversal — sehingga aksi terbaru mudah terlihat. Urutan ini juga dipakai pada hasil **cetak**.
 - Transaksi lama yang masih bertanda **`Diarsipkan=Ya`** otomatis disembunyikan dan tidak dihitung dalam saldo. Fitur arsip kas sudah **tidak dipakai lagi**; untuk memunculkan data lama tersebut, ubah kolom **`Diarsipkan`** menjadi `Tidak` langsung di Google Sheets. Untuk transaksi yang **dibatalkan**, gunakan badge **Dibatalkan** + ikon **Pulihkan** (menghapus entri Reversal).
 - Ikon **print** (🖨️) di samping judul **Riwayat Transaksi** membuka jendela cetak berisi **laporan kas sederhana**: identitas RT, periode terpilih, ringkasan Saldo Awal/Pemasukan/Pengeluaran/Saldo Akhir, serta tabel transaksi + totalnya. Laporan mengikuti **periode, pencarian, dan filter** yang sedang aktif — jadi cetak dulu setelah menyaring bila ingin laporan spesifik, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser (URL, tanggal, dan nomor halaman) tidak ikut tercetak.
 
