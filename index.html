@@ -1630,6 +1630,25 @@
         </div>
     </div>
 
+    <!-- ================= MODAL PERINGATAN (konfirmasi aksi sensitif) ================= -->
+    <div id="modal-warning" role="dialog" aria-modal="true" aria-labelledby="warning-title" aria-describedby="warning-message" onclick="if(event.target===this)closeWarning()" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl my-auto space-y-4">
+            <div class="flex items-start gap-3">
+                <div id="warning-icon-wrap" class="w-11 h-11 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <i id="warning-icon" class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <div class="min-w-0">
+                    <h3 id="warning-title" class="font-bold text-lg text-slate-800 leading-snug">Konfirmasi</h3>
+                    <p id="warning-message" class="text-sm text-slate-600 leading-relaxed mt-1"></p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button type="button" onclick="closeWarning()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl"><i class="fa-solid fa-xmark mr-1.5"></i>Batal</button>
+                <button type="button" id="warning-confirm" onclick="runWarningConfirm()" class="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-sm"><i class="fa-solid fa-check mr-1.5"></i>Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ================= JAVASCRIPT APP LOGIC ================= -->
     <script>
         // Default Initial Data (kosong - mulai dari tampilan bersih)
@@ -1671,7 +1690,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-01';
+        const APP_BUILD = '2026-10-17-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2221,7 +2240,7 @@
         // Simpan snapshot tampilan (tab aktif + modal terbuka) ke History API agar
         // gestur "Back" pada perangkat mobile menutup modal atau kembali ke tab
         // sebelumnya, bukan langsung keluar dari aplikasi.
-        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-saldo-awal', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-lapor', 'modal-warga-surat', 'modal-about', 'modal-install'];
+        const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-saldo-awal', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-lapor', 'modal-warga-surat', 'modal-warning', 'modal-about', 'modal-install'];
         let currentTab = 'dashboard';
 
         function getOpenModal() {
@@ -3446,6 +3465,9 @@
         }
 
         // Modal Control Helpers
+        // Callback tombol konfirmasi pada modal peringatan (lihat openWarning()).
+        let warningConfirmCallback = null;
+
         function openModal(id, opts) {
             opts = opts || {};
             // Saat menambah record baru, bersihkan sisa isian dari sesi edit
@@ -3477,11 +3499,44 @@
             else if (id === 'modal-kegiatan') { editMode.kegiatan = null; document.getElementById('modal-kegiatan-title').textContent = 'Tambah Agenda Kegiatan'; document.getElementById('btn-save-kegiatan').textContent = 'Simpan Agenda'; document.getElementById('kegiatan-publik').checked = true; }
             else if (id === 'modal-surat') { updateSuratHpActions(); }
             else if (id === 'modal-lapor') { editMode.lapor = null; document.getElementById('modal-lapor-title').textContent = 'Catat Pengaduan'; document.getElementById('btn-save-lapor').textContent = 'Simpan Pengaduan'; updateLaporTanggalSelesaiReq(); }
+            else if (id === 'modal-warning') { warningConfirmCallback = null; }
             // Hapus entri riwayat milik modal ini (bila ada) agar gestur "Back"
             // setelah menutup modal tidak membukanya kembali.
             if (!opts.fromHistory && history.state && history.state.rt && history.state.modal === id) {
                 try { history.back(); } catch (e) { /* abaikan */ }
             }
+        }
+
+        // ===== Modal peringatan sederhana (pengganti confirm() bawaan browser) =====
+        // opts: { title, message, confirmLabel, confirmIcon, icon, danger, onConfirm }
+        function openWarning(opts) {
+            opts = opts || {};
+            const title = document.getElementById('warning-title');
+            const message = document.getElementById('warning-message');
+            const confirmBtn = document.getElementById('warning-confirm');
+            const wrap = document.getElementById('warning-icon-wrap');
+            const icon = document.getElementById('warning-icon');
+            if (!title || !message || !confirmBtn) return;
+            const danger = opts.danger !== false;
+            title.textContent = opts.title || 'Konfirmasi';
+            message.textContent = opts.message || 'Lanjutkan tindakan ini?';
+            confirmBtn.innerHTML = '<i class="fa-solid ' + (opts.confirmIcon || 'fa-check') + ' mr-1.5"></i>' + (opts.confirmLabel || 'Ya, Lanjutkan');
+            confirmBtn.className = 'px-4 py-2 text-sm text-white rounded-xl shadow-sm ' + (danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700');
+            if (wrap) wrap.className = 'w-11 h-11 rounded-full flex items-center justify-center shrink-0 ' + (danger ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700');
+            if (icon) icon.className = 'fa-solid ' + (opts.icon || 'fa-triangle-exclamation') + ' text-lg';
+            warningConfirmCallback = (typeof opts.onConfirm === 'function') ? opts.onConfirm : null;
+            openModal('modal-warning');
+        }
+
+        function closeWarning() {
+            warningConfirmCallback = null;
+            closeModal('modal-warning');
+        }
+
+        function runWarningConfirm() {
+            const cb = warningConfirmCallback;
+            closeWarning();
+            if (cb) cb();
         }
 
         // Modal "Tentang Aplikasi" (visi & misi SAPA RT).
@@ -3947,9 +4002,18 @@
             if (!item._id) { item._id = newId(); saveLocalState(); }
 
             const nominal = Number(item.jumlah) || 0;
-            const confirmMsg = `Batalkan transaksi ini dengan entri Reversal?\n\n• Tanggal: ${fmtDateDisplay(item.tanggal) || '-'}\n• Nama: ${item.nama || '-'}\n• Jumlah: ${formatRupiah(nominal)}\n\nSistem akan menambahkan entri Reversal senilai ${formatRupiah(nominal)} sehingga saldo kembali nol. Data asli tetap tersimpan.`;
-            if (!confirm(confirmMsg)) return;
+            openWarning({
+                title: 'Batalkan transaksi?',
+                message: (item.nama || 'Transaksi') + ' sebesar ' + formatRupiah(nominal) + ' akan dibatalkan. Sistem menambahkan satu entri Reversal senilai sama sehingga saldo kembali nol; data asli tetap tersimpan.',
+                confirmLabel: 'Ya, Batalkan',
+                confirmIcon: 'fa-arrows-rotate',
+                icon: 'fa-triangle-exclamation',
+                onConfirm: function () { addKasReversal(item, nominal); }
+            });
+        }
 
+        // Tambahkan baris Reversal untuk transaksi asal (dipanggil setelah konfirmasi).
+        function addKasReversal(item, nominal) {
             const revId = newId();
             const rev = {
                 _id: revId,
@@ -3983,16 +4047,33 @@
             if (!rev) return;
             const revIndex = appState.kas.indexOf(rev);
             if (revIndex === -1) return;
-            deleteKasReversal(revIndex);
+            deleteKasReversal(revIndex, {
+                title: 'Pulihkan transaksi?',
+                message: 'Entri Reversal akan dihapus dan transaksi asal kembali dihitung dalam saldo.',
+                confirmLabel: 'Ya, Pulihkan',
+                confirmIcon: 'fa-rotate-right',
+                icon: 'fa-rotate-right',
+                danger: false
+            });
         }
 
-        function deleteKasReversal(index) {
+        function deleteKasReversal(index, opts) {
             const item = appState.kas[index];
             if (!item || !isKasReversal(item)) return;
-            const confirmMsg = `Hapus entri Reversal ini?\n\n• Jumlah: ${formatRupiah(item.jumlah)}\n\nTransaksi asal akan kembali dihitung dalam saldo.`;
-            if (confirm(confirmMsg)) {
-                deleteRecord('Iuran_Kas', index, appState.kas, renderKasTable, 'kas');
-            }
+            opts = opts || {};
+            const revId = item._id;
+            openWarning({
+                title: opts.title || 'Hapus entri Reversal?',
+                message: opts.message || ('Entri Reversal sebesar ' + formatRupiah(item.jumlah) + ' akan dihapus dan transaksi asal kembali dihitung dalam saldo.'),
+                confirmLabel: opts.confirmLabel || 'Ya, Hapus',
+                confirmIcon: opts.confirmIcon || 'fa-trash-can',
+                icon: opts.icon || 'fa-triangle-exclamation',
+                danger: opts.danger !== false,
+                onConfirm: function () {
+                    const i = findIndexById(appState.kas, revId);
+                    if (i !== -1) deleteRecord('Iuran_Kas', i, appState.kas, renderKasTable, 'kas');
+                }
+            });
         }
 
         function restoreKas(index) {
