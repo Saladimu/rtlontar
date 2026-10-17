@@ -103,6 +103,13 @@ Menu **Ringkasan** menampilkan gambaran singkat RT:
    - **Alamat / No. Rumah** \*
 3. Klik **Simpan Warga**. Bila berhasil muncul notifikasi, dan data langsung tampil di tabel.
 
+### Mencetak daftar warga
+
+- Klik ikon **print** di samping judul **Data Warga** untuk membuka jendela cetak **Daftar Data Warga** (A4 landscape).
+- Laporan mengikuti **pencarian** dan **filter status tempat tinggal** yang aktif, dan hanya memuat **data aktif** (data arsip tidak ikut dicetak).
+- Baris diurutkan berdasarkan **No. KK** menaik; pada setiap KK, **Kepala Keluarga** selalu tampil paling atas, diikuti anggota sesuai urutan data. KK yang kosong diletakkan di akhir.
+- Ringkasan di atas tabel: **Total KK**, **Total Warga**, **Kepala Keluarga**, dan **Anggota**.
+
 ### Isi otomatis dari NIK (menghemat waktu)
 
 - Begitu **NIK 16 digit** yang valid diketik, kolom **Jenis Kelamin** dan **Tanggal Lahir** terisi otomatis dari angka di dalam NIK.

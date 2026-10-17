@@ -370,8 +370,11 @@
         <!-- ================= PANEL 1: DATA WARGA ================= -->
         <section id="panel-warga" class="tab-panel hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-                <div>
+                <div class="flex items-center gap-2">
                     <h2 class="text-2xl font-bold text-slate-800" data-rt="wargaTitle">Data Warga</h2>
+                    <button type="button" onclick="printWargaReport()" title="Cetak daftar warga" class="text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 p-1.5 rounded-lg transition">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
                 </div>
                 <button onclick="openModal('modal-warga')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-user-plus"></i>
@@ -1698,7 +1701,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-09';
+        const APP_BUILD = '2026-10-17-10';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2890,22 +2893,15 @@
             `;
         }
 
-        // Render Warga Table
-        function renderWargaTable() {
-            const tbody = document.getElementById('table-warga-body');
-            const search = document.getElementById('search-warga').value.toLowerCase();
-            const filterStatus = document.getElementById('filter-status-warga').value;
-
-            tbody.innerHTML = '';
-
-            renderWargaNameList();
-
-            // Pencarian memakai kotak pencarian atas + filter status (baris filter
-            // per kolom dihapus). Haystack mencakup seluruh field + usia + tanggal
-            // tampilan agar pencarian nama/NIK/tanggal/usia tetap bekerja.
-            // Baris yang diarsipkan disembunyikan kecuali "Tampilkan arsip" aktif.
-            // Saat tampil, data arsip dipisah ke bagian tersendiri di ATAS tabel
-            // dengan warna latar berbeda agar mudah dikenali (fitur jarang dipakai).
+        // Hasil pencarian + filter status tinggal untuk Data Warga. Dipakai
+        // bersama oleh renderWargaTable() dan printWargaReport() agar konsisten.
+        // Haystack mencakup seluruh field + usia + tanggal tampilan agar pencarian
+        // nama/NIK/tanggal/usia tetap bekerja.
+        function computeWargaFilter() {
+            const searchEl = document.getElementById('search-warga');
+            const filterEl = document.getElementById('filter-status-warga');
+            const search = searchEl ? String(searchEl.value || '').toLowerCase() : '';
+            const filterStatus = filterEl ? filterEl.value : '';
             const matched = appState.warga.filter(item => {
                 const haystack = [item.nomorKK, item.nama, item.status, item.jenisKelamin, item.nik, item.tempat, item.tanggalLahir, item.pendidikan, item.pekerjaan, item.hp, fmtPhone(item.hp), item.statusTinggal, item.alamat, hitungUsia(item.tanggalLahir), fmtDateDisplay(item.tanggalLahir)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
@@ -2913,6 +2909,21 @@
                 const matchStatus = filterStatus === '' || item.statusTinggal === filterStatus;
                 return matchSearch && matchStatus;
             });
+            return { search: search, filterStatus: filterStatus, matched: matched };
+        }
+
+        // Render Warga Table
+        function renderWargaTable() {
+            const tbody = document.getElementById('table-warga-body');
+            const { search, filterStatus, matched } = computeWargaFilter();
+
+            tbody.innerHTML = '';
+
+            renderWargaNameList();
+
+            // Baris yang diarsipkan disembunyikan kecuali "Tampilkan arsip" aktif.
+            // Saat tampil, data arsip dipisah ke bagian tersendiri di ATAS tabel
+            // dengan warna latar berbeda agar mudah dikenali (fitur jarang dipakai).
             const aktifItems = matched.filter(item => !isArchivedWarga(item));
             const archivedItems = showArchivedWarga ? matched.filter(item => isArchivedWarga(item)) : [];
 
@@ -3041,6 +3052,132 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Cetak daftar Data Warga. Mengikuti pencarian + filter status tinggal
+        // yang aktif, hanya warga non-arsip, diurutkan No. KK menaik dengan
+        // Kepala Keluarga selalu di awal tiap KK.
+        function printWargaReport() {
+            const { search, filterStatus, matched } = computeWargaFilter();
+            const items = matched.filter(item => !isArchivedWarga(item));
+            if (items.length === 0) {
+                showToast('Tidak ada data warga untuk dicetak.', 'error');
+                return;
+            }
+
+            const cfg = window.RT_CONFIG || {};
+            const appName = cfg.appName || 'SAPA RT';
+            const appVersion = cfg.appVersion || '';
+            const rtRw = (cfg.rt || cfg.rw) ? ('RT ' + (cfg.rt || '') + ' / RW ' + (cfg.rw || '')) : '';
+            const headerLine2 = [rtRw, cfg.alamatrt].filter(Boolean).join(', ');
+            const headerLine3 = [cfg.kelurahan, cfg.kecamatan].filter(Boolean).join(', ');
+
+            const esc = v => String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+
+            // Kepala Keluarga = prioritas 0 agar muncul sebelum anggota pada KK yang sama.
+            const isKepala = item => String((item && item.status) || '').trim().toLowerCase() === 'kepala keluarga';
+            const sorted = items.slice().sort((a, b) => {
+                const ka = String((a && a.nomorKK) || '').trim();
+                const kb = String((b && b.nomorKK) || '').trim();
+                if (!ka || !kb) {
+                    if (!ka && kb) return 1;   // KK kosong di akhir
+                    if (ka && !kb) return -1;
+                } else {
+                    const c = ka.localeCompare(kb, 'id', { numeric: true });
+                    if (c !== 0) return c;
+                }
+                const ra = isKepala(a) ? 0 : 1;
+                const rb = isKepala(b) ? 0 : 1;
+                return ra - rb;
+            });
+
+            const totalKK = new Set(sorted.map(x => String((x && x.nomorKK) || '').trim()).filter(Boolean)).size;
+            const totalKepala = sorted.filter(isKepala).length;
+            const totalAnggota = sorted.length - totalKepala;
+
+            const rows = sorted.map((item, idx) => {
+                const kepala = isKepala(item);
+                const nama = esc(item.nama || '-');
+                return `<tr${kepala ? ' class="headrow"' : ''}>
+                    <td class="c">${idx + 1}</td>
+                    <td class="nw">${esc(String(item.nomorKK || '').trim() || '-')}</td>
+                    <td>${kepala ? '<strong>' + nama + '</strong>' : nama}<div class="mut">Usia: ${esc(hitungUsia(item.tanggalLahir) || '-')}</div></td>
+                    <td>${esc(item.status || '-')}<div class="mut">${esc(item.jenisKelamin || '-')}</div></td>
+                    <td class="nw">${esc(item.nik || '-')}</td>
+                    <td class="nw">${esc(fmtPhone(item.hp) || '-')}</td>
+                    <td>${esc(item.tempat || '-')}<div class="mut">${esc(fmtDateDisplay(item.tanggalLahir) || '-')}</div></td>
+                    <td>${esc(item.statusTinggal || '-')}<div class="mut">${esc(item.alamat || '-')}</div></td>
+                </tr>`;
+            }).join('');
+
+            const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><title>Daftar Data Warga</title>
+<style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:10mm 12mm;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .head{text-align:center;border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}
+    .head h1{margin:0;font-size:17px}
+    .head .sub{margin:2px 0;font-size:11px;color:#334155}
+    .meta{display:flex;justify-content:space-between;margin:6px 0 8px;font-size:11px;color:#334155}
+    .cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+    .card{flex:1 1 20%;border:1px solid #cbd5e1;border-radius:6px;padding:6px 9px}
+    .card .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+    .card .val{font-size:13px;font-weight:700;margin-top:1px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #cbd5e1;padding:4px 6px;vertical-align:top}
+    th{background:#f1f5f9;text-align:left;font-size:10px}
+    td.c,th.c{text-align:center}
+    td.nw,th.nw{white-space:nowrap}
+    tr.headrow td{background:#f8fafc}
+    .mut{color:#64748b;font-size:9px}
+    .note{font-size:9px;color:#64748b;margin:0 0 8px}
+    .foot{margin-top:10px;font-size:10px;color:#64748b;display:flex;justify-content:space-between}
+    @page{size:A4 landscape;margin:0}
+</style></head>
+<body>
+    <div class="head">
+        <h1>Daftar Data Warga</h1>
+        ${headerLine2 ? '<p class="sub">' + esc(headerLine2) + '</p>' : ''}
+        ${headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : ''}
+    </div>
+    <div class="meta"><span>Data aktif${filterStatus ? ' &middot; Status tinggal: ' + esc(filterStatus) : ''}${search ? ' &middot; Difilter dengan pencarian' : ''}</span><span>Dicetak: ${esc(fmtTimestamp(new Date()))}</span></div>
+    <div class="note">Diurutkan berdasarkan No. KK; Kepala Keluarga selalu tampil lebih dulu pada setiap KK. Data arsip tidak dicetak.</div>
+    <div class="cards">
+        <div class="card"><div class="lbl">Total KK</div><div class="val">${totalKK}</div></div>
+        <div class="card"><div class="lbl">Total Warga</div><div class="val">${sorted.length}</div></div>
+        <div class="card"><div class="lbl">Kepala Keluarga</div><div class="val">${totalKepala}</div></div>
+        <div class="card"><div class="lbl">Anggota</div><div class="val">${totalAnggota}</div></div>
+    </div>
+    <table>
+        <thead><tr>
+            <th class="c" style="width:26px">No</th>
+            <th class="nw" style="width:112px">No. KK</th>
+            <th>Nama Lengkap</th>
+            <th style="width:96px">Status / JK</th>
+            <th class="nw" style="width:116px">NIK</th>
+            <th class="nw" style="width:90px">No. HP</th>
+            <th style="width:140px">Tempat / Tgl Lahir</th>
+            <th style="width:170px">Status Tinggal / Alamat</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table>
+    <div class="foot"><span>Jumlah: ${sorted.length} jiwa &middot; ${totalKK} KK</span><span>${esc(appName)}${appVersion ? ' ' + esc(appVersion) : ''}</span></div>
+</body></html>`;
+
+            const w = window.open('', '_blank');
+            if (!w) {
+                showToast('Izinkan pop-up untuk mencetak daftar warga.', 'error');
+                return;
+            }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            const doPrint = () => { try { w.print(); } catch (e) { /* diabaikan */ } };
+            if (w.document.readyState === 'complete') setTimeout(doPrint, 200);
+            else w.onload = () => setTimeout(doPrint, 200);
         }
 
         // ===== Filter tampilan Iuran & Kas: per bulan / per tanggal / semua =====
