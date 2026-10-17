@@ -1701,7 +1701,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-10';
+        const APP_BUILD = '2026-10-17-13';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3056,7 +3056,8 @@
 
         // Cetak daftar Data Warga. Mengikuti pencarian + filter status tinggal
         // yang aktif, hanya warga non-arsip, diurutkan No. KK menaik dengan
-        // Kepala Keluarga selalu di awal tiap KK.
+        // Kepala Keluarga selalu di awal tiap KK. Header tabel diulang dan
+        // footer "Page X of Y" tampil di setiap halaman A4 landscape.
         function printWargaReport() {
             const { search, filterStatus, matched } = computeWargaFilter();
             const items = matched.filter(item => !isArchivedWarga(item));
@@ -3103,67 +3104,136 @@
                 return `<tr${kepala ? ' class="headrow"' : ''}>
                     <td class="c">${idx + 1}</td>
                     <td class="nw">${esc(String(item.nomorKK || '').trim() || '-')}</td>
+                    <td class="nw">${esc(item.nik || '-')}</td>
                     <td>${kepala ? '<strong>' + nama + '</strong>' : nama}<div class="mut">Usia: ${esc(hitungUsia(item.tanggalLahir) || '-')}</div></td>
                     <td>${esc(item.status || '-')}<div class="mut">${esc(item.jenisKelamin || '-')}</div></td>
-                    <td class="nw">${esc(item.nik || '-')}</td>
                     <td class="nw">${esc(fmtPhone(item.hp) || '-')}</td>
-                    <td>${esc(item.tempat || '-')}<div class="mut">${esc(fmtDateDisplay(item.tanggalLahir) || '-')}</div></td>
+                    <td class="nw">${esc([String(item.tempat || '').trim(), fmtDateDisplay(item.tanggalLahir)].filter(Boolean).join(', ') || '-')}</td>
                     <td>${esc(item.statusTinggal || '-')}<div class="mut">${esc(item.alamat || '-')}</div></td>
                 </tr>`;
             }).join('');
+
+            const subsHtml = (headerLine2 ? '<p class="sub">' + esc(headerLine2) + '</p>' : '')
+                + (headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : '');
+            const metaHtml = '<div class="meta"><span>Data aktif'
+                + (filterStatus ? ' &middot; Status tinggal: ' + esc(filterStatus) : '')
+                + (search ? ' &middot; Difilter dengan pencarian' : '')
+                + '</span><span>Dicetak: ' + esc(fmtTimestamp(new Date())) + '</span></div>';
+            const cardsHtml = '<div class="cards">'
+                + '<div class="card"><div class="lbl">Total KK</div><div class="val">' + totalKK + '</div></div>'
+                + '<div class="card"><div class="lbl">Total Warga</div><div class="val">' + sorted.length + '</div></div>'
+                + '<div class="card"><div class="lbl">Kepala Keluarga</div><div class="val">' + totalKepala + '</div></div>'
+                + '<div class="card"><div class="lbl">Anggota</div><div class="val">' + totalAnggota + '</div></div>'
+                + '</div>';
+            const footLeft = esc(appName) + (appVersion ? ' ' + esc(appVersion) : '')
+                + ' &middot; Jumlah: ' + sorted.length + ' jiwa &middot; ' + totalKK + ' KK';
+            const theadHtml = '<tr>'
+                + '<th class="c" style="width:26px">No</th>'
+                + '<th class="nw" style="width:112px">No. KK</th>'
+                + '<th class="nw" style="width:116px">NIK</th>'
+                + '<th>Nama Lengkap</th>'
+                + '<th style="width:96px">Status / JK</th>'
+                + '<th class="nw" style="width:90px">No. HP</th>'
+                + '<th class="nw" style="width:170px">Tempat, Tgl Lahir</th>'
+                + '<th style="width:170px">Status Tinggal / Alamat</th>'
+                + '</tr>';
 
             const html = `<!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8"><title>Daftar Data Warga</title>
 <style>
     *{box-sizing:border-box}
-    body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:10mm 12mm;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .head{text-align:center;border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}
-    .head h1{margin:0;font-size:17px}
-    .head .sub{margin:2px 0;font-size:11px;color:#334155}
-    .meta{display:flex;justify-content:space-between;margin:6px 0 8px;font-size:11px;color:#334155}
-    .cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+    body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;background:#fff;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .page{width:297mm;height:210mm;padding:10mm 12mm;overflow:hidden;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    .inner{display:flex;flex-direction:column;height:100%}
+    .top{margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #0f172a}
+    .top h1{margin:0 0 3px;font-size:17px;text-align:center}
+    .top .sub{margin:0;font-size:10px;color:#334155;text-align:center;line-height:1.35}
+    .meta{display:flex;justify-content:space-between;margin:6px 0;font-size:10px;color:#334155}
+    .cards{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
     .card{flex:1 1 20%;border:1px solid #cbd5e1;border-radius:6px;padding:6px 9px}
     .card .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
     .card .val{font-size:13px;font-weight:700;margin-top:1px}
     table{width:100%;border-collapse:collapse}
     th,td{border:1px solid #cbd5e1;padding:4px 6px;vertical-align:top}
-    th{background:#f1f5f9;text-align:left;font-size:10px}
+    th{background:#f1f5f9;text-align:center;font-size:10px}
     td.c,th.c{text-align:center}
     td.nw,th.nw{white-space:nowrap}
     tr.headrow td{background:#f8fafc}
     .mut{color:#64748b;font-size:9px}
-    .note{font-size:9px;color:#64748b;margin:0 0 8px}
-    .foot{margin-top:10px;font-size:10px;color:#64748b;display:flex;justify-content:space-between}
+    .pf{margin-top:auto;padding-top:5px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:9px;color:#64748b}
+    .src{position:absolute;left:-10000px;top:0;width:273mm}
+    [hidden]{display:none !important}
     @page{size:A4 landscape;margin:0}
 </style></head>
 <body>
-    <div class="head">
-        <h1>Daftar Data Warga</h1>
-        ${headerLine2 ? '<p class="sub">' + esc(headerLine2) + '</p>' : ''}
-        ${headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : ''}
-    </div>
-    <div class="meta"><span>Data aktif${filterStatus ? ' &middot; Status tinggal: ' + esc(filterStatus) : ''}${search ? ' &middot; Difilter dengan pencarian' : ''}</span><span>Dicetak: ${esc(fmtTimestamp(new Date()))}</span></div>
-    <div class="note">Diurutkan berdasarkan No. KK; Kepala Keluarga selalu tampil lebih dulu pada setiap KK. Data arsip tidak dicetak.</div>
-    <div class="cards">
-        <div class="card"><div class="lbl">Total KK</div><div class="val">${totalKK}</div></div>
-        <div class="card"><div class="lbl">Total Warga</div><div class="val">${sorted.length}</div></div>
-        <div class="card"><div class="lbl">Kepala Keluarga</div><div class="val">${totalKepala}</div></div>
-        <div class="card"><div class="lbl">Anggota</div><div class="val">${totalAnggota}</div></div>
-    </div>
-    <table>
-        <thead><tr>
-            <th class="c" style="width:26px">No</th>
-            <th class="nw" style="width:112px">No. KK</th>
-            <th>Nama Lengkap</th>
-            <th style="width:96px">Status / JK</th>
-            <th class="nw" style="width:116px">NIK</th>
-            <th class="nw" style="width:90px">No. HP</th>
-            <th style="width:140px">Tempat / Tgl Lahir</th>
-            <th style="width:170px">Status Tinggal / Alamat</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-    </table>
-    <div class="foot"><span>Jumlah: ${sorted.length} jiwa &middot; ${totalKK} KK</span><span>${esc(appName)}${appVersion ? ' ' + esc(appVersion) : ''}</span></div>
+<div id="source" class="src"><table><thead id="source-thead">${theadHtml}</thead><tbody id="source-body">${rows}</tbody></table></div>
+<template id="tpl-top"><h1>Daftar Data Warga</h1>${subsHtml}</template>
+<template id="tpl-first">${metaHtml}${cardsHtml}</template>
+<template id="tpl-foot"><span>${footLeft}</span><span class="pn"></span></template>
+<div id="pages"></div>
+<script>
+(function () {
+    var srcBody = document.getElementById('source-body');
+    var srcHead = document.getElementById('source-thead');
+    var srcRows = Array.prototype.slice.call(srcBody.rows);
+    var rowH = srcRows.map(function (r) { return r.getBoundingClientRect().height; });
+    var headH = srcHead.getBoundingClientRect().height;
+    var topTpl = document.getElementById('tpl-top').innerHTML;
+    var firstTpl = document.getElementById('tpl-first').innerHTML;
+    var footTpl = document.getElementById('tpl-foot').innerHTML;
+    var headHtml = srcHead.innerHTML;
+    var pagesEl = document.getElementById('pages');
+    var idx = 0, total = 0;
+    function build(first) {
+        var page = document.createElement('div');
+        page.className = 'page';
+        var inner = document.createElement('div');
+        inner.className = 'inner';
+        var top = document.createElement('div');
+        top.className = 'top';
+        top.innerHTML = topTpl + (first ? firstTpl : '');
+        inner.appendChild(top);
+        var table = document.createElement('table');
+        table.innerHTML = '<thead>' + headHtml + '</thead><tbody></tbody>';
+        inner.appendChild(table);
+        var foot = document.createElement('div');
+        foot.className = 'pf';
+        foot.innerHTML = footTpl;
+        inner.appendChild(foot);
+        page.appendChild(inner);
+        pagesEl.appendChild(page);
+        return { inner: inner, top: top, table: table, foot: foot };
+    }
+    var PAGE_GAP = 14;
+    while (idx < srcRows.length) {
+        var parts = build(total === 0);
+        var avail = parts.inner.clientHeight
+            - parts.top.getBoundingClientRect().height
+            - parts.foot.getBoundingClientRect().height - PAGE_GAP;
+        var used = headH;
+        var tb = parts.table.tBodies[0];
+        var added = 0;
+        while (idx < srcRows.length) {
+            var h = rowH[idx];
+            if (added > 0 && used + h > avail) break;
+            tb.appendChild(srcRows[idx].cloneNode(true));
+            used += h;
+            idx++;
+            added++;
+        }
+        total++;
+        if (added === 0) break;
+    }
+    var pages = pagesEl.children;
+    Array.prototype.forEach.call(pages, function (p, i) {
+        var pn = p.querySelector('.pn');
+        if (pn) pn.textContent = 'Page ' + (i + 1) + ' of ' + pages.length;
+    });
+    var src = document.getElementById('source');
+    if (src && src.parentNode) src.parentNode.removeChild(src);
+})();
+<\/script>
 </body></html>`;
 
             const w = window.open('', '_blank');
