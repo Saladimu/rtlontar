@@ -106,7 +106,7 @@ Menu **Ringkasan** menampilkan gambaran singkat RT:
 ### Mencetak daftar warga
 
 - Klik ikon **print** di samping judul **Data Warga** untuk membuka jendela cetak **Daftar Data Warga** (A4 landscape).
-- Laporan mengikuti **pencarian** dan **filter status tempat tinggal** yang aktif, dan hanya memuat **data aktif** (data arsip tidak ikut dicetak).
+- Laporan mengikuti **pencarian** dan **filter status tempat tinggal** yang aktif. Bila **Tampilkan arsip** dicentang, data arsip **ikut tercetak** (baris berlatar kuning dan berlabel **Arsip**); bila tidak dicentang, hanya data aktif yang dicetak.
 - Baris diurutkan berdasarkan **No. KK** menaik; pada setiap KK, **Kepala Keluarga** selalu tampil paling atas, diikuti anggota sesuai urutan data. KK yang kosong diletakkan di akhir.
 - Ringkasan di atas tabel: **Total KK**, **Total Warga**, **Kepala Keluarga**, dan **Anggota**.
 
@@ -140,7 +140,7 @@ Satu NIK hanya boleh terdaftar satu kali. Bila NIK sudah ada, sistem menolak dan
 
 Data warga **tidak pernah dihapus permanen**:
 
-1. Klik ikon **📦 Arsipkan** pada baris warga (ada konfirmasi).
+1. Klik ikon **📦 Arsipkan** pada baris warga. Muncul dialog peringatan berisi **Nama, Nomor KK, dan NIK** — klik **Ya, Arsipkan** untuk melanjutkan (atau **Batal**).
 2. Data hilang dari daftar utama, dashboard, dan pencarian — tetapi **tetap tersimpan** di Google Sheets.
 3. Untuk melihatnya, centang **Tampilkan arsip** di atas tabel. Data terarsip tampil **di bagian atas** dengan **latar kuning** dan judul **“Data Diarsipkan (N)”**, diikuti **“Data Aktif (M)”**.
 4. Klik ikon **📤 Pulihkan** untuk mengembalikan warga ke daftar aktif.
@@ -249,7 +249,7 @@ Warga cek status di portal & mengambil surat
 - Tabel terbaru di atas, dengan kolom **Tanggal / No. Pengajuan**, **Nama Pemohon / NIK** (NIK disamarkan, mis. `3173••••••01`), **No. HP / Alamat**, **Jenis Surat**, **Keperluan**, **Status**, dan **Aksi**.
 - **Filter periode** di kanan atas tabel: **Per Bulan** (default = bulan berjalan), **Per Tanggal**, atau **Semua Data** (pola sama dengan Iuran & Kas). Pilihan tersimpan di browser. Label di samping judul **Daftar Pengajuan** menampilkan jumlah baris + periode aktif.
 - **Filter** berdasarkan status dan **kotak cari** (nama, NIK, jenis surat, no. pengajuan, atau No. Surat).
-- **Cetak daftar:** ikon **print** (🖨️) di samping judul **Daftar Pengajuan** membuka jendela cetak berisi **laporan pengajuan sederhana** (kop RT, periode, waktu cetak, ringkasan jumlah per status, dan tabel pengajuan + jumlahnya). Laporan mengikuti **periode, pencarian, & filter status** yang sedang tampil, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser tidak ikut tercetak.
+- **Cetak daftar:** ikon **print** (🖨️) di samping judul **Daftar Pengajuan** membuka jendela cetak berisi **laporan pengajuan sederhana** (kop RT, periode, waktu cetak, ringkasan jumlah per status, dan tabel pengajuan + jumlahnya). Laporan mengikuti **periode, pencarian, & filter status** yang sedang tampil, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser tidak ikut tercetak. **Arsip tidak ikut tercetak** kecuali **Tampilkan arsip** dicentang.
 - Centang **Tampilkan arsip** bila ingin melihat pengajuan yang sudah diarsipkan.
 
 ### Mencatat pengajuan manual (Isi Manual)

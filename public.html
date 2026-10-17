@@ -320,6 +320,7 @@
         </section>
 
         <!-- ================= LAPOR & ASPIRASI ================= -->
+        <hr id="lapor-divider" class="border-slate-200 dark:border-slate-700">
         <section id="lapor-section">
             <div class="flex items-center space-x-2 mb-4">
                 <i class="fa-solid fa-comment-dots text-teal-600 dark:text-teal-400 text-xl"></i>
@@ -1337,7 +1338,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-15-02';
+        const APP_BUILD = '2026-10-15-03';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2219,6 +2220,8 @@
         function hideLaporSection() {
             const s = document.getElementById('lapor-section');
             if (s) s.classList.add('hidden');
+            const d = document.getElementById('lapor-divider');
+            if (d) d.classList.add('hidden');
         }
 
         // Isi dropdown "Jenis Pengaduan" dari RT_CONFIG.jenisPengaduan (config.js).

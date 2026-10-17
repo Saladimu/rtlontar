@@ -1654,7 +1654,7 @@
                 </div>
                 <div class="min-w-0">
                     <h3 id="warning-title" class="font-bold text-lg text-slate-800 leading-snug">Konfirmasi</h3>
-                    <p id="warning-message" class="text-sm text-slate-600 leading-relaxed mt-1"></p>
+                    <p id="warning-message" class="text-sm text-slate-600 leading-relaxed mt-1 whitespace-pre-line"></p>
                 </div>
             </div>
             <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
@@ -1705,7 +1705,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-18';
+        const APP_BUILD = '2026-10-17-21';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3065,7 +3065,9 @@
         // footer "Page X of Y" tampil di setiap halaman A4 landscape.
         function printWargaReport() {
             const { search, filterStatus, matched } = computeWargaFilter();
-            const items = matched.filter(item => !isArchivedWarga(item));
+            // Arsip hanya ikut dicetak bila toggle "Tampilkan arsip" aktif,
+            // sama seperti tabel di layar.
+            const items = showArchivedWarga ? matched.slice() : matched.filter(item => !isArchivedWarga(item));
             if (items.length === 0) {
                 showToast('Tidak ada data warga untuk dicetak.', 'error');
                 return;
@@ -3105,12 +3107,14 @@
 
             const rows = sorted.map((item, idx) => {
                 const kepala = isKepala(item);
+                const arsip = isArchivedWarga(item);
                 const nama = esc(item.nama || '-');
-                return `<tr${kepala ? ' class="headrow"' : ''}>
+                const rowClass = [kepala ? 'headrow' : '', arsip ? 'arcrow' : ''].filter(Boolean).join(' ');
+                return `<tr${rowClass ? ' class="' + rowClass + '"' : ''}>
                     <td class="c">${idx + 1}</td>
                     <td class="nw">${esc(String(item.nomorKK || '').trim() || '-')}</td>
                     <td class="nw">${esc(item.nik || '-')}</td>
-                    <td>${kepala ? '<strong>' + nama + '</strong>' : nama}<div class="mut">Usia: ${esc(hitungUsia(item.tanggalLahir) || '-')}</div></td>
+                    <td>${kepala ? '<strong>' + nama + '</strong>' : nama}<div class="mut">Usia: ${esc(hitungUsia(item.tanggalLahir) || '-')}</div>${arsip ? '<div class="mut">Arsip</div>' : ''}</td>
                     <td>${esc(item.status || '-')}<div class="mut">${esc(item.jenisKelamin || '-')}</div></td>
                     <td class="nw">${esc(fmtPhone(item.hp) || '-')}</td>
                     <td class="nw">${esc([String(item.tempat || '').trim(), fmtDateDisplay(item.tanggalLahir)].filter(Boolean).join(', ') || '-')}</td>
@@ -3120,7 +3124,7 @@
 
             const subsHtml = (headerLine2 ? '<p class="sub">' + esc(headerLine2) + '</p>' : '')
                 + (headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : '');
-            const metaHtml = '<div class="meta"><span>Data aktif'
+            const metaHtml = '<div class="meta"><span>' + (showArchivedWarga ? 'Data aktif &amp; arsip' : 'Data aktif')
                 + (filterStatus ? ' &middot; Status tinggal: ' + esc(filterStatus) : '')
                 + (search ? ' &middot; Difilter dengan pencarian' : '')
                 + '</span><span>Dicetak: ' + esc(fmtTimestamp(new Date())) + '</span></div>';
@@ -3165,6 +3169,7 @@
     td.c,th.c{text-align:center}
     td.nw,th.nw{white-space:nowrap}
     tr.headrow td{background:#f8fafc}
+    tr.arcrow td{background:#fffbeb}
     .mut{color:#64748b;font-size:9px}
     .pf{margin-top:auto;padding-top:5px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:9px;color:#64748b}
     .src{position:absolute;left:-10000px;top:0;width:273mm}
@@ -4248,8 +4253,19 @@
         function archiveWarga(index) {
             const item = appState.warga[index];
             if (!item) return;
-            const confirmMsg = `Arsipkan data warga ini?\n\n• Nama: ${item.nama || '-'}\n• Nomor KK: ${item.nomorKK || '-'}\n• NIK: ${item.nik || '-'}\n\nData tidak akan ditampilkan, namun tetap tersimpan dan dapat dipulihkan.`;
-            if (confirm(confirmMsg)) updateWargaArsip(index, true);
+            const lines = 'Nama: ' + (item.nama || '-')
+                + '\nNomor KK: ' + (item.nomorKK || '-')
+                + '\nNIK: ' + (item.nik || '-')
+                + '\n\nData tidak akan ditampilkan, namun tetap tersimpan dan dapat dipulihkan.';
+            openWarning({
+                title: 'Arsipkan data warga?',
+                message: lines,
+                confirmLabel: 'Ya, Arsipkan',
+                confirmIcon: 'fa-box-archive',
+                icon: 'fa-box-archive',
+                danger: true,
+                onConfirm: function () { updateWargaArsip(index, true); }
+            });
         }
 
         function restoreWarga(index) {
@@ -5062,7 +5078,11 @@
         // Cetak laporan Daftar Pengajuan Surat sederhana (baris yang sedang tampil).
         function printSuratReport() {
             const { filterStatus, matched } = computeSuratFilter();
-            if (matched.length === 0) {
+            // Arsip hanya ikut tercetak bila "Tampilkan arsip" dicentang.
+            const printedItems = matched.filter(function (item) {
+                return showArchivedSurat || !isArchivedSurat(item);
+            });
+            if (printedItems.length === 0) {
                 showToast('Tidak ada pengajuan untuk dicetak.', 'error');
                 return;
             }
@@ -5081,12 +5101,12 @@
                 .replace(/"/g, '&quot;');
 
             const counts = { Pending: 0, Diproses: 0, Selesai: 0, Ditolak: 0 };
-            matched.forEach(item => {
+            printedItems.forEach(item => {
                 const s = item.status || 'Pending';
                 counts[s] = (counts[s] || 0) + 1;
             });
 
-            const rows = matched
+            const rows = printedItems
                 .map(item => ({ item, key: (suratWaktuISO(item.waktu) || '') + ' ' + (item.waktu || '') }))
                 .sort((a, b) => a.key.localeCompare(b.key))
                 .map((entry, idx) => {
@@ -5135,7 +5155,7 @@
     </div>
     <div class="meta"><span>Periode: ${esc(periodLabel)}${filterStatus ? ' &middot; Status: ' + esc(filterStatus) : ''}</span><span>Dicetak: ${esc(fmtTimestamp(new Date()))}</span></div>
     <div class="cards">
-        <div class="card"><div class="lbl">Total</div><div class="val">${matched.length}</div></div>
+        <div class="card"><div class="lbl">Total</div><div class="val">${printedItems.length}</div></div>
         <div class="card"><div class="lbl">Pending</div><div class="val">${counts.Pending || 0}</div></div>
         <div class="card"><div class="lbl">Diproses</div><div class="val">${counts.Diproses || 0}</div></div>
         <div class="card"><div class="lbl">Selesai</div><div class="val">${counts.Selesai || 0}</div></div>
@@ -5152,7 +5172,7 @@
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>
-    <div class="foot"><span>Jumlah pengajuan: ${matched.length}</span><span>${esc(appName)}${appVersion ? ' ' + esc(appVersion) : ''}</span></div>
+    <div class="foot"><span>Jumlah pengajuan: ${printedItems.length}</span><span>${esc(appName)}${appVersion ? ' ' + esc(appVersion) : ''}</span></div>
 </body></html>`;
 
             const w = window.open('', '_blank');
