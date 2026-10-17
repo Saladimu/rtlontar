@@ -143,7 +143,7 @@ Data warga **tidak pernah dihapus permanen**:
 1. Klik ikon **📦 Arsipkan** pada baris warga. Muncul dialog peringatan berisi **Nama, Nomor KK, dan NIK** — klik **Ya, Arsipkan** untuk melanjutkan (atau **Batal**).
 2. Data hilang dari daftar utama, dashboard, dan pencarian — tetapi **tetap tersimpan** di Google Sheets.
 3. Untuk melihatnya, centang **Tampilkan arsip** di atas tabel. Data terarsip tampil **di bagian atas** dengan **latar kuning** dan judul **“Data Diarsipkan (N)”**, diikuti **“Data Aktif (M)”**.
-4. Klik ikon **📤 Pulihkan** untuk mengembalikan warga ke daftar aktif.
+4. Klik ikon **📤 Pulihkan**. Muncul dialog konfirmasi berisi **Nama, Nomor KK, dan NIK** — klik **Ya, Pulihkan** untuk mengembalikan warga ke daftar aktif.
 
 Gunakan arsip untuk warga yang pindah, meninggal, atau kontraknya berakhir — riwayatnya tetap tersimpan untuk keperluan administrasi.
 
