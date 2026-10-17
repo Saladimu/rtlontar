@@ -690,10 +690,14 @@
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                 <div class="p-4 border-b border-slate-200 flex flex-col lg:flex-row gap-3 justify-between lg:items-center">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-base">Daftar Pengaduan</h3>
+                        <div class="flex items-center gap-2">
+                            <h3 class="font-bold text-slate-800 text-base">Daftar Pengaduan</h3>
+                            <button type="button" onclick="printLaporReport()" title="Cetak daftar pengaduan" class="text-slate-400 hover:text-cyan-600 hover:bg-cyan-50 p-1.5 rounded-lg transition"><i class="fa-solid fa-print"></i></button>
+                        </div>
                         <p id="lapor-table-label" class="text-xs text-slate-400 mt-0.5"></p>
                     </div>
                     <div class="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                        <input type="month" id="lapor-filter-month" onchange="onLaporMonthChange()" title="Filter bulan laporan" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                         <select id="filter-status-lapor" onchange="renderLaporTable()" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
                             <option value="">Semua Status</option>
                             <option value="Diterima">Diterima</option>
@@ -1701,7 +1705,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-14';
+        const APP_BUILD = '2026-10-17-17';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2265,6 +2269,7 @@
             initSuratView();
             renderSuratTable();
             initLaporForm();
+            initLaporMonthFilter();
             renderLaporTable();
             updateConnectionUI();
             initNetworkStatus();
@@ -5204,11 +5209,58 @@
             if (el) el.checked = showArchivedLapor;
         }
 
+        // Filter bulan laporan pengaduan. Kosong = semua bulan.
+        let laporFilterMonth = localStorage.getItem('rt_lapor_filter_month') || '';
+
+        function initLaporMonthFilter() {
+            const el = document.getElementById('lapor-filter-month');
+            if (el) el.value = laporFilterMonth;
+        }
+
+        function onLaporMonthChange() {
+            const el = document.getElementById('lapor-filter-month');
+            laporFilterMonth = el ? el.value : '';
+            if (laporFilterMonth) localStorage.setItem('rt_lapor_filter_month', laporFilterMonth);
+            else localStorage.removeItem('rt_lapor_filter_month');
+            renderLaporTable();
+        }
+
+        // Waktu laporan ("dd-Mmm-yyyy HH:mm" atau ISO) -> ISO tanggal (yyyy-MM-dd).
+        function laporWaktuISO(v) {
+            return suratWaktuISO(v);
+        }
+
+        // Kunci urut kronologis (yyyy-MM-dd HH:mm) untuk laporan cetak.
+        function laporWaktuKey(v) {
+            const iso = laporWaktuISO(v);
+            if (!iso) return '';
+            const m = String(v || '').match(/(\d{2}):(\d{2})/);
+            return iso + ' ' + (m ? m[1] + ':' + m[2] : '00:00');
+        }
+
+        function laporMatchesMonth(item) {
+            if (!laporFilterMonth) return true;
+            const iso = laporWaktuISO(item && item.waktu);
+            return !iso || iso.slice(0, 7) === laporFilterMonth;
+        }
+
+        function laporMonthLabel() {
+            const m = String(laporFilterMonth || '').match(/^(\d{4})-(\d{2})$/);
+            if (!m) return '';
+            const names = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            const mi = parseInt(m[2], 10) - 1;
+            return (mi >= 0 && mi < 12 ? names[mi] : m[2]) + ' ' + m[1];
+        }
+
         function clearLaporFilters() {
             const s = document.getElementById('search-lapor');
             const f = document.getElementById('filter-status-lapor');
+            const m = document.getElementById('lapor-filter-month');
             if (s) s.value = '';
             if (f) f.value = '';
+            if (m) m.value = '';
+            laporFilterMonth = '';
+            localStorage.removeItem('rt_lapor_filter_month');
             renderLaporTable();
         }
 
@@ -5593,21 +5645,13 @@
             showToast('Status diubah menjadi ' + next, 'success');
         }
 
-        function renderLaporTable() {
-            const tbody = document.getElementById('table-lapor-body');
-            if (!tbody) return;
+        // Hasil pencarian + filter status + bulan + arsip untuk Daftar Pengaduan.
+        // Dipakai bersama oleh renderLaporTable() dan printLaporReport().
+        function computeLaporFilter() {
             const searchEl = document.getElementById('search-lapor');
             const filterEl = document.getElementById('filter-status-lapor');
             const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const filterStatus = filterEl ? filterEl.value : '';
-
-            tbody.innerHTML = '';
-
-            // Ringkasan jumlah per status (yang diarsipkan tidak dihitung).
-            ['Diterima', 'Diproses', 'Selesai'].forEach(function (s) {
-                const el = document.getElementById('lapor-count-' + s.toLowerCase());
-                if (el) el.innerText = (appState.lapor || []).filter(function (x) { return !isArchivedLapor(x) && (x.status || 'Diterima') === s; }).length;
-            });
 
             const list = (appState.lapor || []).slice().reverse(); // terbaru dahulu
             const matched = list.filter(function (item) {
@@ -5615,21 +5659,38 @@
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || (item.status || 'Diterima') === filterStatus;
-                return matchSearch && matchStatus;
+                return matchSearch && matchStatus && laporMatchesMonth(item);
             });
 
             const aktifItems = matched.filter(function (item) { return !isArchivedLapor(item); });
             const archivedItems = showArchivedLapor ? matched.filter(function (item) { return isArchivedLapor(item); }) : [];
             const filtered = showArchivedLapor ? archivedItems.concat(aktifItems) : aktifItems;
+            return { search, filterStatus, matched, aktifItems, archivedItems, filtered };
+        }
+
+        function renderLaporTable() {
+            const tbody = document.getElementById('table-lapor-body');
+            if (!tbody) return;
+            const { search, filterStatus, aktifItems, archivedItems, filtered } = computeLaporFilter();
+
+            tbody.innerHTML = '';
+
+            // Ringkasan jumlah per status (yang diarsipkan tidak dihitung).
+            ['Diterima', 'Diproses', 'Selesai'].forEach(function (s) {
+                const el = document.getElementById('lapor-count-' + s.toLowerCase());
+                if (el) el.innerText = (appState.lapor || []).filter(function (x) { return !isArchivedLapor(x) && laporMatchesMonth(x) && (x.status || 'Diterima') === s; }).length;
+            });
+
             const showSections = showArchivedLapor && archivedItems.length > 0;
             const firstArchivedPos = 0;
             const firstActivePos = archivedItems.length;
 
             const label = document.getElementById('lapor-table-label');
-            if (label) label.innerText = filtered.length + ' dari ' + (appState.lapor || []).length + ' pengaduan';
+            if (label) label.innerText = filtered.length + ' dari ' + (appState.lapor || []).length + ' pengaduan'
+                + (laporFilterMonth ? ' - ' + laporMonthLabel() : '');
 
             if (filtered.length === 0) {
-                const anyFilter = search !== '' || filterStatus !== '';
+                const anyFilter = search !== '' || filterStatus !== '' || laporFilterMonth !== '';
                 let msg;
                 if ((appState.lapor || []).length === 0) {
                     msg = 'Belum ada pengaduan. Laporan dari Portal Publik akan tampil di sini.';
@@ -5703,6 +5764,212 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        // Cetak Daftar Pengaduan. Mengikuti pencarian, filter status, filter
+        // bulan, dan toggle "Tampilkan arsip". Dipaginasi maksimal 15 record
+        // per halaman A4 landscape dengan header berulang & footer "Page X of Y".
+        function printLaporReport() {
+            const { search, filterStatus, filtered } = computeLaporFilter();
+            if (filtered.length === 0) {
+                showToast('Tidak ada pengaduan untuk dicetak.', 'error');
+                return;
+            }
+            // Laporan cetak selalu kronologis: tanggal (timestamp) menaik.
+            // Tabel di layar tetap menampilkan yang terbaru di atas.
+            const printedItems = filtered.slice().sort(function (a, b) {
+                const ka = laporWaktuKey(a && a.waktu);
+                const kb = laporWaktuKey(b && b.waktu);
+                if (!ka && !kb) return 0;
+                if (!ka) return 1;
+                if (!kb) return -1;
+                return ka.localeCompare(kb);
+            });
+
+            const cfg = window.RT_CONFIG || {};
+            const appName = cfg.appName || 'SAPA RT';
+            const appVersion = cfg.appVersion || '';
+            const rtRw = (cfg.rt || cfg.rw) ? ('RT ' + (cfg.rt || '') + ' / RW ' + (cfg.rw || '')) : '';
+            const headerLine2 = [rtRw, cfg.alamatrt].filter(Boolean).join(', ');
+            const headerLine3 = [cfg.kelurahan, cfg.kecamatan].filter(Boolean).join(', ');
+
+            const esc = v => String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+            const cut = (v, n) => {
+                const t = String(v == null ? '' : v).trim();
+                return t.length > n ? t.slice(0, n - 1) + '\u2026' : t;
+            };
+
+            const statusOf = item => item.status || 'Diterima';
+            const counts = { Diterima: 0, Diproses: 0, Selesai: 0 };
+            printedItems.forEach(item => { const st = statusOf(item); if (counts[st] != null) counts[st]++; });
+
+            const rows = printedItems.map((item, idx) => {
+                const archived = isArchivedLapor(item);
+                const nama = esc(item.nama || '-');
+                const badge = archived ? ' <span class="tag">Arsip</span>' : '';
+                const hp = esc(fmtPhone(item.noHp) || '-');
+                const tgl = esc(fmtDateDisplay(laporWaktuISO(item.waktu)) || '-');
+                const detail = esc(cut(item.detail, 180));
+                const petugas = esc(item.petugas || '-');
+                const selesai = item.tanggalSelesai
+                    ? '<div class="mut">Selesai: ' + esc(fmtDateDisplay(item.tanggalSelesai) || '-') + '</div>'
+                    : '';
+                return `<tr${archived ? ' class="archrow"' : ''}>
+                    <td class="c">${idx + 1}</td>
+                    <td class="nw">${tgl}</td>
+                    <td class="nw">${esc(item.noPengaduan || '-')}</td>
+                    <td>${nama}${badge}<div class="mut">${hp}</div></td>
+                    <td>${esc(item.alamat || '-')}</td>
+                    <td>${esc(item.jenisPengaduan || '-')}</td>
+                    <td><strong>${esc(item.judul || '-')}</strong>${detail ? '<div class="mut">' + detail + '</div>' : ''}</td>
+                    <td class="c"><strong>${esc(statusOf(item))}</strong></td>
+                    <td>${petugas}${selesai}</td>
+                </tr>`;
+            }).join('');
+
+            const subsHtml = (headerLine2 ? '<p class="sub">' + esc(headerLine2) + '</p>' : '')
+                + (headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : '');
+            const period = laporFilterMonth ? laporMonthLabel() : 'Semua bulan';
+            const metaLeft = (showArchivedLapor ? 'Termasuk arsip' : 'Data aktif')
+                + ' &middot; Periode: ' + esc(period)
+                + (filterStatus ? ' &middot; Status: ' + esc(filterStatus) : '')
+                + (search ? ' &middot; Difilter dengan pencarian' : '');
+            const metaHtml = '<div class="meta"><span>' + metaLeft + '</span><span>Dicetak: ' + esc(fmtTimestamp(new Date())) + '</span></div>';
+            const cardsHtml = '<div class="cards">'
+                + '<div class="card"><div class="lbl">Total Pengaduan</div><div class="val">' + printedItems.length + '</div></div>'
+                + '<div class="card"><div class="lbl">Diterima</div><div class="val">' + counts.Diterima + '</div></div>'
+                + '<div class="card"><div class="lbl">Diproses</div><div class="val">' + counts.Diproses + '</div></div>'
+                + '<div class="card"><div class="lbl">Selesai</div><div class="val">' + counts.Selesai + '</div></div>'
+                + '</div>';
+            const footLeft = esc(appName) + (appVersion ? ' ' + esc(appVersion) : '')
+                + ' &middot; Jumlah: ' + printedItems.length + ' pengaduan'
+                + (laporFilterMonth ? ' &middot; ' + esc(period) : '');
+            const theadHtml = '<tr>'
+                + '<th class="c" style="width:24px">No</th>'
+                + '<th class="nw" style="width:70px">Tanggal</th>'
+                + '<th class="nw" style="width:100px">No. Pengaduan</th>'
+                + '<th style="width:150px">Nama / No. HP</th>'
+                + '<th style="width:130px">Alamat</th>'
+                + '<th style="width:110px">Jenis</th>'
+                + '<th>Judul / Detail</th>'
+                + '<th style="width:64px">Status</th>'
+                + '<th style="width:130px">Petugas / Selesai</th>'
+                + '</tr>';
+
+            const html = `<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><title>Daftar Pengaduan</title>
+<style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;background:#fff;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .page{width:297mm;height:210mm;padding:10mm 12mm;overflow:hidden;page-break-after:always}
+    .page:last-child{page-break-after:auto}
+    .inner{display:flex;flex-direction:column;height:100%}
+    .top{margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #0f172a}
+    .top h1{margin:0 0 3px;font-size:17px;text-align:center}
+    .top .sub{margin:0;font-size:10px;color:#334155;text-align:center;line-height:1.35}
+    .meta{display:flex;justify-content:space-between;margin:6px 0;font-size:10px;color:#334155}
+    .cards{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+    .card{flex:1 1 20%;border:1px solid #cbd5e1;border-radius:6px;padding:6px 9px}
+    .card .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}
+    .card .val{font-size:13px;font-weight:700;margin-top:1px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border:1px solid #cbd5e1;padding:4px 6px;vertical-align:top}
+    th{background:#f1f5f9;text-align:center;font-size:10px}
+    td.c,th.c{text-align:center}
+    td.nw,th.nw{white-space:nowrap}
+    tr.archrow td{background:#fffbeb}
+    .mut{color:#64748b;font-size:9px}
+    .tag{display:inline-block;padding:0 4px;border-radius:4px;background:#fde68a;color:#92400e;font-size:8px;font-weight:700;vertical-align:middle}
+    .pf{margin-top:auto;padding-top:5px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:9px;color:#64748b}
+    .src{position:absolute;left:-10000px;top:0;width:273mm}
+    [hidden]{display:none !important}
+    @page{size:A4 landscape;margin:0}
+</style></head>
+<body>
+<div id="source" class="src"><table><thead id="source-thead">${theadHtml}</thead><tbody id="source-body">${rows}</tbody></table></div>
+<template id="tpl-top"><h1>Daftar Pengaduan</h1>${subsHtml}</template>
+<template id="tpl-first">${metaHtml}${cardsHtml}</template>
+<template id="tpl-foot"><span>${footLeft}</span><span class="pn"></span></template>
+<div id="pages"></div>
+<script>
+(function () {
+    var srcBody = document.getElementById('source-body');
+    var srcHead = document.getElementById('source-thead');
+    var srcRows = Array.prototype.slice.call(srcBody.rows);
+    var rowH = srcRows.map(function (r) { return r.getBoundingClientRect().height; });
+    var headH = srcHead.getBoundingClientRect().height;
+    var topTpl = document.getElementById('tpl-top').innerHTML;
+    var firstTpl = document.getElementById('tpl-first').innerHTML;
+    var footTpl = document.getElementById('tpl-foot').innerHTML;
+    var headHtml = srcHead.innerHTML;
+    var pagesEl = document.getElementById('pages');
+    var idx = 0, total = 0;
+    function build(first) {
+        var page = document.createElement('div');
+        page.className = 'page';
+        var inner = document.createElement('div');
+        inner.className = 'inner';
+        var top = document.createElement('div');
+        top.className = 'top';
+        top.innerHTML = topTpl + (first ? firstTpl : '');
+        inner.appendChild(top);
+        var table = document.createElement('table');
+        table.innerHTML = '<thead>' + headHtml + '</thead><tbody></tbody>';
+        inner.appendChild(table);
+        var foot = document.createElement('div');
+        foot.className = 'pf';
+        foot.innerHTML = footTpl;
+        inner.appendChild(foot);
+        page.appendChild(inner);
+        pagesEl.appendChild(page);
+        return { inner: inner, top: top, table: table, foot: foot };
+    }
+    var PAGE_GAP = 14;
+    var PRINT_PAGE_SIZE = 15;
+    while (idx < srcRows.length) {
+        var parts = build(total === 0);
+        var avail = parts.inner.clientHeight
+            - parts.top.getBoundingClientRect().height
+            - parts.foot.getBoundingClientRect().height - PAGE_GAP;
+        var used = headH;
+        var tb = parts.table.tBodies[0];
+        var added = 0;
+        while (idx < srcRows.length && added < PRINT_PAGE_SIZE) {
+            var h = rowH[idx];
+            if (added > 0 && used + h > avail) break;
+            tb.appendChild(srcRows[idx].cloneNode(true));
+            used += h;
+            idx++;
+            added++;
+        }
+        total++;
+        if (added === 0) break;
+    }
+    var pages = pagesEl.children;
+    Array.prototype.forEach.call(pages, function (p, i) {
+        var pn = p.querySelector('.pn');
+        if (pn) pn.textContent = 'Page ' + (i + 1) + ' of ' + pages.length;
+    });
+    var src = document.getElementById('source');
+    if (src && src.parentNode) src.parentNode.removeChild(src);
+})();
+<\/script>
+</body></html>`;
+
+            const w = window.open('', '_blank');
+            if (!w) {
+                showToast('Izinkan pop-up untuk mencetak daftar pengaduan.', 'error');
+                return;
+            }
+            w.document.open();
+            w.document.write(html);
+            w.document.close();
+            w.focus();
+            const doPrint = () => { try { w.print(); } catch (e) { /* diabaikan */ } };
+            if (w.document.readyState === 'complete') setTimeout(doPrint, 200);
+            else w.onload = () => setTimeout(doPrint, 200);
         }
 
         // Validasi sederhana format email (cukup untuk mencegah salah ketik).
