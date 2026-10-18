@@ -1705,7 +1705,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-22';
+        const APP_BUILD = '2026-10-17-24';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3566,7 +3566,6 @@
     .tag{font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px}
     .tag.rev{background:#fef3c7;color:#92400e;font-weight:700}
     .tag.cancel{background:#ffe4e6;color:#9f1239}
-    .note{font-size:10px;color:#64748b;margin:-6px 0 10px}
     .foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}
     @page{size:A4 portrait;margin:0}
 </style></head>
@@ -3577,7 +3576,6 @@
         ${headerLine3 ? '<p class="sub">' + esc(headerLine3) + '</p>' : ''}
     </div>
     <div class="meta"><span>${esc(periodLabel)}</span><span>Dicetak: ${esc(fmtTimestamp(new Date()))}</span></div>
-    <div class="note">Transaksi yang dibatalkan tetap ditampilkan bersama entri Reversal; saldo total tidak berubah.</div>
     <div class="cards">
         <div class="card"><div class="lbl">Saldo Awal</div><div class="val">${esc(formatRupiah(opening))}</div></div>
         <div class="card"><div class="lbl">Pemasukan</div><div class="val">${esc(formatRupiah(totalMasuk))}</div></div>
@@ -5124,15 +5122,15 @@
                 .map((entry, idx) => {
                     const item = entry.item;
                     const arsip = isArchivedSurat(item) ? ' <span class="tag">Arsip</span>' : '';
-                    const noSurat = item.noSurat ? `<div class="mut">No: ${esc(item.noSurat)}</div>` : '';
+                    const noSurat = item.noSurat ? `<div class="mut nw">No: ${esc(item.noSurat)}</div>` : '';
                     const tgl = fmtDateDisplay(suratWaktuISO(item.waktu)) || '-';
                     return `<tr>
                         <td class="c">${idx + 1}</td>
                         <td class="nw">${esc(tgl)}</td>
-                        <td>${esc(item.nama || '-')}${arsip}${noSurat}</td>
+                        <td>${esc(item.nama || '-')}${arsip}</td>
                         <td><div class="nw">${esc(maskNik(item.nik) || '-')}</div><div class="nw mut">${esc(fmtPhone(item.noHp) || '-')}</div></td>
                         <td>${esc(item.jenisSurat || '-')}<div class="mut">${esc(item.keperluan || '-')}</div></td>
-                        <td class="c">${esc(item.status || 'Pending')}</td>
+                        <td class="c">${esc(item.status || 'Pending')}${noSurat}</td>
                     </tr>`;
                 }).join('');
 
@@ -5177,10 +5175,10 @@
         <thead><tr>
             <th class="c" style="width:30px">No</th>
             <th class="nw" style="width:78px">Tanggal</th>
-            <th style="width:220px">Nama Pemohon</th>
+            <th style="width:200px">Nama Pemohon</th>
             <th style="width:104px">NIK /<br>No. HP</th>
-            <th style="width:200px">Jenis Surat /<br>Keperluan</th>
-            <th class="c" style="width:60px">Status</th>
+            <th style="width:170px">Jenis Surat /<br>Keperluan</th>
+            <th class="c" style="width:120px">Status /<br>No. Surat</th>
         </tr></thead>
         <tbody>${rows}</tbody>
     </table>
