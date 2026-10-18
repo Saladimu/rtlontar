@@ -1865,7 +1865,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-18-06';
+        const APP_BUILD = '2026-10-18-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5969,7 +5969,7 @@
             }
 
             try {
-                const text = await callGemini({ system: system, prompt: prompt, json: true, maxTokens: 1600 });
+                const text = await callGemini({ system: system, prompt: prompt, json: true, maxTokens: 4096 });
                 const parsed = extractGeminiJson(text);
                 if (!parsed) throw new Error('Jawaban AI tidak bisa dibaca. Coba lagi.');
                 if (!parsed.ringkasan && !parsed.balasan_warga) throw new Error('Jawaban AI tidak lengkap. Coba lagi.');
@@ -6086,7 +6086,7 @@
                     + '\nJudul/bahan saat ini:\n' + (judul || '-')
                     + '\nIsi/catatan saat ini:\n' + (isi || '-')
                     + '\n\nSusun ulang menjadi pengumuman resmi RT yang siap terbit.';
-                const text = await callGemini({ system: system, prompt: prompt, json: true, maxTokens: 800 });
+                const text = await callGemini({ system: system, prompt: prompt, json: true, maxTokens: 4096 });
                 const parsed = extractGeminiJson(text);
                 if (!parsed) throw new Error('Jawaban AI tidak bisa dibaca. Coba lagi.');
                 const outJudul = String(parsed.judul || parsed.title || '').trim();
@@ -6152,7 +6152,7 @@
                     + '\nNama/poin kegiatan saat ini:\n' + (nama || '-')
                     + '\nKeterangan saat ini:\n' + (keterangan || '-')
                     + '\n\nSusun ulang menjadi agenda kegiatan yang siap disimpan.';
-                const text = await callGemini({ system: system, prompt: prompt, json: true, maxTokens: 700 });
+                const text = await callGemini({ system: system, prompt: prompt, json: true, maxTokens: 4096 });
                 const parsed = extractGeminiJson(text);
                 if (!parsed) throw new Error('Jawaban AI tidak bisa dibaca. Coba lagi.');
                 const outNama = String(parsed.nama_kegiatan || parsed.nama || parsed.title || '').trim();
@@ -6914,10 +6914,13 @@
                     throw new Error(msg || ('HTTP ' + res.status));
                 }
                 const parts = payload && payload.candidates && payload.candidates[0] && payload.candidates[0].content && payload.candidates[0].content.parts;
+                const cand = payload && payload.candidates && payload.candidates[0];
+                const finish = cand && cand.finishReason;
                 const text = parts ? parts.filter(function (p) { return p && !p.thought; }).map(function (p) { return p.text ? p.text : ''; }).join('') : '';
+                if (finish === 'MAX_TOKENS' && options.json) {
+                    throw new Error('Jawaban AI terpotong karena batas token. Coba lagi atau gunakan model yang lebih ringkas.');
+                }
                 if (!parts || !text.trim()) {
-                    const cand = payload && payload.candidates && payload.candidates[0];
-                    const finish = cand && cand.finishReason;
                     const block = payload && payload.promptFeedback && payload.promptFeedback.blockReason;
                     let detail = '';
                     if (finish === 'MAX_TOKENS') detail = 'batas token habis sebelum ada jawaban';
@@ -6954,7 +6957,7 @@
             const original = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>Testing...'; }
             try {
-                const text = await callGemini({ system: 'Anda asisten yang patuh. Jawab singkat.', prompt: 'Balas hanya dengan satu kata: OK', maxTokens: 256, temperature: 0 });
+                const text = await callGemini({ system: 'Anda asisten yang patuh. Jawab singkat.', prompt: 'Balas hanya dengan satu kata: OK', maxTokens: 512, temperature: 0 });
                 showToast('Koneksi Gemini berhasil (' + s.model + '): ' + String(text).trim().slice(0, 40), 'success');
             } catch (e) {
                 showToast('Koneksi Gemini gagal: ' + (e && e.message ? e.message : 'kesalahan tidak diketahui'), 'error');

@@ -357,6 +357,8 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-18)
 
+- ✅ **Perbaikan "Jawaban AI tidak bisa dibaca" pada draft Gemini** — penyebab umum: model *thinking* menghabiskan `maxOutputTokens` sebelum JSON selesai. Budget draft/triage dinaikkan ke **4096** (uji koneksi **512**), dan `callGemini()` kini melempar pesan jelas **"Jawaban AI terpotong karena batas token"** saat `finishReason: MAX_TOKENS` pada permintaan JSON. `APP_BUILD` index → `2026-10-18-07` (+ `version.json`), cache SW → **`sapa-rt-static-v62`**; `test_ai_assistant.js` (**82**) — suite **82** hijau.
+
 - ✅ **Toast notifikasi tampil di atas modal** — `#toast-banner` kini `position: fixed` kanan-atas dengan `z-index: 70` (di atas overlay modal `z-50`), lebar `min(24rem, calc(100vw - 2rem))`, teks `break-words`. Pesan error (termasuk dari **Bantu Tulis AI** di Edit Pengumuman/Kegiatan) tampil **8 detik** (tipe lain tetap 4 detik). `APP_BUILD` index → `2026-10-18-06` (+ `version.json`), cache SW → **`sapa-rt-static-v61`**; `test_ai_assistant.js` (**80**) — suite **82** hijau.
 
 - ✅ **Perbaikan diagnostik koneksi Gemini** — `callGemini()` kini menjelaskan jawaban kosong: `finishReason: MAX_TOKENS` → *"batas token habis sebelum ada jawaban"*, `promptFeedback.blockReason` → *"diblokir: …"*, dan **bagian `thought` tidak lagi dijadikan jawaban** (difilter). Uji koneksi memakai `maxTokens: 256` + `temperature: 0` agar model *thinking* punya ruang menjawab. Teks bantuan kartu AI diperbarui (Lapor, Pengumuman, Kegiatan). `APP_BUILD` index → `2026-10-18-05` (+ `version.json`), cache SW → **`sapa-rt-static-v60`**; `test_ai_assistant.js` (**78**) — suite **82** hijau.
