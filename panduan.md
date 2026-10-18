@@ -314,10 +314,10 @@ Sama seperti Pengajuan Surat, bila **Admin Email** diisi di Setting, setiap peng
 
 ### Bantuan AI (opsional)
 
-Pengurus bisa meminta bantuan **Gemini** untuk merangkum pengaduan, menyiapkan draft balasan, merapikan **Pengumuman**/**Agenda Kegiatan**, serta meninjau **Pengajuan Surat**. Fitur ini **opsional** dan tidak mengubah data secara otomatis.
+Pengurus bisa meminta bantuan **Gemini** untuk merangkum pengaduan, menyiapkan draft balasan, merapikan **Pengumuman**/**Agenda Kegiatan**, serta meninjau **Pengajuan Surat** dan merangkum **Iuran & Kas**. Fitur ini **opsional** dan tidak mengubah data secara otomatis.
 
 1. Buka **Setting → Integrasi Google Sheets**, lalu pada kartu **AI Assistant (Gemini)** tempel **API key** Gemini (buat gratis di Google AI Studio), klik **Save**, dan **Test Gemini Connection**.
-2. Nyalakan **Enable AI assistant**. Tombol **Saran AI** (pengaduan) dan **Bantu Tulis AI** (pengumuman/kegiatan/surat) akan muncul.
+2. Nyalakan **Enable AI assistant**. Tombol **Saran AI** (pengaduan), **Bantu Tulis AI** (pengumuman/kegiatan/surat), dan ikon **Ringkas dengan AI** (Iuran & Kas) akan muncul.
 3. Buka **Lapor & Aspirasi → Isi Manual** atau **Edit**, isi **Judul** & **Detail**, lalu klik **Saran AI**.
 4. Periksa panel saran: ringkasan, **Jenis Pengaduan** (klik **Terapkan**), **urgensi**, **draft Catatan Tindak Lanjut** (klik **Pakai**), dan **draft Balasan untuk Warga** (klik **Salin**).
 5. Edit bila perlu, lalu **Simpan** seperti biasa.
@@ -326,7 +326,9 @@ Untuk **Pengumuman/Kegiatan**: isi dulu bahan singkat (judul/poin atau nama/poin
 
 Untuk **Pengajuan Surat**: buka **Catat/Edit Pengajuan Surat**, pilih **Jenis Surat** dan isi **Keperluan**, klik **Bantu Tulis AI**. Panel menampilkan ringkasan, daftar hal yang perlu dikonfirmasi, draft **Catatan Pengurus** (bisa **Pakai**/**Salin**), dan draft **Balasan WhatsApp** (bisa **Salin**). NIK, nama, No. KK, No. HP, alamat, dan No. Surat tidak dibaca/dikirim.
 
-Catatan privasi: API key hanya tersimpan di browser pengurus. Yang dikirim ke Gemini hanya isi form yang relevan — pada pengaduan: **jenis, judul, detail, lokasi, tanggal kejadian, dan harapan**; pada surat: **jenis surat, keperluan, dan status**. **Nama, NIK, No. KK, No. HP, alamat lengkap, dan No. Surat tidak dikirim.** Semua hasil AI berupa draft dan tidak pernah disimpan otomatis.
+Untuk **Iuran & Kas**: pilih periode seperti biasa, lalu klik ikon **Ringkas dengan AI** di samping tombol cetak. Panel menampilkan **Saldo Awal, Pemasukan, Pengeluaran, Saldo Akhir**, dan **narasi** yang bisa disalin. Angka **dihitung oleh sistem**; AI tidak menghitung ulang dan tidak mengubah data. Nama warga, No. Rumah, dan keterangan transaksi tidak dikirim.
+
+Catatan privasi: API key hanya tersimpan di browser pengurus. Yang dikirim ke Gemini hanya isi form yang relevan — pada pengaduan: **jenis, judul, detail, lokasi, tanggal kejadian, dan harapan**; pada surat: **jenis surat, keperluan, dan status**; pada kas: **angka rekap** saja. **Nama, NIK, No. KK, No. HP, alamat lengkap, No. Surat, serta keterangan transaksi kas tidak dikirim.** Semua hasil AI berupa draft dan tidak pernah disimpan otomatis.
 
 ## Portal Publik: Menyalakan dan Mematikan
 
