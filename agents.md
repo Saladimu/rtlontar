@@ -357,6 +357,8 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-18)
 
+- ✅ **Tombol Batal & Simpan berdampingan di footer modal** — footer **Pengumuman** dan **Kegiatan** kini memakai grup `flex items-center justify-end gap-2` (`margin-left:auto`) sehingga **Batal selalu di kiri tombol Simpan/Perbarui** dan tidak terpisah saat `flex-wrap` aktif; tombol **Bantu Tulis AI** tetap di kiri. `APP_BUILD` index → `2026-10-18-08` (+ `version.json`), cache SW → **`sapa-rt-static-v63`**; `test_ai_assistant.js` (**84**) — suite **82** hijau.
+
 - ✅ **Perbaikan "Jawaban AI tidak bisa dibaca" pada draft Gemini** — penyebab umum: model *thinking* menghabiskan `maxOutputTokens` sebelum JSON selesai. Budget draft/triage dinaikkan ke **4096** (uji koneksi **512**), dan `callGemini()` kini melempar pesan jelas **"Jawaban AI terpotong karena batas token"** saat `finishReason: MAX_TOKENS` pada permintaan JSON. `APP_BUILD` index → `2026-10-18-07` (+ `version.json`), cache SW → **`sapa-rt-static-v62`**; `test_ai_assistant.js` (**82**) — suite **82** hijau.
 
 - ✅ **Toast notifikasi tampil di atas modal** — `#toast-banner` kini `position: fixed` kanan-atas dengan `z-index: 70` (di atas overlay modal `z-50`), lebar `min(24rem, calc(100vw - 2rem))`, teks `break-words`. Pesan error (termasuk dari **Bantu Tulis AI** di Edit Pengumuman/Kegiatan) tampil **8 detik** (tipe lain tetap 4 detik). `APP_BUILD` index → `2026-10-18-06` (+ `version.json`), cache SW → **`sapa-rt-static-v61`**; `test_ai_assistant.js` (**80**) — suite **82** hijau.
