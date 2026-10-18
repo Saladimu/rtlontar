@@ -357,6 +357,10 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-18)
 
+- ✅ **Garis pemisah setelah Harapan / Solusi** — `<hr id="lapor-harapan-divider">` ditambahkan pada form pengaduan **warga** (`public.html`) sebelum checkbox persetujuan, dan `<hr id="lapor-admin-harapan-divider">` pada form **admin** sebelum bagian Status/Petugas. `APP_BUILD` index → `2026-10-18-10`, public → `2026-10-18-02` (+ `version.json`), cache SW → **`sapa-rt-static-v65`**; `test_lapor_feature.js` (**131**) — suite **82** hijau.
+
+- ✅ **Catatan Tindak Lanjut jadi textarea penuh** — pada form **Catat/Edit Pengaduan**, `#lapor-admin-catatan` diubah dari `<input>` setengah lebar menjadi **`<textarea rows="2" maxlength="300">` full-width** (gaya sama seperti **Harapan / Solusi**), sehingga teks panjang tidak terpotong. `APP_BUILD` index → `2026-10-18-09` (+ `version.json`), cache SW → **`sapa-rt-static-v64`**; `test_lapor_feature.js` (**129**) — suite **82** hijau.
+
 - ✅ **Tombol Batal & Simpan berdampingan di footer modal** — footer **Pengumuman** dan **Kegiatan** kini memakai grup `flex items-center justify-end gap-2` (`margin-left:auto`) sehingga **Batal selalu di kiri tombol Simpan/Perbarui** dan tidak terpisah saat `flex-wrap` aktif; tombol **Bantu Tulis AI** tetap di kiri. `APP_BUILD` index → `2026-10-18-08` (+ `version.json`), cache SW → **`sapa-rt-static-v63`**; `test_ai_assistant.js` (**84**) — suite **82** hijau.
 
 - ✅ **Perbaikan "Jawaban AI tidak bisa dibaca" pada draft Gemini** — penyebab umum: model *thinking* menghabiskan `maxOutputTokens` sebelum JSON selesai. Budget draft/triage dinaikkan ke **4096** (uji koneksi **512**), dan `callGemini()` kini melempar pesan jelas **"Jawaban AI terpotong karena batas token"** saat `finishReason: MAX_TOKENS` pada permintaan JSON. `APP_BUILD` index → `2026-10-18-07` (+ `version.json`), cache SW → **`sapa-rt-static-v62`**; `test_ai_assistant.js` (**82**) — suite **82** hijau.

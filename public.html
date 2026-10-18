@@ -415,6 +415,7 @@
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                                 placeholder="Saran atau harapan Anda terkait penyelesaian masalah ini."></textarea>
                         </div>
+                        <hr id="lapor-harapan-divider" class="border-slate-200 dark:border-slate-700" style="margin:0.25rem 0">
                         <label class="flex items-start space-x-2 text-xs text-slate-600 dark:text-slate-300">
                             <input id="lapor-setuju" type="checkbox" required class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
                             <span>Saya menyatakan data yang saya sampaikan benar dan setuju data ini digunakan oleh Pengurus RT untuk menindaklanjuti laporan.</span>
@@ -1338,7 +1339,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-18-01';
+        const APP_BUILD = '2026-10-18-02';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
