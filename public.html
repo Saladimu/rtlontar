@@ -1338,7 +1338,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-15-03';
+        const APP_BUILD = '2026-10-18-01';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1874,7 +1874,8 @@
                             renderKegiatan(kegiatan);
                             updateLastUpdated(pengumuman, kegiatan);
 
-                            // Sembunyikan Lapor & Aspirasi bila dinonaktifkan admin.
+                            // Sembunyikan menu yang dinonaktifkan admin.
+                            if (res.suratEnabled === false) hideSuratSection();
                             if (res.laporEnabled === false) hideLaporSection();
                         } else if (res && res.code === 'portal_disabled') {
                             showPortalDisabled();

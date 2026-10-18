@@ -19,6 +19,7 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - **Nama:** `ADMIN_TOKEN`
    - **Nilai:** token rahasia pilihan Anda (mis. `rt-rahasia-2026`)
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
+   - (Opsional) **Nama:** `SURAT_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, fitur **Layanan Surat** dianggap **aktif**. Nilai ini otomatis diubah lewat toggle **Layanan Surat** di panel Portal Publik aplikasi (aksi `setSuratStatus`).
    - (Opsional) **Nama:** `LAPOR_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, fitur **Lapor & Aspirasi** dianggap **aktif**. Nilai ini otomatis diubah lewat toggle **Lapor & Aspirasi** di panel Portal Publik aplikasi (aksi `setLaporStatus`).
     - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat** dan **pengaduan Lapor & Aspirasi** baru dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — data tetap tersimpan. Dapat juga diisi/diubah dari **dashboard admin**: menu **Settings > Integrasi Google Sheets > Admin Email** (aksi `setAdminEmail`).
    - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
@@ -43,6 +44,10 @@ Karena Web App di-deploy sebagai **Anyone**, tanpa proteksi siapa pun yang tahu 
 ### ON/OFF Portal Publik
 
 Admin dapat menyalakan/mematikan akses portal publik dari toggle di tab **Portal Publik** (`index.html`). Status disimpan di Script Property `PUBLIC_PORTAL_ENABLED` lewat aksi `setPortalStatus` (butuh token). Saat **OFF**, `action=readPublic` mengembalikan `{result:"error", code:"portal_disabled"}` sehingga `public.html` menampilkan pesan "Portal publik dinonaktifkan" dan tidak ada data yang bocor. Saat properti belum diatur, portal dianggap **aktif** (default).
+
+### ON/OFF Layanan Surat
+
+Toggle **Layanan Surat** di tab **Portal Publik** menyimpan status ke Script Property `SURAT_ENABLED` lewat aksi `setSuratStatus` (butuh token). Saat **OFF**, aksi publik `submitSurat`, `checkSurat`, dan `lookupWarga` mengembalikan `{result:"error", code:"surat_disabled"}` sehingga pengajuan/cek status/isi otomatis NIK ditolak; `public.html` menyembunyikan bagian Layanan Surat. Fitur Lapor & Aspirasi dan data publik lain tetap berjalan. Default **aktif** bila properti belum diatur.
 
 Di frontend admin (`index.html`), isi **Token Admin** di panel *Integrasi Google Sheets* lalu klik **Simpan Token**. Token disimpan di `localStorage` (`rt_admin_token`) pada perangkat admin dan hanya itu yang mengirimkannya.
 
@@ -300,6 +305,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | Aksi | Payload | Deskripsi |
 |------|---------|-----------|
 | `setPortalStatus` | `{action:"setPortalStatus", enabled:true/false, token:T}` | Menyalakan/mematikan portal publik. Butuh token admin. Disimpan di Script Property `PUBLIC_PORTAL_ENABLED` |
+| `setSuratStatus` | `{action:"setSuratStatus", enabled:true/false, token:T}` | Menyalakan/mematikan fitur **Layanan Surat**. Butuh token admin. Disimpan di Script Property `SURAT_ENABLED` |
 | `setLaporStatus` | `{action:"setLaporStatus", enabled:true/false, token:T}` | Menyalakan/mematikan fitur **Lapor & Aspirasi**. Butuh token admin. Disimpan di Script Property `LAPOR_ENABLED` |
 | `setAdminEmail` | `{action:"setAdminEmail", email:"admin@contoh.com", token:T}` | Menyimpan alamat email admin ke Script Property `ADMIN_EMAIL` (penerima notifikasi pengajuan surat). Butuh token admin. Validasi format: bila kosong/salah → `{result:"error", code:"invalid_email"}`; sukses → `{result:"success", adminEmail}`. Dipakai tombol **Save Email** di panel Pengaturan (`index.html`) |
 | `setSaldoAwal` | `{action:"setSaldoAwal", saldoAwal:1500000, token:T}` | Menyimpan saldo pembukaan kas ke Script Property `SALDO_AWAL`. Butuh token admin. Bila bukan angka / negatif → `{result:"error", code:"invalid"}`; sukses → `{result:"success", saldoAwal}`. Dipakai tombol pensil pada kartu **Saldo Awal** di panel Iuran & Kas (`index.html`) |
@@ -415,10 +421,11 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`/`Pengajuan_Surat`/`Lapor_Aspirasi`; ditolak (`portal_disabled`) bila portal OFF |
 | `getOrCreateSheet(ss, name)` | Ambil sheet; **buat otomatis** (beserta header) bila belum ada & termasuk skema dikenal |
 | `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
+| `isSuratEnabled()` / `setSuratEnabled(bool)` | Baca/tulis status fitur Layanan Surat di Script Property `SURAT_ENABLED` (default aktif) |
 | `isLaporEnabled()` / `setLaporEnabled(bool)` | Baca/tulis status fitur Lapor & Aspirasi di Script Property `LAPOR_ENABLED` (default aktif) |
 | `getSaldoAwal()` / `handleSetSaldoAwal(data)` | Baca/tulis saldo pembukaan kas di Script Property `SALDO_AWAL` (default `0`). Dipakai `readAllSheets()` (field `saldoAwal`) dan aksi admin `setSaldoAwal` |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setLaporStatus` / `setAdminEmail` / `setSaldoAwal` (token) + `submitSurat` & `submitLapor` (publik) |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setSuratStatus` / `setLaporStatus` / `setAdminEmail` / `setSaldoAwal` (token) + `submitSurat` & `submitLapor` (publik) |
 | `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
 | `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
 | `handleLookupWarga(params)` | Aksi publik `lookupWarga`: cari warga berdasar NIK, buka hanya Nama/No. HP/Alamat |
@@ -483,7 +490,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 
 7. **Token Admin**: `ADMIN_TOKEN` disimpan di Script Properties (bukan di kode). Semua tulis & baca lengkap diverifikasi. Ganti token kapan saja dengan mengubah Script Property; admin perlu memperbarui Token Admin di `index.html`.
 
-8. **Status Portal Publik**: `PUBLIC_PORTAL_ENABLED` disimpan di Script Properties. Toggle di `index.html` mengirim `setPortalStatus`; bila `false`, `readPublic` ditolak (`code:"portal_disabled"`). Properti ini sengaja terpisah dari `ADMIN_TOKEN`.
+8. **Status Portal Publik**: `PUBLIC_PORTAL_ENABLED` disimpan di Script Properties. Toggle di `index.html` mengirim `setPortalStatus`; bila `false`, `readPublic` ditolak (`code:"portal_disabled"`). Properti ini sengaja terpisah dari `ADMIN_TOKEN`. Toggle **Layanan Surat** memakai properti terpisah `SURAT_ENABLED` (aksi `setSuratStatus`); bila `false`, `submitSurat`/`checkSurat`/`lookupWarga` ditolak (`code:"surat_disabled"`).
 
 ---
 

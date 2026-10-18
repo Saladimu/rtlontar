@@ -173,7 +173,7 @@ Pembatalan **tidak menghapus** data. Saat Anda menekan ikon 🔄 **Batalkan**, s
 - Transaksi **pemasukan** → entri **Reversal Keluar** (mengurangi saldo).
 - Transaksi **pengeluaran** → entri **Reversal Masuk** (menambah saldo).
 
-Pasangan **transaksi asli + Reversal** selalu berjumlah **nol**, sehingga saldo kembali seperti sebelum transaksi dicatat. Transaksi asli tetap tampil dengan badge **“Dibatalkan”**, dan entri Reversal diberi badge **“Reversal”**. Keduanya tetap muncul di laporan/cetak agar jejak audit terlihat; kolom **Total Pemasukan** dan **Total Pengeluaran** memuat keduanya (selisihnya nol).
+Pasangan **transaksi asli + Reversal** selalu berjumlah **nol**, sehingga saldo kembali seperti sebelum transaksi dicatat. Transaksi asli tetap tampil dengan badge **“Dibatalkan”**, dan entri Reversal diberi badge **“Reversal”**. Keduanya memakai **latar amber yang sama** dengan aksen garis di sisi kiri sehingga pasangannya mudah dikenali saat memeriksa riwayat. Keduanya tetap muncul di laporan/cetak agar jejak audit terlihat; kolom **Total Pemasukan** dan **Total Pengeluaran** memuat keduanya (selisihnya nol).
 
 - **Salah membatalkan?** Klik ikon 🔄 **Pulihkan** pada baris yang berbadge “Dibatalkan”. Entri Reversal akan dihapus dan transaksi asli kembali dihitung.
 - **Entri Reversal tidak bisa diedit.** Untuk mengubah transaksi, pulihkan dulu pembatalannya, edit, lalu batalkan lagi bila perlu.
@@ -319,6 +319,9 @@ Menu **Portal Publik** mengatur halaman yang dilihat warga.
 - **Toggle Portal Publik** dengan badge **AKTIF** / non-aktif:
   - **AKTIF** — warga bisa membuka portal, membaca pengumuman/kegiatan, mengajukan surat, dan menyampaikan **Lapor & Aspirasi**.
   - **non-aktif** — server menolak permintaan portal, form pengajuan surat, lapor/aspirasi & cek status otomatis disembunyikan. Data benar-benar tidak bisa diakses, bukan sekadar tautannya disembunyikan.
+- **Toggle Layanan Surat** dengan badge **AKTIF** / non-aktif — mengatur khusus menu pengajuan & cek status surat:
+  - **AKTIF** — form pengajuan surat & cek status tersedia untuk warga.
+  - **non-aktif** — menu Layanan Surat disembunyikan dari Portal Publik dan server menolak pengiriman/pencarian (`surat_disabled`). Pengumuman, kegiatan, dan Lapor & Aspirasi tetap berjalan normal.
 - **Toggle Lapor & Aspirasi** dengan badge **AKTIF** / non-aktif — mengatur khusus fitur pengaduan/aspirasi:
   - **AKTIF** — form lapor/aspirasi & cek status tersedia untuk warga.
   - **non-aktif** — menu Lapor & Aspirasi disembunyikan dari Portal Publik dan server menolak pengiriman/pencarian (`lapor_disabled`). Pengumuman, kegiatan, dan layanan surat tetap berjalan normal.
@@ -576,6 +579,7 @@ Buka **Project Settings → Script Properties** di Apps Script dan tambahkan:
 | `NOTIF_REPLY_TO` | Opsional | Alamat balasan (default `ADMIN_EMAIL`). |
 | `NOTIF_SUBJECT_PREFIX` | Opsional | Prefiks subjek email (default `[SAPA-RT]`). |
 | `LAPOR_FOLDER_ID` | Opsional | ID folder Google Drive untuk menyimpan foto pengaduan. Bila kosong, backend mencari/membuat folder bernama `Lapor`. |
+| `SURAT_ENABLED` | Opsional | `true`/`false` untuk menyalakan/mematikan fitur **Layanan Surat** (default **aktif** bila tidak diisi). Biasanya diubah dari toggle **Layanan Surat** di panel Portal Publik (aksi `setSuratStatus`). |
 | `LAPOR_ENABLED` | Opsional | `true`/`false` untuk menyalakan/mematikan fitur **Lapor & Aspirasi** (default **aktif** bila tidak diisi). Nilai ini biasanya diubah dari tombol **ON/OFF** di panel Portal Publik, tidak perlu diedit manual. |
 
 Bila baru mengaktifkan email, jalankan izin sekali: pilih fungsi **`authorizeMail`** pada dropdown editor Apps Script → **Run** → **Review permissions** → **Allow** → lalu deploy **New version**.

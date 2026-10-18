@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v28-2026-10-17'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v29-2026-10-18'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -183,6 +183,7 @@ function seedData() {
   return {
     portalEnabled: true,
     laporEnabled: true,
+    suratEnabled: true,
     adminEmail: '',
     saldoAwal: 1500000,
     sheets: {
@@ -261,6 +262,7 @@ function loadStore() {
     });
     if (typeof parsed.portalEnabled !== 'boolean') parsed.portalEnabled = true;
     if (typeof parsed.laporEnabled !== 'boolean') parsed.laporEnabled = true;
+    if (typeof parsed.suratEnabled !== 'boolean') parsed.suratEnabled = true;
     if (typeof parsed.adminEmail !== 'string') parsed.adminEmail = '';
     if (!isFinite(Number(parsed.saldoAwal)) || Number(parsed.saldoAwal) < 0) parsed.saldoAwal = 0;
     else parsed.saldoAwal = Math.round(Number(parsed.saldoAwal));
@@ -314,7 +316,7 @@ function readAllSheets() {
       return out;
     });
   });
-  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, laporEnabled: store.laporEnabled !== false, adminEmail: store.adminEmail || '', saldoAwal: Number(store.saldoAwal) || 0, data };
+  return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, laporEnabled: store.laporEnabled !== false, suratEnabled: store.suratEnabled !== false, adminEmail: store.adminEmail || '', saldoAwal: Number(store.saldoAwal) || 0, data };
 }
 
 function readPublicSheets() {
@@ -327,13 +329,14 @@ function readPublicSheets() {
   ['Pengumuman', 'Kegiatan_Warga'].forEach((name) => {
     data[name] = (full.data[name] || []).filter((row) => isPublik(row[idx[name]]));
   });
-  return { result: 'success', version: CODE_VERSION, portalEnabled: true, laporEnabled: store.laporEnabled !== false, data };
+  return { result: 'success', version: CODE_VERSION, portalEnabled: true, laporEnabled: store.laporEnabled !== false, suratEnabled: store.suratEnabled !== false, data };
 }
 
 function handleLookupWarga(params) {
   if (store.portalEnabled === false) {
     return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
   }
+  if (store.suratEnabled === false) return suratDisabled();
   const nik = cleanStr(params.nik, 40).replace(/\D/g, '');
   if (!/^\d{16}$/.test(nik)) {
     return { result: 'success', version: CODE_VERSION, found: false, code: 'invalid_nik' };
@@ -369,6 +372,7 @@ function handleCheckSurat(params) {
   if (store.portalEnabled === false) {
     return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
   }
+  if (store.suratEnabled === false) return suratDisabled();
   const nik = cleanStr(params.nik, 40).replace(/\D/g, '');
   const hpRaw = params.hp !== undefined && params.hp !== null ? params.hp : params.noHp;
   const hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
@@ -418,6 +422,10 @@ function portalDisabled() {
 
 function laporDisabled() {
   return { result: 'error', code: 'lapor_disabled', version: CODE_VERSION, message: 'Fitur Lapor & Aspirasi sedang dinonaktifkan oleh admin.' };
+}
+
+function suratDisabled() {
+  return { result: 'error', code: 'surat_disabled', version: CODE_VERSION, message: 'Fitur Layanan Surat sedang dinonaktifkan oleh admin.' };
 }
 
 function handleLookupWargaHp(params) {
@@ -504,6 +512,12 @@ function handlePost(data) {
     return { result: 'success', laporEnabled: store.laporEnabled };
   }
 
+  if (data.action === 'setSuratStatus') {
+    store.suratEnabled = data.enabled === true || String(data.enabled) === 'true';
+    saveStore();
+    return { result: 'success', suratEnabled: store.suratEnabled };
+  }
+
   if (data.action === 'setAdminEmail') {
     const email = cleanStr(data.email, 200);
     if (!email) return { result: 'error', code: 'invalid_email', message: 'Alamat email admin tidak boleh kosong.' };
@@ -525,6 +539,7 @@ function handlePost(data) {
     if (store.portalEnabled === false) {
       return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
     }
+    if (store.suratEnabled === false) return suratDisabled();
     if (cleanStr(data.website, 100)) return { result: 'success', id: 'ok', message: 'Pengajuan terkirim.' };
     const nama = cleanStr(data.nama, 100);
     const nik = cleanStr(data.nik, 40).replace(/\D/g, '');

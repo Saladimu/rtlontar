@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v28-2026-10-17";
+var CODE_VERSION = "publik-v29-2026-10-18";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -209,6 +209,23 @@ function isLaporEnabled() {
 function setLaporEnabled(enabled) {
   PropertiesService.getScriptProperties().setProperty(LAPOR_PROP, enabled ? 'true' : 'false');
   return isLaporEnabled();
+}
+
+// ================= STATUS FITUR LAYANAN SURAT =================
+// Flag ON/OFF fitur "Layanan Surat" di portal publik, terpisah dari portal utama
+// dan dari Lapor & Aspirasi. Disimpan di Script Properties key "SURAT_ENABLED".
+// Bila "false", aksi publik submitSurat/checkSurat/lookupWarga ditolak.
+var SURAT_PROP = 'SURAT_ENABLED';
+
+function isSuratEnabled() {
+  var v = PropertiesService.getScriptProperties().getProperty(SURAT_PROP);
+  if (v === null || v === undefined || v === '') return true;
+  return String(v).trim().toLowerCase() !== 'false';
+}
+
+function setSuratEnabled(enabled) {
+  PropertiesService.getScriptProperties().setProperty(SURAT_PROP, enabled ? 'true' : 'false');
+  return isSuratEnabled();
 }
 
 // True bila nilai Publik berarti tampil di portal publik.
@@ -528,7 +545,7 @@ function readAllSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "adminEmail": getAdminEmail(), "saldoAwal": getSaldoAwal(), "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "suratEnabled": isSuratEnabled(), "adminEmail": getAdminEmail(), "saldoAwal": getSaldoAwal(), "data": data };
 }
 
 // Baca hanya data yang boleh tampil di portal publik:
@@ -557,7 +574,7 @@ function readPublicSheets() {
     });
   });
 
-  return { "result": "success", "version": CODE_VERSION, "portalEnabled": true, "laporEnabled": isLaporEnabled(), "data": data };
+  return { "result": "success", "version": CODE_VERSION, "portalEnabled": true, "laporEnabled": isLaporEnabled(), "suratEnabled": isSuratEnabled(), "data": data };
 }
 
 function doPost(e) {
@@ -591,6 +608,15 @@ function doPost(e) {
       }
       var laporOn = setLaporEnabled(data.enabled === true || String(data.enabled) === 'true');
       return respond({ "result": "success", "laporEnabled": laporOn });
+    }
+
+    // Aksi khusus: mengubah status ON/OFF fitur Layanan Surat (butuh token admin).
+    if (data.action === 'setSuratStatus') {
+      if (!isAuthorized(data.token)) {
+        return respond(unauthorized());
+      }
+      var suratOn = setSuratEnabled(data.enabled === true || String(data.enabled) === 'true');
+      return respond({ "result": "success", "suratEnabled": suratOn });
     }
 
     // Aksi khusus: mengubah alamat email admin (ADMIN_EMAIL, butuh token admin).
@@ -988,6 +1014,9 @@ function handleCheckSurat(params) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
   }
+  if (!isSuratEnabled()) {
+    return suratError('surat_disabled', 'Fitur Layanan Surat sedang dinonaktifkan oleh admin.');
+  }
 
   var nik = cleanStr(params.nik, 40).replace(/\D/g, '');
   var hpRaw = (params.hp !== undefined && params.hp !== null) ? params.hp : params.noHp;
@@ -1096,6 +1125,9 @@ function handleLookupWarga(params) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
   }
+  if (!isSuratEnabled()) {
+    return suratError('surat_disabled', 'Fitur Layanan Surat sedang dinonaktifkan oleh admin.');
+  }
 
   var nik = cleanStr(params.nik, 40).replace(/\D/g, '');
   if (!/^\d{16}$/.test(nik)) {
@@ -1148,6 +1180,9 @@ function handleLookupWarga(params) {
 function handleSubmitSurat(data) {
   if (!isPortalEnabled()) {
     return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+  if (!isSuratEnabled()) {
+    return suratError('surat_disabled', 'Fitur Layanan Surat sedang dinonaktifkan oleh admin.');
   }
 
   // Honeypot: field tersembunyi yang hanya diisi bot. Pura-pura sukses.

@@ -901,6 +901,37 @@
                 </div>
             </div>
 
+            <!-- Layanan Surat Card -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+                            <i class="fa-solid fa-file-signature text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-800">Layanan Surat</h3>
+                            <p class="text-xs text-slate-500">Aktifkan agar warga dapat mengajukan surat &amp; cek status dari Portal Publik</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div id="surat-portal-status-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">
+                            AKTIF
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-surat-portal" onchange="toggleSuratPortal()" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="surat-portal-off" class="hidden p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p class="text-sm text-amber-800">
+                        <i class="fa-solid fa-lock mr-2"></i>
+                        Fitur <b>Layanan Surat non-aktif</b>. Menu pengajuan &amp; cek status surat disembunyikan dari Portal Publik dan pengiriman/pencarian ditolak sampai diaktifkan kembali.
+                    </p>
+                </div>
+            </div>
+
             <!-- Lapor & Aspirasi Card -->
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4">
                 <div class="flex items-center justify-between">
@@ -1695,7 +1726,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v28-2026-10-17';
+        const EXPECTED_BACKEND_VERSION = 'publik-v29-2026-10-18';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1705,7 +1736,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-17-24';
+        const APP_BUILD = '2026-10-18-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2240,7 +2271,8 @@
             backendVersion: '',
             activeBase: '',
             portalEnabled: true,
-            laporEnabled: true
+            laporEnabled: true,
+            suratEnabled: true
         };
 
         // Application Init
@@ -2257,6 +2289,14 @@
             updateLastUpdated();
             decorateFooterBuildInfo();
             renderDashboardStats();
+            fitKasSaldoValue();
+            // Ukuran font Saldo Kas RT menyesuaikan lebar kartu saat layar diubah.
+            if (window.addEventListener) {
+                window.addEventListener('resize', function () {
+                    if (window.requestAnimationFrame) requestAnimationFrame(fitKasSaldoValue);
+                    else fitKasSaldoValue();
+                });
+            }
             initShowArchivedWarga();
             initShowArchivedSurat();
             initShowArchivedLapor();
@@ -2659,6 +2699,26 @@
         }
 
         // Render Dashboard Statistics
+        // Kartu ringkasan "Saldo Kas RT" lebarnya terbatas (6 kolom di layar besar).
+        // Kecilkan ukuran font angka secara bertahap agar nominal panjang tetap
+        // muat dalam satu baris, bukan terpotong/terlipat.
+        function fitKasSaldoValue() {
+            const el = document.getElementById('stat-kas');
+            if (!el || !el.parentElement) return;
+            const box = el.parentElement;
+            const maxSize = 24; // setara text-2xl (1.5rem)
+            const minSize = 11;
+            el.style.whiteSpace = 'nowrap';
+            el.style.fontSize = '';
+            let size = maxSize;
+            const avail = box.clientWidth;
+            if (!avail) return;
+            while (size > minSize && el.scrollWidth > el.clientWidth) {
+                size -= 1;
+                el.style.fontSize = size + 'px';
+            }
+        }
+
         function renderDashboardStats() {
             // Total warga + jumlah Nomor KK unik: "#total / #unik (KK)".
             // Baris yang diarsipkan tidak dihitung.
@@ -2677,6 +2737,7 @@
             });
             const saldo = (Number(appState.saldoAwal) || 0) + totalMasuk - totalKeluar;
             document.getElementById('stat-kas').innerText = formatRupiah(saldo);
+            fitKasSaldoValue();
             // Pengumuman & Agenda Kegiatan: angka utama = jumlah yang tampil (publik),
             // lalu "(N)" = jumlah yang disembunyikan dari portal publik.
             const pubPengumuman = appState.pengumuman.filter(p => isPublikVal(p.publik)).length;
@@ -3464,15 +3525,19 @@
 
                 const amountClass = keluar ? 'text-rose-600 font-semibold' : 'text-emerald-600 font-semibold';
 
+                // Transaksi asal yang dibatalkan + entri Reversal-nya memakai
+                // latar amber yang sama (plus aksen garis kiri) supaya pasangan
+                // mudah dikenali saat memeriksa riwayat.
+                const paired = reversal || reversed;
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-emerald-50';
                 const tr = document.createElement('tr');
-                tr.className = reversal
+                tr.className = paired
                     ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer transition'
                     : `${zebra} hover:bg-emerald-100 cursor-pointer transition`;
                 tr.title = reversal ? 'Entri reversal (tidak dapat diedit)' : (reversed ? 'Transaksi dibatalkan' : 'Klik untuk edit');
                 tr.onclick = () => editKas(originalIndex);
                 tr.innerHTML = `
-                    <td class="px-3 py-2 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
+                    <td class="${paired ? 'border-l-4 border-amber-300 ' : ''}px-3 py-2 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
                     <td class="px-3 py-2 font-medium text-slate-800">${item.nama}${cancelBadge}</td>
                     <td class="px-3 py-2 text-slate-600 text-xs">${item.noRumah || '-'}</td>
                     <td class="px-3 py-2">${jenisBadge}</td>
@@ -6455,6 +6520,57 @@
             if (offSection) offSection.classList.toggle('hidden', enabled);
         }
 
+        // Toggle ON/OFF fitur Layanan Surat di Portal Publik (disimpan di backend).
+        function toggleSuratPortal() {
+            const checkbox = document.getElementById('toggle-surat-portal');
+            const enabled = checkbox ? checkbox.checked : true;
+
+            if (!apiBases().length) {
+                showToast('Koneksi Google Sheets belum dikonfigurasi. Buka Pengaturan.', 'error');
+                if (checkbox) checkbox.checked = !enabled;
+                return;
+            }
+            if (!appState.adminToken) {
+                promptForAdminToken('Token admin belum diatur. Simpan token di Pengaturan sebelum mengubah status Layanan Surat.');
+                if (checkbox) checkbox.checked = !enabled;
+                return;
+            }
+
+            appState.suratEnabled = enabled;
+            updateSuratPortalUI();
+
+            postToSheets({ action: 'setSuratStatus', enabled: enabled, token: appState.adminToken }, {
+                onSuccess: () => {
+                    showToast(enabled ? 'Layanan Surat diaktifkan!' : 'Layanan Surat dinonaktifkan.', enabled ? 'success' : 'info');
+                },
+                onError: (reason, detail) => {
+                    appState.suratEnabled = !enabled;
+                    updateSuratPortalUI();
+                    if (detail && detail.code === 'unauthorized') {
+                        promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        return;
+                    }
+                    showToast('Gagal mengirim status Layanan Surat ke Google Sheets.', 'error');
+                }
+            });
+        }
+
+        function updateSuratPortalUI() {
+            const checkbox = document.getElementById('toggle-surat-portal');
+            const badge = document.getElementById('surat-portal-status-badge');
+            const offSection = document.getElementById('surat-portal-off');
+            const enabled = appState.suratEnabled !== false;
+
+            if (checkbox) checkbox.checked = enabled;
+            if (badge) {
+                badge.className = enabled
+                    ? 'px-3 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700'
+                    : 'px-3 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-700';
+                badge.textContent = enabled ? 'AKTIF' : 'NON-AKTIF';
+            }
+            if (offSection) offSection.classList.toggle('hidden', enabled);
+        }
+
         // Collapse/expand ringkasan "Apa yang Bisa Dilihat Warga?".
         function togglePublicInfo() {
             const body = document.getElementById('public-info-body');
@@ -6786,8 +6902,10 @@
             saveLocalState();
             appState.portalEnabled = res.portalEnabled !== false;
             appState.laporEnabled = res.laporEnabled !== false;
+            appState.suratEnabled = res.suratEnabled !== false;
             updatePublicPortalUI();
             updateLaporPortalUI();
+            updateSuratPortalUI();
             if (typeof res.adminEmail === 'string' && res.adminEmail) {
                 appState.adminEmail = res.adminEmail;
                 localStorage.setItem('rt_admin_email', res.adminEmail);
