@@ -36,6 +36,7 @@ SAPA (**Sistem Administrasi & Pelayanan Antarwarga**) adalah Sistem Informasi & 
 - **🕵️ Portal Publik Terisolasi:** `public.html` memakai endpoint `readPublic` yang hanya mengembalikan Pengumuman & Kegiatan ber-`Publik=Ya`; data warga & kas tidak pernah dikirim ke portal publik.
 - **🧾 Isi form surat otomatis dari Data Warga (bantu warga):** pada **Layanan Surat**, kolom **NIK (16 digit)** berada di **paling atas**. Begitu NIK valid dimasukkan, sistem mencari NIK di **Data Warga** (`action=lookupWarga`) — bila ketemu, **Nama Lengkap & Alamat/No. Rumah** terisi otomatis **dan terkunci** (hanya tampilan, tidak dapat diubah), sedangkan **No. HP/WhatsApp** ditampilkan **tersamar namun tetap dapat diperiksa/diubah** (mis. `0812••••7890`; ketuk kolom untuk melihat nomor aslinya) — nomor asli tetap dikirim saat submit. Bila NIK **tidak terdaftar**, muncul info bahwa NIK tidak ada di data warga dan form **tetap dapat diisi manual** lalu dikirim.
 - **📣 Lapor & Aspirasi (Portal Publik & Admin):** menu baru **di bawah Layanan Surat** pada Portal Publik untuk menyampaikan **pengaduan, keluhan, atau aspirasi** kepada Pengurus RT. Warga memasukkan **No. WhatsApp** yang terdaftar di Data Warga (`action=lookupWargaHp`); **Nama & Alamat** terisi otomatis (hanya-baca). Warga memilih **Jenis Pengaduan** (13 kategori dari `RT_CONFIG.jenisPengaduan`), menulis **Judul** & **Detail**, plus opsional **Lokasi**, **Tanggal Kejadian**, **Foto/Bukti** (dikompres di browser lalu diunggah ke folder Google Drive `Lapor`), dan **Harapan/Solusi**. Setelah terkirim warga menerima **Nomor Pengaduan** (format `ADU/2026-001`) yang dapat dicek statusnya kapan saja. Lihat bagian **Lapor & Aspirasi**.
+- **✨ Asisten AI (Opsional, Gemini):** tombol **Saran AI** pada form **Catat/Edit Pengaduan** meminta Gemini merangkum pengaduan, menyarankan **Jenis Pengaduan** & **urgensi**, serta menyusun **draft Catatan Tindak Lanjut** dan **draft balasan WhatsApp** — semuanya berupa draft yang dapat diedit/diterapkan admin (tidak pernah disimpan otomatis). Tombol **Bantu Tulis AI** juga tersedia di form **Pengumuman** dan **Agenda Kegiatan** untuk merapikan judul/isi/keterangan. **API key diisi sendiri oleh admin** di **Pengaturan → AI Assistant (Gemini)**, disimpan **hanya di `localStorage` browser** (`rt_ai_api_key`) dan **tidak pernah dikirim ke Google Sheets**. Yang dikirim ke Gemini hanya **judul, detail, jenis, lokasi, tanggal kejadian, dan harapan** (Lapor) atau isi form pengumuman/kegiatan; **nama, No. HP, dan alamat lengkap tidak pernah dikirim**. Asisten bersifat opsional (toggle ON/OFF) dan seluruh perhitungan saldo/data tetap deterministik. Lihat bagian **Asisten AI (Opsional, Gemini)**.
 - **🌗 Tema Terang/Gelap (Portal Publik):** `public.html` punya tombol tema di header untuk beralih mode terang/gelap. Pilihan disimpan di `localStorage` (`rt_theme`) dan default mengikuti preferensi sistem, tanpa kedipan saat dibuka.
 - **🚨 Nomor Siaga Darurat (Portal Publik):** tombol ikon di header `public.html` membuka daftar **Nomor Siaga Darurat Utama** (112, 110, 113, 118/119, 115, 117, 129, 123) lengkap dengan ikon per layanan. Setiap nomor dapat diketuk untuk langsung menelepon (`tel:`).
 - **📱 QR Buka Portal (Portal Publik):** mengeklik **logo RT** di header `public.html` (sebelah judul "Portal Publik") membuka jendela berisi gambar **`qr-public.png`** — kode QR untuk membuka Portal Publik lewat ponsel — beserta tautan URL portal (`RT_CONFIG.publicPortalUrl`) yang dapat diketuk langsung. Memudahkan membagikan akses portal antar warga tanpa mengetik alamat.
@@ -267,6 +268,27 @@ Untuk menguji alur lengkap, kirim pengajuan dari Portal Publik menggunakan NIK &
 > 4. Ulangi **Tes Email Admin** di dashboard.
 >
 > Pesan ini juga muncul langsung di dashboard sebagai kode `mail_scope_denied` bila tombol **Tes Email Admin** diklik sebelum izin diberikan.
+
+### Asisten AI (Opsional, Gemini)
+
+Fitur bantu tulis **khusus admin**, tanpa mengubah backend. Semua panggilan dilakukan **langsung dari browser admin** ke Gemini API memakai **API key milik admin**.
+
+**Mengaktifkan:**
+1. Buat API key gratis di **Google AI Studio**.
+2. Buka **Pengaturan → AI Assistant (Gemini)**, tempel key, dan klik **Save**.
+3. Klik **Test Gemini Connection** untuk memastikan key & model valid (default `gemini-2.5-flash`).
+4. Nyalakan toggle **Enable AI assistant**. Tombol **Saran AI** (Lapor) dan **Bantu Tulis AI** (Pengumuman/Kegiatan) akan muncul.
+
+**Cara pakai di Lapor & Aspirasi:** buka **Isi Manual** atau **Edit** pengaduan, isi **Judul** & **Detail** (minimal 3 & 10 karakter), lalu klik **Saran AI**. Panel menampilkan ringkasan, saran jenis + tombol **Terapkan**, urgensi, draft **Catatan Tindak Lanjut** (tombol **Pakai**), dan draft **Balasan untuk Warga** (tombol **Salin**). Tidak ada yang tersimpan otomatis — admin tetap menekan **Simpan**.
+
+**Cara pakai di Pengumuman & Kegiatan:** buka form **Buat/Edit Pengumuman** atau **Tambah/Edit Agenda Kegiatan**, isi dulu bahan singkat (judul/poin untuk pengumuman, nama/poin untuk kegiatan), lalu klik **Bantu Tulis AI**. Panel menampilkan draft yang bisa diedit; klik **Terapkan ke Form** untuk mengisi kolom terkait (termasuk saran **Kategori** pada pengumuman). Tanggal, waktu, lokasi, dan PJ tidak diubah. Tidak ada auto-save.
+
+**Privasi & keamanan:**
+- API key disimpan **hanya di `localStorage`** browser admin (`rt_ai_api_key`, `rt_ai_model`, `rt_ai_enabled`); **tidak** pernah ditulis ke Google Sheets, log, atau dikirim ke backend RT.
+- Data yang dikirim ke Gemini: **jenis, judul, detail, lokasi, tanggal kejadian, harapan** (Lapor), atau isi form **pengumuman/kegiatan**. **Nama warga, No. HP, dan alamat lengkap tidak dikirim.**
+- Hasil AI adalah **draft**. Sistem tidak mengubah status, menyimpan, atau menghitung saldo secara otomatis.
+- Prompt menandai teks admin/warga sebagai **data**, bukan instruksi, untuk mengurangi risiko *prompt injection*.
+- Bila key tidak ada, fitur nonaktif, atau koneksi gagal, form tetap berfungsi normal (AI hanya lapisan bantuan).
 
 ### Nomor Siaga Darurat (Portal Publik)
 

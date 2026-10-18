@@ -312,6 +312,20 @@ Pengaduan yang sudah tuntas bisa **diarsipkan** (ikon kotak arsip) — data teta
 
 Sama seperti Pengajuan Surat, bila **Admin Email** diisi di Setting, setiap pengaduan baru dari portal mengirim email notifikasi ke pengurus. Bila warga melampirkan foto, email memuat baris **"Bukti pendukung : View foto"** dengan tautan **View foto** ke lampiran di Google Drive.
 
+### Saran AI untuk pengaduan (opsional)
+
+Pengurus bisa meminta bantuan **Gemini** untuk merangkum pengaduan, menyiapkan draft balasan, dan merapikan **Pengumuman** atau **Agenda Kegiatan**. Fitur ini **opsional** dan tidak mengubah data secara otomatis.
+
+1. Buka **Setting → Integrasi Google Sheets**, lalu pada kartu **AI Assistant (Gemini)** tempel **API key** Gemini (buat gratis di Google AI Studio), klik **Save**, dan **Test Gemini Connection**.
+2. Nyalakan **Enable AI assistant**. Tombol **Saran AI** (pengaduan) dan **Bantu Tulis AI** (pengumuman/kegiatan) akan muncul.
+3. Buka **Lapor & Aspirasi → Isi Manual** atau **Edit**, isi **Judul** & **Detail**, lalu klik **Saran AI**.
+4. Periksa panel saran: ringkasan, **Jenis Pengaduan** (klik **Terapkan**), **urgensi**, **draft Catatan Tindak Lanjut** (klik **Pakai**), dan **draft Balasan untuk Warga** (klik **Salin**).
+5. Edit bila perlu, lalu **Simpan** seperti biasa.
+
+Untuk **Pengumuman/Kegiatan**: isi dulu bahan singkat (judul/poin atau nama/poin), klik **Bantu Tulis AI**, periksa draft, lalu klik **Terapkan ke Form**. Tanggal, waktu, lokasi, dan PJ tetap diisi manual.
+
+Catatan privasi: API key hanya tersimpan di browser pengurus. Yang dikirim ke Gemini hanya isi form yang relevan — pada pengaduan: **jenis, judul, detail, lokasi, tanggal kejadian, dan harapan**; **nama, No. HP, dan alamat lengkap warga tidak dikirim**. Semua hasil AI berupa draft dan tidak pernah disimpan otomatis.
+
 ## Portal Publik: Menyalakan dan Mematikan
 
 Menu **Portal Publik** mengatur halaman yang dilihat warga.
@@ -346,6 +360,7 @@ Menu **Setting → Integrasi Google Sheets**. Halaman ini untuk memastikan aplik
 - **Test Connection** — memeriksa koneksi ke backend secara nyata.
 - **Load Data from Sheets** — memuat ulang data dari Google Sheets (sama dengan tombol 🔄 di header).
 - **Check Backend Version** — memastikan backend sudah memakai versi terbaru.
+- **AI Assistant (Gemini)** — opsional. Tempel **API key** Gemini milik pengurus, klik **Save**, lalu **Test Gemini Connection**. Key hanya disimpan di browser ini (tidak dikirim ke Google Sheets). Nyalakan **Enable AI assistant** untuk memunculkan tombol **Saran AI** di form pengaduan dan **Bantu Tulis AI** di form pengumuman/kegiatan. Lihat bagian **Saran AI untuk pengaduan**.
 - **Reset Demo Data (Local)** — **hanya** menghapus data demo yang tersimpan di browser ini. **Tidak** menghapus apa pun di Google Sheets. Aman digunakan setelah sesi demo/pelatihan.
 - **Demo Mode (Offline)** — penjelasan mode tanpa server. Bila `publicApiUrl` dan `apiBase` di `config.js` dikosongkan, aplikasi berjalan lokal (semua data hanya di browser) — berguna untuk pelatihan pengurus tanpa menyentuh data asli.
 
