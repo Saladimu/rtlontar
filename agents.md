@@ -130,8 +130,8 @@ Setiap permintaan pengiriman data dari Frontend Agent ke Backend Apps Script dik
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`laporEnabled`/`adminEmail`. **Butuh token** |
-| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya` + `laporEnabled`. **Tanpa token**. Bila portal OFF → `{result:"error", code:"portal_disabled"}` |
+| `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`suratEnabled`/`laporEnabled`/`adminEmail`/`saldoAwal`. **Butuh token** |
+| `readPublic` | `action=readPublic` | Hanya Pengumuman & Kegiatan `Publik=Ya` + `suratEnabled`/`laporEnabled`. **Tanpa token**. Bila portal OFF → `{result:"error", code:"portal_disabled"}` |
 | `delete` | `action=delete&sheetName=X&id=Y&token=T` | Hapus baris di sheet X (JSONP callback). **Butuh token** |
 | `version` | `action=version` | Cek versi `code.gs` yang aktif (untuk memastikan sudah redeploy) |
 | `lookupWarga` | `action=lookupWarga&nik=...` | Cari 1 warga di `Data_Warga` → `{found, nama, noHp, alamat}` saja. **Tanpa token**, ikut gate portal & rate-limit |
@@ -162,6 +162,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 | `update` | `{ action:"update", sheetName, token, id, ...field }` | Perbarui baris dengan `id` tersebut. Timestamp & ID asli dipertahankan, **tidak** menambah baris baru |
 | `delete` | `{ action:"delete", sheetName, token, id }` | Hapus baris dengan `id` tersebut |
 | `setPortalStatus` | `{ action:"setPortalStatus", enabled:true/false, token }` | Nyalakan/matikan portal publik (Script Property `PUBLIC_PORTAL_ENABLED`). Bukan operasi per-sheet |
+| `setSuratStatus` | `{ action:"setSuratStatus", enabled:true/false, token }` | Nyalakan/matikan fitur **Layanan Surat** (Script Property `SURAT_ENABLED`). Bukan operasi per-sheet |
 | `setLaporStatus` | `{ action:"setLaporStatus", enabled:true/false, token }` | Nyalakan/matikan fitur **Lapor & Aspirasi** (Script Property `LAPOR_ENABLED`). Bukan operasi per-sheet |
 | `submitSurat` | `{ action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan }` | Intake pengajuan surat dari portal publik. **Tanpa token**: validasi, honeypot, rate limit, paksa `Pending`, notifikasi email |
 | `submitLapor` | `{ action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju }` | Intake pengaduan dari portal publik. **Tanpa token**: No. HP wajib terdaftar, honeypot, rate limit, paksa `Diterima`, No. Pengaduan `ADU/<tahun>-NNN`, notifikasi email |

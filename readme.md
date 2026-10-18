@@ -400,7 +400,7 @@ node tools/mock-server.js --reset
 
 - Data disimpan di `tools/mock-data.json` (dibuat otomatis; berkas ini **tidak** ikut di-commit — lihat `.gitignore`).
 - Karena `/api` dilayani penuh oleh server lokal, **tidak ada** permintaan keluar ke `script.google.com`. Google Sheets dan situs produksi **tidak tersentuh sama sekali**.
-- Endpoint yang didukung: `version`, `read`, `readPublic`, `checkSurat`, `lookupWarga`, `sendTestEmail`, `delete` (GET), serta `add` / `update` / `delete` / `setPortalStatus` / `setAdminEmail` / `setSaldoAwal` / `submitSurat` (POST).
+- Endpoint yang didukung: `version`, `read`, `readPublic`, `checkSurat`, `lookupWarga`, `lookupWargaHp`, `checkLapor`, `sendTestEmail`, `delete` (GET), serta `add` / `update` / `delete` / `setPortalStatus` / `setSuratStatus` / `setLaporStatus` / `setAdminEmail` / `setSaldoAwal` / `submitSurat` / `submitLapor` (POST).
 - Token admin boleh diisi apa saja (mock tidak menyimpan rahasia). Portal publik, arsip warga, dan format No. Surat (`SRT-<yymmdd>-XXXX`) juga disimulasikan agar perilaku mendekati produksi.
 
 > Selama pratinjau lokal berjalan, **semua** perubahan data hanya tersimpan di `tools/mock-data.json`. Menghapus/mengedit berkas itu hanya memengaruhi data lokal, bukan produksi.

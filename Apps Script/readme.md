@@ -228,8 +228,8 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 
 | Action | Parameter | Deskripsi |
 |--------|-----------|-----------|
-| `read` | `action=read&token=T` | Baca semua data dari 4 sheet + `portalEnabled` + `adminEmail`. **Butuh token admin** (JSONP) |
-| `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
+| `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`suratEnabled`/`laporEnabled`/`adminEmail`/`saldoAwal`. **Butuh token admin** (JSONP) |
+| `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya` + `suratEnabled`/`laporEnabled`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
 | `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Pengajuan ber-`Diarsipkan=Ya` **tidak dikembalikan**; jumlahnya dilaporkan pada field `archived` sehingga UI dapat menampilkan keterangan "sudah diarsipkan". Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
 | `lookupWarga` | `action=lookupWarga&nik=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **NIK (16 digit) persis** untuk mengisi otomatis **Nama, No. HP, & Alamat** pada form pengajuan surat. Ketemu → `{result:"success", found:true, nama, noHp, alamat}`; tidak → `{found:false}` (warga tetap boleh mengisi manual). Hanya 3 field itu yang dibuka (bukan seluruh data warga). Ter-gate status portal; dibatasi ≤ 20 pencarian/jam per NIK. Mendukung JSONP |
 | `lookupWargaHp` | `action=lookupWargaHp&hp=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **No. HP** (dinormalisasi `0`/`62`) untuk mengisi otomatis **Nama & Alamat** pada form **Lapor & Aspirasi**. Ketemu → `{result:"success", found:true, nama, alamat}`; tidak → `{found:false}`. Hanya warga terdaftar yang boleh mengirim pengaduan. Ter-gate status portal; dibatasi per jam. Mendukung JSONP |
@@ -417,7 +417,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 |--------|-----------|
 | `doGet(e)` | Handler GET: routing ke `readAllSheets()`, `readPublicSheets()`, `handleDelete()`, `handleLookupWarga()`, `handleLookupWargaHp()`, `handleCheckSurat()`, `handleCheckLapor()`, `handleSendTestEmail()`, atau `version`. `read`/`delete`/`sendTestEmail` diverifikasi token |
 | `handleDelete(params)` | Hapus baris berdasarkan `id` (kolom bantu ID) via `findRowById()`; verifikasi token |
-| `readAllSheets()` | Baca 6 sheet lengkap (termasuk `Pengajuan_Surat` & `Lapor_Aspirasi`), pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, laporEnabled, adminEmail, saldoAwal, data}` |
+| `readAllSheets()` | Baca 6 sheet lengkap (termasuk `Pengajuan_Surat` & `Lapor_Aspirasi`), pastikan format GMT+7, backfill ID, format tanggal, return `{result, version, portalEnabled, suratEnabled, laporEnabled, adminEmail, saldoAwal, data}` |
 | `readPublicSheets()` | Versi publik: hanya Pengumuman & Kegiatan ber-`Publik=Ya`, tanpa `Data_Warga`/`Iuran_Kas`/`Pengajuan_Surat`/`Lapor_Aspirasi`; ditolak (`portal_disabled`) bila portal OFF |
 | `getOrCreateSheet(ss, name)` | Ambil sheet; **buat otomatis** (beserta header) bila belum ada & termasuk skema dikenal |
 | `isPortalEnabled()` / `setPortalEnabled(bool)` | Baca/tulis status portal publik di Script Property `PUBLIC_PORTAL_ENABLED` (default aktif) |
