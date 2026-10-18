@@ -808,7 +808,7 @@
                 <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
                     <div>
                         <p class="text-sm font-semibold text-slate-700">Enable AI assistant</p>
-                        <p class="text-xs text-slate-500">Shows the "Saran AI" button in the Lapor admin form.</p>
+                        <p class="text-xs text-slate-500">Shows AI helper buttons in the Lapor, Pengumuman, and Kegiatan admin forms.</p>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="toggle-ai-enabled" onchange="toggleAIEnabled()" class="sr-only peer">
@@ -818,7 +818,7 @@
 
                 <p class="text-xs text-slate-500 leading-relaxed">
                     <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i>
-                    Privacy: only the complaint title, detail, category, location, and expectation are sent to Gemini. Name, phone number, and full address are never sent. AI output is a draft — review it before saving.
+                    Privacy: only the relevant form contents are sent to Gemini (complaint details, or announcement/activity text). In Lapor, name, phone number, and full address are never sent. AI output is a draft — review it before saving.
                 </p>
             </div>
 
@@ -1865,7 +1865,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-18-04';
+        const APP_BUILD = '2026-10-18-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -6914,8 +6914,18 @@
                     throw new Error(msg || ('HTTP ' + res.status));
                 }
                 const parts = payload && payload.candidates && payload.candidates[0] && payload.candidates[0].content && payload.candidates[0].content.parts;
-                if (!parts || !parts.length) throw new Error('Gemini tidak mengembalikan jawaban.');
-                return parts.map(function (p) { return p && p.text ? p.text : ''; }).join('');
+                const text = parts ? parts.filter(function (p) { return p && !p.thought; }).map(function (p) { return p.text ? p.text : ''; }).join('') : '';
+                if (!parts || !text.trim()) {
+                    const cand = payload && payload.candidates && payload.candidates[0];
+                    const finish = cand && cand.finishReason;
+                    const block = payload && payload.promptFeedback && payload.promptFeedback.blockReason;
+                    let detail = '';
+                    if (finish === 'MAX_TOKENS') detail = 'batas token habis sebelum ada jawaban';
+                    else if (finish) detail = 'finishReason=' + finish;
+                    else if (block) detail = 'diblokir: ' + block;
+                    throw new Error('Gemini tidak mengembalikan jawaban' + (detail ? ' (' + detail + ')' : '') + '. Coba model lain atau ulangi.');
+                }
+                return text;
             } catch (e) {
                 if (e && e.name === 'AbortError') throw new Error('Permintaan AI melebihi 30 detik.');
                 throw e;
@@ -6944,7 +6954,7 @@
             const original = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>Testing...'; }
             try {
-                const text = await callGemini({ system: 'Anda asisten yang patuh. Jawab singkat.', prompt: 'Balas dengan satu kata: OK', maxTokens: 10 });
+                const text = await callGemini({ system: 'Anda asisten yang patuh. Jawab singkat.', prompt: 'Balas hanya dengan satu kata: OK', maxTokens: 256, temperature: 0 });
                 showToast('Koneksi Gemini berhasil (' + s.model + '): ' + String(text).trim().slice(0, 40), 'success');
             } catch (e) {
                 showToast('Koneksi Gemini gagal: ' + (e && e.message ? e.message : 'kesalahan tidak diketahui'), 'error');
