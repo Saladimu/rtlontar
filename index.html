@@ -1926,7 +1926,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-19-01';
+        const APP_BUILD = '2026-10-19-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -7154,9 +7154,11 @@
         // Panggil Gemini API dari browser memakai key milik admin.
         async function callGemini(opts) {
             const s = getAISettings();
-            if (!s.key) throw new Error('API key Gemini belum diisi.');
             const options = opts || {};
-            const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(s.model) + ':generateContent?key=' + encodeURIComponent(s.key);
+            const key = String(options.key || s.key || '').trim();
+            const model = String(options.model || s.model || AI_DEFAULT_MODEL).trim() || AI_DEFAULT_MODEL;
+            if (!key) throw new Error('API key Gemini belum diisi.');
+            const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
             const body = {
                 systemInstruction: { parts: [{ text: options.system || 'Anda asisten administrasi RT di Indonesia.' }] },
                 contents: [{ role: 'user', parts: [{ text: options.prompt || '' }] }],
@@ -7222,7 +7224,11 @@
 
         async function testAIConnection() {
             const s = getAISettings();
-            if (!s.key) {
+            const keyEl = document.getElementById('ai-api-key');
+            const modelEl = document.getElementById('ai-model');
+            const testKey = String((keyEl ? keyEl.value : '') || s.key || '').trim();
+            const testModel = String((modelEl ? modelEl.value : '') || s.model || AI_DEFAULT_MODEL).trim() || AI_DEFAULT_MODEL;
+            if (!testKey) {
                 showToast('Isi API key Gemini lalu klik Save.', 'error');
                 return;
             }
@@ -7230,8 +7236,9 @@
             const original = btn ? btn.innerHTML : '';
             if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>Testing...'; }
             try {
-                const text = await callGemini({ system: 'Anda asisten yang patuh. Jawab singkat.', prompt: 'Balas hanya dengan satu kata: OK', maxTokens: 512, temperature: 0 });
-                showToast('Koneksi Gemini berhasil (' + s.model + '): ' + String(text).trim().slice(0, 40), 'success');
+                const text = await callGemini({ system: 'Anda asisten yang patuh. Jawab singkat.', prompt: 'Balas hanya dengan satu kata: OK', maxTokens: 512, temperature: 0, key: testKey, model: testModel });
+                const savedHint = testModel !== s.model ? ' Klik Save untuk memakai model ini.' : '';
+                showToast('Koneksi Gemini berhasil (' + testModel + '): ' + String(text).trim().slice(0, 40) + savedHint, 'success');
             } catch (e) {
                 showToast('Koneksi Gemini gagal: ' + (e && e.message ? e.message : 'kesalahan tidak diketahui'), 'error');
             } finally {

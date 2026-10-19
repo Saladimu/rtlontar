@@ -317,7 +317,7 @@ Sama seperti Pengajuan Surat, bila **Admin Email** diisi di Setting, setiap peng
 Pengurus bisa meminta bantuan **Gemini** untuk merangkum pengaduan, menyiapkan draft balasan, merapikan **Pengumuman**/**Agenda Kegiatan**, serta meninjau **Pengajuan Surat** dan merangkum **Iuran & Kas**. Fitur ini **opsional** dan tidak mengubah data secara otomatis.
 
 1. Buka **Setting → Integrasi Google Sheets**, lalu pada kartu **AI Assistant (Gemini)** tempel **API key** Gemini (buat gratis di Google AI Studio), klik **Save**, dan **Test Gemini Connection**.
-2. Nyalakan **Enable AI assistant**. Tombol **Saran AI** (pengaduan), **Bantu Tulis AI** (pengumuman/kegiatan/surat), dan ikon **Ringkas dengan AI** (Iuran & Kas) akan muncul. Pada kolom **Model**, pilih dari daftar; default **`gemini-3.5-flash-lite`** (kuota harian lebih besar). Untuk kualitas lebih tinggi, pilih **`gemini-3.8-flash`** (kuota harian lebih kecil).
+2. Nyalakan **Enable AI assistant**. Tombol **Saran AI** (pengaduan), **Bantu Tulis AI** (pengumuman/kegiatan/surat), dan ikon **Ringkas dengan AI** (Iuran & Kas) akan muncul. Pada kolom **Model**, pilih dari daftar; default **`gemini-3.5-flash-lite`** (kuota harian lebih besar). Untuk kualitas lebih tinggi, pilih **`gemini-3.8-flash`** (kuota harian lebih kecil). **Test Gemini Connection** memakai key/model yang sedang tampil; klik **Save** setelahnya agar dipakai untuk draft.
 3. Buka **Lapor & Aspirasi → Isi Manual** atau **Edit**, isi **Judul** & **Detail**, lalu klik **Saran AI**.
 4. Periksa panel saran: ringkasan, **Jenis Pengaduan** (klik **Terapkan**), **urgensi**, **draft Catatan Tindak Lanjut** (klik **Pakai**), dan **draft Balasan untuk Warga** (klik **Salin**).
 5. Edit bila perlu, lalu **Simpan** seperti biasa.

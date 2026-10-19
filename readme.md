@@ -276,7 +276,7 @@ Fitur bantu tulis **khusus admin**, tanpa mengubah backend. Semua panggilan dila
 **Mengaktifkan:**
 1. Buat API key gratis di **Google AI Studio**.
 2. Buka **Pengaturan → AI Assistant (Gemini)**, tempel key, dan klik **Save**.
-3. Klik **Test Gemini Connection** untuk memastikan key & model valid (default `gemini-3.5-flash-lite`).
+3. Klik **Test Gemini Connection** untuk memastikan key & model valid (default `gemini-3.5-flash-lite`). Test memakai **key dan model yang sedang tampil di kolom**; klik **Save** bila ingin menyimpannya untuk draft.
 4. Nyalakan toggle **Enable AI assistant**. Tombol **Saran AI** (Lapor), **Bantu Tulis AI** (Pengumuman/Kegiatan/Surat), dan ikon **Ringkas dengan AI** (Iuran & Kas) akan muncul.
 
 > **Catatan model:** kolom **Model** bisa diisi langsung atau dipilih dari daftar yang muncul. Model yang bisa dipakai untuk key/project baru:
