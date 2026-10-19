@@ -276,8 +276,20 @@ Fitur bantu tulis **khusus admin**, tanpa mengubah backend. Semua panggilan dila
 **Mengaktifkan:**
 1. Buat API key gratis di **Google AI Studio**.
 2. Buka **Pengaturan → AI Assistant (Gemini)**, tempel key, dan klik **Save**.
-3. Klik **Test Gemini Connection** untuk memastikan key & model valid (default `gemini-2.5-flash`).
+3. Klik **Test Gemini Connection** untuk memastikan key & model valid (default `gemini-3.5-flash-lite`).
 4. Nyalakan toggle **Enable AI assistant**. Tombol **Saran AI** (Lapor), **Bantu Tulis AI** (Pengumuman/Kegiatan/Surat), dan ikon **Ringkas dengan AI** (Iuran & Kas) akan muncul.
+
+> **Catatan model:** kolom **Model** bisa diisi langsung atau dipilih dari daftar yang muncul. Model yang bisa dipakai untuk key/project baru:
+>
+> | Model | Free tier (indikatif) | Catatan |
+> |---|---|---|
+> | `gemini-3.5-flash-lite` | 15 RPM / 500 RPD | **Default**, paling seimbang untuk pemakaian harian |
+> | `gemini-3.1-flash-lite` | 15 RPM / 500 RPD | Alternatif lama, kuota sama |
+> | `gemini-3.8-flash` | 5 RPM / 20 RPD | Kualitas terbaik, kuota harian kecil |
+> | `gemini-3.7-flash` | 5 RPM / 20 RPD | Generasi sebelumnya |
+> | `gemini-3.6-flash` | 5 RPM / 20 RPD | Generasi sebelumnya |
+>
+> **`gemini-2.5-flash` tidak deprecated**, tetapi aksesnya dibatasi untuk project yang pernah aktif memakainya; key baru ditolak dengan pesan *"no longer available to new users"*. Model `gemini-2.0-flash`/`2.0-flash-lite` dan model agent seperti Computer Use/Deep Research bukan pilihan untuk fitur ini. Bila free tier habis, aktifkan billing atau gunakan model Lite yang RPD-nya lebih besar.
 
 **Cara pakai di Lapor & Aspirasi:** buka **Isi Manual** atau **Edit** pengaduan, isi **Judul** & **Detail** (minimal 3 & 10 karakter), lalu klik **Saran AI**. Panel menampilkan ringkasan, saran jenis + tombol **Terapkan**, urgensi, draft **Catatan Tindak Lanjut** (tombol **Pakai**), dan draft **Balasan untuk Warga** (tombol **Salin**). Tidak ada yang tersimpan otomatis — admin tetap menekan **Simpan**.
 
