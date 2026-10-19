@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v29-2026-10-18'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v30-2026-10-19'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -323,11 +323,11 @@ function readPublicSheets() {
   if (store.portalEnabled === false) {
     return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
   }
-  const full = readAllSheets();
   const data = { Pengumuman: [], Kegiatan_Warga: [] };
   const idx = { Pengumuman: 6, Kegiatan_Warga: 7 };
   ['Pengumuman', 'Kegiatan_Warga'].forEach((name) => {
-    data[name] = (full.data[name] || []).filter((row) => isPublik(row[idx[name]]));
+    // Portal publik hanya membaca dua sheet ini; jangan menyentuh data privat.
+    data[name] = (store.sheets[name] || []).filter((row) => isPublik(row[idx[name]])).map((row) => row.slice());
   });
   return { result: 'success', version: CODE_VERSION, portalEnabled: true, laporEnabled: store.laporEnabled !== false, suratEnabled: store.suratEnabled !== false, data };
 }

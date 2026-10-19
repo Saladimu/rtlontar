@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v29-2026-10-18";
+var CODE_VERSION = "publik-v30-2026-10-19";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -511,6 +511,25 @@ function getOrCreateSheet(ss, name) {
   return sheet;
 }
 
+// Format kolom tanggal/waktu yang masih berupa objek Date dari Sheets.
+function formatSheetRows(rows, fmt) {
+  fmt = fmt || {};
+  return rows.map(function (row) {
+    return row.map(function (cell, col) {
+      if (cell instanceof Date && fmt[col]) {
+        return Utilities.formatDate(cell, TZ, fmt[col]);
+      }
+      return cell;
+    });
+  });
+}
+
+// Format tanggal untuk tabel publik (0-based index kolom).
+var PUBLIC_FORMATS = {
+  "Pengumuman": { 1: "yyyy-MM-dd" },
+  "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" }
+};
+
 function readAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga", "Pengajuan_Surat", "Lapor_Aspirasi"];
@@ -533,16 +552,8 @@ function readAllSheets() {
 
     ensureSpreadsheetFormat(ss, sheet, name);
     var rows = ensureIds(sheet, name);
-    var fmt = formats[name] || {};
 
-    data[name] = rows.map(function (row) {
-      return row.map(function (cell, col) {
-        if (cell instanceof Date && fmt[col]) {
-          return Utilities.formatDate(cell, TZ, fmt[col]);
-        }
-        return cell;
-      });
-    });
+    data[name] = formatSheetRows(rows, formats[name]);
   });
 
   return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "suratEnabled": isSuratEnabled(), "adminEmail": getAdminEmail(), "saldoAwal": getSaldoAwal(), "data": data };
@@ -563,13 +574,22 @@ function readPublicSheets() {
     };
   }
 
-  var full = readAllSheets();
+  // Baca HANYA dua sheet publik. Jangan panggil readAllSheets(): itu membaca
+  // Data_Warga/Iuran_Kas/surat/lapor dan menulis ID bila kosong, sehingga
+  // portal publik menjadi lambat dan melakukan kerja tulis yang tidak perlu.
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var data = { "Pengumuman": [], "Kegiatan_Warga": [] };
 
   ["Pengumuman", "Kegiatan_Warga"].forEach(function (name) {
-    var rows = (full.data && full.data[name]) || [];
+    var sheet = ss.getSheetByName(name);
+    if (!sheet) return;
+    var values = sheet.getDataRange().getValues();
+    if (values.length < 2) return;
     var idx = PUBLIK_INDEX[name];
-    data[name] = rows.filter(function (row) {
+    var rows = values.slice(1).filter(function (row) {
+      return row.some(function (cell) { return cell !== '' && cell !== null && cell !== undefined; });
+    });
+    data[name] = formatSheetRows(rows, PUBLIC_FORMATS[name]).filter(function (row) {
       return isPublik(row[idx]);
     });
   });

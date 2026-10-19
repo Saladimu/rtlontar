@@ -1339,7 +1339,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-18-02';
+        const APP_BUILD = '2026-10-19-01';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1452,7 +1452,7 @@
                 checkForUpdate();
             };
             checkForUpdate(); // cek segera saat watcher mulai
-            setInterval(tick, 60000);
+            setInterval(tick, 600000);
             document.addEventListener('visibilitychange', function () {
                 if (document.visibilityState !== 'hidden') checkForUpdate();
             });
@@ -1944,7 +1944,7 @@
                     <div class="flex items-start justify-between mb-2">
                         <h3 class="font-bold text-slate-800 dark:text-slate-100 text-sm">${escapeHtml(item.namaKegiatan)}${daysLeftBadge(item.daysLeft)}</h3>
                         <span class="text-xs px-2 py-0.5 bg-rose-50 dark:bg-rose-900/40 text-rose-600 dark:text-rose-300 rounded-lg">
-                            <i class="fa-regular fa-clock mr-1"></i>${escapeHtml(formatTimeOnly(item.waktu))}
+                            <i class="fa-regular fa-clock mr-1"></i>${escapeHtml(item.waktu)}
                         </span>
                     </div>
                     <div class="space-y-1 text-xs text-slate-600 dark:text-slate-300">

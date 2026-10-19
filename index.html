@@ -835,7 +835,7 @@
                 <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
                     <div>
                         <p class="text-sm font-semibold text-slate-700">Enable AI assistant</p>
-                        <p class="text-xs text-slate-500">Shows AI helper buttons in the Lapor, Pengumuman, Kegiatan, and Surat admin forms.</p>
+                        <p class="text-xs text-slate-500">Shows AI helper buttons in the Lapor, Pengumuman, Kegiatan, Surat, and Kas panels.</p>
                     </div>
                     <label class="relative inline-flex items-center cursor-pointer">
                         <input type="checkbox" id="toggle-ai-enabled" onchange="toggleAIEnabled()" class="sr-only peer">
@@ -845,7 +845,7 @@
 
                 <p class="text-xs text-slate-500 leading-relaxed">
                     <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i>
-                    Privacy: only the relevant form contents are sent to Gemini (complaint details, announcement/activity text, or letter type/keperluan/status). In Lapor and Surat, name, NIK, No. KK, phone number, and full address are never sent. AI output is a draft — review it before saving.
+                    Privacy: only the relevant form contents are sent to Gemini (complaint details, announcement/activity text, letter type/keperluan/status, or kas totals). In Lapor and Surat, name, NIK, No. KK, phone number, and full address are never sent. AI output is a draft — review it before saving.
                 </p>
             </div>
 
@@ -1916,7 +1916,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v29-2026-10-18';
+        const EXPECTED_BACKEND_VERSION = 'publik-v30-2026-10-19';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1926,7 +1926,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-18-15';
+        const APP_BUILD = '2026-10-19-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2823,7 +2823,7 @@
                 checkForUpdate();
             };
             checkForUpdate(); // cek segera saat watcher mulai
-            setInterval(tick, 60000);
+            setInterval(tick, 600000);
             document.addEventListener('visibilitychange', function () {
                 if (document.visibilityState !== 'hidden') checkForUpdate();
             });
