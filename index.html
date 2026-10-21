@@ -1926,7 +1926,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-19-02';
+        const APP_BUILD = '2026-10-19-04';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4743,15 +4743,45 @@
         // Deletion Functions
 
         function deletePengumuman(index) {
-            if(confirm('Hapus pengumuman ini?')) {
-                deleteRecord('Pengumuman', index, appState.pengumuman, renderPengumumanCards, 'pengumuman');
-            }
+            const item = appState.pengumuman[index];
+            if (!item) return;
+            const targetId = item._id || '';
+            const isImbauan = String(item.kategori || '').toLowerCase() === 'imbauan';
+            const tanggal = fmtDateDisplay(item.tanggal);
+            openWarning({
+                title: isImbauan ? 'Hapus imbauan?' : 'Hapus pengumuman?',
+                message: (isImbauan ? 'Imbauan "' : 'Pengumuman "') + (item.judul || '-') + '"' +
+                    (tanggal ? ' pada ' + tanggal : '') +
+                    ' akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+                confirmLabel: 'Ya, Hapus',
+                confirmIcon: 'fa-trash-can',
+                icon: 'fa-triangle-exclamation',
+                danger: true,
+                onConfirm: function () {
+                    const i = targetId ? findIndexById(appState.pengumuman, targetId) : index;
+                    if (i !== -1) deleteRecord('Pengumuman', i, appState.pengumuman, renderPengumumanCards, 'pengumuman');
+                }
+            });
         }
 
         function deleteKegiatan(index) {
-            if(confirm('Hapus agenda kegiatan ini?')) {
-                deleteRecord('Kegiatan_Warga', index, appState.kegiatan, renderKegiatanCards, 'kegiatan');
-            }
+            const item = appState.kegiatan[index];
+            if (!item) return;
+            const targetId = item._id || '';
+            const tanggal = fmtDateDisplay(item.tanggal);
+            openWarning({
+                title: 'Hapus agenda kegiatan?',
+                message: 'Agenda "' + (item.namaKegiatan || '-') + '"' + (tanggal ? ' pada ' + tanggal : '') +
+                    ' akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+                confirmLabel: 'Ya, Hapus',
+                confirmIcon: 'fa-trash-can',
+                icon: 'fa-triangle-exclamation',
+                danger: true,
+                onConfirm: function () {
+                    const i = targetId ? findIndexById(appState.kegiatan, targetId) : index;
+                    if (i !== -1) deleteRecord('Kegiatan_Warga', i, appState.kegiatan, renderKegiatanCards, 'kegiatan');
+                }
+            });
         }
 
         // ===== Pengajuan Surat (admin) =====
