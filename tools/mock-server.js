@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v30-2026-10-19'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v31-2026-10-21'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -360,6 +360,15 @@ function handleLookupWarga(params) {
   return { result: 'success', version: CODE_VERSION, found: false };
 }
 
+function normalizeSuratRef(value) {
+  return cleanStr(value, 60).replace(/[\s\u2010-\u2015\u2212]+/g, '').toUpperCase();
+}
+
+function sanitizeSuratRef(value) {
+  const s = normalizeSuratRef(value);
+  return /^[A-Z0-9-]{6,40}$/.test(s) ? s : null;
+}
+
 function normalizeSuratHp(value) {
   const d = String(value === undefined || value === null ? '' : value).replace(/\D/g, '');
   if (!d) return '';
@@ -373,24 +382,40 @@ function handleCheckSurat(params) {
     return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
   }
   if (store.suratEnabled === false) return suratDisabled();
-  const nik = cleanStr(params.nik, 40).replace(/\D/g, '');
-  const hpRaw = params.hp !== undefined && params.hp !== null ? params.hp : params.noHp;
-  const hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
-  if (!/^\d{16}$/.test(nik) || hp.length < 9) {
-    return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.' };
+
+  const ref = normalizeSuratRef(params.ref);
+  const byRef = !!ref;
+  let nik = '';
+  let hpNorm = '';
+  if (byRef) {
+    if (!/^[A-Z0-9-]{6,40}$/.test(ref)) {
+      return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Masukkan No. Pengajuan yang valid.' };
+    }
+  } else {
+    nik = cleanStr(params.nik, 40).replace(/\D/g, '');
+    const hpRaw = params.hp !== undefined && params.hp !== null ? params.hp : params.noHp;
+    const hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
+    if (!/^\d{16}$/.test(nik) || hp.length < 9) {
+      return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.' };
+    }
+    hpNorm = normalizeSuratHp(hp);
   }
-  const hpNorm = normalizeSuratHp(hp);
+
   const rows = store.sheets.Pengajuan_Surat || [];
   const results = [];
   let archivedCount = 0;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
-    const rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
-    if (rNik === nik && normalizeSuratHp(rHp) === hpNorm) {
+    const rawRowRef = row[11] !== undefined ? row[11] : row[row.length - 1];
+    const rowRef = normalizeSuratRef(rawRowRef);
+    const matches = byRef
+      ? (rowRef === ref)
+      : (String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '') === nik &&
+         normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) === hpNorm);
+    if (matches) {
       if (isArsip(row[10])) { archivedCount++; continue; } // pengajuan diarsipkan tidak dapat diambil publik
       results.push({
-        ref: String(row[row.length - 1] === undefined || row[row.length - 1] === null ? '' : row[row.length - 1]),
+        ref: rowRef,
         tanggal: displayTimestamp(row[0]),
         jenisSurat: cleanStr(row[5], 120),
         status: cleanStr(row[7], 20) || 'Pending',
@@ -555,8 +580,8 @@ function handlePost(data) {
     if (!jenisSurat) return { result: 'error', code: 'invalid', message: 'Jenis Surat wajib dipilih.' };
     if (keperluan.length < 3) return { result: 'error', code: 'invalid', message: 'Keperluan / alasan pengajuan wajib diisi (minimal 3 karakter).' };
     const ts = nowIso();
-    let id = cleanStr(data.ref, 40);
-    if (!id || !/^[A-Za-z0-9-]{6,40}$/.test(id) || findRowIndex('Pengajuan_Surat', id) !== -1) id = makeSuratId(ts);
+    let id = sanitizeSuratRef(data.ref);
+    if (!id || findRowIndex('Pengajuan_Surat', id) !== -1) id = makeSuratId(ts);
     const row = buildRow('Pengajuan_Surat', { nama, nik, noHp, alamat, jenisSurat, keperluan, status: 'Pending', noSurat: '', catatan: '' }, ts, id);
     store.sheets.Pengajuan_Surat.push(row);
     saveStore();

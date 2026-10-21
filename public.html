@@ -290,23 +290,43 @@
                             </span>
                             <span>
                                 <span class="block font-bold text-slate-800 dark:text-slate-100">Cek Status Pengajuan</span>
-                                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masukkan NIK dan No. HP/WhatsApp yang sama seperti saat mengajukan.</span>
+                                <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">Cek dengan NIK + No. HP/WhatsApp, atau dengan No. Pengajuan.</span>
                             </span>
                         </span>
                         <i id="surat-chevron-cek" class="fa-solid fa-chevron-down text-slate-400 transition-transform duration-200 flex-shrink-0 rotate-180"></i>
                     </button>
                     <div id="surat-panel-cek" class="px-5 pb-5 hidden">
                     <form id="surat-check-form" class="space-y-3" onsubmit="return cekStatusSurat(event)">
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
-                            <input id="cek-nik" type="text" required inputmode="numeric" maxlength="16" autocomplete="off" oninput="onSuratNIKInput(this, 'cek-nik-hint')"
-                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
-                            <p id="cek-nik-hint" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500"></p>
+                        <div class="grid grid-cols-2 gap-2" role="group" aria-label="Pilih cara cek status">
+                            <button type="button" id="cek-mode-nik" aria-pressed="true" aria-controls="cek-panel-nik" onclick="setCekMode('nik')"
+                                class="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-transparent transition bg-emerald-600 text-white hover:bg-emerald-700">
+                                <i class="fa-solid fa-user"></i> NIK + No. HP
+                            </button>
+                            <button type="button" id="cek-mode-ref" aria-pressed="false" aria-controls="cek-panel-ref" onclick="setCekMode('ref')"
+                                class="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border border-transparent transition bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600">
+                                <i class="fa-solid fa-file-signature"></i> No. Pengajuan
+                            </button>
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
-                            <input id="cek-hp" type="tel" required inputmode="numeric" maxlength="15" autocomplete="tel" oninput="onPhoneInput(this)"
-                                class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        <div id="cek-panel-nik" class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">NIK (16 digit)</label>
+                                <input id="cek-nik" type="text" required inputmode="numeric" maxlength="16" autocomplete="off" oninput="onSuratNIKInput(this, 'cek-nik-hint')"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                <p id="cek-nik-hint" class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500"></p>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. HP / WhatsApp</label>
+                                <input id="cek-hp" type="tel" required inputmode="numeric" maxlength="15" autocomplete="tel" oninput="onPhoneInput(this)"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                            </div>
+                        </div>
+                        <div id="cek-panel-ref" class="space-y-3 hidden">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">No. Pengajuan</label>
+                                <input id="cek-ref" type="text" maxlength="40" autocomplete="off" placeholder="SRT-261006-AB12" oninput="onCekRefInput(this)"
+                                    class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 uppercase tracking-wide focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                                <p class="text-xs mt-1 leading-snug text-slate-400 dark:text-slate-500">Nomor ini tampil setelah pengajuan terkirim.</p>
+                            </div>
                         </div>
                         <button id="cek-submit-btn" type="submit"
                             class="w-full flex items-center justify-center px-4 py-2.5 text-sm font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition">
@@ -593,7 +613,7 @@
                     </li>
                     <li class="flex gap-3">
                         <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">5</span>
-                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Untuk memeriksa status, buka kartu <b>"Cek Status Pengajuan"</b>, lalu masukkan <b>NIK</b> dan <b>No. HP/WhatsApp</b> yang <b>sama</b> seperti saat mengajukan, dan klik <b>"Cek Status"</b>.</span>
+                        <span class="text-sm text-slate-700 dark:text-slate-200 pt-0.5">Untuk memeriksa status, buka kartu <b>"Cek Status Pengajuan"</b>. Pilih <b>NIK + No. HP</b> lalu masukkan data yang <b>sama</b> seperti saat mengajukan, atau pilih <b>No. Pengajuan</b> lalu masukkan nomor yang Anda simpan. Klik <b>"Cek Status"</b>.</span>
                     </li>
                     <li class="flex gap-3">
                         <span class="w-7 h-7 flex-shrink-0 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm flex items-center justify-center">6</span>
@@ -603,10 +623,10 @@
                 <div class="mt-4 bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3">
                     <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 mb-1"><i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>Tips</p>
                     <ul class="text-xs text-slate-600 dark:text-slate-300 space-y-1 list-disc list-inside">
-                        <li>NIK &amp; No. HP saat cek status harus <b>sama persis</b> dengan saat mengajukan.</li>
+                        <li>NIK &amp; No. HP saat cek status harus <b>sama persis</b> dengan saat mengajukan. Alternatifnya, gunakan <b>No. Pengajuan</b> yang Anda simpan.</li>
                         <li>Bila NIK tidak terdaftar di data warga, pengajuan <b>tetap bisa dikirim</b> dengan mengisi data secara manual.</li>
                         <li>Satu NIK dibatasi maksimal <b>5 pengajuan</b>.</li>
-                        <li>Data pribadi aman: portal hanya menampilkan pengajuan yang cocok dengan NIK & No. HP Anda.</li>
+                        <li>Data pribadi aman: portal hanya menampilkan pengajuan yang cocok dengan NIK &amp; No. HP, atau No. Pengajuan, yang Anda masukkan.</li>
                     </ul>
                 </div>
             </div>
@@ -1339,7 +1359,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-19-02';
+        const APP_BUILD = '2026-10-21-02';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2105,15 +2125,18 @@
 
             setSuratBusy(true);
             postToSheets(payload, {
-                onSuccess: function () {
+                onSuccess: function (res) {
                     setSuratBusy(false);
                     document.getElementById('surat-form').reset();
                     setSuratNIKHint('surat-nik-hint', '', '');
                     setSuratNikLookup('', '');
                     releaseWargaFillIfLocked();
+                    // Pakai nomor yang benar-benar tersimpan bila server mengembalikannya
+                    // (mis. ref bentrok lalu server membuat nomor baru).
+                    const savedRef = normalizeCekRef(res && res.id ? res.id : '') || ref;
                     showSuratMessage('success',
-                        '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(ref) + '</b><br>' +
-                        '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP Anda pada panel "Cek Status Pengajuan".</span>');
+                        '<b>Pengajuan terkirim.</b><br>Nomor pengajuan Anda: <b>' + escapeHtml(savedRef) + '</b><br>' +
+                        '<span class="text-xs">Simpan nomor ini. Cek status memakai NIK & No. HP, atau No. Pengajuan ini, pada panel "Cek Status Pengajuan".</span>');
                 },
                 onError: function (reason, detail) {
                     console.error('submitSurat gagal:', reason, detail);
@@ -2131,6 +2154,63 @@
         }
 
         // Cek status via JSONP GET (action=checkSurat).
+        // Dua pilihan: NIK + No. HP, atau No. Pengajuan (ref) saja.
+        let cekMode = 'nik';
+        const CEK_MODE_ACTIVE = ['bg-emerald-600', 'text-white', 'hover:bg-emerald-700'];
+        const CEK_MODE_INACTIVE = ['bg-slate-100', 'dark:bg-slate-700', 'text-slate-600', 'dark:text-slate-300', 'hover:bg-slate-50', 'dark:hover:bg-slate-600'];
+
+        function setCekMode(mode) {
+            const next = mode === 'ref' ? 'ref' : 'nik';
+            const isRef = next === 'ref';
+            const changed = cekMode !== next;
+            cekMode = next;
+
+            const panelNik = document.getElementById('cek-panel-nik');
+            const panelRef = document.getElementById('cek-panel-ref');
+            if (panelNik) panelNik.classList.toggle('hidden', isRef);
+            if (panelRef) panelRef.classList.toggle('hidden', !isRef);
+
+            const nikBtn = document.getElementById('cek-mode-nik');
+            const refBtn = document.getElementById('cek-mode-ref');
+            [[nikBtn, !isRef], [refBtn, isRef]].forEach(function (pair) {
+                const btn = pair[0];
+                if (!btn) return;
+                CEK_MODE_ACTIVE.concat(CEK_MODE_INACTIVE).forEach(function (c) { btn.classList.remove(c); });
+                CEK_MODE_ACTIVE.forEach(function (c) { if (pair[1]) btn.classList.add(c); });
+                CEK_MODE_INACTIVE.forEach(function (c) { if (!pair[1]) btn.classList.add(c); });
+                btn.setAttribute('aria-pressed', pair[1] ? 'true' : 'false');
+            });
+
+            ['cek-nik', 'cek-hp'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (isRef) el.removeAttribute('required');
+                else el.setAttribute('required', 'required');
+            });
+            const refEl = document.getElementById('cek-ref');
+            if (refEl) {
+                if (isRef) refEl.setAttribute('required', 'required');
+                else refEl.removeAttribute('required');
+            }
+
+            if (changed) {
+                const box = document.getElementById('cek-result');
+                if (box) box.innerHTML = '';
+            }
+        }
+
+        function normalizeCekRef(value) {
+            return String(value == null ? '' : value)
+                .replace(/[\s\u2010-\u2015\u2212]+/g, '')
+                .toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40);
+        }
+
+        function onCekRefInput(el) {
+            if (!el) return;
+            const v = normalizeCekRef(el.value);
+            if (v !== el.value) el.value = v;
+        }
+
         function cekStatusSurat(e) {
             e.preventDefault();
             const box = document.getElementById('cek-result');
@@ -2138,29 +2218,42 @@
                 box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Portal belum dikonfigurasi.</div>';
                 return false;
             }
-            const nik = (document.getElementById('cek-nik').value || '').replace(/\D/g, '');
-            const hp = (document.getElementById('cek-hp').value || '').trim();
-            if (nik.length !== 16) {
-                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">NIK harus 16 digit angka.</div>';
-                return false;
-            }
-            if (!parseNIK(nik)) {
-                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Harap periksa ulang NIK</div>';
-                return false;
-            }
-            if (hp.replace(/\D/g, '').length < 9) {
-                box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Nomor HP/WhatsApp tidak valid.</div>';
-                return false;
+
+            let query;
+            if (cekMode === 'ref') {
+                const ref = normalizeCekRef(document.getElementById('cek-ref').value);
+                if (ref.length < 6 || !/^[A-Z0-9-]{6,40}$/.test(ref)) {
+                    box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Masukkan No. Pengajuan yang valid (contoh: SRT-261006-AB12).</div>';
+                    return false;
+                }
+                query = 'action=checkSurat&ref=' + encodeURIComponent(ref);
+            } else {
+                const nik = (document.getElementById('cek-nik').value || '').replace(/\D/g, '');
+                const hp = (document.getElementById('cek-hp').value || '').trim();
+                if (nik.length !== 16) {
+                    box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">NIK harus 16 digit angka.</div>';
+                    return false;
+                }
+                if (!parseNIK(nik)) {
+                    box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Harap periksa ulang NIK</div>';
+                    return false;
+                }
+                if (hp.replace(/\D/g, '').length < 9) {
+                    box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Nomor HP/WhatsApp tidak valid.</div>';
+                    return false;
+                }
+                query = 'action=checkSurat&nik=' + encodeURIComponent(nik) + '&hp=' + encodeURIComponent(hp);
             }
 
             box.innerHTML = '<div class="flex justify-center py-4"><i class="fa-solid fa-circle-notch fa-spin text-slate-300 dark:text-slate-600"></i></div>';
             const callbackName = '__cekSurat_' + Date.now();
+            const mode = cekMode;
             loadApiJsonp(
-                () => 'action=checkSurat&nik=' + encodeURIComponent(nik) + '&hp=' + encodeURIComponent(hp) + '&callback=' + callbackName,
+                () => query + '&callback=' + callbackName,
                 callbackName,
                 {
                     timeout: 15000,
-                    onSuccess: function (res) { renderCekResult(res, box); },
+                    onSuccess: function (res) { renderCekResult(res, box, mode); },
                     onError: function () {
                         box.innerHTML = '<div class="text-sm text-rose-600 dark:text-rose-300">Gagal menghubungi server. Coba lagi.</div>';
                     }
@@ -2169,7 +2262,7 @@
             return false;
         }
 
-        function renderCekResult(res, box) {
+        function renderCekResult(res, box, mode) {
             if (!res || res.result !== 'success') {
                 const msg = (res && res.code === 'portal_disabled') ? 'Portal publik sedang dinonaktifkan.'
                     : (res && res.message) ? res.message : 'Gagal memeriksa status.';
@@ -2183,7 +2276,10 @@
                     box.innerHTML = '<div class="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 rounded-xl p-3 text-sm flex items-start gap-2"><i class="fa-solid fa-box-archive mt-0.5"></i><span>Pengajuan ini sudah <b class="font-semibold">diarsipkan</b> oleh pengurus RT, sehingga tidak lagi ditampilkan. Silakan hubungi pengurus RT bila memerlukan informasi lebih lanjut.</span></div>';
                     return;
                 }
-                box.innerHTML = '<div class="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl p-3 text-sm">Tidak ada pengajuan yang cocok dengan NIK & No. HP tersebut.</div>';
+                const emptyMsg = mode === 'ref'
+                    ? 'Tidak ada pengajuan yang cocok dengan No. Pengajuan tersebut.'
+                    : 'Tidak ada pengajuan yang cocok dengan NIK & No. HP tersebut.';
+                box.innerHTML = '<div class="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl p-3 text-sm">' + emptyMsg + '</div>';
                 return;
             }
             let html = items.map(function (it) {

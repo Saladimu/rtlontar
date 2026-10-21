@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v30-2026-10-19";
+var CODE_VERSION = "publik-v31-2026-10-21";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -813,10 +813,16 @@ function suratError(code, message) {
 }
 
 // Terima ref dari warga hanya bila formatnya aman, agar tidak merusak kolom ID.
+// Bentuk kanonik No. Pengajuan: tanpa spasi, huruf besar, hanya A-Z/0-9/-.
+// Dipakai saat menyimpan maupun mencari agar ref lama/ketikan warga tetap cocok.
+function normalizeSuratRef(value) {
+  return cleanStr(value, 60).replace(/[\s\u2010-\u2015\u2212]+/g, '').toUpperCase();
+}
+
 function sanitizeSuratRef(value) {
-  var s = cleanStr(value, 40);
+  var s = normalizeSuratRef(value);
   if (!s) return null;
-  return /^[A-Za-z0-9-]{6,40}$/.test(s) ? s : null;
+  return /^[A-Z0-9-]{6,40}$/.test(s) ? s : null;
 }
 
 function randomCode4() {
@@ -1016,8 +1022,8 @@ function checkAndRecordSuratCheckRate(key) {
   return true;
 }
 
-// Handler aksi publik `checkSurat`: warga cek status dengan NIK + No. HP.
-// Hanya mengembalikan pengajuan yang NIK sama dan No. HP cocok (setelah dinormalisasi).
+// Handler aksi publik `checkSurat`: warga cek status dengan NIK + No. HP,
+// atau dengan No. Pengajuan (ref) saja. Hanya field non-sensitif yang dikembalikan.
 // Indeks kolom Pengajuan_Surat (termasuk kolom A Timestamp): 10 = Diarsipkan.
 var PENGAJUAN_SURAT_COL_ARSIP = 10;
 // Normalisasi nomor HP Indonesia menjadi format internasional "62..." agar
@@ -1038,19 +1044,35 @@ function handleCheckSurat(params) {
     return suratError('surat_disabled', 'Fitur Layanan Surat sedang dinonaktifkan oleh admin.');
   }
 
-  var nik = cleanStr(params.nik, 40).replace(/\D/g, '');
-  var hpRaw = (params.hp !== undefined && params.hp !== null) ? params.hp : params.noHp;
-  var hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
+  // Mode 1: No. Pengajuan (ref) saja. Ref berfungsi sebagai kunci akses.
+  var ref = normalizeSuratRef(params.ref);
+  var byRef = !!ref;
+  var nik = '';
+  var hpNorm = '';
 
-  if (!/^\d{16}$/.test(nik) || hp.length < 9) {
-    return suratError('invalid', 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.');
-  }
+  if (byRef) {
+    if (!/^[A-Z0-9-]{6,40}$/.test(ref)) {
+      return suratError('invalid', 'Masukkan No. Pengajuan yang valid.');
+    }
+    if (!checkAndRecordSuratCheckRate('ref:' + ref)) {
+      return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+    }
+  } else {
+    // Mode 2: NIK + No. HP (keduanya harus cocok).
+    nik = cleanStr(params.nik, 40).replace(/\D/g, '');
+    var hpRaw = (params.hp !== undefined && params.hp !== null) ? params.hp : params.noHp;
+    var hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
 
-  // Normalisasi nomor HP agar "0812...", "62812...", "+62 812...", dsb. saling cocok.
-  var hpNorm = normalizeSuratHp(hp);
+    if (!/^\d{16}$/.test(nik) || hp.length < 9) {
+      return suratError('invalid', 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.');
+    }
 
-  if (!checkAndRecordSuratCheckRate(nik + '|' + hpNorm)) {
-    return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+    // Normalisasi nomor HP agar "0812...", "62812...", "+62 812...", dsb. saling cocok.
+    hpNorm = normalizeSuratHp(hp);
+
+    if (!checkAndRecordSuratCheckRate(nik + '|' + hpNorm)) {
+      return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+    }
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1061,16 +1083,21 @@ function handleCheckSurat(params) {
   if (sheet) {
     ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
     var rows = ensureIds(sheet, 'Pengajuan_Surat');
+    var idCol = EXPECTED_FIELDS['Pengajuan_Surat'];
     for (var i = 0; i < rows.length; i++) {
       var row = rows[i];
-      var rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
-      var rHp = String(row[3] === undefined || row[3] === null ? '' : row[3]).replace(/\D/g, '');
-      if (rNik === nik && normalizeSuratHp(rHp) === hpNorm) {
+      var rawRowRef = row[idCol] !== undefined ? row[idCol] : row[row.length - 1];
+      var rowRef = normalizeSuratRef(rawRowRef);
+      var matches = byRef
+        ? (rowRef === ref)
+        : (String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '') === nik &&
+           normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) === hpNorm);
+      if (matches) {
         // Pengajuan yang sudah diarsipkan tidak lagi dapat diambil publik;
         // cukup dihitung agar frontend bisa memberi tahu bahwa sudah diarsipkan.
         if (isArsip(row[PENGAJUAN_SURAT_COL_ARSIP])) { archivedCount++; continue; }
         results.push({
-          "ref": String(row[row.length - 1] === undefined || row[row.length - 1] === null ? '' : row[row.length - 1]),
+          "ref": rowRef,
           "tanggal": formatTimestampCell(row[0]),
           "jenisSurat": cleanStr(row[5], 120),
           "status": cleanStr(row[7], 20) || 'Pending',

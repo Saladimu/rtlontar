@@ -462,8 +462,9 @@ Yang perlu diketahui:
 ## Cek Status Pengajuan Surat
 
 1. Di bagian **Layanan Surat**, klik judul **“Cek Status Pengajuan”** untuk membuka panelnya.
-2. Masukkan **NIK** dan **No. HP / WhatsApp** yang **sama persis** dengan yang dipakai saat mengajukan.
-   - Nomor HP boleh ditulis dengan awalan `0` maupun `62`, boleh berspasi atau bertanda hubung — sistem menormalkannya otomatis (mis. `0812-3456-7890` = `6281234567890`).
+2. Pilih salah satu cara:
+   - **NIK + No. HP / WhatsApp** — masukkan data yang **sama persis** dengan yang dipakai saat mengajukan. Nomor HP boleh ditulis dengan awalan `0` maupun `62`, boleh berspasi atau bertanda hubung — sistem menormalkannya otomatis (mis. `0812-3456-7890` = `6281234567890`).
+   - **No. Pengajuan** — masukkan nomor yang tampil setelah pengajuan terkirim (contoh `SRT-261006-AB12`). Nomor ini adalah kunci akses, jadi simpan dengan baik.
 3. Klik **Cek Status**.
 
 Hasilnya menampilkan status terbaru dan catatan pengurus:
@@ -517,7 +518,7 @@ Setelah dipasang, aplikasi terbuka **layar penuh** dari ikon di layar utama. Bil
 Tetap lanjutkan pengisian secara manual dan kirim pengajuan; beri tahu pengurus agar data warga Anda dilengkapi. Nama & alamat yang terisi otomatis akan aktif setelah NIK Anda terdaftar.
 
 **Pengajuan saya tidak muncul saat cek status.**
-Pastikan **NIK dan No. HP sama persis** dengan saat mengajukan. Bila nomor HP Anda sempat berubah, hubungi pengurus (hanya pengurus yang dapat memperbaiki data pengajuan).
+Pastikan **NIK dan No. HP sama persis** dengan saat mengajukan, atau gunakan **No. Pengajuan** yang Anda simpan. Bila nomor HP Anda sempat berubah, hubungi pengurus (hanya pengurus yang dapat memperbaiki data pengajuan).
 
 **Muncul pesan batas pengajuan.**
 Maksimal **5 pengajuan per NIK per jam**. Tunggu sekitar satu jam, atau hubungi pengurus bila memang mendesak.
@@ -526,7 +527,7 @@ Maksimal **5 pengajuan per NIK per jam**. Tunggu sekitar satu jam, atau hubungi 
 Hubungi pengurus RT melalui WhatsApp. Anda juga bisa memeriksa ulang status lain kali; catatan pengurus akan muncul di hasil cek status.
 
 **Apakah data saya aman?**
-Ya. Portal publik **tidak pernah** menampilkan daftar data warga maupun kas RT. Data warga hanya diambil **satu per satu** saat Anda memasukkan NIK pada form pengajuan — itu pun hanya nama, alamat, dan nomor HP tersamar. Hasil **Cek Status** hanya menampilkan pengajuan yang cocok dengan NIK & No. HP Anda, dan pemakaian pencarian dibatasi per jam.
+Ya. Portal publik **tidak pernah** menampilkan daftar data warga maupun kas RT. Data warga hanya diambil **satu per satu** saat Anda memasukkan NIK pada form pengajuan — itu pun hanya nama, alamat, dan nomor HP tersamar. Hasil **Cek Status** hanya menampilkan pengajuan yang cocok dengan NIK & No. HP, atau No. Pengajuan, yang Anda masukkan. Pemakaian pencarian dibatasi per jam, dan No. Pengajuan tidak mudah ditebak.
 
 **Portal bilang dinonaktifkan.**
 Pengurus sedang mematikan akses portal (mis. saat pembaruan data). Coba lagi nanti atau hubungi pengurus.

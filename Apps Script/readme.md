@@ -230,7 +230,7 @@ Base URL: `https://script.google.com/macros/s/DEPLOYMENT_ID/exec`
 |--------|-----------|-----------|
 | `read` | `action=read&token=T` | Baca semua data dari 6 sheet + `portalEnabled`/`suratEnabled`/`laporEnabled`/`adminEmail`/`saldoAwal`. **Butuh token admin** (JSONP) |
 | `readPublic` | `action=readPublic` | Hanya `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya` + `suratEnabled`/`laporEnabled`. **Tanpa token**. Mengembalikan `{result:"error", code:"portal_disabled"}` bila portal dinonaktifkan admin |
-| `checkSurat` | `action=checkSurat&nik=...&hp=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok). Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Pengajuan ber-`Diarsipkan=Ya` **tidak dikembalikan**; jumlahnya dilaporkan pada field `archived` sehingga UI dapat menampilkan keterangan "sudah diarsipkan". Dibatasi ≤ 30 percobaan/jam per NIK+HP. Mendukung JSONP |
+| `checkSurat` | `action=checkSurat&nik=...&hp=...` **atau** `action=checkSurat&ref=...` | **Publik (tanpa token).** Warga cek status pengajuan surat dengan **NIK + No. HP** (keduanya harus cocok) **atau** dengan **No. Pengajuan** (`ref`, mis. `SRT-261006-AB12`) saja. Hanya mengembalikan `{ref, tanggal, jenisSurat, status, noSurat, catatan}` — tanpa NIK/nama. Pengajuan ber-`Diarsipkan=Ya` **tidak dikembalikan**; jumlahnya dilaporkan pada field `archived` sehingga UI dapat menampilkan keterangan "sudah diarsipkan". Dibatasi ≤ 30 percobaan/jam per NIK+HP atau per ref (ditambah batas global). Mendukung JSONP |
 | `lookupWarga` | `action=lookupWarga&nik=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **NIK (16 digit) persis** untuk mengisi otomatis **Nama, No. HP, & Alamat** pada form pengajuan surat. Ketemu → `{result:"success", found:true, nama, noHp, alamat}`; tidak → `{found:false}` (warga tetap boleh mengisi manual). Hanya 3 field itu yang dibuka (bukan seluruh data warga). Ter-gate status portal; dibatasi ≤ 20 pencarian/jam per NIK. Mendukung JSONP |
 | `lookupWargaHp` | `action=lookupWargaHp&hp=...` | **Publik (tanpa token).** Cari SATU warga berdasarkan **No. HP** (dinormalisasi `0`/`62`) untuk mengisi otomatis **Nama & Alamat** pada form **Lapor & Aspirasi**. Ketemu → `{result:"success", found:true, nama, alamat}`; tidak → `{found:false}`. Hanya warga terdaftar yang boleh mengirim pengaduan. Ter-gate status portal; dibatasi per jam. Mendukung JSONP |
 | `checkLapor` | `action=checkLapor&nomor=...` | **Publik (tanpa token).** Cek status pengaduan berdasar **No. Pengaduan** (mis. `ADU/2026-001`). Mengembalikan `{result, count, archived, data:[{nomor, tanggal, jenisPengaduan, judul, status, petugas, catatan, tanggalSelesai}]}`. Baris `Diarsipkan=Ya` tidak ditampilkan (dihitung ke `archived`). Dibatasi per jam. Mendukung JSONP |
@@ -249,9 +249,14 @@ GET https://script.google.com/macros/s/XXXX/exec?action=read&token=TOKEN_RAHASIA
 GET https://script.google.com/macros/s/XXXX/exec?action=readPublic&callback=myCallback
 ```
 
-**Contoh Cek Status Pengajuan Surat (warga):**
+**Contoh Cek Status Pengajuan Surat (warga, NIK + No. HP):**
 ```
 GET https://script.google.com/macros/s/XXXX/exec?action=checkSurat&nik=3173012304567890&hp=081234567890&callback=myCallback
+```
+
+**Contoh Cek Status Pengajuan Surat (warga, No. Pengajuan):**
+```
+GET https://script.google.com/macros/s/XXXX/exec?action=checkSurat&ref=SRT-261006-AB12&callback=myCallback
 ```
 Respons: `{"result":"success","count":1,"data":[{"ref":"SRT-261006-AB12","tanggal":"06-10-2026 13:00","jenisSurat":"Surat Pengantar KTP-el","status":"Diproses","catatan":"Menunggu tanda tangan"}]}`
 
@@ -427,7 +432,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
 | `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setSuratStatus` / `setLaporStatus` / `setAdminEmail` / `setSaldoAwal` (token) + `submitSurat` & `submitLapor` (publik) |
 | `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
-| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan NIK + No. HP, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
+| `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan **NIK + No. HP** atau **No. Pengajuan (`ref`)**, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
 | `handleLookupWarga(params)` | Aksi publik `lookupWarga`: cari warga berdasar NIK, buka hanya Nama/No. HP/Alamat |
 | `handleLookupWargaHp(params)` | Aksi publik `lookupWargaHp`: cari warga berdasar No. HP (dinormalisasi), buka hanya Nama/Alamat (dipakai form Lapor) |
 | `handleSubmitLapor(data)` | Aksi publik `submitLapor`: gate portal, No. HP wajib terdaftar (`findWargaByHpNorm`), honeypot, rate limit, ambil Nama/Alamat dari `Data_Warga`, simpan `Status=Diterima` + No. Pengaduan, unggah foto (opsional), email admin |
