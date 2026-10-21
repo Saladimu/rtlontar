@@ -51,6 +51,35 @@
         .update-flash {
             animation: rt-update-flash 1.1s ease-in-out infinite;
         }
+        /* Sticky-note penanda record baru di menu Pengajuan Surat / Lapor. */
+        .nav-new-note {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto;
+            padding: 2px 7px;
+            border: 1px solid #fbbf24;
+            border-radius: 6px;
+            background: #fef3c7;
+            color: #92400e;
+            font-size: 10px;
+            line-height: 1.2;
+            font-weight: 700;
+            white-space: nowrap;
+            transform: rotate(-2deg);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .18);
+        }
+        .nav-new-note::after {
+            content: "";
+            position: absolute;
+            right: -1px;
+            bottom: -1px;
+            border-width: 0 0 7px 7px;
+            border-style: solid;
+            border-color: transparent transparent #f59e0b transparent;
+        }
+        .nav-new-note[hidden] { display: none; }
     </style>
     <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
          agar perubahan config.js langsung terlihat tanpa hard refresh. -->
@@ -138,10 +167,12 @@
             <button onclick="switchTab('surat')" id="nav-surat" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-envelope-open-text w-5"></i>
                 <span class="font-medium text-sm">Pengajuan Surat</span>
+                <span id="nav-surat-new" class="nav-new-note" style="margin-left:auto" aria-live="polite" hidden></span>
             </button>
             <button onclick="switchTab('lapor')" id="nav-lapor" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-comment-dots w-5"></i>
                 <span class="font-medium text-sm">Lapor &amp; Aspirasi</span>
+                <span id="nav-lapor-new" class="nav-new-note" style="margin-left:auto" aria-live="polite" hidden></span>
             </button>
             <button onclick="switchTab('publicportal')" id="nav-publicportal" class="nav-btn w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i class="fa-solid fa-globe w-5"></i>
@@ -215,9 +246,11 @@
         </button>
         <button onclick="switchTab('surat'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-envelope-open-text w-5 text-cyan-400"></i><span>Pengajuan Surat</span>
+            <span id="nav-surat-new-mobile" class="nav-new-note" style="margin-left:auto" aria-live="polite" hidden></span>
         </button>
         <button onclick="switchTab('lapor'); toggleMobileMenu();" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-comment-dots w-5 text-teal-400"></i><span>Lapor &amp; Aspirasi</span>
+            <span id="nav-lapor-new-mobile" class="nav-new-note" style="margin-left:auto" aria-live="polite" hidden></span>
         </button>
         <button onclick="switchTab('publicportal'); toggleMobileMenu();" id="nav-publicportal-mobile" class="w-full text-left py-2 px-3 rounded-lg hover:bg-slate-700 flex items-center space-x-3">
             <i class="fa-solid fa-globe w-5 text-blue-400"></i><span>Portal Publik</span>
@@ -1927,7 +1960,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-19-05';
+        const APP_BUILD = '2026-10-19-06';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2546,6 +2579,74 @@
         const MODAL_IDS = ['modal-warga', 'modal-kas', 'modal-saldo-awal', 'modal-pengumuman', 'modal-kegiatan', 'modal-surat', 'modal-lapor', 'modal-warga-surat', 'modal-warning', 'modal-about', 'modal-install'];
         let currentTab = 'dashboard';
 
+        // ===== Penanda record baru (sticky-note di menu kiri) =====
+        // Menyimpan ID yang sudah "dilihat" per jenis. Baseline dibuat pada
+        // pemuatan pertama agar record lama tidak langsung dianggap baru.
+        const NEW_RECORD_KEYS = { surat: 'rt_seen_surat_ids', lapor: 'rt_seen_lapor_ids' };
+        const NEW_RECORD_LABELS = { surat: 'pengajuan surat', lapor: 'laporan' };
+
+        function readSeenRecordIds(type) {
+            const key = NEW_RECORD_KEYS[type];
+            if (!key) return null;
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw === null) return null;
+                const arr = JSON.parse(raw);
+                return new Set(Array.isArray(arr) ? arr.map(String) : []);
+            } catch (e) {
+                return new Set();
+            }
+        }
+
+        function saveSeenRecordIds(type, ids) {
+            const key = NEW_RECORD_KEYS[type];
+            if (!key) return;
+            try { localStorage.setItem(key, JSON.stringify(Array.from(ids))); } catch (e) { /* abaikan */ }
+        }
+
+        function setNewRecordNote(type, count) {
+            ['nav-' + type + '-new', 'nav-' + type + '-new-mobile'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (!el) return;
+                const n = Number(count) || 0;
+                el.hidden = n === 0;
+                el.textContent = n > 0 ? n + ' baru' : '';
+                el.title = n > 0 ? n + ' ' + NEW_RECORD_LABELS[type] + ' baru' : '';
+            });
+        }
+
+        function updateNewRecordNotes() {
+            Object.keys(NEW_RECORD_KEYS).forEach(function (type) {
+                const items = Array.isArray(appState[type]) ? appState[type] : [];
+                const ids = items.map(function (item) { return String(item && item._id || ''); }).filter(Boolean);
+                const valid = new Set(ids);
+                let seen = readSeenRecordIds(type);
+                if (seen === null) {
+                    saveSeenRecordIds(type, valid);
+                    setNewRecordNote(type, 0);
+                    return;
+                }
+                Array.from(seen).forEach(function (id) { if (!valid.has(id)) seen.delete(id); });
+                let count = 0;
+                if (currentTab === type) {
+                    ids.forEach(function (id) { seen.add(id); });
+                } else {
+                    count = ids.filter(function (id) { return !seen.has(id); }).length;
+                }
+                saveSeenRecordIds(type, seen);
+                setNewRecordNote(type, count);
+            });
+        }
+
+        function markNewRecordsSeen(type) {
+            if (!NEW_RECORD_KEYS[type]) return;
+            const items = Array.isArray(appState[type]) ? appState[type] : [];
+            const seen = readSeenRecordIds(type) || new Set();
+            items.forEach(function (item) { if (item && item._id) seen.add(String(item._id)); });
+            saveSeenRecordIds(type, seen);
+            setNewRecordNote(type, 0);
+        }
+
         function getOpenModal() {
             for (const id of MODAL_IDS) {
                 const el = document.getElementById(id);
@@ -2599,6 +2700,7 @@
             }
 
             currentTab = tabId;
+            markNewRecordsSeen(tabId);
             if (!opts.fromHistory) pushNavState();
         }
 
@@ -7862,6 +7964,7 @@
                 tanggalSelesai: fmtDate(r[15]), arsip: r[16]
             })));
             saveLocalState();
+            updateNewRecordNotes();
             appState.portalEnabled = res.portalEnabled !== false;
             appState.laporEnabled = res.laporEnabled !== false;
             appState.suratEnabled = res.suratEnabled !== false;
@@ -7999,10 +8102,12 @@
             appState.surat = [];
             appState.lapor = [];
             appState.saldoAwal = 0;
-            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_lapor', 'rt_saldo_awal', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_local_deletes_lapor', 'rt_outbox'].forEach(function (key) {
+            ['rt_warga', 'rt_kas', 'rt_pengumuman', 'rt_kegiatan', 'rt_surat', 'rt_lapor', 'rt_saldo_awal', 'rt_local_deletes_warga', 'rt_local_deletes_kas', 'rt_local_deletes_pengumuman', 'rt_local_deletes_kegiatan', 'rt_local_deletes_surat', 'rt_local_deletes_lapor', 'rt_outbox', 'rt_seen_surat_ids', 'rt_seen_lapor_ids'].forEach(function (key) {
                 localStorage.removeItem(key);
             });
             localDeletes = { warga: [], kas: [], pengumuman: [], kegiatan: [], surat: [], lapor: [] };
+            setNewRecordNote('surat', 0);
+            setNewRecordNote('lapor', 0);
             updateOutboxUI();
             renderDashboardStats();
             renderWargaTable();
