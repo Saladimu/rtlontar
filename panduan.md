@@ -672,12 +672,14 @@ Portal warga harus terbuka, tetapi dashboard admin harus terkunci. Caranya memak
    - Policy: **Allow**, Include → **Emails** → daftar email pengurus. Session duration mis. `24 hours`.
 
    **b. `RT Public Assets`** — membebaskan berkas publik
-   - Hostname & Path: `/public`, `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png`
+   - Hostname & Path: `/public`, `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/fonts.css`, `/fonts/*`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png`
    - Policy: **Bypass**, Include → **Everyone**.
 
 4. Simpan. Perubahan berlaku seketika tanpa perlu deploy ulang.
 
 > **Jangan** bypass path `/` atau `/index.html` — itu pintu admin Anda. Dan **jangan lupa** bypass **`/public`** (tanpa `.html`), karena Cloudflare Pages mengalihkan `/public.html` → `/public`; bila terlewat, warga akan diminta login.
+>
+> **Ikon tidak muncul di perangkat baru?** Pastikan **`/fonts.css`** dan **`/fonts/*`** juga di-bypass. Tanpa keduanya, halaman publik tetap terbuka tetapi font ikon self-hosted ikut dialihkan ke halaman login Access, sehingga semua ikon kosong.
 >
 > **Keamanan berlapis:** halaman admin dijaga Cloudflare Access, sedangkan datanya dijaga `ADMIN_TOKEN`. Data warga/kas tidak pernah dikirim ke portal publik.
 

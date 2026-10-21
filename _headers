@@ -14,6 +14,7 @@
   Cache-Control: public, max-age=604800
 
 # Font self-hosted (woff2 ber-versi ?v=3): boleh di-cache lama.
+# PENTING: /fonts.css dan /fonts/* juga wajib di-bypass Cloudflare Access.
 # Saat mengganti isi font, naikkan ?v= di fonts.css, <link preload>, dan sw.js.
 /fonts/*
   Cache-Control: public, max-age=604800

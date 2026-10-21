@@ -503,7 +503,7 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 | `/` dan `/index.html` | Halaman **admin** | **Login Cloudflare Access** (hanya email yang diizinkan) |
 | `/public` dan `/public.html` | Portal publik warga | Terbuka (tanpa login) |
 | `/api` (proxy same-origin ke Apps Script) | Data portal publik & operasi admin | Terbuka (tanpa login); data tetap dijaga token `ADMIN_TOKEN` |
-| `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png` | Aset pendukung + berkas PWA portal publik | Terbuka (tanpa login) |
+| `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/fonts.css`, `/fonts/*`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png` | Aset pendukung, font self-hosted, + berkas PWA portal publik | Terbuka (tanpa login) |
 
 > **GitHub Pages dimatikan** agar halaman admin tidak bisa diakses lewat `saladimu.github.io`. Portal publik dan admin berbagi satu domain (`sapa-rt017.pages.dev`); bagikan ke warga cukup `https://sapa-rt017.pages.dev/public` (tanpa ekstensi `.html`). Tidak perlu domain/wrapper tambahan — keamanan admin bersumber dari Cloudflare Access pada path `/` & `/index.html`.
 
@@ -524,12 +524,14 @@ Aplikasi dipublikasikan melalui **Cloudflare Pages** (project dari repository in
 
    **b. `RT Public Assets`** (mengecualikan aset publik)
    - Public hostname: `sapa-rt017.pages.dev` — Path `/public`
-   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png`
+   - Tambah hostname: Path `/public.html`, `/api`, `/config.js`, `/version.json`, `/rt-icon.png`, `/icon-192.png`, `/favicon.ico`, `/apple-touch-icon.png`, `/tailwind.css`, `/fonts.css`, `/fonts/*`, `/manifest-public.webmanifest`, `/sw.js`, `/qr-public.png`
    - Policy: Action **Bypass**, Include → **Everyone**.
 
 4. **Simpan.** Perubahan berlaku langsung, tanpa redeploy.
 
 > **Penting:** Cloudflare Pages mengalihkan `/public.html` → `/public` (HTTP 308). Karena itu path **`/public`** wajib ikut di-bypass, bukan hanya `/public.html`. Namun **jangan** bypass path `/` atau `/index.html`.
+>
+> **Penting (ikon/font):** `fonts.css` dan seluruh isi `/fonts/*` juga wajib di-bypass. Bila keduanya masih dilindungi Access, halaman portal publik tetap terbuka tetapi **semua ikon Font Awesome dan font Inter gagal dimuat**; gejala ini paling terlihat di perangkat/browser baru yang belum punya cookie login Access.
 
 ### Menambah pengguna yang boleh mengakses admin
 
