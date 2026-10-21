@@ -56,8 +56,8 @@ Catatan penting:
 | **Iuran & Kas RT** | Catat pemasukan/pengeluaran dan lihat saldo kas. |
 | **Pengumuman** | Terbitkan papan informasi RT. |
 | **Kegiatan Warga** | Agenda kerja bakti, posyandu, siskamling, dll. |
-| **Pengajuan Surat** | Kelola permohonan surat dari warga (dan pencatatan manual). Sticky-note **“N baru”** menandai pengajuan yang belum pernah dibuka. |
-| **Lapor & Aspirasi** | Kelola pengaduan/aspirasi warga (proses, arsip, cari). Sticky-note **“N baru”** menandai laporan yang belum pernah dibuka. |
+| **Pengajuan Surat** | Kelola permohonan surat dari warga (dan pencatatan manual). Sticky-note **“N baru”** yang berkedip menandai pengajuan yang belum pernah dibuka. |
+| **Lapor & Aspirasi** | Kelola pengaduan/aspirasi warga (proses, arsip, cari). Sticky-note **“N baru”** yang berkedip menandai laporan yang belum pernah dibuka. |
 | **Portal Publik** | Nyalakan/matikan akses portal untuk warga. |
 | **Setting → Integrasi Google Sheets** | Token admin, email notifikasi, tes koneksi, muat data. |
 | **Setting → Pasang Aplikasi** | Panduan memasang aplikasi ke layar utama HP/komputer. |

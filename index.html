@@ -80,6 +80,16 @@
             border-color: transparent transparent #f59e0b transparent;
         }
         .nav-new-note[hidden] { display: none; }
+        @keyframes rt-note-blink {
+            0%, 100% { opacity: 1; box-shadow: 0 1px 2px rgba(15, 23, 42, .18); }
+            50% { opacity: .45; box-shadow: 0 0 0 3px rgba(251, 191, 36, .35); }
+        }
+        .nav-new-note {
+            animation: rt-note-blink 1.4s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .nav-new-note { animation: none; }
+        }
     </style>
     <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
          agar perubahan config.js langsung terlihat tanpa hard refresh. -->
@@ -1960,7 +1970,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-19-06';
+        const APP_BUILD = '2026-10-19-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
