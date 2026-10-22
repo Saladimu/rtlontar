@@ -134,6 +134,10 @@
                     <div class="min-w-0">
                         <h1 class="font-bold text-lg text-slate-800 dark:text-slate-100" data-rt="publicSubtitle">Portal Publik</h1>
                         <p class="text-xs text-slate-500 dark:text-slate-400" data-rt="appLongName">Sistem Administrasi &amp; Pelayanan Antarwarga</p>
+                        <button type="button" id="qr-hint-note" onclick="openQrModal()" aria-label="Klik logo untuk melihat QR Portal Publik"
+                            class="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-amber-300 bg-amber-200 text-amber-900 text-xs font-semibold rotate-1 shadow-sm">
+                            <i class="fa-solid fa-qrcode"></i><span>Klik logo untuk lihat QR Portal</span>
+                        </button>
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
@@ -259,7 +263,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jenis Surat</label>
-                            <select id="surat-jenis" required
+                            <select id="surat-jenis" required onchange="scheduleSuratDuplicateCheck()"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
                                 <option value="">-- Pilih jenis surat --</option>
                             </select>
@@ -268,6 +272,16 @@
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Keperluan / Alasan Pengajuan</label>
                             <textarea id="surat-keperluan" required maxlength="800" rows="3"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"></textarea>
+                        </div>
+                        <div id="surat-duplicate-warning" class="hidden border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-xl p-3 text-sm">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                                <div class="space-y-1">
+                                    <p class="font-semibold">Pengajuan serupa sudah pernah dikirim.</p>
+                                    <div id="surat-duplicate-list" class="text-xs space-y-1"></div>
+                                    <p class="text-xs">Anda tetap dapat melanjutkan pengajuan ini bila memang diperlukan.</p>
+                                </div>
+                            </div>
                         </div>
                         <!-- Honeypot anti-bot: disembunyikan dari manusia -->
                         <input id="surat-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">
@@ -440,6 +454,16 @@
                             <input id="lapor-setuju" type="checkbox" required class="mt-0.5 rounded border-slate-300 text-teal-600 focus:ring-teal-500">
                             <span>Saya menyatakan data yang saya sampaikan benar dan setuju data ini digunakan oleh Pengurus RT untuk menindaklanjuti laporan.</span>
                         </label>
+                        <div id="surat-duplicate-warning" class="hidden border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-xl p-3 text-sm">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                                <div class="space-y-1">
+                                    <p class="font-semibold">Pengajuan serupa sudah pernah dikirim.</p>
+                                    <div id="surat-duplicate-list" class="text-xs space-y-1"></div>
+                                    <p class="text-xs">Anda tetap dapat melanjutkan pengajuan ini bila memang diperlukan.</p>
+                                </div>
+                            </div>
+                        </div>
                         <!-- Honeypot anti-bot: disembunyikan dari manusia -->
                         <input id="lapor-website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" class="hidden">
                         <button id="lapor-submit-btn" type="submit"
@@ -911,6 +935,7 @@
             if (!el) return;
             const digits = String(el.value || '').replace(/\D/g, '').slice(0, 15);
             if (digits !== el.value) el.value = digits;
+            if (el.id === 'surat-hp') scheduleSuratDuplicateCheck();
         }
 
         // ===== Validasi NIK (mengikuti aturan Data_Warga) =====
@@ -968,7 +993,10 @@
             } else {
                 setSuratNIKHint(hintId, 'NIK valid.', 'ok');
             }
-            if (isSuratForm) scheduleWargaLookup(validNik ? digits : '');
+            if (isSuratForm) {
+                scheduleWargaLookup(validNik ? digits : '');
+                scheduleSuratDuplicateCheck();
+            }
         }
 
         // ===== Lookup data warga berdasarkan NIK (bantu isi form surat) =====
@@ -1041,6 +1069,7 @@
             const hpDigits = String(res.noHp || '').replace(/\D/g, '');
             if (hpDigits.length >= 8) maskSuratHp(hpDigits);
             else clearSuratHpMask(true);
+            scheduleSuratDuplicateCheck();
         }
 
         // ===== Nama & Alamat: terisi otomatis & terkunci (hanya tampilan) =====
@@ -1163,6 +1192,7 @@
                 suratHpReal = digits;
                 suratHpMasked = false;
             }
+            scheduleSuratDuplicateCheck();
         }
 
         // Lepas isian otomatis & kunci hanya bila sedang aktif, agar isian
@@ -1359,7 +1389,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-21-03';
+        const APP_BUILD = '2026-10-22-02';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -1579,6 +1609,10 @@
         // ===== QR Buka Portal Publik (klik logo di header) =====
         // Menampilkan gambar qr-public.png agar mudah dibagikan/dipindai lewat ponsel.
         function openQrModal(opts) {
+            // Catatan pengingat tidak perlu lagi tampil setelah QR pernah dibuka.
+            try { localStorage.setItem('rt_qr_hint_seen', '1'); } catch (e) { /* abaikan */ }
+            const hint = document.getElementById('qr-hint-note');
+            if (hint) hint.classList.add('hidden');
             const link = document.getElementById('qr-public-url');
             if (link) {
                 const cfg = window.RT_CONFIG || {};
@@ -1589,6 +1623,15 @@
             openPublicModal('qr-modal', opts);
         }
         function closeQrModal(opts) { closePublicModal('qr-modal', opts); }
+
+        // Sembunyikan catatan QR bila warga sudah pernah membuka QR (localStorage).
+        function initQrHint() {
+            try {
+                if (localStorage.getItem('rt_qr_hint_seen') !== '1') return;
+                const hint = document.getElementById('qr-hint-note');
+                if (hint) hint.classList.add('hidden');
+            } catch (e) { /* abaikan */ }
+        }
         window.openQrModal = openQrModal;
         window.closeQrModal = closeQrModal;
 
@@ -1650,6 +1693,7 @@
         // Init
         document.addEventListener('DOMContentLoaded', function() {
             updateThemeToggleUI(currentTheme() === 'dark');
+            initQrHint();
             initNetworkStatus();
             try { history.replaceState({ rtPub: 1, modal: null }, ''); } catch (e) { /* abaikan */ }
 
@@ -2012,6 +2056,81 @@
             return map[status] || 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300';
         }
 
+        // ===== Peringatan pengajuan serupa (NIK + No. HP + jenis surat) =====
+        // Dicek saat NIK/HP/jenis valid. Bersifat informasi: TIDAK memblokir kirim.
+        let suratDupTimer = null;
+        let suratDupSeq = 0;
+
+        function currentSuratHp() {
+            if (suratHpMasked && suratHpReal) return suratHpReal;
+            const el = document.getElementById('surat-hp');
+            return (el && el.value) ? el.value : '';
+        }
+
+        function clearSuratDuplicateWarning() {
+            const box = document.getElementById('surat-duplicate-warning');
+            if (box) box.classList.add('hidden');
+        }
+
+        function scheduleSuratDuplicateCheck() {
+            if (suratDupTimer) { clearTimeout(suratDupTimer); suratDupTimer = null; }
+            suratDupSeq += 1;
+            const seq = suratDupSeq;
+            const nik = (document.getElementById('surat-nik').value || '').replace(/\D/g, '');
+            const hp = String(currentSuratHp() || '').replace(/\D/g, '');
+            const jenisSurat = (document.getElementById('surat-jenis').value || '').trim();
+            if (nik.length !== 16 || !parseNIK(nik) || hp.length < 9 || !jenisSurat) {
+                clearSuratDuplicateWarning();
+                return;
+            }
+            suratDupTimer = setTimeout(function () { checkSuratDuplicate(nik, hp, jenisSurat, seq); }, 800);
+        }
+
+        function checkSuratDuplicate(nik, hp, jenisSurat, seq) {
+            if (!apiBases().length) return;
+            const callbackName = '__suratDup_' + Date.now() + '_' + seq;
+            loadApiJsonp(
+                function () {
+                    return 'action=checkSuratDuplicate&nik=' + encodeURIComponent(nik) +
+                        '&hp=' + encodeURIComponent(hp) +
+                        '&jenisSurat=' + encodeURIComponent(jenisSurat) +
+                        '&callback=' + callbackName;
+                },
+                callbackName,
+                {
+                    timeout: 12000,
+                    onSuccess: function (res) {
+                        if (seq !== suratDupSeq) return;
+                        const count = res && res.result === 'success' ? Number(res.count || 0) : 0;
+                        if (!count) { clearSuratDuplicateWarning(); return; }
+                        renderSuratDuplicateWarning(res.data || [], count, jenisSurat);
+                    },
+                    onError: function () {
+                        if (seq !== suratDupSeq) return;
+                        clearSuratDuplicateWarning();
+                    }
+                }
+            );
+        }
+
+        function renderSuratDuplicateWarning(items, count, jenisSurat) {
+            const box = document.getElementById('surat-duplicate-warning');
+            const list = document.getElementById('surat-duplicate-list');
+            if (!box || !list) return;
+            const listItems = items || [];
+            const rows = listItems.map(function (it) {
+                return '<div><i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal || '-') +
+                    '<br><span class="text-amber-700 dark:text-amber-300">Keperluan:</span> ' +
+                    escapeHtml(it.keperluan || '-') + '</div>';
+            }).join('');
+            const more = count > listItems.length
+                ? '<div>Dan ' + (count - listItems.length) + ' pengajuan lain dengan jenis yang sama.</div>'
+                : '';
+            list.innerHTML = '<p>NIK ini sudah pernah mengajukan <b>' + escapeHtml(jenisSurat) + '</b>:</p>' +
+                rows + more;
+            box.classList.remove('hidden');
+        }
+
         // Nomor pengajuan (referensi) yang dibuat di sisi warga; dipakai sebagai ID baris.
         function makeSuratRef() {
             const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -2131,6 +2250,7 @@
                     setSuratNIKHint('surat-nik-hint', '', '');
                     setSuratNikLookup('', '');
                     releaseWargaFillIfLocked();
+                    clearSuratDuplicateWarning();
                     // Pakai nomor yang benar-benar tersimpan bila server mengembalikannya
                     // (mis. ref bentrok lalu server membuat nomor baru).
                     const savedRef = normalizeCekRef(res && res.id ? res.id : '') || ref;

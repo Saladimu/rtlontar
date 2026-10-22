@@ -426,8 +426,9 @@ Layanan ini menggantikan cara lama “minta surat ke rumah Pak RT”. Formulirny
    - Bila NIK **belum terdaftar**, akan muncul keterangan; Anda **tetap bisa mengisi** nama, alamat, dan nomor secara manual lalu mengirim pengajuan.
 3. Pilih **Jenis Surat** (mis. Surat Pengantar KTP-el, SKTM, Domisili, SKCK, dan lainnya).
 4. Tulis **Keperluan / Alasan Pengajuan** — mis. “untuk perpanjangan KTP-el”.
-5. Klik **Kirim Pengajuan**.
-6. **Catat Nomor Pengajuan** yang muncul, mis. `SRT-261006-AB12`. Nomor ini bukti pengajuan Anda — simpan (screenshot atau catat di HP).
+5. Bila **NIK + No. HP** Anda sudah pernah mengajukan **jenis surat yang sama**, muncul panel kuning berisi **tanggal** dan **keperluan** pengajuan sebelumnya. Ini hanya **peringatan** — Anda **tetap boleh melanjutkan** bila memang perlu mengajukan lagi.
+6. Klik **Kirim Pengajuan**.
+7. **Catat Nomor Pengajuan** yang muncul, mis. `SRT-261006-AB12`. Nomor ini bukti pengajuan Anda — simpan (screenshot atau catat di HP).
 
 Yang perlu diketahui:
 

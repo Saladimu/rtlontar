@@ -357,6 +357,12 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-18)
 
+## 🔧 Recent Changes (2026-10-22)
+
+- ✅ **Peringatan pengajuan surat serupa di portal publik** — saat NIK 16 digit, No. HP valid, dan **Jenis Surat** dipilih, form **Ajukan Surat Baru** memeriksa apakah NIK+HP tersebut sudah pernah mengajukan jenis yang sama. Bila ada, muncul panel kuning berisi **tanggal** dan **keperluan** pengajuan sebelumnya (maks. 5 terbaru); warga **tetap dapat mengirim** pengajuan baru (tidak diblokir). Dicek via aksi publik baru **`checkSuratDuplicate`** yang diautentikasi **NIK + No. HP** (bukan NIK saja), hanya membuka tanggal & keperluan, mengabaikan baris `Diarsipkan=Ya`, dan dibatasi per kunci + global. `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v32-2026-10-22`** (perlu **redeploy New version**), `APP_BUILD` index & public → `2026-10-22-01`, cache SW → **`sapa-rt-static-v81`**; `test_pengajuan_public.js` (**66**) & `test_pengajuan_check.js` (**53**) — suite **83** hijau.
+
+- ✅ **Sticky-note pengingat QR di header portal publik** — catatan kuning kecil di dekat logo bertuliskan **“Klik logo untuk lihat QR Portal”**. Catatan (dan logo) membuka modal QR; setelah QR pernah dibuka, catatan disembunyikan dan statusnya disimpan di `localStorage` (`rt_qr_hint_seen`). `APP_BUILD` public → `2026-10-22-02`, cache SW → **`sapa-rt-static-v82`**; `test_pengajuan_public.js` (**68**) — suite **83** hijau.
+
 ## 🔧 Recent Changes (2026-10-21)
 
 - ✅ **Cek Status Pengajuan publik bisa memakai No. Pengajuan** — selain **NIK + No. HP**, warga kini dapat memilih mode **No. Pengajuan** (mis. `SRT-261006-AB12`) sebagai kunci akses. Backend `handleCheckSurat` menerima parameter `ref` (rate limit per ref + batas global), tetap menyembunyikan baris `Diarsipkan=Ya` dan menghitungnya ke `archived`. Ref dinormalisasi secara kanonik (huruf besar, spasi/non-breaking dash dibuang) baik saat **disimpan** (`sanitizeSuratRef`) maupun **dicari**, dan kolom ID dibaca eksplisit (`EXPECTED_FIELDS`) agar tidak bergantung pada posisi kolom terakhir. Pesan sukses pengajuan kini menampilkan **`res.id`** dari server (bukan ref optimistis klien), sehingga nomor yang disimpan warga selalu nomor yang benar-benar tersimpan. `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v31-2026-10-21`** (perlu **redeploy New version**), `APP_BUILD` public → `2026-10-21-02`, cache SW → **`sapa-rt-static-v79`**; `test_pengajuan_public.js` (**63**) & `test_pengajuan_check.js` (**43**) — suite **83** hijau.

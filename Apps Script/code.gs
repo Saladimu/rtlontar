@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v31-2026-10-21";
+var CODE_VERSION = "publik-v32-2026-10-22";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -271,6 +271,9 @@ function doGet(e) {
   } else if (params.action === 'checkSurat') {
     // Cek status pengajuan surat oleh warga: cocokkan NIK + No. HP. Tanpa token.
     payload = handleCheckSurat(params);
+  } else if (params.action === 'checkSuratDuplicate') {
+    // Peringatan pengajuan serupa (NIK + HP + jenis surat). Tanpa token.
+    payload = handleCheckSuratDuplicate(params);
   } else if (params.action === 'lookupWarga') {
     // Cari profil warga berdasarkan NIK (bantu isi form surat). Tanpa token.
     payload = handleLookupWarga(params);
@@ -1111,6 +1114,66 @@ function handleCheckSurat(params) {
   results.reverse(); // terbaru lebih dahulu
 
   return { "result": "success", "version": CODE_VERSION, "count": results.length, "archived": archivedCount, "data": results };
+}
+
+// ================= PERINGATAN PENGAJUAN SERUPA =================
+// Sebelum mengirim, form publik memberi tahu bila NIK + No. HP yang sama sudah
+// pernah mengajukan surat dengan jenis yang sama. Hanya menampilkan tanggal &
+// keperluan milik pengajuan itu sendiri (diautentikasi NIK + No. HP), dan
+// pengajuan yang sudah diarsipkan tidak ikut diperingatkan. Tidak memblokir.
+function handleCheckSuratDuplicate(params) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+  if (!isSuratEnabled()) {
+    return suratError('surat_disabled', 'Fitur Layanan Surat sedang dinonaktifkan oleh admin.');
+  }
+
+  var nik = cleanStr(params.nik, 40).replace(/\D/g, '');
+  var hpRaw = (params.hp !== undefined && params.hp !== null) ? params.hp : params.noHp;
+  var hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
+  var jenisSurat = cleanStr(params.jenisSurat, 120);
+
+  if (!/^\d{16}$/.test(nik) || hp.length < 9) {
+    return suratError('invalid', 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.');
+  }
+  if (!jenisSurat) {
+    return suratError('invalid', 'Pilih jenis surat terlebih dahulu.');
+  }
+
+  var hpNorm = normalizeSuratHp(hp);
+  if (!checkAndRecordSuratCheckRate('dup:' + nik + '|' + hpNorm)) {
+    return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Pengajuan_Surat');
+  var results = [];
+  var total = 0;
+  var jenisKey = jenisSurat.toLowerCase();
+
+  if (sheet) {
+    ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
+    var rows = ensureIds(sheet, 'Pengajuan_Surat');
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (isArsip(row[PENGAJUAN_SURAT_COL_ARSIP])) continue;
+      var rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
+      if (rNik !== nik) continue;
+      if (normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) !== hpNorm) continue;
+      if (cleanStr(row[5], 120).toLowerCase() !== jenisKey) continue;
+      total++;
+      results.push({
+        "tanggal": formatTimestampCell(row[0]),
+        "keperluan": cleanStr(row[6], 800)
+      });
+    }
+  }
+
+  results.reverse();
+  results = results.slice(0, 5);
+
+  return { "result": "success", "version": CODE_VERSION, "count": total, "data": results };
 }
 
 // ================= LOOKUP WARGA (bantu isi form surat) =================

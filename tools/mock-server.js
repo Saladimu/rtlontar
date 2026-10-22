@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v31-2026-10-21'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v32-2026-10-22'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -330,6 +330,40 @@ function readPublicSheets() {
     data[name] = (store.sheets[name] || []).filter((row) => isPublik(row[idx[name]])).map((row) => row.slice());
   });
   return { result: 'success', version: CODE_VERSION, portalEnabled: true, laporEnabled: store.laporEnabled !== false, suratEnabled: store.suratEnabled !== false, data };
+}
+
+function handleCheckSuratDuplicate(params) {
+  if (store.portalEnabled === false) {
+    return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
+  }
+  if (store.suratEnabled === false) return suratDisabled();
+
+  const nik = cleanStr(params.nik, 40).replace(/\D/g, '');
+  const hpRaw = params.hp !== undefined && params.hp !== null ? params.hp : params.noHp;
+  const hp = cleanStr(hpRaw, 30).replace(/\D/g, '');
+  const jenisSurat = cleanStr(params.jenisSurat, 120);
+  if (!/^\d{16}$/.test(nik) || hp.length < 9) {
+    return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Masukkan NIK (16 digit) dan No. HP/WhatsApp yang valid.' };
+  }
+  if (!jenisSurat) return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Pilih jenis surat terlebih dahulu.' };
+
+  const hpNorm = normalizeSuratHp(hp);
+  const jenisKey = jenisSurat.toLowerCase();
+  const rows = store.sheets.Pengajuan_Surat || [];
+  const results = [];
+  let total = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (isArsip(row[10])) continue;
+    const rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
+    if (rNik !== nik) continue;
+    if (normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) !== hpNorm) continue;
+    if (cleanStr(row[5], 120).toLowerCase() !== jenisKey) continue;
+    total++;
+    results.push({ tanggal: displayTimestamp(row[0]), keperluan: cleanStr(row[6], 800) });
+  }
+  results.reverse();
+  return { result: 'success', version: CODE_VERSION, count: total, data: results.slice(0, 5) };
 }
 
 function handleLookupWarga(params) {
@@ -721,6 +755,7 @@ function handleApi(req, res) {
     else if (params.action === 'read') payload = readAllSheets();
     else if (params.action === 'readPublic') payload = readPublicSheets();
     else if (params.action === 'checkSurat') payload = handleCheckSurat(params);
+    else if (params.action === 'checkSuratDuplicate') payload = handleCheckSuratDuplicate(params);
     else if (params.action === 'lookupWarga') payload = handleLookupWarga(params);
     else if (params.action === 'lookupWargaHp') payload = handleLookupWargaHp(params);
     else if (params.action === 'checkLapor') payload = handleCheckLapor(params);
