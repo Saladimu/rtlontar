@@ -1995,7 +1995,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-07';
+        const APP_BUILD = '2026-10-22-09';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -6007,6 +6007,30 @@
             if (box) { box.textContent = ''; box.classList.add('hidden'); }
         }
 
+        // Tautan Google Drive "uc?export=view" sering gagal dimuat di elemen gambar
+        // (respons bukan berkas gambar / diblokir). Gunakan endpoint thumbnail Drive
+        // untuk pratinjau, dengan cadangan lh3, lalu URL asli sebagai pilihan akhir.
+        function laporFotoDriveId(url) {
+            const u = String(url || '');
+            if (!/drive\.google\.com/i.test(u)) return '';
+            const byPath = u.match(/\/file\/d\/([A-Za-z0-9_-]{10,})/);
+            if (byPath) return byPath[1];
+            const byQuery = u.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+            return byQuery ? byQuery[1] : '';
+        }
+
+        function laporFotoPreviewSources(url) {
+            const u = String(url || '').trim();
+            const sources = [];
+            const id = laporFotoDriveId(u);
+            if (id) {
+                sources.push('https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w1000');
+                sources.push('https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w1000');
+            }
+            if (u) sources.push(u);
+            return sources;
+        }
+
         function renderLaporAdminFoto(url) {
             const box = document.getElementById('lapor-admin-foto-preview');
             const input = document.getElementById('lapor-admin-foto');
@@ -6036,7 +6060,6 @@
             thumbWrap.rel = 'noopener';
             thumbWrap.className = 'block';
             const img = document.createElement('img');
-            img.src = u;
             img.alt = 'Lampiran foto pengaduan';
             img.width = 320;
             img.height = 240;
@@ -6044,13 +6067,21 @@
             img.loading = 'lazy';
             img.referrerPolicy = 'no-referrer';
             img.className = 'max-h-48 w-auto rounded-lg border border-slate-200';
+            const sources = laporFotoPreviewSources(u);
+            let attempt = 0;
             img.onerror = function () {
+                attempt += 1;
+                if (attempt < sources.length) {
+                    img.src = sources[attempt];
+                    return;
+                }
                 thumbWrap.remove();
                 const warn = document.createElement('span');
                 warn.className = 'text-xs text-slate-400';
                 warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>Pratinjau tidak dapat dimuat. Gunakan "Buka foto asli".';
                 box.appendChild(warn);
             };
+            if (sources.length) img.src = sources[0];
             thumbWrap.appendChild(img);
 
             box.appendChild(openLink);
@@ -6196,15 +6227,18 @@
                 status: status, petugas: petugas, catatanTindakLanjut: catatan,
                 tanggalPenyelesaian: tanggalSelesai, arsip: 'Tidak'
             };
-
             if (editMode.lapor !== null) {
                 const editId = editMode.lapor;
                 const idx = findIndexById(appState.lapor, editId);
                 const prev = idx !== -1 ? appState.lapor[idx] : null;
                 data.arsip = prev ? (prev.arsip || 'Tidak') : 'Tidak';
                 data.noPengaduan = prev ? (prev.noPengaduan || '') : '';
+                // State lokal memakai nama field `catatan` (lihat applySheetsData &
+                // laporRowPayload); tanpa salinan ini catatan hasil "Pakai" dari AI
+                // hilang dari record lokal setelah disimpan / saat edit dibuka lagi.
+                const localData = Object.assign({}, data, { catatan: catatan });
                 if (idx !== -1) {
-                    appState.lapor[idx] = Object.assign({ _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan, tanggalSelesai: tanggalSelesai }, data);
+                    appState.lapor[idx] = Object.assign({ _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan, tanggalSelesai: tanggalSelesai }, localData);
                 }
                 editMode.lapor = null;
                 saveLocalState();
@@ -6214,7 +6248,8 @@
             } else {
                 const id = makeLaporId();
                 data.id = id;
-                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '', tanggalSelesai: tanggalSelesai }, data));
+                const localData = Object.assign({}, data, { catatan: catatan });
+                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '', tanggalSelesai: tanggalSelesai }, localData));
                 saveLocalState();
                 renderLaporTable();
                 sendToGoogleSheets(data);

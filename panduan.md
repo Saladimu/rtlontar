@@ -306,6 +306,10 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga �
 
 Untuk pengaduan yang diterima lisan/lewat telepon, klik **Isi Manual**. Bila **No. Pengaduan** dibiarkan kosong, sistem mengisinya otomatis berurutan.
 
+### Foto bukti pendukung
+
+Saat mengedit pengaduan, **Foto / Bukti Pendukung** menampilkan pratinjau gambar. Untuk lampiran Google Drive, aplikasi otomatis memakai tautan thumbnail Drive agar gambar tetap tampil di dalam aplikasi; klik **Buka foto asli** untuk membuka berkas aslinya di tab baru.
+
 ### Arsip, bukan hapus
 
 Pengaduan yang sudah tuntas bisa **diarsipkan** (ikon kotak arsip). Dialog **“Arsipkan data?”** yang sama menampilkan **Nama, No. Pengaduan, dan Judul** sebelum Anda menekan **Ya, Arsipkan**; data tetap tersimpan, hanya disembunyikan dari daftar & ringkasan. Centang **“Tampilkan arsip”** untuk melihatnya **terpisah di atas** tabel; klik ikon kotak terbuka untuk **memulihkan**. Pengaduan terarsip tidak lagi muncul pada **Cek Status Pengaduan** warga.
@@ -322,7 +326,7 @@ Pengurus bisa meminta bantuan **Gemini** untuk merangkum pengaduan, menyiapkan d
 2. Nyalakan **Enable AI assistant**. Tombol **Saran AI** (pengaduan), **Bantu Tulis AI** (pengumuman/kegiatan/surat), dan ikon **Ringkas dengan AI** (Iuran & Kas) akan muncul. Pada kolom **Model**, pilih dari daftar; default **`gemini-3.5-flash-lite`** (kuota harian lebih besar). Untuk kualitas lebih tinggi, pilih **`gemini-3.8-flash`** (kuota harian lebih kecil). **Test Gemini Connection** memakai key/model yang sedang tampil; klik **Save** setelahnya agar dipakai untuk draft.
 3. Buka **Lapor & Aspirasi → Isi Manual** atau **Edit**, isi **Judul** & **Detail**, lalu klik **Saran AI**.
 4. Periksa panel saran: ringkasan, **Jenis Pengaduan** (klik **Terapkan**), **urgensi**, **draft Catatan Tindak Lanjut** (klik **Pakai**), dan **draft Balasan untuk Warga** (klik **Salin**).
-5. Edit bila perlu, lalu **Simpan** seperti biasa.
+5. Edit bila perlu, lalu **Simpan** seperti biasa. Catatan yang diisi lewat **Pakai** ikut tersimpan dan tetap tampil saat pengaduan dibuka kembali.
 
 Untuk **Pengumuman/Kegiatan**: isi dulu bahan singkat (judul/poin atau nama/poin), klik **Bantu Tulis AI**, periksa draft, lalu klik **Terapkan ke Form**. Tanggal, waktu, lokasi, dan PJ tetap diisi manual.
 
