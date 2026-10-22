@@ -406,7 +406,7 @@ Ada empat cara:
 
 1. **Klik tautan yang dibagikan pengurus** — biasanya berbentuk `https://sapa-rt017.pages.dev/public`.
 2. **Pindai kode QR** — kode QR portal tertempel di papan pengumuman/pos ronda, dan juga bisa dibuka dari portal: **klik logo RT** di pojok kiri atas untuk menampilkan kode QR yang dapat dipindai langsung dari ponsel orang lain.
-3. **Pakai Layanan Cepat** — di bagian atas portal ada empat ikon besar: **Ajukan Surat**, **Cek Status**, **Lapor**, dan **Cek Pengaduan**. Ketuk salah satu untuk langsung menuju layanan yang dituju. Ikon-ikon di header juga berukuran besar agar mudah ditekan di ponsel. Tampilan panel mengikuti tema terang/gelap yang dipilih.
+3. **Pakai Layanan Cepat** — di bagian atas portal ada dua pasangan ikon besar: **Ajukan Surat / Cek Status** dan **Lapor / Cek Pengaduan**. Ketuk salah satu untuk langsung menuju layanan yang dituju. Bila hanya satu layanan yang dibuka admin, pasangannya melebar penuh; bila **Layanan Surat dan Lapor sama-sama OFF**, panel ini tidak ditampilkan. Ikon-ikon di header juga berukuran besar agar mudah ditekan di ponsel. Tampilan panel mengikuti tema terang/gelap yang dipilih.
 4. **Simpan sebagai aplikasi** di layar utama ponsel (lihat [Pasang Aplikasi di HP](#pasang-aplikasi-di-hp)) agar mudah dibuka kembali.
 
 Portal dapat dibuka dari ponsel maupun komputer. Isinya sama.

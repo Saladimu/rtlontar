@@ -190,27 +190,37 @@
                     <h2 id="quick-actions-title" class="text-sm font-bold text-slate-800 dark:text-slate-100">Layanan Cepat</h2>
                     <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Pilih layanan yang Anda butuhkan.</p>
                 </div>
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                    <button type="button" data-quick="surat" onclick="openSuratQuick('ajukan')" title="Ajukan surat baru" aria-label="Ajukan surat baru"
-                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-slate-100 transition">
-                        <span class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg"><i class="fa-solid fa-file-pen"></i></span>
-                        <span class="text-xs font-semibold">Ajukan Surat</span>
-                    </button>
-                    <button type="button" data-quick="surat" onclick="openSuratQuick('cek')" title="Cek status pengajuan surat" aria-label="Cek status pengajuan surat"
-                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-slate-100 transition">
-                        <span class="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg"><i class="fa-solid fa-magnifying-glass"></i></span>
-                        <span class="text-xs font-semibold">Cek Status</span>
-                    </button>
-                    <button type="button" data-quick="lapor" onclick="openLaporQuick('lapor')" title="Kirim laporan atau aspirasi" aria-label="Kirim laporan atau aspirasi"
-                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-slate-100 transition">
-                        <span class="w-11 h-11 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg"><i class="fa-solid fa-comment-dots"></i></span>
-                        <span class="text-xs font-semibold">Lapor</span>
-                    </button>
-                    <button type="button" data-quick="lapor" onclick="openLaporQuick('cek')" title="Cek status pengaduan" aria-label="Cek status pengaduan"
-                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 dark:text-slate-100 transition">
-                        <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg"><i class="fa-solid fa-list-check"></i></span>
-                        <span class="text-xs font-semibold">Cek Pengaduan</span>
-                    </button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="quick-group-surat" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2"><i class="fa-solid fa-file-pen mr-1 text-emerald-600"></i>Layanan Surat</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" data-quick="surat" onclick="openSuratQuick('ajukan')" title="Ajukan surat baru" aria-label="Ajukan surat baru"
+                                class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 dark:text-slate-100 transition">
+                                <span class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg"><i class="fa-solid fa-file-pen"></i></span>
+                                <span class="text-xs font-semibold">Ajukan Surat</span>
+                            </button>
+                            <button type="button" data-quick="surat" onclick="openSuratQuick('cek')" title="Cek status pengajuan surat" aria-label="Cek status pengajuan surat"
+                                class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 dark:text-slate-100 transition">
+                                <span class="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <span class="text-xs font-semibold">Cek Status</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="quick-group-lapor" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-3">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2"><i class="fa-solid fa-comment-dots mr-1 text-teal-600"></i>Pengaduan &amp; Aspirasi</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" data-quick="lapor" onclick="openLaporQuick('lapor')" title="Kirim laporan atau aspirasi" aria-label="Kirim laporan atau aspirasi"
+                                class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 dark:text-slate-100 transition">
+                                <span class="w-11 h-11 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg"><i class="fa-solid fa-comment-dots"></i></span>
+                                <span class="text-xs font-semibold">Lapor</span>
+                            </button>
+                            <button type="button" data-quick="lapor" onclick="openLaporQuick('cek')" title="Cek status pengaduan" aria-label="Cek status pengaduan"
+                                class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white border border-slate-200 hover:bg-cyan-100 text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:hover:bg-slate-600 dark:text-slate-100 transition">
+                                <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg"><i class="fa-solid fa-list-check"></i></span>
+                                <span class="text-xs font-semibold">Cek Pengaduan</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -1426,7 +1436,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-22-04';
+        const APP_BUILD = '2026-10-22-06';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2196,7 +2206,10 @@
         function hideSuratSection() {
             const s = document.getElementById('surat-section');
             if (s) s.classList.add('hidden');
+            const g = document.getElementById('quick-group-surat');
+            if (g) g.classList.add('hidden');
             document.querySelectorAll('[data-quick="surat"]').forEach(function (b) { b.classList.add('hidden'); });
+            updateQuickActionsVisibility();
         }
 
         // Buka/tutup (collapse) kartu "Ajukan Surat Baru" & "Cek Status Pengajuan".
@@ -2502,7 +2515,23 @@
             if (s) s.classList.add('hidden');
             const d = document.getElementById('lapor-divider');
             if (d) d.classList.add('hidden');
+            const g = document.getElementById('quick-group-lapor');
+            if (g) g.classList.add('hidden');
             document.querySelectorAll('[data-quick="lapor"]').forEach(function (b) { b.classList.add('hidden'); });
+            updateQuickActionsVisibility();
+        }
+
+        // Layanan Cepat: sembunyikan kotak bila layanan surat & lapor sama-sama OFF.
+        // Bila hanya satu yang aktif, grup yang tersisa melebar penuh.
+        function updateQuickActionsVisibility() {
+            const section = document.getElementById('quick-actions');
+            const gs = document.getElementById('quick-group-surat');
+            const gl = document.getElementById('quick-group-lapor');
+            const suratHidden = !gs || gs.classList.contains('hidden');
+            const laporHidden = !gl || gl.classList.contains('hidden');
+            if (gs) gs.classList.toggle('col-span-full', laporHidden && !suratHidden);
+            if (gl) gl.classList.toggle('col-span-full', suratHidden && !laporHidden);
+            if (section) section.classList.toggle('hidden', suratHidden && laporHidden);
         }
 
         // Isi dropdown "Jenis Pengaduan" dari RT_CONFIG.jenisPengaduan (config.js).

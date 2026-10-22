@@ -714,6 +714,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="pagination-surat"></div>
             </div>
         </section>
 
@@ -795,6 +796,7 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="pagination-lapor"></div>
             </div>
         </section>
 
@@ -1993,7 +1995,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-04';
+        const APP_BUILD = '2026-10-22-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3115,10 +3117,16 @@
 
         // ===== Paginasi tabel: tampilkan maksimal TABLE_PAGE_SIZE record per halaman =====
         const TABLE_PAGE_SIZE = 15;
+        const SURAT_PAGE_SIZE = 10;
+        const LAPOR_PAGE_SIZE = 10;
         let wargaPage = 1;
         let kasPage = 1;
+        let suratPage = 1;
+        let laporPage = 1;
         let wargaFilterSig = '\u0000';
         let kasFilterSig = '\u0000';
+        let suratFilterSig = '\u0000';
+        let laporFilterSig = '\u0000';
 
         // Tampilkan data warga yang diarsipkan (disembunyikan secara default).
         let showArchivedWarga = localStorage.getItem('rt_show_archived_warga') === '1';
@@ -3258,6 +3266,16 @@
         function gotoKasPage(page) {
             kasPage = page;
             renderKasTable();
+        }
+
+        function gotoSuratPage(page) {
+            suratPage = page;
+            renderSuratTable();
+        }
+
+        function gotoLaporPage(page) {
+            laporPage = page;
+            renderLaporTable();
         }
 
         // Bar umum untuk kontrol paginasi. gotoFnName = nama fungsi global tujuan.
@@ -5602,6 +5620,10 @@
             const firstArchivedPos = 0;
             const firstActivePos = archivedItems.length;
 
+            // Perubahan pencarian/filter/periode/arsip mengembalikan ke halaman 1.
+            const filterSig = [search, filterStatus, suratView.mode, suratView.month, suratView.date, showArchivedSurat ? '1' : '0'].join('\u0001');
+            if (filterSig !== suratFilterSig) { suratFilterSig = filterSig; suratPage = 1; }
+
             const label = document.getElementById('surat-table-label');
             if (label) {
                 const periodTxt = suratPeriodLabel();
@@ -5623,8 +5645,16 @@
                 const empty = document.createElement('tr');
                 empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
+                renderPaginationBar('pagination-surat', 1, 1, 0, 0, 0, 'gotoSuratPage');
                 return;
             }
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / SURAT_PAGE_SIZE));
+            if (suratPage > totalPages) suratPage = totalPages;
+            if (suratPage < 1) suratPage = 1;
+            const startIdx = (suratPage - 1) * SURAT_PAGE_SIZE;
+            const pageItems = filtered.slice(startIdx, startIdx + SURAT_PAGE_SIZE);
+            renderPaginationBar('pagination-surat', suratPage, totalPages, filtered.length, startIdx + 1, startIdx + pageItems.length, 'gotoSuratPage');
 
             // Judul pemisah bagian (arsip vs aktif) saat "Tampilkan arsip" aktif.
             const appendSectionRow = (kind, count) => {
@@ -5639,9 +5669,10 @@
                 tbody.appendChild(tr);
             };
 
-            filtered.forEach(function (item, rowIdx) {
-                if (showSections && rowIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
-                if (showSections && rowIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
+            pageItems.forEach(function (item, rowIdx) {
+                const absIdx = startIdx + rowIdx;
+                if (showSections && absIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
+                if (showSections && absIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
                 const originalIndex = appState.surat.indexOf(item);
                 const archived = isArchivedSurat(item);
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-cyan-50';
@@ -6783,6 +6814,10 @@
             const firstArchivedPos = 0;
             const firstActivePos = archivedItems.length;
 
+            // Perubahan pencarian/filter/bulan/arsip mengembalikan ke halaman 1.
+            const filterSig = [search, filterStatus, laporFilterMonth, showArchivedLapor ? '1' : '0'].join('\u0001');
+            if (filterSig !== laporFilterSig) { laporFilterSig = filterSig; laporPage = 1; }
+
             const label = document.getElementById('lapor-table-label');
             if (label) label.innerText = filtered.length + ' dari ' + (appState.lapor || []).length + ' pengaduan'
                 + (laporFilterMonth ? ' - ' + laporMonthLabel() : '');
@@ -6802,8 +6837,16 @@
                 const empty = document.createElement('tr');
                 empty.innerHTML = `<td colspan="7" class="p-4 text-center text-slate-400">${msg}</td>`;
                 tbody.appendChild(empty);
+                renderPaginationBar('pagination-lapor', 1, 1, 0, 0, 0, 'gotoLaporPage');
                 return;
             }
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / LAPOR_PAGE_SIZE));
+            if (laporPage > totalPages) laporPage = totalPages;
+            if (laporPage < 1) laporPage = 1;
+            const startIdx = (laporPage - 1) * LAPOR_PAGE_SIZE;
+            const pageItems = filtered.slice(startIdx, startIdx + LAPOR_PAGE_SIZE);
+            renderPaginationBar('pagination-lapor', laporPage, totalPages, filtered.length, startIdx + 1, startIdx + pageItems.length, 'gotoLaporPage');
 
             const appendSectionRow = (kind, count) => {
                 const tr = document.createElement('tr');
@@ -6817,9 +6860,10 @@
                 tbody.appendChild(tr);
             };
 
-            filtered.forEach(function (item, rowIdx) {
-                if (showSections && rowIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
-                if (showSections && rowIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
+            pageItems.forEach(function (item, rowIdx) {
+                const absIdx = startIdx + rowIdx;
+                if (showSections && absIdx === firstArchivedPos) appendSectionRow('archived', archivedItems.length);
+                if (showSections && absIdx === firstActivePos) appendSectionRow('active', aktifItems.length);
                 const originalIndex = appState.lapor.indexOf(item);
                 const archived = isArchivedLapor(item);
                 const zebra = rowIdx % 2 === 0 ? 'bg-white' : 'bg-teal-50';
