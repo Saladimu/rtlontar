@@ -273,7 +273,7 @@ Untuk permohonan yang disampaikan lisan/datang langsung:
   - **No. Surat wajib diisi ketika status diubah menjadi `Selesai`.** Bila nomor masih kosong, sistem otomatis membuka modal untuk memintanya; server juga menolak menyimpan status `Selesai` tanpa nomor surat.
   - **Catatan Pengurus** sangat dianjurkan saat menolak/meminta kelengkapan, mis. “KTP belum dilampirkan”.
 - **Hubungi pemohon:** saat mengedit, di bawah kolom No. HP muncul tombol **Chat WhatsApp** dan **Telepon**.
-- **Arsip (bukan hapus):** ikon 📦 mengarsipkan pengajuan (dengan konfirmasi). Pengajuan terarsip tidak ikut hitungan kartu status, tampil terpisah di bagian atas tabel dengan latar kuning dan badge **“Arsip”**, serta bisa dipulihkan dengan ikon 📤. **Warga tetap bisa memeriksa status pengajuan yang diarsipkan.**
+- **Arsip (bukan hapus):** ikon 📦 membuka dialog peringatan seragam **“Arsipkan data?”** berisi **Nama, No. Pengajuan, dan Jenis Surat**; klik **Ya, Arsipkan** untuk melanjutkan. Pengajuan terarsip tidak ikut hitungan kartu status, tampil terpisah di bagian atas tabel dengan latar kuning dan badge **“Arsip”**, serta bisa dipulihkan dengan ikon 📤. **Warga tetap bisa memeriksa status pengajuan yang diarsipkan.**
 
 ### No. Surat dan hasil untuk warga
 
@@ -299,7 +299,7 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga �
 
 1. Klik baris (atau ikon pensil) untuk membuka **Edit**.
 2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**. Tanggal dapat **diketik langsung** pada fieldnya, atau dipilih lewat kalender saat field diklik. **Tanggal Kejadian tidak boleh melebihi hari ini**, dan **Tanggal Penyelesaian tidak boleh lebih awal** dari **Tanggal Kejadian** maupun **tanggal laporan** (Timestamp) — sistem akan menolak bila terbalik.
-3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga. **Nama Warga, No. HP, dan Alamat tidak dapat diubah** saat mengedit (dikunci karena berasal dari data warga saat melapor). Lampiran **Foto / Bukti Pendukung** warga tampil sebagai **pratinjau** — tautannya **dikunci** (tidak dapat diubah) dan bisa dibuka ukuran asli lewat tombol **“Buka foto asli”**.
+3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga. Saat mengedit, **Nama Warga, No. HP, dan Alamat dikunci** karena berasal dari data warga; **Lokasi Kejadian, Tanggal Kejadian, dan Harapan / Solusi juga dikunci** agar isi laporan asli warga tidak berubah. Lampiran **Foto / Bukti Pendukung** warga tampil sebagai **pratinjau** — tautannya **dikunci** (tidak dapat diubah) dan bisa dibuka ukuran asli lewat tombol **“Buka foto asli”**.
 4. Klik **Simpan**. Ikon **ubah status cepat** (putar) juga bisa dipakai untuk menggilir status tanpa membuka modal.
 
 ### Mencatat pengaduan manual
@@ -308,7 +308,7 @@ Untuk pengaduan yang diterima lisan/lewat telepon, klik **Isi Manual**. Bila **N
 
 ### Arsip, bukan hapus
 
-Pengaduan yang sudah tuntas bisa **diarsipkan** (ikon kotak arsip) — data tetap tersimpan, hanya disembunyikan dari daftar & ringkasan. Centang **“Tampilkan arsip”** untuk melihatnya **terpisah di atas** tabel; klik ikon kotak terbuka untuk **memulihkan**. Pengaduan terarsip tidak lagi muncul pada **Cek Status Pengaduan** warga.
+Pengaduan yang sudah tuntas bisa **diarsipkan** (ikon kotak arsip). Dialog **“Arsipkan data?”** yang sama menampilkan **Nama, No. Pengaduan, dan Judul** sebelum Anda menekan **Ya, Arsipkan**; data tetap tersimpan, hanya disembunyikan dari daftar & ringkasan. Centang **“Tampilkan arsip”** untuk melihatnya **terpisah di atas** tabel; klik ikon kotak terbuka untuk **memulihkan**. Pengaduan terarsip tidak lagi muncul pada **Cek Status Pengaduan** warga.
 
 ### Notifikasi email
 

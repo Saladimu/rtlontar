@@ -1995,7 +1995,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-05';
+        const APP_BUILD = '2026-10-22-07';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2101,7 +2101,7 @@
             rtDateHelper.setAttribute('aria-hidden', 'true');
             rtDateHelper.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0;margin:0;';
             rtDateHelper.addEventListener('change', function () {
-                if (!rtDateTarget) return;
+                if (!rtDateTarget || rtDateTarget.readOnly || rtDateTarget.disabled) return;
                 rtDateTarget.value = isoToDDMMYYYY(this.value);
                 rtDateTarget.dispatchEvent(new Event('input', { bubbles: true }));
                 rtDateTarget.focus();
@@ -2112,7 +2112,7 @@
 
         function openDatePicker(id) {
             var el = document.getElementById(id);
-            if (!el) return;
+            if (!el || el.readOnly || el.disabled) return;
             rtDateTarget = el;
             var helper = ensureDateHelper();
             helper.value = ddmmyyyyToISO(el.value) || todayLocalISO();
@@ -4314,6 +4314,22 @@
             if (cb) cb();
         }
 
+        // Konfirmasi arsip yang seragam untuk daftar Pengajuan Surat & Lapor Aspirasi.
+        // kind: 'surat' | 'lapor'; details: baris ringkas data; onConfirm: aksi arsip.
+        function openArchiveWarning(kind, details, onConfirm) {
+            const label = kind === 'lapor' ? 'pengaduan' : 'pengajuan surat';
+            const lines = (details || []).filter(Boolean).map(function (line) { return '• ' + line; });
+            openWarning({
+                title: 'Arsipkan data?',
+                message: 'Arsipkan ' + label + ' ini?\n\n' + lines.join('\n') +
+                    '\n\nData tidak akan tampil di daftar utama, namun tetap tersimpan dan dapat dipulihkan.',
+                confirmLabel: 'Ya, Arsipkan',
+                confirmIcon: 'fa-box-archive',
+                icon: 'fa-box-archive',
+                onConfirm: onConfirm
+            });
+        }
+
         // Modal "Tentang Aplikasi" (visi & misi SAPA RT).
         function openAbout(opts) { openModal('modal-about', opts); }
         function closeAbout(opts) { closeModal('modal-about', opts); }
@@ -5453,8 +5469,14 @@
         function archiveSurat(index) {
             const item = appState.surat[index];
             if (!item) return;
-            const confirmMsg = `Arsipkan pengajuan surat ini?\n\n• Nama: ${item.nama || '-'}\n• No. Pengajuan: ${item._id || '-'}\n• Jenis Surat: ${item.jenisSurat || '-'}\n\nPengajuan tidak akan tampil di daftar utama, namun tetap tersimpan dan dapat dipulihkan.`;
-            if (confirm(confirmMsg)) updateSuratArsip(index, true);
+            openArchiveWarning('surat', [
+                'Nama: ' + (item.nama || '-'),
+                'No. Pengajuan: ' + (item._id || '-'),
+                'Jenis Surat: ' + (item.jenisSurat || '-')
+            ], function () {
+                const currentIndex = appState.surat.indexOf(item);
+                updateSuratArsip(currentIndex >= 0 ? currentIndex : index, true);
+            });
         }
 
         function restoreSurat(index) {
@@ -6036,18 +6058,27 @@
             box.classList.remove('hidden');
         }
 
-        // Nama, No. HP, dan Alamat tidak boleh diubah saat mengedit pengaduan
-        // (data identitas berasal dari data warga saat warga melapor).
-        function setLaporIdentityReadonly(on) {
-            ['lapor-admin-nama', 'lapor-admin-hp', 'lapor-admin-alamat'].forEach(function (id) {
-                const el = document.getElementById(id);
+        // Nama, No. HP, Alamat, Lokasi Kejadian, Tanggal Kejadian, dan Harapan
+        // tidak boleh diubah saat mengedit pengaduan: identitas berasal dari data
+        // warga dan detail tersebut adalah isi laporan asli warga.
+        function setLaporProtectedReadonly(on) {
+            const fields = [
+                ['lapor-admin-nama', 'Data identitas tidak dapat diubah saat mengedit pengaduan'],
+                ['lapor-admin-hp', 'Data identitas tidak dapat diubah saat mengedit pengaduan'],
+                ['lapor-admin-alamat', 'Data identitas tidak dapat diubah saat mengedit pengaduan'],
+                ['lapor-admin-lokasi', 'Lokasi kejadian tidak dapat diubah saat mengedit pengaduan'],
+                ['lapor-admin-tanggal', 'Tanggal kejadian tidak dapat diubah saat mengedit pengaduan'],
+                ['lapor-admin-harapan', 'Harapan / solusi tidak dapat diubah saat mengedit pengaduan']
+            ];
+            fields.forEach(function (pair) {
+                const el = document.getElementById(pair[0]);
                 if (!el) return;
                 el.readOnly = !!on;
                 el.classList.toggle('bg-slate-100', !!on);
                 el.classList.toggle('text-slate-500', !!on);
                 el.classList.toggle('cursor-default', !!on);
                 el.setAttribute('aria-readonly', on ? 'true' : 'false');
-                if (on) el.title = 'Data identitas tidak dapat diubah saat mengedit pengaduan';
+                if (on) el.title = pair[1];
                 else el.removeAttribute('title');
             });
         }
@@ -6060,7 +6091,7 @@
             renderLaporAdminFoto('');
             clearLaporFormError();
             initLaporForm();
-            setLaporIdentityReadonly(false);
+            setLaporProtectedReadonly(false);
             const statusEl = document.getElementById('lapor-admin-status');
             if (statusEl) statusEl.value = 'Diterima';
             updateLaporTanggalSelesaiReq();
@@ -6080,7 +6111,7 @@
             clearLaporFormError();
             initLaporForm();
             clearLaporAIPanel();
-            setLaporIdentityReadonly(true);
+            setLaporProtectedReadonly(true);
             document.getElementById('modal-lapor-title').textContent = 'Edit Pengaduan';
             const wrap = document.getElementById('lapor-tanggal-meta-wrap');
             if (wrap) wrap.classList.remove('hidden');
@@ -6744,8 +6775,14 @@
         function archiveLapor(index) {
             const item = appState.lapor[index];
             if (!item) return;
-            const confirmMsg = `Arsipkan pengaduan ini?\n\n• Nama: ${item.nama || '-'}\n• No. Pengaduan: ${item.noPengaduan || item._id || '-'}\n• Judul: ${item.judul || '-'}\n\nPengaduan tidak akan tampil di daftar utama, namun tetap tersimpan dan dapat dipulihkan.`;
-            if (confirm(confirmMsg)) updateLaporArsip(index, true);
+            openArchiveWarning('lapor', [
+                'Nama: ' + (item.nama || '-'),
+                'No. Pengaduan: ' + (item.noPengaduan || item._id || '-'),
+                'Judul: ' + (item.judul || '-')
+            ], function () {
+                const currentIndex = appState.lapor.indexOf(item);
+                updateLaporArsip(currentIndex >= 0 ? currentIndex : index, true);
+            });
         }
 
         function restoreLapor(index) {
