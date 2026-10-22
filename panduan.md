@@ -247,8 +247,8 @@ Warga cek status di portal & mengambil surat
 
 - Empat kartu ringkasan di atas tabel menunjukkan jumlah pengajuan per status: **Pending, Diproses, Selesai, Ditolak** (seluruh pengajuan aktif, tidak terpengaruh periode).
 - Tabel terbaru di atas, dengan kolom **Tanggal / No. Pengajuan**, **Nama Pemohon / NIK** (NIK disamarkan, mis. `3173••••••01`), **No. HP / Alamat**, **Jenis Surat**, **Keperluan**, **Status**, dan **Aksi**.
-- Di bawah badge **Status** tampil **durasi** lamanya pengajuan, mis. `12 hari`. Untuk status **Pending/Diproses/Ditolak** hitungan berjalan sampai hari ini; saat status **Selesai**, durasi **berhenti** pada **Tanggal Selesai**.
-- Saat mengubah status menjadi **Selesai**, kolom **Tanggal Selesai** muncul dan otomatis terisi tanggal hari ini — ubah bila surat sebenarnya selesai pada tanggal lain. Bila status dikembalikan ke bukan Selesai, tanggal itu dikosongkan. Pengajuan **Selesai** lama yang belum punya tanggal menampilkan `-`; buka **Edit** untuk mengisinya.
+- Di bawah badge **Status** tampil **durasi** lamanya pengajuan, mis. `12 hari`. Untuk status **Pending/Diproses** hitungan berjalan sampai hari ini; saat status **Selesai** atau **Ditolak**, durasi **berhenti** pada tanggal akhir yang dicatat.
+- Saat mengubah status menjadi **Selesai** atau **Ditolak**, kolom **Tanggal Selesai** / **Tanggal Ditolak** muncul dan otomatis terisi tanggal hari ini — ubah bila tanggal sebenarnya berbeda. Bila status dikembalikan ke status aktif, tanggal itu dikosongkan. Pengajuan **Selesai/Ditolak** lama yang belum punya tanggal akhir menampilkan `-`; buka **Edit** untuk mengisinya.
 - **Filter periode** di kanan atas tabel: **Per Bulan** (default = bulan berjalan), **Per Tanggal**, atau **Semua Data** (pola sama dengan Iuran & Kas). Pilihan tersimpan di browser. Label di samping judul **Daftar Pengajuan** menampilkan jumlah baris + periode aktif.
 - **Filter** berdasarkan status dan **kotak cari** (nama, NIK, jenis surat, no. pengajuan, atau No. Surat).
 - **Cetak daftar:** ikon **print** (🖨️) di samping judul **Daftar Pengajuan** membuka jendela cetak berisi **laporan pengajuan sederhana** (kop RT, periode, waktu cetak, ringkasan jumlah per status, dan tabel pengajuan + jumlahnya). Laporan mengikuti **periode, pencarian, & filter status** yang sedang tampil, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser tidak ikut tercetak. **Arsip tidak ikut tercetak** kecuali **Tampilkan arsip** dicentang.
@@ -406,7 +406,7 @@ Ada empat cara:
 
 1. **Klik tautan yang dibagikan pengurus** — biasanya berbentuk `https://sapa-rt017.pages.dev/public`.
 2. **Pindai kode QR** — kode QR portal tertempel di papan pengumuman/pos ronda, dan juga bisa dibuka dari portal: **klik logo RT** di pojok kiri atas untuk menampilkan kode QR yang dapat dipindai langsung dari ponsel orang lain.
-3. **Pakai Layanan Cepat** — di bagian atas portal ada empat ikon besar: **Ajukan Surat**, **Cek Status**, **Lapor**, dan **QR Portal**. Ketuk salah satu untuk langsung menuju layanan yang dituju. Ikon-ikon di header juga berukuran besar agar mudah ditekan di ponsel.
+3. **Pakai Layanan Cepat** — di bagian atas portal ada empat ikon besar: **Ajukan Surat**, **Cek Status**, **Lapor**, dan **Cek Pengaduan**. Ketuk salah satu untuk langsung menuju layanan yang dituju. Ikon-ikon di header juga berukuran besar agar mudah ditekan di ponsel. Tampilan panel mengikuti tema terang/gelap yang dipilih.
 4. **Simpan sebagai aplikasi** di layar utama ponsel (lihat [Pasang Aplikasi di HP](#pasang-aplikasi-di-hp)) agar mudah dibuka kembali.
 
 Portal dapat dibuka dari ponsel maupun komputer. Isinya sama.

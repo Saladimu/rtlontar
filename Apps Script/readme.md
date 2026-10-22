@@ -133,10 +133,10 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 | Status Pengurusan | String | Pending / Diproses / Selesai / Ditolak |
 | No. Surat | String | 474/017-RT/RW.06/X/2026 (nomor surat resmi; **wajib** bila status `Selesai`) |
 | Catatan Pengurus | String | (opsional, diisi pengurus) |
-| Tanggal Selesai | String | `yyyy-MM-dd` — tanggal surat benar-benar selesai; dipakai untuk **membekukan durasi**. Kosong untuk status selain `Selesai` atau data lama. |
+| Tanggal Selesai | String | `yyyy-MM-dd` — tanggal akhir saat status `Selesai` **atau** `Ditolak`; dipakai untuk **membekukan durasi** (label UI menyesuaikan: Tanggal Selesai / Tanggal Ditolak). Kosong untuk status aktif atau data lama. |
 | Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengajuan dari daftar utama **dan** dari hasil `checkSurat` publik (tetap tersimpan, dapat dipulihkan) |
 
-> Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan. Kolom **`Tanggal Selesai`** juga ditambahkan otomatis (sebelum `Diarsipkan`) saat backend baru pertama kali dijalankan; baris lama tidak diubah sehingga tampil `-` sampai tanggalnya dilengkapi lewat Edit.
+> Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan. Kolom **`Tanggal Selesai`** juga ditambahkan otomatis (sebelum `Diarsipkan`) saat backend baru pertama kali dijalankan; baris lama tidak diubah sehingga tampil `-` sampai tanggalnya dilengkapi lewat Edit. Kolom ini menyimpan **tanggal akhir** baik untuk pengajuan `Selesai` maupun `Ditolak`.
 >
 > **Aturan bisnis:** saat status diubah menjadi `Selesai`, server menolak simpan bila `No. Surat` kosong (`{result:"error", code:"invalid"}`). Warga dapat melihat `No. Surat` pada hasil `checkSurat` setelah surat selesai.
 >

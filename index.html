@@ -1531,7 +1531,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status Pengurusan</label>
-                        <select id="surat-status" onchange="updateSuratNoSuratReq()" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
+                        <select id="surat-status" onchange="updateSuratNoSuratReq(true)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
                             <!-- Options diisi oleh JS dari config.js -->
                         </select>
                     </div>
@@ -1541,9 +1541,9 @@
                     </div>
                 </div>
                 <div id="surat-selesai-wrap" class="hidden">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Selesai</label>
+                    <label id="surat-tanggal-akhir-label" class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Selesai</label>
                     <input type="text" id="surat-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('surat-tanggal-selesai')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
-                    <p class="text-xs text-slate-400 mt-1">Dipakai untuk menghentikan hitungan durasi pengajuan. Terisi otomatis saat status diubah ke <b>Selesai</b>.</p>
+                    <p id="surat-tanggal-akhir-hint" class="text-xs text-slate-400 mt-1">Dipakai untuk menghentikan hitungan durasi pengajuan. Terisi otomatis saat status diubah ke <b>Selesai</b>.</p>
                 </div>
                 <div id="surat-tanggal-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -1993,7 +1993,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-03';
+        const APP_BUILD = '2026-10-22-04';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4951,21 +4951,34 @@
             }
         }
 
+        // Status akhir: durasi berhenti saat Selesai maupun Ditolak.
+        function isSuratTerminalStatus(status) {
+            return status === 'Selesai' || status === 'Ditolak';
+        }
+
         // Tandai field No. Surat sebagai wajib saat status pengurusan "Selesai".
-        function updateSuratNoSuratReq() {
+        function updateSuratNoSuratReq(statusChanged) {
             const statusEl = document.getElementById('surat-status');
             const status = statusEl ? statusEl.value : '';
             const isSelesai = status === 'Selesai';
+            const isTerminal = isSuratTerminalStatus(status);
             const mark = document.getElementById('surat-nosurat-req');
             if (mark) mark.classList.toggle('hidden', !isSelesai);
 
-            // Tanggal Selesai: tampil hanya saat Selesai dan terisi otomatis.
+            // Tanggal akhir: tampil untuk Selesai/Ditolak dan terisi otomatis.
             const wrap = document.getElementById('surat-selesai-wrap');
             const input = document.getElementById('surat-tanggal-selesai');
-            if (wrap) wrap.classList.toggle('hidden', !isSelesai);
+            const label = document.getElementById('surat-tanggal-akhir-label');
+            const hint = document.getElementById('surat-tanggal-akhir-hint');
+            if (wrap) wrap.classList.toggle('hidden', !isTerminal);
+            if (label) label.textContent = status === 'Ditolak' ? 'Tanggal Ditolak' : 'Tanggal Selesai';
+            if (hint) hint.innerHTML = 'Dipakai untuk menghentikan hitungan durasi pengajuan. Terisi otomatis saat status diubah ke <b>' + (status === 'Ditolak' ? 'Ditolak' : 'Selesai') + '</b>.';
             if (input) {
-                if (isSelesai && !input.value) input.value = isoToDDMMYYYY(todayLocalISO());
-                if (!isSelesai) input.value = '';
+                if (!isTerminal) input.value = '';
+                else {
+                    if (statusChanged) input.value = '';
+                    if (!input.value) input.value = isoToDDMMYYYY(todayLocalISO());
+                }
             }
         }
 
@@ -5112,13 +5125,13 @@
             return days > 0 ? days : 0;
         }
 
-        // Durasi pengajuan: hari ini - tanggal pengajuan. Untuk status Selesai,
-        // hitungan dibekukan memakai Tanggal Selesai (bukan hari ini).
+        // Durasi pengajuan: hari ini - tanggal pengajuan. Untuk status akhir
+        // (Selesai/Ditolak), hitungan dibekukan memakai tanggal akhir.
         function suratDurationDays(item) {
             const start = timestampRefISO(item && item.waktu);
             if (!start) return null;
             const status = String((item && item.status) || 'Pending');
-            if (status === 'Selesai') {
+            if (isSuratTerminalStatus(status)) {
                 const done = timestampRefISO(item && item.tanggalSelesai);
                 if (!done) return null;
                 return suratIsoDayDiff(start, done);
@@ -5129,10 +5142,12 @@
         function suratDurationHtml(item) {
             const days = suratDurationDays(item);
             if (days === null) {
-                return '<span class="text-xs text-slate-400" title="Tanggal selesai belum diisi. Buka Edit untuk melengkapinya.">-</span>';
+                return '<span class="text-xs text-slate-400" title="Tanggal selesai/ditolak belum diisi. Buka Edit untuk melengkapinya.">-</span>';
             }
-            const done = String((item && item.status) || '') === 'Selesai';
-            const tip = done ? 'Durasi sampai tanggal selesai' : 'Durasi sejak tanggal pengajuan';
+            const status = String((item && item.status) || '');
+            const tip = status === 'Ditolak'
+                ? 'Durasi sampai tanggal ditolak'
+                : (status === 'Selesai' ? 'Durasi sampai tanggal selesai' : 'Durasi sejak tanggal pengajuan');
             return '<span class="text-xs text-slate-500 whitespace-nowrap" title="' + tip + '"><i class="fa-regular fa-clock mr-1"></i>' + days + ' hari</span>';
         }
 
@@ -5345,11 +5360,13 @@
             const selesaiInput = document.getElementById('surat-tanggal-selesai');
             const selesaiRaw = selesaiInput ? String(selesaiInput.value || '').trim() : '';
             const selesaiIso = ddmmyyyyToISO(selesaiRaw);
-            if (status === 'Selesai' && selesaiRaw && !selesaiIso) {
-                showSuratFormError('Tanggal Selesai tidak valid (format dd-mm-yyyy).', 'surat-tanggal-selesai');
+            const isTerminal = isSuratTerminalStatus(status);
+            const tanggalLabel = status === 'Ditolak' ? 'Tanggal Ditolak' : 'Tanggal Selesai';
+            if (isTerminal && selesaiRaw && !selesaiIso) {
+                showSuratFormError(tanggalLabel + ' tidak valid (format dd-mm-yyyy).', 'surat-tanggal-selesai');
                 return;
             }
-            const tanggalSelesai = status === 'Selesai' ? (selesaiIso || todayLocalISO()) : '';
+            const tanggalSelesai = isTerminal ? (selesaiIso || todayLocalISO()) : '';
             const data = {
                 sheetName: 'Pengajuan_Surat',
                 nama: nama,
@@ -5443,11 +5460,9 @@
             }
 
             item.status = next;
-            // Durasi berhenti saat Selesai: simpan tanggal selesai; saat status
-            // dibuka kembali (bukan Selesai), kosongkan agar hitungan berjalan lagi.
-            item.tanggalSelesai = next === 'Selesai'
-                ? (timestampRefISO(item.tanggalSelesai) || todayLocalISO())
-                : '';
+            // Durasi berhenti saat status akhir (Selesai/Ditolak): simpan tanggal
+            // akhir; saat status dibuka kembali, kosongkan agar hitungan berjalan lagi.
+            item.tanggalSelesai = isSuratTerminalStatus(next) ? todayLocalISO() : '';
             saveLocalState();
             renderSuratTable();
             sendToGoogleSheets({
