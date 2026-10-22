@@ -1,7 +1,7 @@
 // Service worker SAPA RT — cache "app shell" statis agar aplikasi tetap terbuka
 // (walau data dari Google Sheets butuh koneksi). PENTING: respons API (/api),
 // Apps Script, dan pembacaan data TIDAK pernah di-cache; data selalu dari jaringan.
-const CACHE = 'sapa-rt-static-v82';
+const CACHE = 'sapa-rt-static-v83';
 
 // Berkas inti (app shell) yang di-precache saat instalasi.
 const SHELL = [

@@ -825,8 +825,8 @@
             </div>
 
             <!-- AI Assistant (Gemini) -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-4 max-w-3xl">
-                <div class="flex items-start justify-between gap-3">
+            <details class="bg-white rounded-2xl shadow-sm border border-slate-200/80 max-w-3xl group" open>
+                <summary class="p-6 flex items-start justify-between gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
                             <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
@@ -836,9 +836,13 @@
                             <p class="text-xs text-slate-500">Optional. Helps summarize and draft replies. Runs in your browser with your own API key.</p>
                         </div>
                     </div>
-                    <span id="ai-status-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-500">OFF</span>
-                </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span id="ai-status-badge" class="px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-500">OFF</span>
+                        <i class="fa-solid fa-chevron-down text-slate-400 transition-transform group-open:rotate-180"></i>
+                    </div>
+                </summary>
 
+                <div class="px-6 pb-6 space-y-4">
                 <div class="space-y-2">
                     <label class="block text-sm font-semibold text-slate-700">Gemini API Key</label>
                     <div class="flex items-center space-x-3">
@@ -891,9 +895,22 @@
                     <i class="fa-solid fa-shield-halved mr-1 text-slate-400"></i>
                     Privacy: only the relevant form contents are sent to Gemini (complaint details, announcement/activity text, letter type/keperluan/status, or kas totals). In Lapor and Surat, name, NIK, No. KK, phone number, and full address are never sent. AI output is a draft — review it before saving.
                 </p>
-            </div>
+                </div>
+            </details>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-6 max-w-3xl">
+            <details class="bg-white rounded-2xl shadow-sm border border-slate-200/80 max-w-3xl group" open>
+                <summary class="p-6 flex items-center gap-3 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                    <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-gear text-lg"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="font-bold text-slate-800">Apps Script setting</h3>
+                        <p class="text-xs text-slate-500">Admin token, email, koneksi, dan sinkronisasi data.</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-slate-400 ml-auto transition-transform group-open:rotate-180"></i>
+                </summary>
+
+                <div class="px-6 pb-6 space-y-6">
                 <div class="space-y-2">
                     <label class="block text-sm font-semibold text-slate-700">Admin Token (ADMIN_TOKEN)</label>
                     <div class="flex items-center space-x-3">
@@ -977,7 +994,8 @@
                         <li>Redeploy as <b>New version</b> whenever <code class="bg-slate-100 px-1 py-0.5 rounded">code.gs</code> changes.</li>
                     </ol>
                 </details>
-            </div>
+                </div>
+            </details>
         </section>
 
         <!-- ================= PANEL 6: PUBLIC PORTAL ================= -->
@@ -1970,7 +1988,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-01';
+        const APP_BUILD = '2026-10-22-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
