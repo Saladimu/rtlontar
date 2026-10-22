@@ -133,9 +133,10 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 | Status Pengurusan | String | Pending / Diproses / Selesai / Ditolak |
 | No. Surat | String | 474/017-RT/RW.06/X/2026 (nomor surat resmi; **wajib** bila status `Selesai`) |
 | Catatan Pengurus | String | (opsional, diisi pengurus) |
+| Tanggal Selesai | String | `yyyy-MM-dd` — tanggal surat benar-benar selesai; dipakai untuk **membekukan durasi**. Kosong untuk status selain `Selesai` atau data lama. |
 | Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengajuan dari daftar utama **dan** dari hasil `checkSurat` publik (tetap tersimpan, dapat dipulihkan) |
 
-> Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan.
+> Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan. Kolom **`Tanggal Selesai`** juga ditambahkan otomatis (sebelum `Diarsipkan`) saat backend baru pertama kali dijalankan; baris lama tidak diubah sehingga tampil `-` sampai tanggalnya dilengkapi lewat Edit.
 >
 > **Aturan bisnis:** saat status diubah menjadi `Selesai`, server menolak simpan bila `No. Surat` kosong (`{result:"error", code:"invalid"}`). Warga dapat melihat `No. Surat` pada hasil `checkSurat` setelah surat selesai.
 >
@@ -303,7 +304,7 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `Iuran_Kas` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `nama`, `noRumah`, `jenis` (`Pemasukan`/`Pengeluaran`/`Reversal Masuk`/`Reversal Keluar`), `jumlah`, `keterangan`, `arsip` (`Ya`/`Tidak`), `reversalDari` (ID transaksi asal untuk entri Reversal) |
 | `Pengumuman` | `sheetName`, `token`, `id` (opsional saat add), `tanggal`, `judul`, `isi`, `kategori`, `pj`, `publik` (`Ya`/`Tidak`) |
 | `Kegiatan_Warga` | `sheetName`, `token`, `id` (opsional saat add), `namaKegiatan`, `tanggal`, `waktu`, `lokasi`, `pj`, `keterangan`, `publik` (`Ya`/`Tidak`) |
-| `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `noSurat`, `catatan`, `arsip` (`Ya`/`Tidak`) |
+| `Pengajuan_Surat` | `sheetName`, `token`, `id` (wajib saat update/delete), `nama`, `nik`, `noHp`, `alamat`, `jenisSurat`, `keperluan`, `status` (`Pending`/`Diproses`/`Selesai`/`Ditolak`), `noSurat`, `catatan`, `tanggalSelesai` (`yyyy-MM-dd`, opsional), `arsip` (`Ya`/`Tidak`) |
 | `Lapor_Aspirasi` | `sheetName`, `token`, `id` (wajib saat update/delete), `noPengaduan`, `nama`, `noHp`, `alamat`, `jenisPengaduan`, `judul`, `detail`, `lokasi`, `tanggalKejadian`, `foto`, `harapan`, `status` (`Diterima`/`Diproses`/`Selesai`), `petugas`, `catatanTindakLanjut`, `tanggalPenyelesaian`, `arsip` (`Ya`/`Tidak`) |
 
 **Aksi khusus (bukan per-sheet):**

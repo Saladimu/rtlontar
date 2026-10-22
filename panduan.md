@@ -247,6 +247,8 @@ Warga cek status di portal & mengambil surat
 
 - Empat kartu ringkasan di atas tabel menunjukkan jumlah pengajuan per status: **Pending, Diproses, Selesai, Ditolak** (seluruh pengajuan aktif, tidak terpengaruh periode).
 - Tabel terbaru di atas, dengan kolom **Tanggal / No. Pengajuan**, **Nama Pemohon / NIK** (NIK disamarkan, mis. `3173••••••01`), **No. HP / Alamat**, **Jenis Surat**, **Keperluan**, **Status**, dan **Aksi**.
+- Di bawah badge **Status** tampil **durasi** lamanya pengajuan, mis. `12 hari`. Untuk status **Pending/Diproses/Ditolak** hitungan berjalan sampai hari ini; saat status **Selesai**, durasi **berhenti** pada **Tanggal Selesai**.
+- Saat mengubah status menjadi **Selesai**, kolom **Tanggal Selesai** muncul dan otomatis terisi tanggal hari ini — ubah bila surat sebenarnya selesai pada tanggal lain. Bila status dikembalikan ke bukan Selesai, tanggal itu dikosongkan. Pengajuan **Selesai** lama yang belum punya tanggal menampilkan `-`; buka **Edit** untuk mengisinya.
 - **Filter periode** di kanan atas tabel: **Per Bulan** (default = bulan berjalan), **Per Tanggal**, atau **Semua Data** (pola sama dengan Iuran & Kas). Pilihan tersimpan di browser. Label di samping judul **Daftar Pengajuan** menampilkan jumlah baris + periode aktif.
 - **Filter** berdasarkan status dan **kotak cari** (nama, NIK, jenis surat, no. pengajuan, atau No. Surat).
 - **Cetak daftar:** ikon **print** (🖨️) di samping judul **Daftar Pengajuan** membuka jendela cetak berisi **laporan pengajuan sederhana** (kop RT, periode, waktu cetak, ringkasan jumlah per status, dan tabel pengajuan + jumlahnya). Laporan mengikuti **periode, pencarian, & filter status** yang sedang tampil, lalu pilih printer atau **Simpan sebagai PDF**. Header/footer bawaan browser tidak ikut tercetak. **Arsip tidak ikut tercetak** kecuali **Tampilkan arsip** dicentang.
@@ -400,11 +402,12 @@ Bagian ini untuk **seluruh warga RT**. Portal dibuka lewat browser — tidak ada
 
 ## Cara Membuka Portal Publik
 
-Ada tiga cara:
+Ada empat cara:
 
 1. **Klik tautan yang dibagikan pengurus** — biasanya berbentuk `https://sapa-rt017.pages.dev/public`.
 2. **Pindai kode QR** — kode QR portal tertempel di papan pengumuman/pos ronda, dan juga bisa dibuka dari portal: **klik logo RT** di pojok kiri atas untuk menampilkan kode QR yang dapat dipindai langsung dari ponsel orang lain.
-3. **Simpan sebagai aplikasi** di layar utama ponsel (lihat [Pasang Aplikasi di HP](#pasang-aplikasi-di-hp)) agar mudah dibuka kembali.
+3. **Pakai Layanan Cepat** — di bagian atas portal ada empat ikon besar: **Ajukan Surat**, **Cek Status**, **Lapor**, dan **QR Portal**. Ketuk salah satu untuk langsung menuju layanan yang dituju. Ikon-ikon di header juga berukuran besar agar mudah ditekan di ponsel.
+4. **Simpan sebagai aplikasi** di layar utama ponsel (lihat [Pasang Aplikasi di HP](#pasang-aplikasi-di-hp)) agar mudah dibuka kembali.
 
 Portal dapat dibuka dari ponsel maupun komputer. Isinya sama.
 
@@ -572,7 +575,7 @@ Judul kolom yang dipakai:
 | `Iuran_Kas` | Timestamp · Tanggal · Nama Warga · No Rumah · Jenis Transaksi · Jumlah (Rp) · Keterangan · Diarsipkan · Reversal Dari · ID |
 | `Pengumuman` | Timestamp · Tanggal · Judul Pengumuman · Isi Pengumuman · Kategori · Penanggung Jawab · Publik · ID |
 | `Kegiatan_Warga` | Timestamp · Nama Kegiatan · Tanggal Pelaksanaan · Waktu · Lokasi · Penanggung Jawab · Keterangan · Publik · ID |
-| `Pengajuan_Surat` | Dibuat otomatis oleh backend (Tanggal, No. Pengajuan, NIK, Nama, No. HP, Alamat, Jenis Surat, Keperluan, No. Surat, Status, Catatan, Diarsipkan, dll.) |
+| `Pengajuan_Surat` | Dibuat otomatis oleh backend (Tanggal, No. Pengajuan, NIK, Nama, No. HP, Alamat, Jenis Surat, Keperluan, Status, No. Surat, Catatan, **Tanggal Selesai**, Diarsipkan, dll.) |
 | `Lapor_Aspirasi` | Dibuat otomatis oleh backend (No. Pengaduan, Nama, No. HP, Alamat, Jenis Pengaduan, Judul, Detail, Lokasi, Tanggal Kejadian, Foto, Harapan, Status, Petugas, Catatan Tindak Lanjut, Tanggal Penyelesaian, Diarsipkan, dll.) |
 
 > **Kolom `Publik`** mengatur apakah data tampil di portal warga (`Ya`/`Tidak`). **Kolom `Diarsipkan`** mengatur data yang disembunyikan tanpa dihapus (`Ya`/`Tidak`); pada `Iuran_Kas` kolom ini hanya dipertahankan untuk **data lama** (tidak ada lagi tombol arsip — pembatalan memakai Reversal). **Kolom `Reversal Dari`** menyimpan ID transaksi asal untuk entri pembatalan otomatis (pasangan Reversal) di `Iuran_Kas`.

@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v32-2026-10-22";
+var CODE_VERSION = "publik-v33-2026-10-22";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -12,7 +12,7 @@ var EXPECTED_FIELDS = {
   "Iuran_Kas": 9,       // A Timestamp + 8 field (termasuk Diarsipkan & Reversal Dari)
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
-  "Pengajuan_Surat": 11, // A Timestamp + 10 field (termasuk Status Pengurusan, No. Surat, Catatan Pengurus, & Diarsipkan)
+  "Pengajuan_Surat": 12, // A Timestamp + 11 field (termasuk Status, No. Surat, Catatan, Tanggal Selesai, & Diarsipkan)
   "Lapor_Aspirasi": 17  // A Timestamp + 16 field (termasuk Status, Petugas, Catatan Tindak Lanjut, Tgl Penyelesaian, & Diarsipkan)
 };
 
@@ -22,7 +22,7 @@ var DESIRED_HEADERS = {
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "Diarsipkan", "Reversal Dari", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
-  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Diarsipkan", "ID"],
+  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Tanggal Selesai", "Diarsipkan", "ID"],
   "Lapor_Aspirasi": ["Timestamp", "No. Pengaduan", "Nama Warga", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Pengaduan", "Judul Pengaduan", "Detail Pengaduan", "Lokasi Kejadian", "Tanggal Kejadian", "Foto / Bukti Pendukung", "Harapan / Solusi", "Status", "Petugas / Pengurus", "Catatan Tindak Lanjut", "Tanggal Penyelesaian", "Diarsipkan", "ID"]
 };
 
@@ -541,7 +541,7 @@ function readAllSheets() {
     "Iuran_Kas": { 1: "yyyy-MM-dd" },
     "Pengumuman": { 1: "yyyy-MM-dd" },
     "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" },
-    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm" },
+    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm", 10: "yyyy-MM-dd" },
     "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd" }
   };
   var data = {};
@@ -763,7 +763,7 @@ function buildRowData(sheetName, data, timestamp, id) {
       data.nama, data.nik, data.noHp, data.alamat,
       data.jenisSurat, data.keperluan,
       data.status || "Pending", data.noSurat || "", data.catatan || "",
-      normalizeArsip(data.arsip)
+      data.tanggalSelesai || "", normalizeArsip(data.arsip)
     );
   } else if (sheetName === "Lapor_Aspirasi") {
     rowData.push(
@@ -1027,8 +1027,9 @@ function checkAndRecordSuratCheckRate(key) {
 
 // Handler aksi publik `checkSurat`: warga cek status dengan NIK + No. HP,
 // atau dengan No. Pengajuan (ref) saja. Hanya field non-sensitif yang dikembalikan.
-// Indeks kolom Pengajuan_Surat (termasuk kolom A Timestamp): 10 = Diarsipkan.
-var PENGAJUAN_SURAT_COL_ARSIP = 10;
+// Indeks kolom Pengajuan_Surat (termasuk kolom A Timestamp): 11 = Diarsipkan.
+// 10 = Tanggal Selesai (dipakai menghitung durasi berhenti saat status Selesai).
+var PENGAJUAN_SURAT_COL_ARSIP = 11;
 // Normalisasi nomor HP Indonesia menjadi format internasional "62..." agar
 // variasi penulisan ("0812...", "62812...", "+62 812...", "812...") saling cocok.
 function normalizeSuratHp(value) {

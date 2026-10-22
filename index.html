@@ -705,7 +705,7 @@
                                 <th class="p-4"><span class="block">No. HP /</span><span class="block">Alamat</span></th>
                                 <th class="p-4">Jenis Surat</th>
                                 <th class="p-4">Keperluan</th>
-                                <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-center"><span class="block">Status</span><span class="block text-xs font-normal text-slate-400">Durasi</span></th>
                                 <th class="p-4 text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -1540,6 +1540,11 @@
                         <input type="text" id="surat-catatan" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" placeholder="mis. menunggu tanda tangan">
                     </div>
                 </div>
+                <div id="surat-selesai-wrap" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tanggal Selesai</label>
+                    <input type="text" id="surat-tanggal-selesai" inputmode="numeric" maxlength="10" oninput="maskDateField(this)" onclick="openDatePicker('surat-tanggal-selesai')" placeholder="dd-mm-yyyy" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
+                    <p class="text-xs text-slate-400 mt-1">Dipakai untuk menghentikan hitungan durasi pengajuan. Terisi otomatis saat status diubah ke <b>Selesai</b>.</p>
+                </div>
                 <div id="surat-tanggal-wrap" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">No. Pengajuan</label>
@@ -1978,7 +1983,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v32-2026-10-22';
+        const EXPECTED_BACKEND_VERSION = 'publik-v33-2026-10-22';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -1988,7 +1993,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-02';
+        const APP_BUILD = '2026-10-22-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -4949,8 +4954,19 @@
         // Tandai field No. Surat sebagai wajib saat status pengurusan "Selesai".
         function updateSuratNoSuratReq() {
             const statusEl = document.getElementById('surat-status');
+            const status = statusEl ? statusEl.value : '';
+            const isSelesai = status === 'Selesai';
             const mark = document.getElementById('surat-nosurat-req');
-            if (mark) mark.classList.toggle('hidden', !(statusEl && statusEl.value === 'Selesai'));
+            if (mark) mark.classList.toggle('hidden', !isSelesai);
+
+            // Tanggal Selesai: tampil hanya saat Selesai dan terisi otomatis.
+            const wrap = document.getElementById('surat-selesai-wrap');
+            const input = document.getElementById('surat-tanggal-selesai');
+            if (wrap) wrap.classList.toggle('hidden', !isSelesai);
+            if (input) {
+                if (isSelesai && !input.value) input.value = isoToDDMMYYYY(todayLocalISO());
+                if (!isSelesai) input.value = '';
+            }
         }
 
         // Tampilkan NIK tersamar pada daftar admin (mis. 3173••••••01).
@@ -5085,6 +5101,41 @@
             return `<span class="px-2.5 py-1 text-xs rounded-full font-medium ${cls}">${escAttr(s)}</span>`;
         }
 
+        // Selisih hari kalender (UTC) antara dua tanggal ISO yyyy-MM-dd.
+        function suratIsoDayDiff(startIso, endIso) {
+            const a = String(startIso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+            const b = String(endIso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!a || !b) return null;
+            const start = Date.UTC(+a[1], +a[2] - 1, +a[3]);
+            const end = Date.UTC(+b[1], +b[2] - 1, +b[3]);
+            const days = Math.round((end - start) / 86400000);
+            return days > 0 ? days : 0;
+        }
+
+        // Durasi pengajuan: hari ini - tanggal pengajuan. Untuk status Selesai,
+        // hitungan dibekukan memakai Tanggal Selesai (bukan hari ini).
+        function suratDurationDays(item) {
+            const start = timestampRefISO(item && item.waktu);
+            if (!start) return null;
+            const status = String((item && item.status) || 'Pending');
+            if (status === 'Selesai') {
+                const done = timestampRefISO(item && item.tanggalSelesai);
+                if (!done) return null;
+                return suratIsoDayDiff(start, done);
+            }
+            return suratIsoDayDiff(start, todayLocalISO());
+        }
+
+        function suratDurationHtml(item) {
+            const days = suratDurationDays(item);
+            if (days === null) {
+                return '<span class="text-xs text-slate-400" title="Tanggal selesai belum diisi. Buka Edit untuk melengkapinya.">-</span>';
+            }
+            const done = String((item && item.status) || '') === 'Selesai';
+            const tip = done ? 'Durasi sampai tanggal selesai' : 'Durasi sejak tanggal pengajuan';
+            return '<span class="text-xs text-slate-500 whitespace-nowrap" title="' + tip + '"><i class="fa-regular fa-clock mr-1"></i>' + days + ' hari</span>';
+        }
+
         // ===== Riwayat Pengajuan Surat per warga (dari Data Warga) =====
         // Cocokkan record Pengajuan_Surat ke warga lewat NIK (digit saja).
         // Bila salah satu NIK kosong (mis. data lama), jatuh ke pencocokan nama.
@@ -5178,6 +5229,8 @@
             document.getElementById('surat-jenis').value = item.jenisSurat || '';
             document.getElementById('surat-keperluan').value = item.keperluan || '';
             document.getElementById('surat-status').value = item.status || 'Pending';
+            const selesaiEl = document.getElementById('surat-tanggal-selesai');
+            if (selesaiEl) selesaiEl.value = isoToDDMMYYYY(timestampRefISO(item.tanggalSelesai) || '');
             document.getElementById('surat-nosurat').value = item.noSurat || '';
             document.getElementById('surat-catatan').value = item.catatan || '';
             setSuratNikHpLocked(true);
@@ -5289,6 +5342,14 @@
                 return;
             }
 
+            const selesaiInput = document.getElementById('surat-tanggal-selesai');
+            const selesaiRaw = selesaiInput ? String(selesaiInput.value || '').trim() : '';
+            const selesaiIso = ddmmyyyyToISO(selesaiRaw);
+            if (status === 'Selesai' && selesaiRaw && !selesaiIso) {
+                showSuratFormError('Tanggal Selesai tidak valid (format dd-mm-yyyy).', 'surat-tanggal-selesai');
+                return;
+            }
+            const tanggalSelesai = status === 'Selesai' ? (selesaiIso || todayLocalISO()) : '';
             const data = {
                 sheetName: 'Pengajuan_Surat',
                 nama: nama,
@@ -5300,6 +5361,7 @@
                 status: status,
                 noSurat: noSurat,
                 catatan: document.getElementById('surat-catatan').value.trim(),
+                tanggalSelesai: tanggalSelesai,
                 arsip: 'Tidak'
             };
 
@@ -5338,7 +5400,7 @@
                 nama: item.nama || '', nik: item.nik || '', noHp: item.noHp || '', alamat: item.alamat || '',
                 jenisSurat: item.jenisSurat || '', keperluan: item.keperluan || '',
                 status: item.status || 'Pending', noSurat: item.noSurat || '', catatan: item.catatan || '',
-                arsip: arsip ? 'Ya' : 'Tidak'
+                tanggalSelesai: timestampRefISO(item.tanggalSelesai) || '', arsip: arsip ? 'Ya' : 'Tidak'
             };
         }
 
@@ -5381,13 +5443,19 @@
             }
 
             item.status = next;
+            // Durasi berhenti saat Selesai: simpan tanggal selesai; saat status
+            // dibuka kembali (bukan Selesai), kosongkan agar hitungan berjalan lagi.
+            item.tanggalSelesai = next === 'Selesai'
+                ? (timestampRefISO(item.tanggalSelesai) || todayLocalISO())
+                : '';
             saveLocalState();
             renderSuratTable();
             sendToGoogleSheets({
                 action: 'update', sheetName: 'Pengajuan_Surat', id: item._id,
                 nama: item.nama, nik: item.nik, noHp: item.noHp, alamat: item.alamat,
                 jenisSurat: item.jenisSurat, keperluan: item.keperluan, status: next,
-                noSurat: item.noSurat || '', catatan: item.catatan, arsip: item.arsip || 'Tidak'
+                noSurat: item.noSurat || '', catatan: item.catatan,
+                tanggalSelesai: item.tanggalSelesai, arsip: item.arsip || 'Tidak'
             });
             showToast('Status diubah menjadi ' + next, 'success');
         }
@@ -5590,7 +5658,12 @@
                         ${item.noSurat ? `<div class="text-slate-500 mt-0.5"><i class="fa-solid fa-file-signature mr-1 text-amber-500"></i>${escAttr(item.noSurat)}</div>` : ''}
                     </td>
                     <td class="p-4 text-slate-500 text-xs" style="max-width:16rem">${escAttr(item.keperluan || '-')}</td>
-                    <td class="p-4 text-center">${suratStatusBadge(item.status)}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex flex-col items-center gap-1">
+                            ${suratStatusBadge(item.status)}
+                            ${suratDurationHtml(item)}
+                        </div>
+                    </td>
                     <td class="p-4 text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); cycleSuratStatus(${originalIndex})" class="text-cyan-600 hover:text-cyan-800 p-1 rounded mr-1" title="Ubah status"><i class="fa-solid fa-rotate"></i></button>
                         <button onclick="event.stopPropagation(); editSurat(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
@@ -7983,7 +8056,7 @@
                 _id: r[r.length - 1], timestamp: r[0], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7]
             })));
             appState.surat = applyLocalDeletes('surat', (d.Pengajuan_Surat || []).map(r => ({
-                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9], arsip: r[10]
+                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9], tanggalSelesai: fmtDate(r[10]), arsip: r[11]
             })));
             appState.lapor = applyLocalDeletes('lapor', (d.Lapor_Aspirasi || []).map(r => ({
                 _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), noPengaduan: r[1], nama: r[2], noHp: r[3], alamat: r[4],

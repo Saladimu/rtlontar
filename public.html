@@ -90,6 +90,13 @@
         .update-flash {
             animation: rt-update-flash 1.1s ease-in-out infinite;
         }
+        /* Target sentuh minimal 44x44 px (pedoman aksesibilitas mobile). */
+        .tap-target {
+            min-width: 44px;
+            min-height: 44px;
+            touch-action: manipulation;
+        }
+        .tap-target i { pointer-events: none; }
         @media (prefers-reduced-motion: reduce) {
             .update-flash { animation: none; outline: 2px solid #f59e0b; outline-offset: 2px; }
         }
@@ -128,40 +135,38 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="flex items-center space-x-3 min-w-0">
                     <div role="button" tabindex="0" onclick="openQrModal()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openQrModal();}" title="Tampilkan QR untuk buka Portal Publik" aria-label="Tampilkan QR kode untuk membuka Portal Publik"
-                        class="w-10 h-10 rounded-xl overflow-hidden bg-white dark:bg-slate-700 shadow-sm flex-shrink-0 cursor-pointer ring-offset-2 hover:ring-2 hover:ring-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
+                        class="w-12 h-12 tap-target rounded-xl overflow-hidden bg-white dark:bg-slate-700 shadow-sm flex-shrink-0 cursor-pointer ring-offset-2 hover:ring-2 hover:ring-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition">
                         <img src="rt-icon.png" alt="Logo RT" width="512" height="512" decoding="async" class="w-full h-full object-cover">
                     </div>
                     <div class="min-w-0">
                         <h1 class="font-bold text-lg text-slate-800 dark:text-slate-100" data-rt="publicSubtitle">Portal Publik</h1>
                         <p class="text-xs text-slate-500 dark:text-slate-400" data-rt="appLongName">Sistem Administrasi &amp; Pelayanan Antarwarga</p>
                         <button type="button" id="qr-hint-note" onclick="openQrModal()" aria-label="Klik logo untuk melihat QR Portal Publik"
-                            class="mt-1 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-amber-300 bg-amber-200 text-amber-900 text-xs font-semibold rotate-1 shadow-sm">
+                            class="tap-target mt-1 inline-flex items-center gap-1.5 px-2.5 rounded-md border border-amber-300 bg-amber-200 text-amber-900 text-xs font-semibold leading-tight rotate-1 shadow-sm">
                             <i class="fa-solid fa-qrcode"></i><span>Klik logo untuk lihat QR Portal</span>
                         </button>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex items-center justify-between gap-1.5 sm:gap-2" role="group" aria-label="Menu portal">
                     <button id="about-btn" onclick="openAbout()" data-rt-title="aboutTitle" aria-label="Tentang aplikasi" data-rt-aria-label="aboutTitle"
-                        class="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
+                        class="tap-target w-11 h-11 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
                         <i class="fa-solid fa-circle-info"></i>
                     </button>
                     <button id="siaga-btn" onclick="openSiaga()" title="Nomor Siaga Darurat" aria-label="Nomor Siaga Darurat"
-                        class="w-9 h-9 flex items-center justify-center text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-sm">
+                        class="tap-target w-11 h-11 flex items-center justify-center text-white bg-rose-600 hover:bg-rose-700 rounded-xl transition shadow-sm">
                         <i class="fa-solid fa-phone-volume"></i>
                     </button>
                     <button id="theme-toggle" onclick="toggleTheme()" title="Ganti tema terang/gelap" aria-label="Ganti tema terang/gelap"
-                        class="w-9 h-9 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
+                        class="tap-target w-11 h-11 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition">
                         <i id="theme-icon" class="fa-solid fa-moon"></i>
                     </button>
                     <button id="install-btn" data-install-btn onclick="installApp()" title="Install aplikasi ke layar utama" aria-label="Install aplikasi"
-                        class="flex items-center space-x-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-xl transition shadow-sm">
+                        class="tap-target w-11 h-11 flex items-center justify-center text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition shadow-sm">
                         <i class="fa-solid fa-download"></i>
-                        <span class="hidden sm:inline">Install</span>
                     </button>
-                    <button id="refresh-btn" onclick="refreshPublicData()" title="Muat Ulang Aplikasi (Hard Refresh)"
-                        class="flex items-center space-x-2 text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 px-3 py-2 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed">
+                    <button id="refresh-btn" onclick="refreshPublicData()" title="Muat Ulang Aplikasi (Hard Refresh)" aria-label="Muat ulang aplikasi"
+                        class="tap-target w-11 h-11 flex items-center justify-center text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-slate-600 hover:text-blue-600 dark:hover:text-blue-300 rounded-xl transition disabled:opacity-60 disabled:cursor-not-allowed">
                         <i id="refresh-icon" class="fa-solid fa-rotate-right"></i>
-                        <span class="hidden sm:inline">Muat Ulang</span>
                     </button>
                 </div>
             </div>
@@ -177,6 +182,38 @@
                 <i class="fa-regular fa-clock mr-1"></i> Terakhir diperbarui: <span id="last-update-time">-</span>
             </div>
         </div>
+
+        <!-- ================= AKSES CEPAT ================= -->
+        <section id="quick-actions" aria-labelledby="quick-actions-title">
+            <div class="bg-gradient-to-br from-slate-900 to-cyan-900 rounded-2xl p-4 sm:p-5 shadow-sm">
+                <div class="mb-3">
+                    <h2 id="quick-actions-title" class="text-sm font-bold text-white">Layanan Cepat</h2>
+                    <p class="text-xs text-cyan-100 mt-0.5">Pilih layanan yang Anda butuhkan.</p>
+                </div>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <button type="button" data-quick="surat" onclick="openSuratQuick('ajukan')" title="Ajukan surat baru" aria-label="Ajukan surat baru"
+                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/20 text-white transition">
+                        <span class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg"><i class="fa-solid fa-file-pen"></i></span>
+                        <span class="text-xs font-semibold">Ajukan Surat</span>
+                    </button>
+                    <button type="button" data-quick="surat" onclick="openSuratQuick('cek')" title="Cek status pengajuan surat" aria-label="Cek status pengajuan surat"
+                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/20 text-white transition">
+                        <span class="w-11 h-11 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center text-lg"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <span class="text-xs font-semibold">Cek Status</span>
+                    </button>
+                    <button type="button" data-quick="lapor" onclick="openLaporQuick('lapor')" title="Kirim laporan atau aspirasi" aria-label="Kirim laporan atau aspirasi"
+                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/20 text-white transition">
+                        <span class="w-11 h-11 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center text-lg"><i class="fa-solid fa-comment-dots"></i></span>
+                        <span class="text-xs font-semibold">Lapor</span>
+                    </button>
+                    <button type="button" onclick="openQrModal()" title="Tampilkan QR Portal Publik" aria-label="Tampilkan QR Portal Publik"
+                        class="tap-target flex flex-col items-center justify-center gap-1.5 py-3 px-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/20 text-white transition">
+                        <span class="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg"><i class="fa-solid fa-qrcode"></i></span>
+                        <span class="text-xs font-semibold">QR Portal</span>
+                    </button>
+                </div>
+            </div>
+        </section>
 
         <!-- ================= PENGUMUMAN ================= -->
         <section>
@@ -214,7 +251,7 @@
                 <i class="fa-solid fa-envelope-open-text text-emerald-600 dark:text-emerald-400 text-xl"></i>
                 <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Layanan Surat</h2>
                 <button type="button" id="surat-guide-btn" onclick="openPanduanSurat()" title="Panduan / Cara Penggunaan" aria-label="Buka panduan Layanan Surat"
-                    class="w-8 h-8 flex items-center justify-center text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 rounded-full transition">
+                    class="tap-target w-11 h-11 flex items-center justify-center text-emerald-600 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/70 rounded-full transition">
                     <i class="fa-solid fa-circle-info"></i>
                 </button>
             </div>
@@ -360,7 +397,7 @@
                 <i class="fa-solid fa-comment-dots text-teal-600 dark:text-teal-400 text-xl"></i>
                 <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Lapor &amp; Aspirasi</h2>
                 <button type="button" id="lapor-guide-btn" onclick="openPanduanLapor()" title="Panduan / Cara Penggunaan" aria-label="Buka panduan Lapor &amp; Aspirasi"
-                    class="w-8 h-8 flex items-center justify-center text-teal-600 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/40 hover:bg-teal-100 dark:hover:bg-teal-900/70 rounded-full transition">
+                    class="tap-target w-11 h-11 flex items-center justify-center text-teal-600 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/40 hover:bg-teal-100 dark:hover:bg-teal-900/70 rounded-full transition">
                     <i class="fa-solid fa-circle-info"></i>
                 </button>
             </div>
@@ -527,7 +564,7 @@
                     <i class="fa-solid fa-phone-volume text-lg"></i>
                     <h2 id="siaga-title" class="font-bold">Nomor Siaga Darurat Utama</h2>
                 </div>
-                <button onclick="closeSiaga()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                <button onclick="closeSiaga()" aria-label="Tutup" class="tap-target w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -612,7 +649,7 @@
                     <i class="fa-solid fa-book-open text-lg"></i>
                     <h2 id="panduan-surat-title" class="font-bold">Panduan Layanan Surat</h2>
                 </div>
-                <button onclick="closePanduanSurat()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                <button onclick="closePanduanSurat()" aria-label="Tutup" class="tap-target w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -669,7 +706,7 @@
                     <i class="fa-solid fa-book-open text-lg"></i>
                     <h2 id="panduan-lapor-title" class="font-bold">Panduan Lapor &amp; Aspirasi</h2>
                 </div>
-                <button onclick="closePanduanLapor()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                <button onclick="closePanduanLapor()" aria-label="Tutup" class="tap-target w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -729,7 +766,7 @@
             <div class="relative bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-900 text-white px-5 py-5 overflow-hidden">
                 <div class="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-cyan-500/10"></div>
                 <div class="absolute -right-4 top-16 w-24 h-24 rounded-full bg-cyan-400/10"></div>
-                <button onclick="closeAbout()" aria-label="Tutup" class="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                <button onclick="closeAbout()" aria-label="Tutup" class="tap-target absolute top-3 right-3 z-10 w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
                 <div class="relative flex items-center space-x-3">
@@ -808,7 +845,7 @@
                     <i class="fa-solid fa-download text-lg"></i>
                     <h2 id="install-title" class="font-bold">Pasang Aplikasi</h2>
                 </div>
-                <button onclick="closeInstallGuide()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                <button onclick="closeInstallGuide()" aria-label="Tutup" class="tap-target w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -908,7 +945,7 @@
                     <i class="fa-solid fa-qrcode text-lg"></i>
                     <h2 id="qr-title" class="font-bold">Pindai untuk Buka Portal</h2>
                 </div>
-                <button onclick="closeQrModal()" aria-label="Tutup" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
+                <button onclick="closeQrModal()" aria-label="Tutup" class="tap-target w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -1389,7 +1426,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-22-02';
+        const APP_BUILD = '2026-10-22-03';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2159,6 +2196,7 @@
         function hideSuratSection() {
             const s = document.getElementById('surat-section');
             if (s) s.classList.add('hidden');
+            document.querySelectorAll('[data-quick="surat"]').forEach(function (b) { b.classList.add('hidden'); });
         }
 
         // Buka/tutup (collapse) kartu "Ajukan Surat Baru" & "Cek Status Pengajuan".
@@ -2179,6 +2217,30 @@
         function isSuratCardCollapsed(which) {
             const panel = document.getElementById('surat-panel-' + which);
             return !!(panel && panel.classList.contains('hidden'));
+        }
+
+        // ===== Akses cepat (ikon besar di halaman publik) =====
+        function focusPublicSection(el) {
+            if (!el) return;
+            var reduce = false;
+            try { reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+            try { el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }
+            catch (e) { el.scrollIntoView(); }
+        }
+
+        function openSuratQuick(which) {
+            const sec = document.getElementById('surat-section');
+            if (!sec || sec.classList.contains('hidden')) return;
+            if (isSuratCardCollapsed(which)) toggleSuratCard(which);
+            focusPublicSection(sec);
+        }
+
+        function openLaporQuick(which) {
+            const sec = document.getElementById('lapor-section');
+            const panel = document.getElementById('lapor-panel-' + which);
+            if (!sec || sec.classList.contains('hidden')) return;
+            if (panel && panel.classList.contains('hidden')) toggleLaporCard(which);
+            focusPublicSection(sec);
         }
 
         function setSuratBusy(busy) {
@@ -2440,6 +2502,7 @@
             if (s) s.classList.add('hidden');
             const d = document.getElementById('lapor-divider');
             if (d) d.classList.add('hidden');
+            document.querySelectorAll('[data-quick="lapor"]').forEach(function (b) { b.classList.add('hidden'); });
         }
 
         // Isi dropdown "Jenis Pengaduan" dari RT_CONFIG.jenisPengaduan (config.js).
@@ -2567,7 +2630,7 @@
                     laporFotoName = file.name || 'lapor.jpg';
                     if (box && dataUrl) {
                         box.className = 'mt-2';
-                        box.innerHTML = '<div class="relative inline-block"><img src="' + escapeHtml(dataUrl) + '" alt="Pratinjau bukti" width="96" height="96" decoding="async" class="w-24 h-24 object-cover rounded-lg border border-slate-200 dark:border-slate-600"><button type="button" onclick="clearLaporFoto()" class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center rounded-full bg-rose-600 text-white text-xs" title="Hapus foto"><i class="fa-solid fa-xmark"></i></button></div>';
+                        box.innerHTML = '<div class="relative inline-block"><img src="' + escapeHtml(dataUrl) + '" alt="Pratinjau bukti" width="96" height="96" decoding="async" class="w-24 h-24 object-cover rounded-lg border border-slate-200 dark:border-slate-600"><button type="button" onclick="clearLaporFoto()" class="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center rounded-full bg-rose-600 text-white text-sm" title="Hapus foto"><i class="fa-solid fa-xmark"></i></button></div>';
                     }
                 });
             };
@@ -2768,7 +2831,7 @@
                             '<div class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-1">Nomor Pengaduan Anda</div>' +
                             '<div class="flex items-center gap-2">' +
                                 '<span class="font-mono font-bold text-emerald-700 dark:text-emerald-300 text-base">' + escapeHtml(no) + '</span>' +
-                                '<button type="button" onclick="copyLaporNomor(\'' + escJsStr(no) + '\', this)" class="text-xs px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fa-solid fa-copy mr-1"></i>Salin</button>' +
+                                '<button type="button" onclick="copyLaporNomor(\'' + escJsStr(no) + '\', this)" class="text-xs px-3 py-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white"><i class="fa-solid fa-copy mr-1"></i>Salin</button>' +
                             '</div>' +
                             '<div class="text-xs text-slate-500 dark:text-slate-400 mt-1">Simpan Nomor Pengaduan ini untuk mengetahui perkembangan laporan.</div>' +
                         '</div>';
@@ -2856,7 +2919,7 @@
                         '<div class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1 flex-wrap">' +
                             '<i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal || '') +
                             (it.nomor ? ' &middot; ' + escapeHtml(it.nomor) +
-                                ' <button type="button" onclick="copyLaporNomor(\'' + escJsStr(it.nomor) + '\', this)" class="text-[10px] px-1.5 py-0.5 rounded bg-teal-600 hover:bg-teal-700 text-white align-middle"><i class="fa-solid fa-copy mr-0.5"></i>Salin</button>' : '') +
+                                ' <button type="button" onclick="copyLaporNomor(\'' + escJsStr(it.nomor) + '\', this)" class="text-xs px-2 py-1.5 rounded bg-teal-600 hover:bg-teal-700 text-white align-middle"><i class="fa-solid fa-copy mr-0.5"></i>Salin</button>' : '') +
                         '</div>' +
                         (it.petugas ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300"><i class="fa-solid fa-user-gear mr-1"></i>Petugas: ' + escapeHtml(it.petugas) + '</div>' : '') +
                         (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +

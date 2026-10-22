@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v32-2026-10-22'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v33-2026-10-22'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -39,7 +39,7 @@ const DATA_FIELDS = {
   Iuran_Kas: 9,
   Pengumuman: 7,
   Kegiatan_Warga: 8,
-  Pengajuan_Surat: 11,
+  Pengajuan_Surat: 12,
   Lapor_Aspirasi: 17,
 };
 
@@ -157,7 +157,7 @@ function buildRow(sheetName, data, tsIso, id) {
       blank(data.nama), blank(data.nik), blank(data.noHp), blank(data.alamat),
       blank(data.jenisSurat), blank(data.keperluan),
       data.status ? String(data.status) : 'Pending', blank(data.noSurat), blank(data.catatan),
-      normalizeArsip(data.arsip)
+      blank(data.tanggalSelesai), normalizeArsip(data.arsip)
     );
   } else if (sheetName === 'Lapor_Aspirasi') {
     row.push(
@@ -227,12 +227,12 @@ function seedData() {
         buildRow('Kegiatan_Warga', { namaKegiatan: 'Rapat Bulanan RT', tanggal: '2026-10-25', waktu: '19:00', lokasi: 'Rumah Pak RT', pj: 'Sekretaris', keterangan: 'Membahas program & keuangan', publik: 'Tidak' }, iso(50), 'id-seed-g5'),
       ],
       Pengajuan_Surat: [
-        buildRow('Pengajuan_Surat', { nama: 'Budi Santoso', nik: '3201010101800001', noHp: '081234567890', alamat: 'Jl. Merdeka No. 1', jenisSurat: 'Surat Keterangan Domisili', keperluan: 'Persyaratan administrasi bank', status: 'Selesai', noSurat: 'SRT-260100-AAAA', catatan: 'Sudah diambil' }, iso(9), 'SRT-261009-AAAA'),
+        buildRow('Pengajuan_Surat', { nama: 'Budi Santoso', nik: '3201010101800001', noHp: '081234567890', alamat: 'Jl. Merdeka No. 1', jenisSurat: 'Surat Keterangan Domisili', keperluan: 'Persyaratan administrasi bank', status: 'Selesai', noSurat: 'SRT-260100-AAAA', catatan: 'Sudah diambil', tanggalSelesai: '2026-10-12' }, iso(9), 'SRT-261009-AAAA'),
         buildRow('Pengajuan_Surat', { nama: 'Siti Aminah', nik: '3201010101850002', noHp: '081298765432', alamat: 'Jl. Merdeka No. 1', jenisSurat: 'Surat Keterangan Domisili (Perorangan)', keperluan: 'Pembukaan rekening bank', status: 'Pending', noSurat: '', catatan: '' }, iso(51), 'SRT-261010-BBBB'),
         buildRow('Pengajuan_Surat', { nama: 'Andi Wijaya', nik: '3201010101790003', noHp: '081377788899', alamat: 'Jl. Kenanga No. 7', jenisSurat: 'Surat Pengantar SKCK', keperluan: 'Melamar pekerjaan', status: 'Diproses', noSurat: '', catatan: 'Sedang diproses pengurus' }, iso(52), 'SRT-261011-CCCC'),
-        buildRow('Pengajuan_Surat', { nama: 'Joko Prasetyo', nik: '3201011502780006', noHp: '081399900001', alamat: 'Jl. Melati No. 12', jenisSurat: 'Surat Keterangan Tidak Mampu (SKTM)', keperluan: 'Bantuan pendidikan anak', status: 'Selesai', noSurat: '474/017-RT/RW.06/X/2026', catatan: 'Sudah diambil' }, iso(53), 'SRT-261012-DDDD'),
+        buildRow('Pengajuan_Surat', { nama: 'Joko Prasetyo', nik: '3201011502780006', noHp: '081399900001', alamat: 'Jl. Melati No. 12', jenisSurat: 'Surat Keterangan Tidak Mampu (SKTM)', keperluan: 'Bantuan pendidikan anak', status: 'Selesai', noSurat: '474/017-RT/RW.06/X/2026', catatan: 'Sudah diambil', tanggalSelesai: '2026-10-15' }, iso(53), 'SRT-261012-DDDD'),
         buildRow('Pengajuan_Surat', { nama: 'Sari Dewi', nik: '3201015501880008', noHp: '081311122233', alamat: 'Jl. Kenanga No. 9', jenisSurat: 'Surat Keterangan Domisili Usaha', keperluan: 'Legalitas usaha warung', status: 'Ditolak', noSurat: '', catatan: 'Kelengkapan dokumen kurang' }, iso(54), 'SRT-261013-EEEE'),
-        buildRow('Pengajuan_Surat', { nama: 'Ahmad Fauzi', nik: '3201011010750009', noHp: '081344455566', alamat: 'Jl. Anggrek No. 3', jenisSurat: 'Surat Pengantar Kartu Keluarga (KK)', keperluan: 'Penambahan anggota keluarga', status: 'Selesai', noSurat: '474/017-RT/RW.06/X/2026', catatan: 'Selesai, data lama', arsip: 'Ya' }, iso(55), 'SRT-261014-FFFF'),
+        buildRow('Pengajuan_Surat', { nama: 'Ahmad Fauzi', nik: '3201011010750009', noHp: '081344455566', alamat: 'Jl. Anggrek No. 3', jenisSurat: 'Surat Pengantar Kartu Keluarga (KK)', keperluan: 'Penambahan anggota keluarga', status: 'Selesai', noSurat: '474/017-RT/RW.06/X/2026', catatan: 'Selesai, data lama', tanggalSelesai: '2026-10-16', arsip: 'Ya' }, iso(55), 'SRT-261014-FFFF'),
       ],
       Lapor_Aspirasi: [
         buildRow('Lapor_Aspirasi', { noPengaduan: 'ADU/2026-001', nama: 'Budi Santoso', noHp: '081234567890', alamat: 'Jl. Merdeka No. 1', jenisPengaduan: '🗑️ Sampah', judul: 'Tumpukan sampah di depan rumah', detail: 'Sampah menumpuk di depan rumah sudah 3 hari dan menimbulkan bau.', lokasi: 'Jl. Merdeka No. 1', tanggalKejadian: '2026-10-13', foto: '', harapan: 'Diangkut rutin', status: 'Selesai', petugas: 'Pak RT', catatanTindakLanjut: 'Sudah diangkut petugas kebersihan', tanggalPenyelesaian: '2026-10-14' }, '2026-10-13T02:00:00.000Z', 'ADU-261013-0001'),
@@ -271,6 +271,12 @@ function loadStore() {
     // Baru : [..., arsip, reversalDari, ID]
     (parsed.sheets.Iuran_Kas || []).forEach((row) => {
       if (Array.isArray(row) && row.length === 9) row.splice(8, 0, '');
+    });
+    // Migrasi lokal: Pengajuan_Surat lama belum punya kolom "Tanggal Selesai".
+    // Lama : [ts, ..., catatan, arsip, ID]
+    // Baru : [ts, ..., catatan, tanggalSelesai, arsip, ID]
+    (parsed.sheets.Pengajuan_Surat || []).forEach((row) => {
+      if (Array.isArray(row) && row.length === 12) row.splice(10, 0, '');
     });
     return parsed;
   } catch (e) {
@@ -354,7 +360,7 @@ function handleCheckSuratDuplicate(params) {
   let total = 0;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    if (isArsip(row[10])) continue;
+    if (isArsip(row[11])) continue;
     const rNik = String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '');
     if (rNik !== nik) continue;
     if (normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) !== hpNorm) continue;
@@ -440,14 +446,14 @@ function handleCheckSurat(params) {
   let archivedCount = 0;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const rawRowRef = row[11] !== undefined ? row[11] : row[row.length - 1];
+    const rawRowRef = row[row.length - 1];
     const rowRef = normalizeSuratRef(rawRowRef);
     const matches = byRef
       ? (rowRef === ref)
       : (String(row[2] === undefined || row[2] === null ? '' : row[2]).replace(/\D/g, '') === nik &&
          normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) === hpNorm);
     if (matches) {
-      if (isArsip(row[10])) { archivedCount++; continue; } // pengajuan diarsipkan tidak dapat diambil publik
+      if (isArsip(row[11])) { archivedCount++; continue; } // pengajuan diarsipkan tidak dapat diambil publik
       results.push({
         ref: rowRef,
         tanggal: displayTimestamp(row[0]),
