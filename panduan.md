@@ -361,7 +361,7 @@ Menu **Portal Publik** mengatur halaman yang dilihat warga.
 
 ## Setting: Integrasi Google Sheets
 
-Menu **Setting → Integrasi Google Sheets**. Halaman ini untuk memastikan aplikasi tersambung ke database yang benar.
+Menu **Setting → Integrasi Google Sheets**. Halaman ini untuk memastikan aplikasi tersambung ke database yang benar. Bagian **AI Assistant (Gemini)** dan **Apps Script setting** dapat dilipat; keduanya **tertutup secara default** — klik judulnya untuk membuka.
 
 - **Active Data Source** — informasi penting saat melaporkan masalah:
   - **Transport:** jalur yang sedang dipakai (mis. `Proxy /api (active) · fallback: direct`).

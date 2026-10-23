@@ -154,7 +154,7 @@ Lihat `Apps Script/readme.md` untuk:
 ### Membaca data dari Google Sheets
 Aplikasi akan otomatis memuat data dari Google Sheets saat dibuka (memakai `publicApiUrl` di `config.js`, lewat proxy `/api` bila aktif) menggunakan `doGet` + JSONP. Anda juga dapat menekan tombol **Muat Data dari Sheets** di **Setting → Integrasi Google Sheets** atau **tombol Refresh 🔄** di header untuk menyegarkan data kapan saja.
 
-> **Sumber Data Aktif:** di **Setting → Integrasi Google Sheets** terdapat kartu ringkasan yang menampilkan **Transport**, **Web App URL** yang dipakai, dan **Versi backend** (terisi otomatis setelah sinkronisasi, atau tekan **Cek Versi Backend**). Berguna untuk memastikan aplikasi membaca dari deployment/spreadsheet yang benar.
+> **Sumber Data Aktif:** di **Setting → Integrasi Google Sheets** terdapat kartu ringkasan yang menampilkan **Transport**, **Web App URL** yang dipakai, dan **Versi backend** (terisi otomatis setelah sinkronisasi, atau tekan **Cek Versi Backend**). Berguna untuk memastikan aplikasi membaca dari deployment/spreadsheet yang benar. Bagian **AI Assistant (Gemini)** dan **Apps Script setting** bersifat **collapsible** dan **tertutup saat halaman pertama dibuka** agar panel tetap ringkas; klik header untuk membuka.
 >
 > Dua endpoint berasal dari `config.js`: **proxy** dari `apiBase` (mis. `/api`) dan **langsung/direct** dari `publicApiUrl` (URL Web App `.../exec`). Keduanya menuju Web App Apps Script yang sama; proxy dicoba lebih dulu.
 >
