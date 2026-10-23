@@ -290,7 +290,7 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga â
 
 ### Daftar pengaduan
 
-- Baris terbaru tampil di atas. Setiap baris memperlihatkan **No. Pengaduan** (format `ADU/2026-001`), tanggal, nama & No. HP warga, jenis, judul, status, dan aksi.
+- Baris terbaru tampil di atas. Setiap baris memperlihatkan **No. Pengaduan** (format `ADU/2026-001`), tanggal, nama & No. HP warga, jenis, judul, status, dan aksi. Di bawah badge status tampil **durasi `N hari`** sejak tanggal pengaduan; untuk status **Selesai** hitungan dibekukan sampai **Tanggal Penyelesaian** (sama seperti Daftar Pengajuan).
 - **Kartu ringkasan status** di atas tabel: jumlah **Diterima**, **Diproses**, dan **Selesai**.
 - **Filter bulan**, **filter status**, dan **kotak pencarian** (nomor, nama, atau judul) membantu menemukan pengaduan tertentu. Kolom bulan boleh dikosongkan untuk menampilkan semua bulan; kartu ringkasan status dan label daftar ikut menyesuaikan bulan yang dipilih.
 - **Cetak daftar:** klik ikon **print** di samping judul **Daftar Pengaduan** untuk mencetak daftar sesuai filter aktif (A4 landscape, maksimal 15 baris per halaman, nomor halaman di footer). Hasil cetak diurutkan **dari tanggal paling lama ke terbaru**.

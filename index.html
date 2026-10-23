@@ -787,7 +787,7 @@
                                 <th class="p-4">Alamat</th>
                                 <th class="p-4">Jenis</th>
                                 <th class="p-4">Judul / Detail</th>
-                                <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-center"><span class="block">Status</span><span class="block text-xs font-normal text-slate-400">Durasi</span></th>
                                 <th class="p-4 text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -1995,7 +1995,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-09';
+        const APP_BUILD = '2026-10-22-10';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5185,6 +5185,33 @@
             return '<span class="text-xs text-slate-500 whitespace-nowrap" title="' + tip + '"><i class="fa-regular fa-clock mr-1"></i>' + days + ' hari</span>';
         }
 
+        // Durasi pengaduan: hari ini - tanggal pengaduan. Status Selesai
+        // membekukan hitungan memakai Tanggal Penyelesaian.
+        function isLaporTerminalStatus(status) {
+            return String(status || '') === 'Selesai';
+        }
+
+        function laporDurationDays(item) {
+            const start = timestampRefISO(item && item.waktu);
+            if (!start) return null;
+            if (isLaporTerminalStatus(item && item.status)) {
+                const done = timestampRefISO(item && item.tanggalSelesai);
+                if (!done) return null;
+                return suratIsoDayDiff(start, done);
+            }
+            return suratIsoDayDiff(start, todayLocalISO());
+        }
+
+        function laporDurationHtml(item) {
+            const days = laporDurationDays(item);
+            if (days === null) {
+                return '<span class="text-xs text-slate-400" title="Tanggal penyelesaian belum diisi. Buka Edit untuk melengkapinya.">-</span>';
+            }
+            const status = String((item && item.status) || '');
+            const tip = status === 'Selesai' ? 'Durasi sampai tanggal penyelesaian' : 'Durasi sejak tanggal pengaduan';
+            return '<span class="text-xs text-slate-500 whitespace-nowrap" title="' + tip + '"><i class="fa-regular fa-clock mr-1"></i>' + days + ' hari</span>';
+        }
+
         // ===== Riwayat Pengajuan Surat per warga (dari Data Warga) =====
         // Cocokkan record Pengajuan_Surat ke warga lewat NIK (digit saja).
         // Bila salah satu NIK kosong (mis. data lama), jatuh ke pencocokan nama.
@@ -6967,7 +6994,12 @@
                         <div class="text-slate-800 font-medium">${escAttr(item.judul || '-')}${fotoIcon}</div>
                         <div class="text-slate-500 mt-0.5 line-clamp-2">${escAttr(item.detail || '-')}</div>
                     </td>
-                    <td class="p-4 text-center">${laporStatusBadge(item.status)}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex flex-col items-center gap-1">
+                            ${laporStatusBadge(item.status)}
+                            ${laporDurationHtml(item)}
+                        </div>
+                    </td>
                     <td class="p-4 text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); cycleLaporStatus(${originalIndex})" class="text-teal-600 hover:text-teal-800 p-1 rounded mr-1" title="Ubah status"><i class="fa-solid fa-rotate"></i></button>
                         <button onclick="event.stopPropagation(); editLapor(${originalIndex})" class="text-blue-500 hover:text-blue-700 p-1 rounded mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
