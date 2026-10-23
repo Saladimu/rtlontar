@@ -268,7 +268,7 @@ Untuk permohonan yang disampaikan lisan/datang langsung:
 ### Memproses pengajuan
 
 - **Ubah status cepat:** klik ikon 🔄 untuk menggilir status `Pending → Diproses → Selesai → Ditolak → Pending`.
-- **Edit (klik baris atau ikon ✏️):** ubah **Status Pengurusan**, **No. Surat**, dan **Catatan Pengurus**. Di modal ini juga terlihat **No. Pengajuan** dan **tanggal pengajuan**.
+- **Edit (klik baris atau ikon ✏️):** ubah **Status Pengurusan**, **No. Surat**, dan **Catatan Pengurus**. Kolom **Catatan Pengurus** kini selebar form dan berupa kotak teks beberapa baris yang bisa ditarik lebih tinggi, sehingga catatan panjang mudah dibaca dan ditulis. Di modal ini juga terlihat **No. Pengajuan** dan **tanggal pengajuan**.
   - **NIK & No. HP terkunci saat mengedit** — keduanya dipakai warga untuk cek status, jadi tidak boleh berubah. (Saat **Isi Manual** baru, kedua kolom ini masih bisa diisi.)
   - **No. Surat wajib diisi ketika status diubah menjadi `Selesai`.** Bila nomor masih kosong, sistem otomatis membuka modal untuk memintanya; server juga menolak menyimpan status `Selesai` tanpa nomor surat.
   - **Catatan Pengurus** sangat dianjurkan saat menolak/meminta kelengkapan, mis. “KTP belum dilampirkan”.
