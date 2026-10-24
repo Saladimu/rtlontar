@@ -18,7 +18,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '10',
+    version: '11',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
 
@@ -38,6 +38,11 @@ window.RT_CONFIG = {
     tahun: new Date().getFullYear(),
     alamatContoh: 'Jl. Lontar Barat No. 06',
     lokasiContoh: 'Depan lapangan',
+
+    // Contoh teks placeholder pada field No. Surat (admin). Token {rt}, {rw},
+    // dan {tahun} diisi otomatis dari nilai di atas. Ubah bagian "474"/"X"
+    // atau susunannya sesuai format nomor surat RT.
+    suratNoContoh: 'mis. 474/{rt}-RT/RW.{rw}/X/{tahun}',
 
     // URL Web App Google Apps Script untuk Portal Publik (endpoint readPublic).
     // Salin URL Web App (yang berakhiran /exec) di sini agar public.html dapat
@@ -144,7 +149,10 @@ window.RT_CONFIG = {
         alamat: c.alamatContoh,
         pj: 'Ketua RT ' + c.rt,
         lokasi: c.lokasiContoh + ' ' + c.rt,
-        suratNo: 'mis. 474/' + c.rt + '-RT/RW.' + c.rw + '/X/' + c.tahun
+        suratNo: String(c.suratNoContoh || 'mis. 474/{rt}-RT/RW.{rw}/X/{tahun}')
+            .replace(/\{rt\}/g, c.rt)
+            .replace(/\{rw\}/g, c.rw)
+            .replace(/\{tahun\}/g, c.tahun)
     };
 
     function apply() {

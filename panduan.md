@@ -260,7 +260,7 @@ Untuk permohonan yang disampaikan lisan/datang langsung:
 
 1. Klik **Isi Manual**.
 2. Masukkan **NIK** lebih dahulu. Bila NIK valid **dan terdaftar**, kolom **Nama Lengkap, No. HP, dan Alamat** terisi otomatis. Mengganti NIK akan memperbarui ketiganya.
-3. Lengkapi **Jenis Surat**, **Keperluan**, **No. Surat** (bila sudah ada), **Status Pengurusan**, dan **Catatan Pengurus**.
+3. Lengkapi **Jenis Surat**, **Keperluan**, **No. Surat** (bila sudah ada — klik **chip contoh** di bawah field untuk mengisi format **`123/RT<rt>/RW<rw>/MM/YYYY`** dengan bulan & tahun berjalan, lalu ganti angka **123** dengan nomor asli), **Status Pengurusan**, dan **Catatan Pengurus**.
 4. Klik **Simpan Pengajuan**. Nomor pengajuan dibuat otomatis dengan format yang sama seperti pengajuan warga (mis. `SRT-261006-AB12`).
 
 > NIK divalidasi ketat (16 digit, jenis kelamin, bulan, dan jumlah hari). Bila tidak lolos, muncul pesan error di dalam modal dan kolom yang bermasalah disorot.
@@ -648,6 +648,7 @@ Yang perlu Anda perhatikan:
 - **`apiBase`** — biarkan `'/api'` bila memakai Cloudflare Pages (disarankan). Aplikasi memakai proxy ini lebih dulu agar tidak diblokir kebijakan privasi browser; bila proxy tidak tersedia, aplikasi otomatis beralih ke `publicApiUrl`.
 - **`publicPortalUrl`** — tautan portal yang dibagikan ke warga (muncul di tombol **Buka Portal**).
 - **`jenisSurat`** — sesuaikan pilihan surat dengan kebutuhan RT.
+- **`suratNoContoh`** — template contoh (placeholder) pada field **No. Surat**; token **`{rt}`**, **`{rw}`**, dan **`{tahun}`** diisi otomatis. Ubah angka `474` atau bulan `X` bila format surat RT berbeda. Chip contoh sekali-klik memakai format tersendiri: **`123/RT<rt>/RW<rw>/MM/YYYY`** (bulan & tahun berjalan).
 - **`version`** — **wajib dinaikkan** setiap kali `config.js` diubah (lihat [Checklist](#checklist-setiap-perubahan)).
 - Ingin **mode demo tanpa server**? Kosongkan `publicApiUrl` dan `apiBase` — aplikasi berjalan di browser saja.
 
