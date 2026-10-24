@@ -1533,7 +1533,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">No. Surat <span id="surat-nosurat-req" class="hidden text-rose-500">*</span></label>
                     <input type="text" id="surat-nosurat" maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" data-rt-placeholder="suratNo" placeholder="mis. 474/RT/RW/X/2026">
-                    <p class="text-xs text-slate-400 mt-1">Nomor surat resmi. Wajib diisi bila status pengurusan <b>Selesai</b>.</p>
+                    <p class="text-xs text-slate-400 mt-1">Nomor surat resmi. Wajib diisi bila status pengurusan <b>Selesai</b> dan tidak boleh sama dengan pengajuan lain.</p>
                     <div class="mt-1.5 flex flex-wrap items-center gap-2">
                         <button type="button" id="surat-nosurat-suggestion" onclick="fillSuratNoSuggestion()" title="Isi contoh nomor surat; hanya angka 123 yang perlu diganti" class="inline-flex items-center gap-1.5 text-xs text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 px-2.5 py-1 rounded-full transition">
                             <i class="fa-solid fa-lightbulb"></i><span id="surat-nosurat-suggestion-label">Contoh nomor</span>
@@ -2004,7 +2004,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-22-17';
+        const APP_BUILD = '2026-10-22-18';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5440,6 +5440,26 @@
             setSuratNikHint(filled.length ? (base + ' Nama, No. HP, & Alamat diisi otomatis.') : base, 'ok');
         }
 
+        // Normalisasi No. Surat untuk deteksi duplikat: abaikan spasi berlebih
+        // dan perbedaan huruf besar/kecil, tetapi nomor tetap harus unik.
+        function suratNoKey(value) {
+            return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+
+        // Cari pengajuan lain dengan No. Surat yang sama. excludeId dipakai saat
+        // mengedit agar nomor milik record itu sendiri tidak dianggap duplikat.
+        function findSuratByNoSurat(noSurat, excludeId) {
+            const key = suratNoKey(noSurat);
+            if (!key) return null;
+            const list = appState.surat || [];
+            for (let i = 0; i < list.length; i++) {
+                const item = list[i];
+                if (excludeId && item._id === excludeId) continue;
+                if (suratNoKey(item.noSurat) === key) return item;
+            }
+            return null;
+        }
+
         function submitSurat(e) {
             e.preventDefault();
             clearSuratFormError();
@@ -5472,6 +5492,12 @@
             if (keperluan.length < 3) { showSuratFormError('Keperluan / alasan pengajuan wajib diisi (minimal 3 karakter).', 'surat-keperluan'); return; }
             if (status === 'Selesai' && !noSurat) {
                 showSuratFormError('No. Surat resmi wajib diisi sebelum menandai status Selesai.', 'surat-nosurat');
+                return;
+            }
+            const dupSurat = findSuratByNoSurat(noSurat, editMode.surat);
+            if (dupSurat) {
+                showSuratFormError('No. Surat sudah dipakai pengajuan ' + (dupSurat.nama || '-') +
+                    ' (' + (dupSurat._id || '-') + '). Gunakan nomor surat yang berbeda.', 'surat-nosurat');
                 return;
             }
 
@@ -5576,11 +5602,21 @@
             const cur = list.indexOf(item.status);
             const next = list[(cur + 1) % list.length];
 
-            // Menandai "Selesai" memerlukan nomor surat resmi -> buka modal edit.
-            if (next === 'Selesai' && !String(item.noSurat || '').trim()) {
-                editSurat(index);
-                showSuratFormError('Isi No. Surat resmi sebelum menandai status Selesai.', 'surat-nosurat');
-                return;
+            // Menandai "Selesai" memerlukan nomor surat resmi yang belum dipakai
+            // pengajuan lain -> buka modal edit agar bisa langsung diperbaiki.
+            if (next === 'Selesai') {
+                if (!String(item.noSurat || '').trim()) {
+                    editSurat(index);
+                    showSuratFormError('Isi No. Surat resmi sebelum menandai status Selesai.', 'surat-nosurat');
+                    return;
+                }
+                const dupSurat = findSuratByNoSurat(item.noSurat, item._id);
+                if (dupSurat) {
+                    editSurat(index);
+                    showSuratFormError('No. Surat sudah dipakai pengajuan ' + (dupSurat.nama || '-') +
+                        ' (' + (dupSurat._id || '-') + '). Gunakan nomor surat yang berbeda.', 'surat-nosurat');
+                    return;
+                }
             }
 
             item.status = next;
