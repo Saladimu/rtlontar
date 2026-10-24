@@ -454,6 +454,8 @@ Menu **Lapor & Aspirasi** ada **di bawah Layanan Surat** pada Portal Publik. Gun
    - Bila nomor belum terdaftar, muncul keterangan — hubungi pengurus RT untuk didaftarkan agar bisa mengirim.
 3. Pilih **Jenis Pengaduan** (mis. Lingkungan & Kebersihan, Penerangan Jalan, Saluran Air/Drainase, Keamanan Lingkungan, Sampah, Aspirasi/Saran, dan lainnya).
 4. Tulis **Judul Pengaduan** dan **Detail** kejadian selengkap mungkin.
+   > Bila nomor Anda sudah pernah mengirim **jenis pengaduan yang sama pada hari itu**, muncul panel kuning **“Pengaduan serupa sudah dikirim hari ini”** berisi jumlahnya. Ini hanya **peringatan** — Anda tetap boleh melanjutkan bila memang masalahnya berbeda atau perlu dilaporkan ulang.
+
 5. (Opsional) Isi **Lokasi Kejadian**, **Tanggal Kejadian** (format **dd-mm-yyyy**, mis. `14-10-2026`; bisa juga dipilih lewat kalender), dan **Harapan / Solusi**.
 6. (Opsional) Lampirkan **Foto/Bukti Pendukung** (gambar, maks. 8 MB) — foto otomatis dikompres sebelum diunggah.
 7. Centang **persetujuan penggunaan data**, lalu klik **Kirim**.
@@ -466,6 +468,7 @@ Yang perlu diketahui:
 - Status awal pengaduan adalah **Diterima**; pengurus akan mengembangkannya menjadi **Diproses** lalu **Selesai**.
 - Batas aman pemakaian: maksimal **5 pengaduan per nomor per jam**.
 - Satu pengaduan untuk satu masalah agar mudah ditindaklanjuti.
+- Peringatan **pengaduan serupa** dihitung dari **No. WhatsApp + jenis** yang sama pada **hari ini** (zona Asia/Jakarta). Peringatan tidak menghalangi pengiriman.
 
 ## Cek Status Pengajuan Surat
 

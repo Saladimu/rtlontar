@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v33-2026-10-22'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v34-2026-10-24'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -116,10 +116,15 @@ function displayTimestamp(iso) {
   return `${p.day}-${p.month}-${p.year} ${p.hour}:${p.minute}`;
 }
 
+// Tanggal (GMT+7) dalam format ISO yyyy-MM-dd dari sebuah timestamp ISO.
+function jakartaDateOf(iso) {
+  const p = jakartaParts(iso);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+
 // Tanggal hari ini (GMT+7) dalam format ISO yyyy-MM-dd.
 function jakartaDateToday() {
-  const p = jakartaParts(nowIso());
-  return `${p.year}-${p.month}-${p.day}`;
+  return jakartaDateOf(nowIso());
 }
 
 function randomCode4() {
@@ -519,6 +524,34 @@ function makeNomorPengaduan() {
   return prefix + ('000' + (max + 1)).slice(-3);
 }
 
+function handleCheckLaporDuplicate(params) {
+  if (store.portalEnabled === false) {
+    return { result: 'error', code: 'portal_disabled', version: CODE_VERSION, message: 'Portal publik sedang dinonaktifkan oleh admin.' };
+  }
+  if (store.laporEnabled === false) return laporDisabled();
+
+  const hpDigits = cleanStr(params.hp !== undefined && params.hp !== null ? params.hp : params.noHp, 30).replace(/\D/g, '');
+  const jenis = cleanStr(params.jenisPengaduan, 120);
+  if (hpDigits.length < 9 || hpDigits.length > 15) {
+    return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Nomor WhatsApp tidak valid.' };
+  }
+  if (!jenis) return { result: 'error', code: 'invalid', version: CODE_VERSION, message: 'Pilih jenis pengaduan terlebih dahulu.' };
+
+  const hpNorm = normalizeSuratHp(hpDigits);
+  const jenisKey = jenis.toLowerCase();
+  const today = jakartaDateToday();
+  const rows = store.sheets.Lapor_Aspirasi || [];
+  let count = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (jakartaDateOf(row[0]) !== today) continue;
+    if (normalizeSuratHp(String(row[3] === undefined || row[3] === null ? '' : row[3])) !== hpNorm) continue;
+    if (cleanStr(row[5], 120).toLowerCase() !== jenisKey) continue;
+    count++;
+  }
+  return { result: 'success', version: CODE_VERSION, count };
+}
+
 function handleCheckLapor(params) {
   if (store.portalEnabled === false) return portalDisabled();
   if (store.laporEnabled === false) return laporDisabled();
@@ -765,6 +798,7 @@ function handleApi(req, res) {
     else if (params.action === 'lookupWarga') payload = handleLookupWarga(params);
     else if (params.action === 'lookupWargaHp') payload = handleLookupWargaHp(params);
     else if (params.action === 'checkLapor') payload = handleCheckLapor(params);
+    else if (params.action === 'checkLaporDuplicate') payload = handleCheckLaporDuplicate(params);
     else if (params.action === 'sendTestEmail') {
       const email = cleanStr(params.email, 200);
       if (email) {

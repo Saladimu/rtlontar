@@ -449,10 +449,20 @@
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Jenis Pengaduan</label>
-                            <select id="lapor-jenis" required
+                            <select id="lapor-jenis" required onchange="scheduleLaporDuplicateCheck()"
                                 class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none">
                                 <option value="">-- Pilih jenis pengaduan --</option>
                             </select>
+                        </div>
+                        <div id="lapor-duplicate-warning" class="hidden border border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 rounded-xl p-3 text-sm">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                                <div class="space-y-1">
+                                    <p class="font-semibold">Pengaduan serupa sudah dikirim hari ini.</p>
+                                    <p id="lapor-duplicate-text" class="text-xs"></p>
+                                    <p class="text-xs">Anda tetap dapat melanjutkan pengiriman bila memang diperlukan.</p>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1">Judul Pengaduan</label>
@@ -1436,7 +1446,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-22-07';
+        const APP_BUILD = '2026-10-22-08';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2551,6 +2561,63 @@
         let laporWarga = null;
         let laporHpTimer = null;
         let laporHpSeq = 0;
+        let laporDupTimer = null;
+        let laporDupSeq = 0;
+
+        // Peringatan pengaduan serupa hari ini: dicek setelah No. HP terdaftar &
+        // jenis dipilih. Bersifat informasi saja dan TIDAK memblokir pengiriman.
+        function clearLaporDuplicateWarning() {
+            const box = document.getElementById('lapor-duplicate-warning');
+            const text = document.getElementById('lapor-duplicate-text');
+            if (text) text.textContent = '';
+            if (box) box.classList.add('hidden');
+        }
+
+        function scheduleLaporDuplicateCheck() {
+            if (laporDupTimer) { clearTimeout(laporDupTimer); laporDupTimer = null; }
+            laporDupSeq += 1;
+            const seq = laporDupSeq;
+            const hp = String((document.getElementById('lapor-hp') && document.getElementById('lapor-hp').value) || '').replace(/\D/g, '');
+            const jenis = String((document.getElementById('lapor-jenis') && document.getElementById('lapor-jenis').value) || '').trim();
+            if (!laporWarga || hp.length < 9 || !jenis) { clearLaporDuplicateWarning(); return; }
+            laporDupTimer = setTimeout(function () { checkLaporDuplicate(hp, jenis, seq); }, 400);
+        }
+
+        function checkLaporDuplicate(hp, jenis, seq) {
+            if (!apiBases().length) { clearLaporDuplicateWarning(); return; }
+            const callbackName = '__laporDup_' + Date.now() + '_' + seq;
+            loadApiJsonp(
+                function () {
+                    return 'action=checkLaporDuplicate&hp=' + encodeURIComponent(hp) +
+                        '&jenisPengaduan=' + encodeURIComponent(jenis) +
+                        '&callback=' + callbackName;
+                },
+                callbackName,
+                {
+                    timeout: 12000,
+                    onSuccess: function (res) {
+                        if (seq !== laporDupSeq) return;
+                        const count = res && res.result === 'success' ? Number(res.count || 0) : 0;
+                        if (!count) { clearLaporDuplicateWarning(); return; }
+                        renderLaporDuplicateWarning(jenis, count);
+                    },
+                    onError: function () {
+                        if (seq !== laporDupSeq) return;
+                        clearLaporDuplicateWarning();
+                    }
+                }
+            );
+        }
+
+        function renderLaporDuplicateWarning(jenis, count) {
+            const box = document.getElementById('lapor-duplicate-warning');
+            const text = document.getElementById('lapor-duplicate-text');
+            if (!box || !text) return;
+            const n = Number(count || 0);
+            text.innerHTML = 'Nomor WhatsApp ini sudah mengirim <b>' + escapeHtml(jenis) + '</b> sebanyak <b>' +
+                n + ' pengaduan</b> hari ini.';
+            box.classList.remove('hidden');
+        }
 
         function setLaporHpHint(msg, kind) {
             const el = document.getElementById('lapor-hp-hint');
@@ -2578,6 +2645,9 @@
 
         function resetLaporWarga() {
             laporWarga = null;
+            if (laporDupTimer) { clearTimeout(laporDupTimer); laporDupTimer = null; }
+            laporDupSeq += 1;
+            clearLaporDuplicateWarning();
             lockLaporIdentity(false);
             const n = document.getElementById('lapor-nama');
             const a = document.getElementById('lapor-alamat');
@@ -2590,6 +2660,9 @@
             laporHpSeq += 1;
             const seq = laporHpSeq;
             if (laporHpTimer) { clearTimeout(laporHpTimer); laporHpTimer = null; }
+            if (laporDupTimer) { clearTimeout(laporDupTimer); laporDupTimer = null; }
+            laporDupSeq += 1;
+            clearLaporDuplicateWarning();
             if (digits.length < 9 || digits.length > 15) {
                 resetLaporWarga();
                 setLaporHpHint(digits ? 'Nomor WhatsApp tidak valid.' : '', digits ? 'warn' : '');
@@ -2597,6 +2670,7 @@
                 return;
             }
             setLaporHpHint('', '');
+            laporWarga = null;
             setLaporLookup('', '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Mencari data warga...');
             laporHpTimer = setTimeout(function () { lookupWargaByHp(digits, seq); }, 500);
         }
@@ -2620,12 +2694,15 @@
                             if (a) a.value = res.alamat || '';
                             lockLaporIdentity(true);
                             setLaporLookup('ok', '<i class="fa-solid fa-circle-check mr-1"></i> Data warga ditemukan: <b>' + escapeHtml(res.nama || '') + '</b>. Nama &amp; Alamat terisi otomatis &amp; tidak dapat diubah.');
+                            scheduleLaporDuplicateCheck();
                         } else {
                             resetLaporWarga();
                             setLaporLookup('warn', '<i class="fa-solid fa-circle-info mr-1"></i> Nomor WhatsApp belum terdaftar pada data warga RT. Hubungi pengurus RT untuk mendaftarkan nomor Anda terlebih dahulu.');
                         }
                     },
-                    onError: function () { if (seq === laporHpSeq) setLaporLookup('', ''); }
+                    onError: function () {
+                        if (seq === laporHpSeq) { setLaporLookup('', ''); clearLaporDuplicateWarning(); }
+                    }
                 }
             );
         }

@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v33-2026-10-22";
+var CODE_VERSION = "publik-v34-2026-10-24";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -283,6 +283,9 @@ function doGet(e) {
   } else if (params.action === 'checkLapor') {
     // Cek status pengaduan oleh warga dengan No. Pengaduan. Tanpa token.
     payload = handleCheckLapor(params);
+  } else if (params.action === 'checkLaporDuplicate') {
+    // Peringatan pengaduan serupa (No. HP + jenis) pada hari yang sama. Tanpa token.
+    payload = handleCheckLaporDuplicate(params);
   } else if (params.action === 'sendTestEmail') {
     // Kirim email uji notifikasi (butuh token admin). Bila params.email diisi,
     // alamat itu dipakai sebagai penerima sekaligus disimpan ke ADMIN_EMAIL.
@@ -1359,6 +1362,7 @@ function handleSubmitSurat(data) {
 // Indeks kolom Lapor_Aspirasi (termasuk kolom A Timestamp):
 var LAPOR_COL_NOMOR = 1;   // No. Pengaduan
 var LAPOR_COL_HP = 3;      // No. HP / WhatsApp
+var LAPOR_COL_JENIS = 5;   // Jenis Pengaduan
 var LAPOR_COL_ARSIP = 16;  // Diarsipkan
 
 var LAPOR_RATE_MAX_PER_HP = 5;
@@ -1595,6 +1599,60 @@ function handleLookupWargaHp(params) {
     "noHp": warga.noHp,
     "alamat": warga.alamat
   };
+}
+
+// Tanggal (yyyy-MM-dd) dari kolom Timestamp Lapor_Aspirasi. Baris baru berupa
+// Date; data lama bisa berupa string ISO. Dipakai untuk batas "hari yang sama".
+function laporRowDay(value) {
+  if (value instanceof Date) return Utilities.formatDate(value, TZ, 'yyyy-MM-dd');
+  var m = String(value === undefined || value === null ? '' : value).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
+}
+
+// Handler aksi publik `checkLaporDuplicate`: memberi tahu bila No. HP yang sama
+// sudah mengirim pengaduan dengan jenis yang sama pada hari ini. Hanya
+// mengembalikan jumlah (tanpa judul/detail) dan TIDAK memblokir pengiriman.
+function handleCheckLaporDuplicate(params) {
+  if (!isPortalEnabled()) {
+    return suratError('portal_disabled', 'Portal publik sedang dinonaktifkan oleh admin.');
+  }
+  if (!isLaporEnabled()) {
+    return suratError('lapor_disabled', 'Fitur Lapor & Aspirasi sedang dinonaktifkan oleh admin.');
+  }
+
+  var hpRaw = cleanStr((params.hp !== undefined && params.hp !== null) ? params.hp : params.noHp, 30);
+  var hpDigits = hpRaw.replace(/\D/g, '');
+  var jenis = cleanStr(params.jenisPengaduan, 120);
+  if (hpDigits.length < 9 || hpDigits.length > 15) {
+    return suratError('invalid', 'Nomor WhatsApp tidak valid.');
+  }
+  if (!jenis) return suratError('invalid', 'Pilih jenis pengaduan terlebih dahulu.');
+
+  var hpNorm = normalizeSuratHp(hpDigits);
+  var jenisKey = jenis.toLowerCase();
+  if (!checkAndRecordLaporCheckRate('dup:' + hpNorm + '|' + jenisKey)) {
+    return suratError('rate_limited', 'Terlalu banyak percobaan. Silakan coba lagi beberapa saat lagi.');
+  }
+
+  var count = 0;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Lapor_Aspirasi');
+  if (sheet) {
+    ensureSpreadsheetFormat(ss, sheet, 'Lapor_Aspirasi');
+    var last = sheet.getLastRow();
+    if (last >= 2) {
+      var rows = sheet.getRange(2, 1, last - 1, LAPOR_COL_JENIS + 1).getValues();
+      var today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        if (laporRowDay(row[0]) !== today) continue;
+        if (normalizeSuratHp(String(row[LAPOR_COL_HP] === undefined || row[LAPOR_COL_HP] === null ? '' : row[LAPOR_COL_HP])) !== hpNorm) continue;
+        if (cleanStr(row[LAPOR_COL_JENIS], 120).toLowerCase() !== jenisKey) continue;
+        count++;
+      }
+    }
+  }
+  return { "result": "success", "version": CODE_VERSION, "count": count };
 }
 
 // Handler aksi publik `submitLapor`: validasi, rate limit, simpan, notifikasi.
