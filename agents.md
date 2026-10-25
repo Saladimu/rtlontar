@@ -339,6 +339,14 @@ Tombol refresh di:
     - Menambah data kini **hanya** lewat modal `Tambah Data Warga` / `Catat Transaksi Kas`. Field **Nama Warga** pada modal Kas tetap memakai `<datalist id="warga-nama-list">` dari `Data_Warga` (`renderWargaNameList()`).
     - Berkas uji: `/tmp/opencode/test_column_filter.js`; guard penghapusan fitur lama di `/tmp/opencode/test_inline_draft.js`.
 
+14. **Berkas khusus RT (`config.js`, `version.json`, `sw.js`):**
+    - Ketiga berkas menyimpan nilai yang berbeda per RT (identitas, URL Web App, build, cache SW). Jangan menimpa nilainya dengan nilai dari `main` saat menyelesaikan merge.
+    - Aktifkan merge driver sekali per clone: `bash tools/setup-git-merge.sh`. Driver `keeprt` (`.gitattributes` + `tools/merge-rt-files.js`) menggabungkan perubahan generik dari `main` tetapi mempertahankan nilai RT.
+    - Setelah setiap merge `main` → `rtNNN`, jalankan `node tools/check-deployment.js` sebelum bump versi dan sebelum push. Checker gagal bila identitas RT, build, atau cache tidak konsisten.
+    - Kenaikan versi tetap manual di branch RT. Driver mencegah tertimpa, bukan menggantikan proses rilis.
+    - Bila driver tidak aktif, Git memberi konflik (aman); jangan menyelesaikannya dengan mengambil seluruh berkas dari `main`.
+    - Bila `main` menambah kunci generik baru di `config.js`, periksa hasil merge agar kunci tersebut ikut masuk.
+
 ---
 
 ## 📂 File Reference
@@ -354,8 +362,15 @@ Tombol refresh di:
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 | `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT |
 | `tools/check-deployment.js` | Pemeriksa konsistensi versi/identitas deployment (`--live` untuk produksi) |
+| `.gitattributes` | Menandai berkas khusus RT memakai merge driver `keeprt` |
+| `tools/merge-rt-files.js` | Driver merge: pertahankan nilai RT sambil menerima perubahan generik |
+| `tools/setup-git-merge.sh` | Memasang merge driver `keeprt` pada clone lokal |
 
 ---
+
+## 🔧 Recent Changes (2026-10-25)
+
+- ✅ **Proteksi berkas khusus RT saat merge** — `config.js`, `version.json`, dan `sw.js` kini memakai merge driver **`keeprt`** (`.gitattributes`) sehingga nilai RT tidak tertimpa saat `main` di-merge ke branch `rtNNN`. Driver **`tools/merge-rt-files.js`** menggabungkan perubahan generik dari `main` (kunci/daftar baru, shell SW, kunci `version.json` baru) tetapi mempertahankan field yang memang di-override RT: `version`, identitas RT/RW/wilayah, alamat, URL `publicApiUrl`/`publicPortalUrl`, serta nama cache SW. Field bersama yang tidak diubah RT tetap mengikuti `main`. Pasang sekali per clone dengan **`bash tools/setup-git-merge.sh`**; tanpa driver Git memberi konflik, bukan menimpa diam-diam. **`tools/check-deployment.js`** menambah 4 pemeriksaan (tiga entri `.gitattributes` + driver terpasang). Diuji dengan merge sintetis: perubahan generik `main` masuk, identitas/build/cache RT tetap. Dokumentasi: `MAINTENANCE.md`, `readme.md`, `panduan.md`.
 
 ## 🔧 Recent Changes (2026-10-18)
 

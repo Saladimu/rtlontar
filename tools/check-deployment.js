@@ -101,6 +101,25 @@ if (publicPortalUrl) {
   console.log('SKIP publicPortalUrl kosong');
 }
 
+const attributesPath = path.join(ROOT, '.gitattributes');
+const attributes = fs.existsSync(attributesPath) ? fs.readFileSync(attributesPath, 'utf8') : '';
+for (const file of ['config.js', 'version.json', 'sw.js']) {
+  const pattern = new RegExp('^' + file.replace(/\./g, '\\.') + '\\s+merge=keeprt$', 'm');
+  check(pattern.test(attributes), file + ' memakai merge=keeprt');
+}
+
+let mergeDriver = '';
+try {
+  mergeDriver = execSync('git config --get merge.keeprt.driver', {
+    cwd: ROOT,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'ignore']
+  }).trim();
+} catch (err) {
+  mergeDriver = '';
+}
+check(/merge-rt-files\.js/.test(mergeDriver), 'merge driver keeprt terpasang', mergeDriver || 'jalankan bash tools/setup-git-merge.sh');
+
 if (!LIVE) {
   console.log('\n' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
