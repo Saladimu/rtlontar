@@ -4,15 +4,15 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 0.1 |
-| Status | Draft for review |
-| Date | 24 October 2026 |
+| Version | 0.2 |
+| Status | Decisions resolved; ready for Phase 1 |
+| Date | 25 October 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
 | Related documents | `readme.md`, `panduan.md`, `agents.md` |
 | Owner | RW 06 |
 | Approver | TBD |
 
-This document captures the discussion about extending SAPA-RT from a single-RT system to an RW 06 system. It separates confirmed inputs from recommended solutions and open decisions. Items marked **Open** require approval before implementation.
+This document captures the discussion about extending SAPA-RT from a single-RT system to an RW 06 system. It separates confirmed inputs from recommended solutions. The Phase 0 decisions in Section 18 are resolved and binding for implementation; any new open item must be recorded there before it affects Phase 1.
 
 ---
 
@@ -116,7 +116,7 @@ The existing design works for one RT. RW 06 needs cross-RT visibility and contro
 | Warga | Submit letters and complaints, check status through the RT public portal |
 | System owner | Maintain deployments, tokens, backups, and access policies |
 
-Proposed permission model:
+Permission model:
 
 | Capability | RT admin | RW viewer | RW admin |
 |---|---|---|---|
@@ -125,7 +125,7 @@ Proposed permission model:
 | Read other RT data | No | Yes | Yes |
 | Approve letters | No | No | Yes |
 | Respond to complaints | Own RT only | No | Yes |
-| Manage RW users and registry | No | No | TBD |
+| Manage RW users and registry | No | No | Yes |
 
 ---
 
@@ -168,7 +168,7 @@ Proposed permission model:
 | FR-WRG-01 | List residents per RT with search and archive filtering. | Must |
 | FR-WRG-02 | Show resident detail fields needed by RW. | Must |
 | FR-WRG-03 | Do not provide create, edit, delete, or archive actions for RW. | Must |
-| FR-WRG-04 | Mask sensitive fields for read-only viewer roles if required by policy. | Open |
+| FR-WRG-04 | Show full NIK, phone, and address to RW admin; mask them for RW viewer. | Must |
 | FR-WRG-05 | Handle duplicate NIKs across RTs without merging records automatically. | Must |
 
 ### 7.3 Cash and dues
@@ -190,9 +190,9 @@ Proposed permission model:
 | FR-SRT-04 | Require a note for return and rejection. | Must |
 | FR-SRT-05 | Write the decision back to the originating RT. | Must |
 | FR-SRT-06 | Expose the RW decision and note in the RT admin app. | Must |
-| FR-SRT-07 | Allow RT to revise and resubmit after a return. | Open |
+| FR-SRT-07 | Allow RT to revise and resubmit after a return, up to 3 returns per request. | Must |
 | FR-SRT-08 | Prevent a stale approval from overwriting a newer RT edit. | Must |
-| FR-SRT-09 | Keep historical letters out of the new approval queue by default. | Open |
+| FR-SRT-09 | Keep historical letters out of the new approval queue by marking them `Tidak Perlu` during migration. | Must |
 
 ### 7.5 Complaints and escalation
 
@@ -202,9 +202,9 @@ Proposed permission model:
 | FR-LPR-02 | Allow filtering for complaints that need RW attention. | Must |
 | FR-LPR-03 | Allow RW to add a response without overwriting the RT's note. | Must |
 | FR-LPR-04 | Record responses in an append-only timeline. | Must |
-| FR-LPR-05 | Allow each response to be public or internal. | Open |
+| FR-LPR-05 | Allow each response to be toggled public or internal; default is public. | Must |
 | FR-LPR-06 | Expose the latest public response in the RT public status page. | Must |
-| FR-LPR-07 | Define whether RT or RW closes an escalated complaint. | Open |
+| FR-LPR-07 | RT remains the complaint owner and closes it; RW marks its part as `Selesai RW`. | Must |
 | FR-LPR-08 | Preserve RT ownership unless escalation explicitly transfers it. | Should |
 
 ### 7.6 Access and administration
@@ -213,10 +213,11 @@ Proposed permission model:
 |---|---|---|
 | FR-ADM-01 | Register each RT with its RT ID, name, endpoint, and active status. | Must |
 | FR-ADM-02 | Store RT credentials only on the server side. | Must |
-| FR-ADM-03 | Map authenticated users to RW roles. | Must |
+| FR-ADM-03 | Map authenticated users to `RW Admin` or optional `RW Viewer`; viewer is read-only and masked. | Must |
 | FR-ADM-04 | Record an audit entry for every RW approval and response. | Must |
 | FR-ADM-05 | Provide a health/version check for each RT. | Should |
 | FR-ADM-06 | Support token rotation without redeploying every RT UI. | Should |
+| FR-ADM-07 | Configure cache TTL, daily digest, and retention without redeploying the portal. | Must |
 
 ---
 
@@ -231,11 +232,11 @@ Proposed permission model:
 | BRL-03 | RW decisions are `Disetujui`, `Dikembalikan`, or `Ditolak`. |
 | BRL-04 | `Dikembalikan` and `Ditolak` require a note. |
 | BRL-05 | RT must not be able to overwrite RW decision fields. |
-| BRL-06 | A returned letter can be revised and resubmitted; the revision counter increments. |
+| BRL-06 | A returned letter can be revised and resubmitted; the revision counter increments. RW may return the same request at most 3 times; after the third return, the next submission can only be approved or rejected. |
 | BRL-07 | Approval writes use optimistic concurrency so an outdated decision cannot overwrite a newer record. |
 | BRL-08 | Historical letters are marked `Tidak Perlu` or otherwise excluded from the queue unless RW decides to review them. |
 
-Recommended but open: RT should be blocked from setting `Selesai` and issuing `No. Surat` until `Rw Status = Disetujui`, unless RW marks the request `Tidak Perlu`.
+RT is blocked from setting `Selesai` and from saving `No. Surat` until `Rw Status = Disetujui`. Records marked `Tidak Perlu` are exempt and remain usable for historical letters.
 
 ### 8.2 Complaints
 
@@ -246,6 +247,8 @@ Recommended but open: RT should be blocked from setting `Selesai` and issuing `N
 | BRP-03 | Internal notes are never shown on the public portal. |
 | BRP-04 | Escalation does not automatically transfer RT ownership unless approved as a separate rule. |
 | BRP-05 | Every RW response records the actor and timestamp. |
+| BRP-06 | Each RW response is public or internal; public is the default, internal is never shown on the public portal. |
+| BRP-07 | RT remains the complaint owner and performs final closure; RW marks its part `Selesai RW`. |
 
 ### 8.3 Residents and kas
 
@@ -372,7 +375,8 @@ Append before the helper `ID` column:
 | `Lapor_Response_Log` | Central audit copy of RW responses |
 | `Outbox` | Pending writes, attempts, last error, next retry |
 | `KPI_Snapshot` | Daily or periodic aggregate metrics per RT |
-| `Audit_Log` | Actor, action, target, timestamp, result |
+| `Audit_Log` | Actor, action, target, timestamp, result; includes login and RW form submissions |
+| `Settings` | Non-secret operational parameters such as cache TTL, digest schedule, and retention |
 
 Credentials must not be stored in a sheet that ordinary spreadsheet viewers can read.
 
@@ -404,6 +408,8 @@ Credentials must not be stored in a sheet that ordinary spreadsheet viewers can 
 
 Performance thresholds should be revisited if any RT exceeds several thousand resident or kas rows, or if multiple RW admins work concurrently.
 
+Cache TTL, digest schedule, and retention must be configurable through the RW `Settings` sheet without redeploying the portal.
+
 ---
 
 ## 12. Security and privacy
@@ -420,10 +426,10 @@ Performance thresholds should be revisited if any RT exceeds several thousand re
 
 - Store RT credentials only in server-side Script Properties.
 - Use a dedicated `RW_TOKEN`, scoped to RW actions.
-- Mask NIK, phone numbers, and addresses for viewer roles if policy requires it.
+- Show full NIK, phone, and address to RW Admin. Mask them for RW Viewer; the feature is controlled by `RW_MASK_VIEWER` and defaults to enabled.
 - Log access to sensitive resident data and all exports.
 - Do not copy full resident or kas data into the RW spreadsheet.
-- Set retention rules for audit logs and snapshots.
+- Retain audit, login, RW decision/response, and snapshot records for 24 months, configurable from 12 to 36 months. RT letters, complaints, residents, and kas remain RT-owned and follow RT retention.
 
 ### 12.3 Integrity
 
@@ -458,7 +464,7 @@ Performance thresholds should be revisited if any RT exceeds several thousand re
 1. Back up each RT spreadsheet.
 2. Deploy the updated `code.gs` with new columns and RW actions.
 3. Run header-based migration to add RW fields.
-4. Mark historical letters as `Tidak Perlu` unless a different rule is approved.
+4. Mark all existing letters as `Tidak Perlu`; only letters created after cutover enter the RW queue.
 5. Set each RT's `RW_TOKEN`.
 6. Verify the RT app still works for existing workflows.
 7. Deploy to one pilot RT, then to the remaining RTs.
@@ -486,7 +492,7 @@ Performance thresholds should be revisited if any RT exceeds several thousand re
 
 | Phase | Scope | Estimate |
 |---|---|---|
-| 0 | Confirm open decisions, inventory 10 RTs, finalize rules | 2-4 days |
+| 0 | Confirm decisions (done 25 Oct 2026), inventory 10 RTs, finalize rules | 2-4 days |
 | 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks |
 | 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks |
 | 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks |
@@ -499,6 +505,8 @@ Indicative totals:
 - Full rollout with reporting and polish: 8-10 weeks.
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
+
+The Phase 0 decision gate is closed. Phase 1 can start once the remaining RT inventory and onboarding plan are agreed; only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -535,21 +543,39 @@ Estimates exclude organizational waiting time, Google verification, and content 
 
 ---
 
-## 18. Open decisions
+## 18. Decisions
 
-| ID | Decision | Recommended default |
+Resolved on 25 October 2026. These decisions are binding for Phase 1.
+
+| ID | Decision | Status |
 |---|---|---|
-| OD-01 | Does RW approval block RT from setting `Selesai` and issuing `No. Surat`? | Yes |
-| OD-02 | Can RT revise and resubmit after `Dikembalikan`? How many rounds? | Yes, with an agreed round limit |
-| OD-03 | Are RW complaint responses visible to residents or internal only? | Public by default, internal option available |
-| OD-04 | Who closes an escalated complaint: RT, RW, or both? | RT remains owner; RW marks its part complete |
-| OD-05 | Who are the RW users and what roles do they need? | RW admin and optional RW viewer |
-| OD-06 | Should all RW users see full NIK, phone, and address? | Full for RW admin, masked for viewer |
-| OD-07 | Is a 5-15 minute cache acceptable? | Yes, with live detail on demand |
-| OD-08 | Should old letters be grandfathered out of approval? | Yes, mark `Tidak Perlu` |
-| OD-09 | Are RW email notifications required? | Daily digest, optional |
-| OD-10 | What audit and snapshot retention period is required? | TBD |
-| OD-11 | Is an RW-level kas ledger needed later? | Out of scope for now |
+| OD-01 | RW approval is required before RT can set `Selesai` and save `No. Surat`. Records marked `Tidak Perlu` are exempt. | Resolved |
+| OD-02 | RT may revise and resubmit after `Dikembalikan`, with a maximum of 3 returns per request. After the third return, RW can only approve or reject. | Resolved |
+| OD-03 | Each RW complaint response has a public/internal toggle. Default is public; internal responses are never shown to residents. | Resolved |
+| OD-04 | RT remains the complaint owner and closes it; RW marks its part as `Selesai RW`. | Resolved |
+| OD-05 | Roles are `RW Admin` and optional `RW Viewer`. | Resolved |
+| OD-06 | RW Admin sees full NIK, phone, and address; RW Viewer sees masked values. | Resolved |
+| OD-07 | Dashboard cache is configurable, default 10 minutes. Any detail view always fetches live data. | Resolved |
+| OD-08 | Historical letters are marked `Tidak Perlu` during migration and excluded from the approval queue. | Resolved |
+| OD-09 | Daily digest is optional and parameterized by enablement, send hour, recipients, and timezone. Default is disabled. | Resolved |
+| OD-10 | Retain audit, login, RW decision/response, and snapshot records for 24 months. The value is configurable from 12 to 36 months. RT operational data remains RT-owned. | Resolved |
+| OD-11 | RW-level kas ledger is out of scope for this phase. | Resolved |
+
+### 18.1 Operational parameters
+
+Store non-secret values in the RW `Settings` sheet. Store credentials only in Script Properties.
+
+| Parameter | Default | Notes |
+|---|---|---|
+| `RW_CACHE_TTL_MINUTES` | 10 | 1-60 minutes; per-RT override allowed; detail views bypass the cache |
+| `RW_SURAT_MAX_ROUNDS` | 3 | Maximum returns before RW must approve or reject |
+| `RW_LAPOR_DEFAULT_VISIBILITY` | `Publik` | Per-response toggle; `Internal` is never public |
+| `RW_MASK_VIEWER` | `true` | Mask NIK, phone, and address for RW Viewer |
+| `RW_DIGEST_ENABLED` | `false` | Enable during pilot when needed |
+| `RW_DIGEST_HOUR` | `8` | 0-23 in the configured timezone |
+| `RW_DIGEST_RECIPIENTS` | empty | Comma-separated RW emails; empty means all active RW Admins |
+| `RW_TIMEZONE` | `Asia/Jakarta` | Used by digest and audit timestamps |
+| `RW_RETENTION_MONTHS` | `24` | Allowed range 12-36 |
 
 ---
 
@@ -566,17 +592,21 @@ Estimates exclude organizational waiting time, Google verification, and content 
 
 - A new eligible letter appears in the RW queue.
 - RW can approve it with a note, and the RT app shows the decision.
-- RW can return it with a required note, and RT can revise.
+- RW can return it with a required note, and RT can revise and resubmit.
+- RT cannot set `Selesai` or save `No. Surat` before approval; `Tidak Perlu` is exempt.
+- RW cannot return the same request more than 3 times.
 - A stale approval is rejected when the RT record changed.
 - Approval and rejection are recorded in the audit log.
-- Existing letters can be excluded from the queue by migration rule.
+- Historical letters are excluded from the queue as `Tidak Perlu` by migration rule.
 
 ### 19.3 Complaint handling
 
 - RW can read complaints and filter for those needing attention.
 - RW can append a response without overwriting the RT note.
+- Each response can be toggled public or internal; public is the default.
 - Public responses appear in the RT public status page.
 - Internal notes never appear publicly.
+- RT remains owner and closes the complaint; RW marks `Selesai RW`.
 - The response timeline and actor are recorded.
 
 ### 19.4 Operations
@@ -585,6 +615,9 @@ Estimates exclude organizational waiting time, Google verification, and content 
 - A failed RT write is queued and retried.
 - Tokens are not visible in the browser.
 - All RW pages require Cloudflare Access authentication.
+- RW Admin sees full sensitive fields; RW Viewer sees masked values.
+- Cache TTL, digest, and retention can be changed without redeploying the portal.
+- Audit and snapshot records are retained for 24 months and purged afterward.
 - Backups and restore steps are documented.
 
 ---
@@ -609,3 +642,4 @@ Estimates exclude organizational waiting time, Google verification, and content 
 | Version | Date | Author | Change |
 |---|---|---|---|
 | 0.1 | 24 October 2026 | Discussion draft | Initial BRD based on RW 06 requirements and architecture discussion |
+| 0.2 | 25 October 2026 | Discussion | Resolved OD-01 to OD-11; added operational parameters, approval gate, 3-return limit, visibility toggle, masking, digest, and 24-month retention |
