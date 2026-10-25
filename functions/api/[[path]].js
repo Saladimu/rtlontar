@@ -12,7 +12,7 @@
 // nilai default di bawah (deployment admin.rt017@gmail.com saat ini).
 
 const DEFAULT_APPS_SCRIPT_URL =
-  'https://script.google.com/macros/s/AKfycbxpKHBNpvDvUzAlKSzRT7eI0QpRsCRN1GabW33IM5V9eKSNH5s_cBFJpqIWlGaYfyRW/exec';
+  'https://script.google.com/macros/s/AKfycbzh-_GNCFPEC7QiOpq6iu1D4sRXEAU2-4mtMxrHmMvANLiBjCpL-dLlgK4sKPPuHGki/exec';
 
 export async function onRequest(context) {
   const { request, env } = context;

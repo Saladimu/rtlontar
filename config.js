@@ -18,7 +18,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '11',
+    version: '12',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
 
@@ -26,7 +26,7 @@ window.RT_CONFIG = {
     // Naikkan saat ada rilis/perubahan besar. Berbeda dari `version` (penanda
     // sinkronisasi config) dan `APP_BUILD` (penanda build HTML).
     appVersion: 'v1.0.0',
-    rt: '017',
+    rt: '018',
     rw: '06',
     kelurahan: 'Tanjung Duren Utara',
     kecamatan: 'Grogol Petamburan',
@@ -34,9 +34,9 @@ window.RT_CONFIG = {
     provinsi: 'DKI Jakarta',
 
     // Nama kawasan / jalan tempat RT berada. Hanya dipakai untuk tampilan.
-    alamatrt: 'Lontar Barat',
+    alamatrt: 'Lontar Timur',
     tahun: new Date().getFullYear(),
-    alamatContoh: 'Jl. Lontar Barat No. 06',
+    alamatContoh: 'Jl. Lontar Timur',
     lokasiContoh: 'Depan lapangan',
 
     // Contoh teks placeholder pada field No. Surat (admin). Token {rt}, {rw},
@@ -48,7 +48,7 @@ window.RT_CONFIG = {
     // Salin URL Web App (yang berakhiran /exec) di sini agar public.html dapat
     // diakses cukup lewat "public.html" tanpa parameter ?url=...
     // Kosongkan ('') untuk memakai parameter ?url=... (kompatibilitas lama).
-    publicApiUrl: 'https://script.google.com/macros/s/AKfycbxpKHBNpvDvUzAlKSzRT7eI0QpRsCRN1GabW33IM5V9eKSNH5s_cBFJpqIWlGaYfyRW/exec',
+    publicApiUrl: 'https://script.google.com/macros/s/AKfycbzh-_GNCFPEC7QiOpq6iu1D4sRXEAU2-4mtMxrHmMvANLiBjCpL-dLlgK4sKPPuHGki/exec',
 
     // Path proxy same-origin (Cloudflare Pages Function, lihat folder `functions/`).
     // Dipakai sebagai jalur utama request ke Apps Script supaya browser tidak
@@ -63,7 +63,7 @@ window.RT_CONFIG = {
     // sedangkan "/public" + aset publik di-bypass). Contoh:
     // https://sapa-rt017.pages.dev/public
     // Kosongkan ('') untuk memakai public.html lokal (atau ?url=... bila publicApiUrl kosong).
-    publicPortalUrl: 'https://sapa-rt017.pages.dev/public',
+    publicPortalUrl: 'https://sapa-rt018.pages.dev/public',
 
     // Daftar pilihan "Jenis Surat" pada fitur Pengajuan Surat. Dipakai oleh
     // index.html (admin) & public.html (form warga) agar seragam. Backend
