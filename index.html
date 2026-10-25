@@ -685,6 +685,14 @@
                             <option value="Selesai">Selesai</option>
                             <option value="Ditolak">Ditolak</option>
                         </select>
+                        <select id="filter-rw-surat" onchange="renderSuratTable()" title="Filter status persetujuan RW" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                            <option value="">Semua Status RW</option>
+                            <option value="Menunggu">Menunggu RW</option>
+                            <option value="Disetujui">Disetujui RW</option>
+                            <option value="Dikembalikan">Dikembalikan RW</option>
+                            <option value="Ditolak">Ditolak RW</option>
+                            <option value="Tidak Perlu">Tidak Perlu RW</option>
+                        </select>
                         <div class="relative w-full sm:w-64">
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                             <input type="text" id="search-surat" oninput="renderSuratTable()" placeholder="Cari nama / NIK / jenis surat..." class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none">
@@ -766,6 +774,13 @@
                             <option value="Diterima">Diterima</option>
                             <option value="Diproses">Diproses</option>
                             <option value="Selesai">Selesai</option>
+                        </select>
+                        <select id="filter-rw-lapor" onchange="renderLaporTable()" title="Filter status tindak lanjut RW" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="">Semua Status RW</option>
+                            <option value="Tidak Perlu">Tidak Perlu RW</option>
+                            <option value="Perlu Tindak Lanjut">Perlu Tindak Lanjut</option>
+                            <option value="Ditangani RW">Ditangani RW</option>
+                            <option value="Selesai RW">Selesai RW</option>
                         </select>
                         <div class="relative w-full sm:w-64">
                             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
@@ -1540,6 +1555,16 @@
                         </button>
                     </div>
                 </div>
+                <div id="surat-rw-panel" class="rounded-xl border border-cyan-200 bg-cyan-50 p-3 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs font-semibold text-cyan-800"><i class="fa-solid fa-shield-halved mr-1"></i>Persetujuan RW</p>
+                        <span id="surat-rw-badge"></span>
+                    </div>
+                    <p id="surat-rw-note" class="text-xs text-slate-700"></p>
+                    <p id="surat-rw-meta" class="text-xs text-slate-500"></p>
+                    <div id="surat-rw-warning" class="hidden text-xs text-amber-800 bg-amber-100 border border-amber-200 rounded-lg px-2 py-1.5"></div>
+                    <button type="button" id="surat-rw-resubmit" onclick="resubmitSuratRw()" class="hidden items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg"><i class="fa-solid fa-rotate-right"></i>Ajukan Ulang ke RW</button>
+                </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Status Pengurusan</label>
                     <select id="surat-status" onchange="updateSuratNoSuratReq(true)" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none">
@@ -1660,6 +1685,16 @@
                     <textarea id="lapor-admin-harapan" rows="2" maxlength="1000" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-teal-500 outline-none" placeholder="Opsional"></textarea>
                 </div>
                 <hr id="lapor-admin-harapan-divider" class="border-slate-200" style="margin:0.25rem 0">
+                <div id="lapor-rw-panel" class="rounded-xl border border-teal-200 bg-teal-50 p-3 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="text-xs font-semibold text-teal-800"><i class="fa-solid fa-shield-halved mr-1"></i>Tindak Lanjut RW</p>
+                        <span id="lapor-rw-badge"></span>
+                    </div>
+                    <p id="lapor-rw-note" class="text-xs text-slate-700"></p>
+                    <p id="lapor-rw-meta" class="text-xs text-slate-500"></p>
+                    <div id="lapor-rw-warning" class="hidden text-xs text-amber-800 bg-amber-100 border border-amber-200 rounded-lg px-2 py-1.5"></div>
+                    <button type="button" id="lapor-rw-escalate" onclick="escalateLaporRw()" class="hidden items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg"><i class="fa-solid fa-paper-plane"></i>Minta Tindak Lanjut RW</button>
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
@@ -2004,7 +2039,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-25-02';
+        const APP_BUILD = '2026-10-25-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2401,6 +2436,8 @@
             if (s) s.value = '';
             const st = document.getElementById('filter-status-surat');
             if (st) st.value = '';
+            const rw = document.getElementById('filter-rw-surat');
+            if (rw) rw.value = '';
             renderSuratTable();
         }
 
@@ -5047,14 +5084,79 @@
             return status === 'Selesai' || status === 'Ditolak';
         }
 
+        function currentSuratRwStatus() {
+            if (editMode.surat === null || editMode.surat === undefined) return 'Menunggu';
+            const idx = findIndexById(appState.surat, editMode.surat);
+            if (idx === -1) return 'Menunggu';
+            return appState.surat[idx].rwStatus || 'Tidak Perlu';
+        }
+
+        // Panel baca-saja keputusan RW pada modal surat. RT tidak dapat mengubah
+        // kolom RW; panel hanya menampilkan status, catatan, aktor, dan revisi.
+        function updateSuratRwPanel() {
+            const badge = document.getElementById('surat-rw-badge');
+            const note = document.getElementById('surat-rw-note');
+            const meta = document.getElementById('surat-rw-meta');
+            const warning = document.getElementById('surat-rw-warning');
+            const btn = document.getElementById('surat-rw-resubmit');
+            if (!badge) return;
+
+            if (editMode.surat === null || editMode.surat === undefined) {
+                badge.innerHTML = suratRwBadge('Menunggu');
+                note.textContent = 'Pengajuan baru akan dikirim ke RW untuk persetujuan. No. Surat dan status Selesai baru dapat diisi setelah disetujui.';
+                meta.textContent = '';
+                if (warning) warning.classList.add('hidden');
+                if (btn) { btn.classList.add('hidden'); btn.classList.remove('inline-flex'); }
+                return;
+            }
+
+            const idx = findIndexById(appState.surat, editMode.surat);
+            const item = idx !== -1 ? appState.surat[idx] : null;
+            const rw = (item && item.rwStatus) || 'Tidak Perlu';
+            const revisi = (item && Number(item.rwRevisi)) || 0;
+            badge.innerHTML = suratRwBadge(rw);
+
+            if (item && item.rwCatatan) note.textContent = 'Catatan RW: ' + item.rwCatatan;
+            else if (rw === 'Menunggu') note.textContent = 'Menunggu keputusan RW.';
+            else if (rw === 'Disetujui') note.textContent = 'Pengajuan disetujui RW. No. Surat dan status Selesai dapat diisi.';
+            else if (rw === 'Tidak Perlu') note.textContent = 'Pengajuan lama / tidak memerlukan persetujuan RW.';
+            else note.textContent = '';
+
+            const parts = [];
+            if (item && item.rwOleh) parts.push('Oleh: ' + item.rwOleh);
+            if (item && item.rwTanggal) parts.push('Tanggal: ' + fmtTimestamp(item.rwTanggal));
+            parts.push('Revisi: ' + revisi + '/3');
+            meta.textContent = parts.join(' \u00B7 ');
+
+            const blocked = !isSuratRwApprovedStatus(rw);
+            const maxed = (rw === 'Dikembalikan' || rw === 'Ditolak') && revisi >= 3;
+            if (warning) {
+                warning.classList.toggle('hidden', !blocked);
+                if (blocked) {
+                    warning.textContent = maxed
+                        ? 'Batas 3 keputusan negatif sudah tercapai. Buat pengajuan baru bila masih diperlukan.'
+                        : 'No. Surat dan status Selesai baru aktif setelah RW menyetujui pengajuan.';
+                }
+            }
+            const canResubmit = (rw === 'Dikembalikan' || rw === 'Ditolak') && revisi < 3;
+            if (btn) {
+                btn.classList.toggle('hidden', !canResubmit);
+                btn.classList.toggle('inline-flex', canResubmit);
+            }
+        }
+
         // Tandai field No. Surat sebagai wajib saat status pengurusan "Selesai".
         function updateSuratNoSuratReq(statusChanged) {
             const statusEl = document.getElementById('surat-status');
             const status = statusEl ? statusEl.value : '';
             const isSelesai = status === 'Selesai';
             const isTerminal = isSuratTerminalStatus(status);
+            const approved = isSuratRwApprovedStatus(currentSuratRwStatus());
             const mark = document.getElementById('surat-nosurat-req');
             if (mark) mark.classList.toggle('hidden', !isSelesai);
+            const noSuratEl = document.getElementById('surat-nosurat');
+            if (noSuratEl) noSuratEl.readOnly = !approved;
+            updateSuratRwPanel();
 
             // Tanggal akhir: tampil untuk Selesai/Ditolak dan terisi otomatis.
             const wrap = document.getElementById('surat-selesai-wrap');
@@ -5073,7 +5175,40 @@
             }
         }
 
-        // Tampilkan NIK tersamar pada daftar admin (mis. 3173••••••01).
+        // Ajukan ulang pengajuan yang Dikembalikan/Ditolak RW. Kolom RW hanya
+        // diubah oleh aksi server ini; perubahan isi harus disimpan lebih dulu.
+        function resubmitSuratRw() {
+            const id = editMode.surat;
+            if (!id) { showToast('Simpan pengajuan terlebih dahulu.', 'info'); return; }
+            const idx = findIndexById(appState.surat, id);
+            const item = idx !== -1 ? appState.surat[idx] : null;
+            if (!item) return;
+            const rw = item.rwStatus || 'Tidak Perlu';
+            const revisi = Number(item.rwRevisi) || 0;
+            if (!((rw === 'Dikembalikan' || rw === 'Ditolak') && revisi < 3)) {
+                showToast('Pengajuan ini tidak dapat diajukan ulang.', 'error');
+                return;
+            }
+            postToSheets({ action: 'resubmitSurat', id: id }, {
+                onSuccess: (res) => {
+                    item.rwStatus = 'Menunggu';
+                    item.rwKunci = '';
+                    item.rwVersi = (res && Number(res.rwVersi)) || ((Number(item.rwVersi) || 1) + 1);
+                    if (res && res.rwRevisi !== undefined) item.rwRevisi = Number(res.rwRevisi) || 0;
+                    saveLocalState();
+                    renderSuratTable();
+                    updateSuratRwPanel();
+                    showToast('Pengajuan diajukan ulang ke RW.', 'success');
+                },
+                onError: (reason, detail) => {
+                    if (detail && detail.code === 'unauthorized') {
+                        promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        return;
+                    }
+                    showToast((detail && detail.message) ? detail.message : 'Gagal mengajukan ulang ke RW.', 'error');
+                }
+            });
+        }
         function maskNik(nik) {
             const s = String(nik == null ? '' : nik).replace(/\D/g, '');
             if (s.length <= 6) return s || '-';
@@ -5203,6 +5338,27 @@
             };
             const cls = map[s] || 'bg-slate-100 text-slate-600';
             return `<span class="px-2.5 py-1 text-xs rounded-full font-medium ${cls}">${escAttr(s)}</span>`;
+        }
+
+        // Status persetujuan RW pada pengajuan surat (kolom terpisah dari status RT).
+        const SURAT_RW_STATUS_OPTIONS = ['Menunggu', 'Disetujui', 'Dikembalikan', 'Ditolak', 'Tidak Perlu'];
+        function suratRwBadge(status) {
+            const s = String(status || 'Tidak Perlu');
+            const map = {
+                'Menunggu': 'bg-blue-100 text-blue-700',
+                'Disetujui': 'bg-emerald-100 text-emerald-700',
+                'Dikembalikan': 'bg-amber-100 text-amber-700',
+                'Ditolak': 'bg-rose-100 text-rose-700',
+                'Tidak Perlu': 'bg-slate-100 text-slate-600'
+            };
+            const icon = s === 'Disetujui' ? 'fa-circle-check'
+                : s === 'Menunggu' ? 'fa-hourglass-half'
+                : s === 'Tidak Perlu' ? 'fa-circle-info'
+                : 'fa-circle-exclamation';
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full font-medium ${map[s] || 'bg-slate-100 text-slate-600'}"><i class="fa-solid ${icon}"></i>RW: ${escAttr(s)}</span>`;
+        }
+        function isSuratRwApprovedStatus(status) {
+            return status === 'Disetujui' || status === 'Tidak Perlu';
         }
 
         // Selisih hari kalender (UTC) antara dua tanggal ISO yyyy-MM-dd.
@@ -5490,6 +5646,11 @@
             if (!alamat) { showSuratFormError('Alamat / No. Rumah wajib diisi.', 'surat-alamat'); return; }
             if (!jenisSurat) { showSuratFormError('Jenis Surat wajib dipilih.', 'surat-jenis'); return; }
             if (keperluan.length < 3) { showSuratFormError('Keperluan / alasan pengajuan wajib diisi (minimal 3 karakter).', 'surat-keperluan'); return; }
+            const rwStatusNow = currentSuratRwStatus();
+            if (!isSuratRwApprovedStatus(rwStatusNow)) {
+                if (noSurat) { showSuratFormError('No. Surat hanya dapat diisi setelah RW menyetujui pengajuan.', 'surat-nosurat'); return; }
+                if (status === 'Selesai') { showSuratFormError('Status Selesai hanya dapat diatur setelah RW menyetujui pengajuan.', 'surat-status'); return; }
+            }
             if (status === 'Selesai' && !noSurat) {
                 showSuratFormError('No. Surat resmi wajib diisi sebelum menandai status Selesai.', 'surat-nosurat');
                 return;
@@ -5529,11 +5690,22 @@
             if (editMode.surat !== null) {
                 const editId = editMode.surat;
                 const idx = findIndexById(appState.surat, editId);
+                const prev = idx !== -1 ? appState.surat[idx] : null;
                 // Pertahankan status arsip saat edit (jangan sampai ter-unarchive).
                 const prevArsip = idx !== -1 ? (appState.surat[idx].arsip || 'Tidak') : 'Tidak';
                 data.arsip = prevArsip;
                 if (idx !== -1) {
-                    appState.surat[idx] = Object.assign({ _id: editId, waktu: appState.surat[idx].waktu }, data);
+                    const next = Object.assign({}, prev, data, { _id: editId, waktu: prev.waktu });
+                    // Samakan dengan server: perubahan isi membatalkan persetujuan RW.
+                    const changed = prev && ['nama', 'nik', 'noHp', 'alamat', 'jenisSurat', 'keperluan'].some(function (k) {
+                        return String(prev[k] == null ? '' : prev[k]) !== String(data[k] == null ? '' : data[k]);
+                    });
+                    if (next.rwStatus === 'Disetujui' && changed) {
+                        next.rwStatus = 'Menunggu';
+                        next.rwVersi = (Number(prev.rwVersi) || 1) + 1;
+                        next.rwKunci = '';
+                    }
+                    appState.surat[idx] = next;
                 }
                 editMode.surat = null;
                 saveLocalState();
@@ -5543,7 +5715,7 @@
             } else {
                 const id = makeSuratRef();
                 data.id = id;
-                appState.surat.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()) }, data));
+                appState.surat.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), rwStatus: 'Menunggu', rwCatatan: '', rwOleh: '', rwTanggal: '', rwRevisi: 0, rwVersi: 1 }, data));
                 saveLocalState();
                 renderSuratTable();
                 sendToGoogleSheets(data);
@@ -5602,6 +5774,12 @@
             const cur = list.indexOf(item.status);
             const next = list[(cur + 1) % list.length];
 
+            // Menandai "Selesai" memerlukan persetujuan RW.
+            if (next === 'Selesai' && !isSuratRwApprovedStatus(item.rwStatus || 'Tidak Perlu')) {
+                editSurat(index);
+                showSuratFormError('Status Selesai hanya dapat diatur setelah RW menyetujui pengajuan.', 'surat-status');
+                return;
+            }
             // Menandai "Selesai" memerlukan nomor surat resmi yang belum dipakai
             // pengajuan lain -> buka modal edit agar bisa langsung diperbaiki.
             if (next === 'Selesai') {
@@ -5727,23 +5905,26 @@
         function computeSuratFilter() {
             const searchEl = document.getElementById('search-surat');
             const filterEl = document.getElementById('filter-status-surat');
+            const filterRwEl = document.getElementById('filter-rw-surat');
             const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const filterStatus = filterEl ? filterEl.value : '';
+            const filterRw = filterRwEl ? filterRwEl.value : '';
             const matched = appState.surat.slice().reverse().filter(function (item) {
                 if (!suratMatchesPeriod(item)) return false;
-                const haystack = [item._id, item.nama, item.nik, maskNik(item.nik), item.noHp, waNumber(item.noHp), item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan, item.waktu, fmtTimestamp(item.waktu)]
+                const haystack = [item._id, item.nama, item.nik, maskNik(item.nik), item.noHp, waNumber(item.noHp), item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan, item.rwStatus, item.rwCatatan, item.rwOleh, item.waktu, fmtTimestamp(item.waktu)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || (item.status || 'Pending') === filterStatus;
-                return matchSearch && matchStatus;
+                const matchRw = filterRw === '' || (item.rwStatus || 'Tidak Perlu') === filterRw;
+                return matchSearch && matchStatus && matchRw;
             });
-            return { search: search, filterStatus: filterStatus, matched: matched };
+            return { search: search, filterStatus: filterStatus, filterRw: filterRw, matched: matched };
         }
 
         function renderSuratTable() {
             const tbody = document.getElementById('table-surat-body');
             if (!tbody) return;
-            const { search, filterStatus, matched } = computeSuratFilter();
+            const { search, filterStatus, filterRw, matched } = computeSuratFilter();
 
             tbody.innerHTML = '';
 
@@ -5763,7 +5944,7 @@
             const firstActivePos = archivedItems.length;
 
             // Perubahan pencarian/filter/periode/arsip mengembalikan ke halaman 1.
-            const filterSig = [search, filterStatus, suratView.mode, suratView.month, suratView.date, showArchivedSurat ? '1' : '0'].join('\u0001');
+            const filterSig = [search, filterStatus, filterRw, suratView.mode, suratView.month, suratView.date, showArchivedSurat ? '1' : '0'].join('\u0001');
             if (filterSig !== suratFilterSig) { suratFilterSig = filterSig; suratPage = 1; }
 
             const label = document.getElementById('surat-table-label');
@@ -5773,7 +5954,7 @@
             }
 
             if (filtered.length === 0) {
-                const anyFilter = search !== '' || filterStatus !== '' || (suratView.mode === 'month' && !!suratView.month) || (suratView.mode === 'date' && !!suratView.date);
+                const anyFilter = search !== '' || filterStatus !== '' || filterRw !== '' || (suratView.mode === 'month' && !!suratView.month) || (suratView.mode === 'date' && !!suratView.date);
                 let msg;
                 if (appState.surat.length === 0) {
                     msg = 'Belum ada pengajuan surat. Pengajuan dari Portal Publik akan tampil di sini.';
@@ -5850,6 +6031,8 @@
                         <div class="flex flex-col items-center gap-1">
                             ${suratStatusBadge(item.status)}
                             ${suratDurationHtml(item)}
+                            ${suratRwBadge(item.rwStatus)}
+                            ${(item.rwStatus === 'Dikembalikan' || item.rwStatus === 'Ditolak') && item.rwCatatan ? `<div class="text-[10px] text-slate-500 max-w-[10rem] truncate" title="${escAttr(item.rwCatatan)}">${escAttr(item.rwCatatan)}</div>` : ''}
                         </div>
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
@@ -5998,6 +6181,104 @@
             return '<span class="px-2.5 py-1 text-xs font-medium rounded-full ' + (map[s] || 'bg-slate-100 text-slate-700') + '">' + escAttr(s) + '</span>';
         }
 
+        // Status tindak lanjut RW pada pengaduan (kolom terpisah dari status RT).
+        const LAPOR_RW_STATUS_OPTIONS = ['Tidak Perlu', 'Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW'];
+        function laporRwBadge(status) {
+            const s = String(status || 'Tidak Perlu');
+            const map = {
+                'Tidak Perlu': 'bg-slate-100 text-slate-600',
+                'Perlu Tindak Lanjut': 'bg-amber-100 text-amber-700',
+                'Ditangani RW': 'bg-blue-100 text-blue-700',
+                'Selesai RW': 'bg-emerald-100 text-emerald-700'
+            };
+            const icon = s === 'Selesai RW' ? 'fa-circle-check'
+                : s === 'Ditangani RW' ? 'fa-user-gear'
+                : s === 'Perlu Tindak Lanjut' ? 'fa-hourglass-half'
+                : 'fa-circle-info';
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full font-medium ${map[s] || 'bg-slate-100 text-slate-600'}"><i class="fa-solid ${icon}"></i>RW: ${escAttr(s)}</span>`;
+        }
+
+        function currentLaporRwStatus() {
+            if (editMode.lapor === null || editMode.lapor === undefined) return 'Tidak Perlu';
+            const idx = findIndexById(appState.lapor, editMode.lapor);
+            if (idx === -1) return 'Tidak Perlu';
+            return appState.lapor[idx].rwStatus || 'Tidak Perlu';
+        }
+
+        // Panel tindak lanjut RW pada modal pengaduan. RT hanya dapat meminta
+        // tindak lanjut; catatan RW tetap milik RW dan tidak ditimpa RT.
+        function updateLaporRwPanel() {
+            const badge = document.getElementById('lapor-rw-badge');
+            const note = document.getElementById('lapor-rw-note');
+            const meta = document.getElementById('lapor-rw-meta');
+            const warning = document.getElementById('lapor-rw-warning');
+            const btn = document.getElementById('lapor-rw-escalate');
+            if (!badge) return;
+
+            if (editMode.lapor === null || editMode.lapor === undefined) {
+                badge.innerHTML = laporRwBadge('Tidak Perlu');
+                note.textContent = 'Pengaduan baru tidak otomatis dikirim ke RW. Gunakan tombol di bawah bila perlu tindak lanjut RW.';
+                meta.textContent = '';
+                if (warning) warning.classList.add('hidden');
+                if (btn) { btn.classList.add('hidden'); btn.classList.remove('inline-flex'); }
+                return;
+            }
+
+            const idx = findIndexById(appState.lapor, editMode.lapor);
+            const item = idx !== -1 ? appState.lapor[idx] : null;
+            const rw = (item && item.rwStatus) || 'Tidak Perlu';
+            badge.innerHTML = laporRwBadge(rw);
+            note.textContent = (item && item.catatan)
+                ? 'Catatan tindak lanjut terakhir: ' + item.catatan
+                : (rw === 'Tidak Perlu' ? 'Belum ada permintaan tindak lanjut ke RW.' : 'Belum ada tanggapan RW.');
+            const parts = [];
+            if (item && item.rwPetugas) parts.push('Oleh: ' + item.rwPetugas);
+            if (item && item.rwDiperbarui) parts.push('Diperbarui: ' + fmtTimestamp(item.rwDiperbarui));
+            meta.textContent = parts.join(' \u00B7 ');
+            if (warning) {
+                const msg = rw === 'Perlu Tindak Lanjut' ? 'Menunggu tanggapan RW.'
+                    : rw === 'Ditangani RW' ? 'RW sedang menangani pengaduan ini.'
+                    : rw === 'Selesai RW' ? 'Bagian RW sudah selesai. RT tetap menutup pengaduan.'
+                    : '';
+                warning.classList.toggle('hidden', !msg);
+                warning.textContent = msg;
+            }
+            const canEscalate = rw === 'Tidak Perlu';
+            if (btn) {
+                btn.classList.toggle('hidden', !canEscalate);
+                btn.classList.toggle('inline-flex', canEscalate);
+            }
+        }
+
+        function escalateLaporRw() {
+            const id = editMode.lapor;
+            if (!id) { showToast('Simpan pengaduan terlebih dahulu.', 'info'); return; }
+            const idx = findIndexById(appState.lapor, id);
+            const item = idx !== -1 ? appState.lapor[idx] : null;
+            if (!item) return;
+            if ((item.rwStatus || 'Tidak Perlu') !== 'Tidak Perlu') {
+                showToast('Pengaduan ini sudah diteruskan ke RW.', 'info');
+                return;
+            }
+            postToSheets({ action: 'laporEscalate', id: id }, {
+                onSuccess: (res) => {
+                    item.rwStatus = (res && res.rwStatus) || 'Perlu Tindak Lanjut';
+                    item.rwDiperbarui = (res && res.rwDiperbarui) || new Date().toISOString();
+                    saveLocalState();
+                    renderLaporTable();
+                    updateLaporRwPanel();
+                    showToast('Pengaduan diteruskan ke RW.', 'success');
+                },
+                onError: (reason, detail) => {
+                    if (detail && detail.code === 'unauthorized') {
+                        promptForAdminToken(detail.message || 'Token admin tidak valid atau belum diatur.');
+                        return;
+                    }
+                    showToast((detail && detail.message) ? detail.message : 'Gagal meneruskan ke RW.', 'error');
+                }
+            });
+        }
+
         function isArchivedLapor(item) {
             if (!item) return false;
             if (item.arsip === true) return true;
@@ -6065,9 +6346,11 @@
             const s = document.getElementById('search-lapor');
             const f = document.getElementById('filter-status-lapor');
             const m = document.getElementById('lapor-filter-month');
+            const rw = document.getElementById('filter-rw-lapor');
             if (s) s.value = '';
             if (f) f.value = '';
             if (m) m.value = '';
+            if (rw) rw.value = '';
             laporFilterMonth = '';
             localStorage.removeItem('rt_lapor_filter_month');
             renderLaporTable();
@@ -6246,6 +6529,7 @@
             const statusEl = document.getElementById('lapor-admin-status');
             if (statusEl) statusEl.value = 'Diterima';
             updateLaporTanggalSelesaiReq();
+            updateLaporRwPanel();
             const wrap = document.getElementById('lapor-tanggal-meta-wrap');
             if (wrap) wrap.classList.add('hidden');
             document.getElementById('modal-lapor-title').textContent = 'Catat Pengaduan';
@@ -6283,6 +6567,7 @@
             setDateInput('lapor-admin-tanggal-selesai', item.tanggalSelesai || '');
             document.getElementById('lapor-admin-catatan').value = item.catatan || '';
             updateLaporTanggalSelesaiReq();
+            updateLaporRwPanel();
             document.getElementById('btn-save-lapor').innerHTML = '<i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan';
             openModal('modal-lapor');
         }
@@ -6358,7 +6643,7 @@
                 // hilang dari record lokal setelah disimpan / saat edit dibuka lagi.
                 const localData = Object.assign({}, data, { catatan: catatan });
                 if (idx !== -1) {
-                    appState.lapor[idx] = Object.assign({ _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan, tanggalSelesai: tanggalSelesai }, localData);
+                    appState.lapor[idx] = Object.assign({}, prev, localData, { _id: editId, waktu: prev.waktu, noPengaduan: prev.noPengaduan, tanggalSelesai: tanggalSelesai });
                 }
                 editMode.lapor = null;
                 saveLocalState();
@@ -6369,7 +6654,7 @@
                 const id = makeLaporId();
                 data.id = id;
                 const localData = Object.assign({}, data, { catatan: catatan });
-                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '', tanggalSelesai: tanggalSelesai }, localData));
+                appState.lapor.push(Object.assign({ _id: id, waktu: fmtTimestamp(new Date()), noPengaduan: '', tanggalSelesai: tanggalSelesai, rwStatus: 'Tidak Perlu', rwPetugas: '', rwDiperbarui: '' }, localData));
                 saveLocalState();
                 renderLaporTable();
                 sendToGoogleSheets(data);
@@ -6971,28 +7256,31 @@
         function computeLaporFilter() {
             const searchEl = document.getElementById('search-lapor');
             const filterEl = document.getElementById('filter-status-lapor');
+            const filterRwEl = document.getElementById('filter-rw-lapor');
             const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const filterStatus = filterEl ? filterEl.value : '';
+            const filterRw = filterRwEl ? filterRwEl.value : '';
 
             const list = (appState.lapor || []).slice().reverse(); // terbaru dahulu
             const matched = list.filter(function (item) {
-                const haystack = [item._id, item.noPengaduan, item.nama, item.noHp, waNumber(item.noHp), item.alamat, item.jenisPengaduan, item.judul, item.detail, item.lokasi, item.status, item.petugas, item.catatan, item.waktu, fmtTimestamp(item.waktu)]
+                const haystack = [item._id, item.noPengaduan, item.nama, item.noHp, waNumber(item.noHp), item.alamat, item.jenisPengaduan, item.judul, item.detail, item.lokasi, item.status, item.petugas, item.catatan, item.rwStatus, item.rwPetugas, item.waktu, fmtTimestamp(item.waktu)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
                 const matchStatus = filterStatus === '' || (item.status || 'Diterima') === filterStatus;
-                return matchSearch && matchStatus && laporMatchesMonth(item);
+                const matchRw = filterRw === '' || (item.rwStatus || 'Tidak Perlu') === filterRw;
+                return matchSearch && matchStatus && matchRw && laporMatchesMonth(item);
             });
 
             const aktifItems = matched.filter(function (item) { return !isArchivedLapor(item); });
             const archivedItems = showArchivedLapor ? matched.filter(function (item) { return isArchivedLapor(item); }) : [];
             const filtered = showArchivedLapor ? archivedItems.concat(aktifItems) : aktifItems;
-            return { search, filterStatus, matched, aktifItems, archivedItems, filtered };
+            return { search, filterStatus, filterRw, matched, aktifItems, archivedItems, filtered };
         }
 
         function renderLaporTable() {
             const tbody = document.getElementById('table-lapor-body');
             if (!tbody) return;
-            const { search, filterStatus, aktifItems, archivedItems, filtered } = computeLaporFilter();
+            const { search, filterStatus, filterRw, aktifItems, archivedItems, filtered } = computeLaporFilter();
 
             tbody.innerHTML = '';
 
@@ -7007,7 +7295,7 @@
             const firstActivePos = archivedItems.length;
 
             // Perubahan pencarian/filter/bulan/arsip mengembalikan ke halaman 1.
-            const filterSig = [search, filterStatus, laporFilterMonth, showArchivedLapor ? '1' : '0'].join('\u0001');
+            const filterSig = [search, filterStatus, filterRw, laporFilterMonth, showArchivedLapor ? '1' : '0'].join('\u0001');
             if (filterSig !== laporFilterSig) { laporFilterSig = filterSig; laporPage = 1; }
 
             const label = document.getElementById('lapor-table-label');
@@ -7015,7 +7303,7 @@
                 + (laporFilterMonth ? ' - ' + laporMonthLabel() : '');
 
             if (filtered.length === 0) {
-                const anyFilter = search !== '' || filterStatus !== '' || laporFilterMonth !== '';
+                const anyFilter = search !== '' || filterStatus !== '' || filterRw !== '' || laporFilterMonth !== '';
                 let msg;
                 if ((appState.lapor || []).length === 0) {
                     msg = 'Belum ada pengaduan. Laporan dari Portal Publik akan tampil di sini.';
@@ -7091,6 +7379,8 @@
                         <div class="flex flex-col items-center gap-1">
                             ${laporStatusBadge(item.status)}
                             ${laporDurationHtml(item)}
+                            ${laporRwBadge(item.rwStatus)}
+                            ${item.rwStatus === 'Perlu Tindak Lanjut' ? '<div class="text-[10px] text-amber-700">Menunggu tanggapan RW</div>' : ''}
                         </div>
                     </td>
                     <td class="p-4 text-center whitespace-nowrap">
@@ -8312,13 +8602,16 @@
                 _id: r[r.length - 1], timestamp: r[0], namaKegiatan: r[1], tanggal: fmtDate(r[2]), waktu: fmtTime(r[3]), lokasi: r[4], pj: r[5], keterangan: r[6], publik: r[7]
             })));
             appState.surat = applyLocalDeletes('surat', (d.Pengajuan_Surat || []).map(r => ({
-                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9], tanggalSelesai: fmtDate(r[10]), arsip: r[11]
+                _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), nama: r[1], nik: r[2], noHp: r[3], alamat: r[4], jenisSurat: r[5], keperluan: r[6], status: r[7] || 'Pending', noSurat: r[8], catatan: r[9], tanggalSelesai: fmtDate(r[10]), arsip: r[11],
+                rwStatus: r[12] || 'Tidak Perlu', rwCatatan: r[13] || '', rwOleh: r[14] || '', rwTanggal: r[15] || '',
+                rwRevisi: Number(r[16]) || 0, rwVersi: Number(r[17]) || 1
             })));
             appState.lapor = applyLocalDeletes('lapor', (d.Lapor_Aspirasi || []).map(r => ({
                 _id: r[r.length - 1], waktu: fmtTimestamp(r[0]), noPengaduan: r[1], nama: r[2], noHp: r[3], alamat: r[4],
                 jenisPengaduan: r[5], judul: r[6], detail: r[7], lokasi: r[8], tanggalKejadian: fmtDate(r[9]),
                 foto: r[10], harapan: r[11], status: r[12] || 'Diterima', petugas: r[13], catatan: r[14],
-                tanggalSelesai: fmtDate(r[15]), arsip: r[16]
+                tanggalSelesai: fmtDate(r[15]), arsip: r[16],
+                rwStatus: r[17] || 'Tidak Perlu', rwPetugas: r[18] || '', rwDiperbarui: r[19] || ''
             })));
             saveLocalState();
             updateNewRecordNotes();
