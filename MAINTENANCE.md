@@ -197,6 +197,30 @@ node tools/check-deployment.js --live
 
 Do not skip step 8. Updating `code.gs` without creating a new deployment leaves the old backend running.
 
+### 6.1 RW 06 schema rollout (backend v35)
+
+Run this once per RT when adopting the RW 06 integration:
+
+1. Back up the spreadsheet (**File > Make a copy**) and note the current Apps Script deployment version.
+2. Deploy `code.gs` **publik-v35-2026-10-25** as a **New version**.
+3. In **Project Settings > Script Properties**, set:
+   - `RW_TOKEN` — a unique secret per RT, shared only with the RW orchestrator. Never reuse `ADMIN_TOKEN`, and do not give it to RT admins.
+   - `RT_ID` — optional, for example `RT018`, written to `Lapor_Tindak_Lanjut`.
+4. Open the admin dashboard once or call `action=read`, so `ensureRwSchema()` runs.
+5. Verify the migration:
+   - `Pengajuan_Surat` has 7 `Rw *` columns before `ID`; `Lapor_Aspirasi` has 4.
+   - `Lapor_Tindak_Lanjut` exists with 9 headers.
+   - Existing rows show `Rw Status=Tidak Perlu`.
+   - `rwCheck` returns `schemaMigrated:true` and `rwTokenConfigured:true`.
+6. Smoke test:
+   - Submit a new letter → `Rw Status=Menunggu`; `Selesai` is rejected until a `rwSuratDecision` approves it.
+   - Send `rwSuratDecision` with `Disetujui`, then set `Selesai` with a No. Surat.
+   - Send `Dikembalikan`, revise, then `resubmitSurat`; confirm `Rw Versi` increments and the third negative decision returns `max_negative`.
+   - Escalate a complaint with `laporEscalate`; send `rwLaporNote`; confirm the audit row and public/internal visibility.
+7. Repeat for RT018 first, then the remaining RTs. Never merge an RT branch back into `main`.
+
+If migration fails, restore the spreadsheet copy. The added columns are additive, so reverting the backend deployment leaves existing data readable.
+
 ---
 
 ## 7. Backup procedure
@@ -237,10 +261,11 @@ Do not skip step 8. Updating `code.gs` without creating a new deployment leaves 
 - Enforce 2FA on every Google account that owns a deployment.
 - Keep recovery codes in a password manager.
 - Use a different `ADMIN_TOKEN` for every RT.
+- Use a different `RW_TOKEN` for every RT and keep it separate from `ADMIN_TOKEN`; only the RW orchestrator/portal holds it.
 - Store tokens only in Script Properties and browser `localStorage`.
 - Review Cloudflare Access users monthly.
 - Revoke sessions immediately when an admin leaves.
-- Rotate `ADMIN_TOKEN` quarterly or after any suspected exposure.
+- Rotate `ADMIN_TOKEN` quarterly or after any suspected exposure; rotate `RW_TOKEN` when an RW operator leaves or a spoke is retired.
 - After token rotation, ask every admin to update the token in the dashboard.
 - Verify that `/` and `/index.html` require Access.
 - Verify that `/public`, `/public.html`, `/api`, `config.js`, `version.json`, icons, fonts, manifests, `sw.js`, and `qr-public.png` are bypassed.
@@ -328,7 +353,7 @@ The full functional test harness is external to the repository and must not hard
 
 - System owner: maintains the repository, deployments, tokens, backups, and this procedure.
 - RT admin: maintains residents, kas, announcements, activities, letters, and complaints.
-- RW 06: will use RT data read-only and approve letters after the RW phase is implemented.
+- RW 06: approves letters and responds to escalated complaints through the RW portal (Phase 4); RT data remains read-only outside the RW workflow columns. The RT admin UI for RW status/filter/panel is already available.
 
 Review this document quarterly and after every critical incident.
 
@@ -339,3 +364,4 @@ Review this document quarterly and after every critical incident.
 | Version | Date | Change |
 |---|---|---|
 | 1.0 | 25 October 2026 | Initial maintenance and release procedure |
+| 1.1 | 25 October 2026 | Added RW 06 schema rollout, `RW_TOKEN` rotation, and pilot verification steps |

@@ -12,7 +12,7 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - `Iuran_Kas`
    - `Pengumuman`
    - `Kegiatan_Warga`
-   - (Tab `Pengajuan_Surat` & `Lapor_Aspirasi` **dibuat otomatis** oleh script saat pertama dibaca/ditulis — opsional dibuat manual)
+   - (Tab `Pengajuan_Surat`, `Lapor_Aspirasi`, & `Lapor_Tindak_Lanjut` **dibuat otomatis** oleh script saat pertama dibaca/ditulis — opsional dibuat manual)
 3. Buka **Ekstensi > Apps Script** di Google Sheets
 4. Salin isi `code.gs` ke editor Apps Script
 5. Buka **Project Settings > Script Properties**, tambahkan properti:
@@ -21,6 +21,8 @@ File ini berisi kode backend untuk sistem SAPA RT (RT Tanjung Duren Utara). Kode
    - (Opsional) **Nama:** `PUBLIC_PORTAL_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, portal publik dianggap **aktif**. Nilai ini otomatis diubah lewat toggle di aplikasi.
    - (Opsional) **Nama:** `SURAT_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, fitur **Layanan Surat** dianggap **aktif**. Nilai ini otomatis diubah lewat toggle **Layanan Surat** di panel Portal Publik aplikasi (aksi `setSuratStatus`).
    - (Opsional) **Nama:** `LAPOR_ENABLED`, **Nilai:** `true`/`false`. Bila belum diatur, fitur **Lapor & Aspirasi** dianggap **aktif**. Nilai ini otomatis diubah lewat toggle **Lapor & Aspirasi** di panel Portal Publik aplikasi (aksi `setLaporStatus`).
+   - (Opsional, integrasi RW 06) **Nama:** `RW_TOKEN`, **Nilai:** token rahasia RW (berbeda dari `ADMIN_TOKEN`). Wajib diisi agar aksi `rwCheck`/`rwRead`/`rwSuratDecision`/`rwLaporNote` dapat dipakai portal RW. Bila kosong, semua aksi RW ditolak (`code:"rw_unauthorized"`). **Jangan bagikan nilai ini ke pengurus RT.**
+   - (Opsional, integrasi RW 06) **Nama:** `RT_ID`, **Nilai:** identitas RT pada audit trail `Lapor_Tindak_Lanjut` (mis. `RT017`). Bila kosong, kolom `RT ID` dibiarkan kosong.
     - (Opsional) **Nama:** `ADMIN_EMAIL`, **Nilai:** email admin (boleh beberapa, dipisah koma). Bila diisi, setiap **pengajuan surat** dan **pengaduan Lapor & Aspirasi** baru dari portal publik dikirimkan notifikasi email ke alamat ini (butuh izin `MailApp`). Bila kosong, tidak ada email — data tetap tersimpan. Dapat juga diisi/diubah dari **dashboard admin**: menu **Settings > Integrasi Google Sheets > Admin Email** (aksi `setAdminEmail`).
    - (Opsional) **Nama:** `NOTIF_SENDER_NAME`, **Nilai:** nama pengirim yang tampil di kotak masuk (From display name). Bila kosong, default **`Pengajuan surat`**.
    - (Opsional) **Nama:** `NOTIF_REPLY_TO`, **Nilai:** alamat **Reply-To** email notifikasi. Bila kosong, default memakai nilai `ADMIN_EMAIL` (balasan otomatis mengarah ke admin).
@@ -40,6 +42,16 @@ Karena Web App di-deploy sebagai **Anyone**, tanpa proteksi siapa pun yang tahu 
 - Token disimpan di **Script Properties** dengan key `ADMIN_TOKEN` dan **tidak** ditulis di dalam kode.
 - Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi otomatis **ditolak** (`code:"unauthorized"`).
 - Portal publik memakai `action=readPublic` yang **tanpa token** dan hanya mengembalikan `Pengumuman` & `Kegiatan_Warga` ber-`Publik=Ya`; `Data_Warga`, `Iuran_Kas`, `Pengajuan_Surat`, dan `Lapor_Aspirasi` tidak pernah dikirim keluar.
+
+### Token RW 06 (terpisah dari admin RT)
+
+Integrasi RW memakai **`RW_TOKEN`** yang **berbeda** dari `ADMIN_TOKEN`. Aksi RW (`rwCheck`, `rwRead`, `rwSuratDecision`, `rwLaporNote`) hanya menerima `RW_TOKEN`; token admin RT ditolak (`code:"rw_unauthorized"`). Sebaliknya, aksi admin RT (`read`, `add`, `update`, `delete`, `laporEscalate`, `resubmitSurat`) tetap hanya menerima `ADMIN_TOKEN`. Pemisahan ini mencegah portal RW mengubah data warga/kas/surat di luar kolom workflow RW.
+
+- **Kepemilikan data:** RT tetap menjadi *system of record*. RW hanya menulis kolom `Rw *` pada `Pengajuan_Surat`/`Lapor_Aspirasi` dan baris baru di `Lapor_Tindak_Lanjut`.
+- **Idempotensi:** setiap keputusan/tanggapan RW wajib menyertakan `kunci` minimal 6 karakter; pengiriman ulang dengan kunci sama mengembalikan `duplicate:true` tanpa menulis ulang.
+- **Konkurensi:** `rwSuratDecision` menerima `expectedVersi` dan `rwLaporNote` menerima `expectedDiperbarui`; bila data sudah berubah, server membalas `code:"stale"` agar portal memuat ulang.
+- **Masking:** backend mengirim data mentah untuk kebutuhan portal RW; penyamaran NIK/No. HP (4 digit terakhir) dan penyembunyian alamat adalah tanggung jawab portal RW (Phase 4).
+- **Retensi:** login/audit 12 bulan; keputusan, tanggapan, dan snapshot 24 bulan (dijalankan oleh orkestrator RW, bukan oleh `code.gs`).
 
 ### ON/OFF Portal Publik
 
@@ -135,10 +147,21 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 | Catatan Pengurus | String | (opsional, diisi pengurus) |
 | Tanggal Selesai | String | `yyyy-MM-dd` — tanggal akhir saat status `Selesai` **atau** `Ditolak`; dipakai untuk **membekukan durasi** (label UI menyesuaikan: Tanggal Selesai / Tanggal Ditolak). Kosong untuk status aktif atau data lama. |
 | Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengajuan dari daftar utama **dan** dari hasil `checkSurat` publik (tetap tersimpan, dapat dipulihkan) |
+| Rw Status | String | `Menunggu` / `Disetujui` / `Dikembalikan` / `Ditolak` / `Tidak Perlu` — status persetujuan RW (default pengajuan baru `Menunggu`) |
+| Rw Catatan | String | Catatan keputusan RW (wajib min. 3 karakter untuk `Dikembalikan`/`Ditolak`) |
+| Rw Oleh | String | Email/nama aktor RW yang memutuskan |
+| Rw Tanggal | DateTime | Waktu keputusan RW (`yyyy-MM-dd HH:mm`, GMT+7) |
+| Rw Revisi | Integer | Jumlah keputusan negatif (`Dikembalikan`/`Ditolak`); maksimal 3 |
+| Rw Versi | Integer | Versi workflow untuk kontrol konkurensi (`expectedVersi`) |
+| Rw Kunci | String | Kunci idempotensi keputusan RW terakhir |
 
 > Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan. Kolom **`Tanggal Selesai`** juga ditambahkan otomatis (sebelum `Diarsipkan`) saat backend baru pertama kali dijalankan; baris lama tidak diubah sehingga tampil `-` sampai tanggalnya dilengkapi lewat Edit. Kolom ini menyimpan **tanggal akhir** baik untuk pengajuan `Selesai` maupun `Ditolak`.
 >
-> **Aturan bisnis:** saat status diubah menjadi `Selesai`, server menolak simpan bila `No. Surat` kosong (`{result:"error", code:"invalid"}`). Warga dapat melihat `No. Surat` pada hasil `checkSurat` setelah surat selesai.
+> **Kolom RW** (7 kolom) disisipkan otomatis **sebelum** kolom bantu `ID` oleh `ensureRwSchema()` saat backend v35 pertama kali dijalankan. Migrasi berbasis **nama header**, idempoten, dan ditandai Script Property `RW_SCHEMA_MIGRATED=true`. Baris lama yang belum punya status RW diisi **`Tidak Perlu`** (riwayat), sehingga tidak memblokir pengajuan lama. Pengajuan baru selalu masuk dengan `Rw Status=Menunggu`.
+>
+> **Aturan bisnis:** saat status diubah menjadi `Selesai`, server menolak simpan bila `No. Surat` kosong (`{result:"error", code:"invalid"}`) **atau** pengajuan belum `Rw Status=Disetujui`. Warga dapat melihat `No. Surat` pada hasil `checkSurat` setelah surat selesai.
+>
+> **Perubahan konten oleh RT:** bila admin RT mengubah isi pengajuan (nama, NIK, HP, alamat, jenis surat, atau keperluan) saat `Rw Status=Disetujui`, server otomatis mengembalikan status RW ke `Menunggu` dan menaikkan `Rw Versi` agar RW meninjau ulang. Data RW lain dipertahankan; kolom RW **tidak** dapat diubah lewat aksi admin biasa.
 >
 > Saat dibaca (`readAllSheets`), kolom `Timestamp` tab ini diformat menjadi `yyyy-MM-dd HH:mm` (GMT+7) sebelum dikirim ke frontend, sehingga panel admin dapat menampilkannya sebagai `dd-Mmm-yyyy HH:mm`.
 >
@@ -167,12 +190,38 @@ Menampung pengaduan/aspirasi warga (fitur **Lapor & Aspirasi**). Tab ini **dibua
 | Catatan Tindak Lanjut | String | (opsional) |
 | Tanggal Penyelesaian | String | (opsional, `yyyy-MM-dd`) |
 | Diarsipkan | String | Ya / Tidak — `Ya` menyembunyikan pengaduan dari daftar utama **dan** hasil `checkLapor` (tetap tersimpan, dapat dipulihkan) |
+| Rw Status | String | `Tidak Perlu` / `Perlu Tindak Lanjut` / `Ditangani RW` / `Selesai RW` — status tindak lanjut RW (default pengaduan baru `Tidak Perlu`) |
+| Rw Petugas | String | Email/nama aktor RW yang menangani |
+| Rw Diperbarui | DateTime | Waktu tanggapan RW terakhir (`yyyy-MM-dd HH:mm`, GMT+7) |
+| Rw Kunci | String | Kunci idempotensi tanggapan RW terakhir |
 
 > Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan (format `ADU-<yyMMdd>-XXXX`).
+>
+> **Kolom RW** (4 kolom) disisipkan otomatis **sebelum** kolom bantu `ID` oleh migrasi yang sama. Pengaduan lama diisi `Tidak Perlu`; pengaduan baru juga `Tidak Perlu` sampai pengurus RT menekan **Minta Tindak Lanjut RW** (aksi admin `laporEscalate` → `Perlu Tindak Lanjut`).
+>
+> **Tanggapan RW** (`rwLaporNote`) menulis `Rw Status` (opsional `Ditangani RW`/`Selesai RW`), `Rw Petugas`, `Rw Diperbarui`, `Rw Kunci`, **dan** menambahkan baris audit di `Lapor_Tindak_Lanjut`. Bila `visibilitas=Publik`, catatan juga disalin ke kolom lama `Catatan Tindak Lanjut` agar tetap tampil di `checkLapor` publik; `visibilitas=Internal` hanya masuk audit trail. Admin RT tidak dapat mengubah kolom RW lewat edit biasa.
 >
 > **No. Pengaduan** dibuat otomatis dengan format **`ADU/<tahun>-<urut>`** (mis. `ADU/2026-001`) baik saat pengaduan dikirim warga maupun saat admin menambah baris manual tanpa nomor.
 >
 > **Foto** disimpan ke folder Drive (`LAPOR_FOLDER_ID` atau folder bernama `Lapor`); tautannya ditulis ke kolom `Foto`. Kegagalan unggah foto **tidak** membatalkan penyimpanan pengaduan.
+
+### 7. Tab `Lapor_Tindak_Lanjut` (dibuat otomatis)
+
+Audit trail tanggapan RW untuk pengaduan. Tab ini dibuat otomatis oleh `ensureRwSchema()` dan **tidak** ikut `readAllSheets` (admin RT) maupun `readPublic`. Portal RW membacanya lewat `rwRead` dengan filter `laporId`.
+
+| Kolom | Tipe | Contoh |
+|-------|------|--------|
+| ID | String | `TL-261025-AB12` |
+| Lapor ID | String | `ADU-261014-7K2M` (ID stabil pengaduan) |
+| RT ID | String | `RT018` (dari Script Property `RT_ID`, opsional) |
+| Aktor | String | `rw06@example.com` |
+| Peran | String | `RW` |
+| Catatan | String | Tanggapan/tindak lanjut |
+| Status | String | `Ditangani RW` / `Selesai RW` |
+| Visibilitas | String | `Publik` / `Internal` |
+| Waktu | DateTime | `yyyy-MM-dd HH:mm` (GMT+7) |
+
+> Tab ini **append-only**; tidak ada update/delete dari aplikasi. Retensi 24 bulan dikelola oleh orkestrator RW.
 
 ---
 
@@ -195,6 +244,8 @@ Menampung pengaduan/aspirasi warga (fitur **Lapor & Aspirasi**). Tab ini **dibua
 5. URL tetap sama, kode baru langsung aktif
 
 > ⚠️ **Penting:** Tanpa buat versi baru, Web App tetap menjalankan kode lama!
+>
+> **Migrasi skema RW (v35):** setelah deploy versi baru, buka dashboard admin **sekali** (login + muat data) **atau** panggil `action=read`/`version` agar `ensureRwSchema()` berjalan. Proses ini menambah kolom `Rw *` (surat 7, lapor 4) di depan kolom `ID`, membuat tab `Lapor_Tindak_Lanjut`, mengisi baris lama dengan `Tidak Perlu`, lalu menandai `RW_SCHEMA_MIGRATED=true`. Aman diulang dan tidak menghapus data. Setelah itu isi Script Property **`RW_TOKEN`** dan opsional **`RT_ID`**, lalu verifikasi lewat `rwCheck` (`rwTokenConfigured` & `schemaMigrated` harus `true`).
 >
 > Prosedur rilis lengkap (backup, kenaikan versi, rollback, pemeriksaan deployment) ada di `MAINTENANCE.md`.
 
@@ -321,6 +372,12 @@ Kirim JSON ke URL Web App (Content-Type: `text/plain` untuk CORS simple request)
 | `setSaldoAwal` | `{action:"setSaldoAwal", saldoAwal:1500000, token:T}` | Menyimpan saldo pembukaan kas ke Script Property `SALDO_AWAL`. Butuh token admin. Bila bukan angka / negatif → `{result:"error", code:"invalid"}`; sukses → `{result:"success", saldoAwal}`. Dipakai tombol pensil pada kartu **Saldo Awal** di panel Iuran & Kas (`index.html`) |
 | `submitSurat` | `{action:"submitSurat", nama, nik, noHp, alamat, jenisSurat, keperluan, ref?, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Pengajuan_Surat`. Server memaksa `Status="Pending"`, mengisi Timestamp & ID. NIK wajib 16 digit; `website` adalah honeypot; dibatasi ≤ 5 pengajuan/jam per NIK (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF. Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", id}` |
 | `submitLapor` | `{action:"submitLapor", noHp, jenisPengaduan, judul, detail, lokasi?, tanggalKejadian?, foto?, harapan?, setuju, website?}` | **Publik (tanpa token).** Hanya menambah baris baru di `Lapor_Aspirasi`. **No. HP wajib terdaftar** di `Data_Warga` (Nama & Alamat diambil dari sana, bukan dari klien); server memaksa `Status="Diterima"`, mengisi Timestamp, ID (`ADU-...`), & **No. Pengaduan** (`ADU/<tahun>-NNN`). `foto` (base64) opsional diunggah ke Drive; `website` honeypot; dibatasi ≤ 5/jam per No. HP (dan ≤ 60/jam total). Ditolak bila Portal Publik OFF atau No. HP tidak terdaftar (`{result:"error", code:"not_registered"}`). Bila `ADMIN_EMAIL` diatur, email notifikasi dikirim. Respons: `{result:"success", noPengaduan, id}` |
+| `laporEscalate` | `{action:"laporEscalate", id, token:T}` | **Admin RT.** Tandai pengaduan `Rw Status=Tidak Perlu` menjadi `Perlu Tindak Lanjut` agar muncul di portal RW. Bila status sudah bukan `Tidak Perlu`, respons `duplicate:true` (tidak menimpa). Dipakai tombol **Minta Tindak Lanjut RW** di `index.html` |
+| `resubmitSurat` | `{action:"resubmitSurat", id, token:T}` | **Admin RT.** Ajukan ulang pengajuan berstatus `Dikembalikan`/`Ditolak` setelah direvisi: `Rw Status=Menunggu`, `Rw Versi+1`, kunci idempotensi dikosongkan. Ditolak (`code:"max_negative"`) bila `Rw Revisi` sudah 3; `not_returned` bila status lain |
+| `rwCheck` | `{action:"rwCheck", token:RW}` | **Portal RW.** Status integrasi: `version`, `rtId`, `rwTokenConfigured`, `schemaMigrated`, `capabilities`, `suratMaxRevisi`, `sheets` |
+| `rwRead` | `{action:"rwRead", sheet:"Pengajuan_Surat"|..., token:RW, includeArchived?, status?, laporId?, limit?, offset?}` | **Portal RW.** Baca satu sheet (`Data_Warga`, `Iuran_Kas`, `Pengumuman`, `Kegiatan_Warga`, `Pengajuan_Surat`, `Lapor_Aspirasi`, `Lapor_Tindak_Lanjut`) dengan paginasi (default 500, maks. 2000). `status` memfilter status RW surat/lapor; `laporId` memfilter audit trail. Respons `{headers, rows, total, offset, limit, truncated}` |
+| `rwSuratDecision` | `{action:"rwSuratDecision", id, decision, catatan, aktor, kunci, expectedVersi?, token:RW}` | **Portal RW.** Putuskan pengajuan berstatus `Menunggu`: `Disetujui`/`Dikembalikan`/`Ditolak`. Catatan wajib (min. 3) untuk keputusan negatif; `kunci` min. 6; `expectedVersi` mencegah overwrite; `Dikembalikan`/`Ditolak` menaikkan `Rw Revisi` (maks. 3 → `max_negative`) |
+| `rwLaporNote` | `{action:"rwLaporNote", id, catatan, aktor, kunci, status?, visibilitas?, expectedDiperbarui?, token:RW}` | **Portal RW.** Kirim tanggapan/tindak lanjut pengaduan. `status` opsional `Ditangani RW`/`Selesai RW`; `visibilitas` `Publik`/`Internal`; menulis audit ke `Lapor_Tindak_Lanjut`. `expectedDiperbarui` mencegah overwrite (`stale`); `kunci` min. 6 |
 
 > **Catatan `submitSurat`:** dipakai halaman `public.html`. ID bisa berasal dari `ref` yang dikirim warga (bila formatnya aman & belum terpakai), atau dibuat otomatis dengan format `SRT-yyMMdd-XXXX`.
 
@@ -435,7 +492,17 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `isLaporEnabled()` / `setLaporEnabled(bool)` | Baca/tulis status fitur Lapor & Aspirasi di Script Property `LAPOR_ENABLED` (default aktif) |
 | `getSaldoAwal()` / `handleSetSaldoAwal(data)` | Baca/tulis saldo pembukaan kas di Script Property `SALDO_AWAL` (default `0`). Dipakai `readAllSheets()` (field `saldoAwal`) dan aksi admin `setSaldoAwal` |
 | `isAuthorized(token)` / `getAdminToken()` | Verifikasi token terhadap Script Property `ADMIN_TOKEN` (perbandingan konstan) |
-| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setSuratStatus` / `setLaporStatus` / `setAdminEmail` / `setSaldoAwal` (token) + `submitSurat` & `submitLapor` (publik) |
+| `doPost(e)` | Handler POST: `add` / `update` (by `id`) / `delete` (by `id`) / `setPortalStatus` / `setSuratStatus` / `setLaporStatus` / `setAdminEmail` / `setSaldoAwal` / `laporEscalate` / `resubmitSurat` (token admin) + `submitSurat` & `submitLapor` (publik) + `rwCheck` / `rwRead` / `rwSuratDecision` / `rwLaporNote` (token RW) |
+| `isRwAuthorized(token)` / `getRwToken()` | Verifikasi `RW_TOKEN` (terpisah dari `ADMIN_TOKEN`); token admin **tidak** berlaku untuk aksi RW |
+| `ensureRwSchema(ss)` | Migrasi sekali per spreadsheet: sisipkan kolom `Rw *` sebelum kolom `ID`, isi baris lama `Tidak Perlu`, buat `Lapor_Tindak_Lanjut`, set `RW_SCHEMA_MIGRATED=true`; idempoten |
+| `handleRwCheck()` | Aksi `rwCheck`: laporkan versi, `RT_ID`, status token/skema, daftar sheet yang boleh dibaca RW |
+| `handleRwRead(data)` | Aksi `rwRead`: baca satu sheet dengan whitelist, filter arsip/status RW/`laporId`, paginasi |
+| `handleRwSuratDecision(data)` | Aksi `rwSuratDecision`: validasi keputusan/catatan/aktor/kunci, cek versi & batas 3 keputusan negatif, tulis 7 kolom RW dengan lock |
+| `handleRwLaporNote(data)` | Aksi `rwLaporNote`: validasi catatan/aktor/kunci/visibilitas/status, tulis 4 kolom RW, salin catatan publik ke kolom lama, append audit `Lapor_Tindak_Lanjut` |
+| `handleLaporEscalate(data)` | Aksi admin `laporEscalate`: ubah `Rw Status` pengaduan `Tidak Perlu` menjadi `Perlu Tindak Lanjut` |
+| `handleResubmitSurat(data)` | Aksi admin `resubmitSurat`: kembalikan surat `Dikembalikan`/`Ditolak` ke `Menunggu` (versi+1, kunci dikosongkan), hormati batas 3 |
+| `mergeSuratRwForAdminUpdate(data, row)` / `mergeLaporRwForAdminUpdate(data, row)` | Pertahankan kolom RW saat admin RT menyimpan; untuk surat, perubahan konten saat `Disetujui` mengembalikan status ke `Menunggu` & menaikkan versi |
+| `appendLaporTimeline(...)` | Tambah baris audit `TL-<yyMMdd>-XXXX` ke `Lapor_Tindak_Lanjut` |
 | `handleSubmitSurat(data)` | Aksi publik `submitSurat`: validasi (NIK 16 digit, HP, field wajib), gate portal, honeypot, rate limit, simpan `Status=Pending` (+ `No. Surat` kosong), email admin |
 | `handleCheckSurat(params)` | Aksi publik `checkSurat`: cocokkan **NIK + No. HP** atau **No. Pengajuan (`ref`)**, kembalikan hanya `{ref, tanggal, jenisSurat, status, noSurat, catatan}`; baris `Diarsipkan=Ya` dilewati & dihitung ke field `archived` (tidak ditampilkan ke warga) |
 | `handleCheckSuratDuplicate(params)` | Aksi publik `checkSuratDuplicate`: cari pengajuan aktif dengan NIK+HP+jenis sama; kembalikan tanggal & keperluan (maks. 5) untuk peringatan form |
@@ -449,7 +516,7 @@ Frontend (index.html / public.html)      Google Apps Script                    G
 | `getLaporFolder()` | Ambil folder Drive `Lapor`: dari Script Property `LAPOR_FOLDER_ID`, atau cari berdasarkan nama, atau **buat otomatis** lalu bagikan ke `ADMIN_EMAIL` |
 | `authorizeDrive()` | Jalankan **sekali** dari editor (Run) untuk memicu izin scope Google Drive; sekaligus membuat folder `Lapor` |
 | `notifyAdminNewLapor(row)` | Email notifikasi pengaduan baru ke `ADMIN_EMAIL`; bila ada lampiran foto, email memuat baris **"Bukti pendukung : View foto"** dengan tautan ke foto Drive (gagal email tidak membatalkan simpan) |
-| `suratSaveError(sheetName, data)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` (dipakai jalur admin add/update) |
+| `suratSaveError(sheetName, data, rwStatus)` | Aturan bisnis: tolak simpan bila status `Selesai` tanpa `No. Surat` **atau** belum `Rw Status=Disetujui` (dipakai jalur admin add/update) |
 | `checkAndRecordSuratRate(nik)` | Rate limit berbasis Script Property `SURAT_RATE` (≤ 5/jam per NIK, ≤ 60/jam global) |
 | `checkAndRecordSuratCheckRate(key)` | Rate limit cek status di Script Property `SURAT_CHECK_RATE` (≤ 30/jam per NIK+HP, ≤ 300/jam global) |
 | `checkAndRecordLaporRate(hp)` | Rate limit pengaduan di Script Property `LAPOR_RATE` (≤ 5/jam per No. HP, ≤ 60/jam global) |
