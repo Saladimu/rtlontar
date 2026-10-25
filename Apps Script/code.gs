@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v34-2026-10-24";
+var CODE_VERSION = "publik-v35-2026-10-25";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -12,8 +12,8 @@ var EXPECTED_FIELDS = {
   "Iuran_Kas": 9,       // A Timestamp + 8 field (termasuk Diarsipkan & Reversal Dari)
   "Pengumuman": 7,      // A Timestamp + 6 field (termasuk Publik)
   "Kegiatan_Warga": 8,  // A Timestamp + 7 field (termasuk Publik)
-  "Pengajuan_Surat": 12, // A Timestamp + 11 field (termasuk Status, No. Surat, Catatan, Tanggal Selesai, & Diarsipkan)
-  "Lapor_Aspirasi": 17  // A Timestamp + 16 field (termasuk Status, Petugas, Catatan Tindak Lanjut, Tgl Penyelesaian, & Diarsipkan)
+  "Pengajuan_Surat": 19, // A Timestamp + 18 field (termasuk 7 field alur RW)
+  "Lapor_Aspirasi": 21  // A Timestamp + 20 field (termasuk 4 field alur RW)
 };
 
 // Header lengkap yang diharapkan (data + kolom bantu ID di paling kanan).
@@ -22,8 +22,9 @@ var DESIRED_HEADERS = {
   "Iuran_Kas": ["Timestamp", "Tanggal", "Nama Warga", "No Rumah", "Jenis Transaksi", "Jumlah (Rp)", "Keterangan", "Diarsipkan", "Reversal Dari", "ID"],
   "Pengumuman": ["Timestamp", "Tanggal", "Judul Pengumuman", "Isi Pengumuman", "Kategori", "Penanggung Jawab", "Publik", "ID"],
   "Kegiatan_Warga": ["Timestamp", "Nama Kegiatan", "Tanggal Pelaksanaan", "Waktu", "Lokasi", "Penanggung Jawab", "Keterangan", "Publik", "ID"],
-  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Tanggal Selesai", "Diarsipkan", "ID"],
-  "Lapor_Aspirasi": ["Timestamp", "No. Pengaduan", "Nama Warga", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Pengaduan", "Judul Pengaduan", "Detail Pengaduan", "Lokasi Kejadian", "Tanggal Kejadian", "Foto / Bukti Pendukung", "Harapan / Solusi", "Status", "Petugas / Pengurus", "Catatan Tindak Lanjut", "Tanggal Penyelesaian", "Diarsipkan", "ID"]
+  "Pengajuan_Surat": ["Timestamp", "Nama Lengkap Pemohon", "NIK", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Surat", "Keperluan / Alasan Pengajuan", "Status Pengurusan", "No. Surat", "Catatan Pengurus", "Tanggal Selesai", "Diarsipkan", "Rw Status", "Rw Catatan", "Rw Oleh", "Rw Tanggal", "Rw Revisi", "Rw Versi", "Rw Kunci", "ID"],
+  "Lapor_Aspirasi": ["Timestamp", "No. Pengaduan", "Nama Warga", "No. HP / WhatsApp", "Alamat / No. Rumah", "Jenis Pengaduan", "Judul Pengaduan", "Detail Pengaduan", "Lokasi Kejadian", "Tanggal Kejadian", "Foto / Bukti Pendukung", "Harapan / Solusi", "Status", "Petugas / Pengurus", "Catatan Tindak Lanjut", "Tanggal Penyelesaian", "Diarsipkan", "Rw Status", "Rw Petugas", "Rw Diperbarui", "Rw Kunci", "ID"],
+  "Lapor_Tindak_Lanjut": ["ID", "Lapor ID", "RT ID", "Aktor", "Peran", "Catatan", "Status", "Visibilitas", "Waktu"]
 };
 
 // Nilai default kolom Publik untuk baris lama saat migrasi.
@@ -34,6 +35,30 @@ var PUBLIK_INDEX = {
   "Pengumuman": 6,
   "Kegiatan_Warga": 7
 };
+
+// ================= ALUR PERSETUJUAN RW 06 =================
+// Indeks kolom 0-based (sebelum kolom bantu ID).
+var SURAT_RW_STATUS_COL = 12;
+var SURAT_RW_CATATAN_COL = 13;
+var SURAT_RW_OLEH_COL = 14;
+var SURAT_RW_TANGGAL_COL = 15;
+var SURAT_RW_REVISI_COL = 16;
+var SURAT_RW_VERSI_COL = 17;
+var SURAT_RW_KUNCI_COL = 18;
+
+var LAPOR_RW_STATUS_COL = 17;
+var LAPOR_RW_PETUGAS_COL = 18;
+var LAPOR_RW_DIPERBARUI_COL = 19;
+var LAPOR_RW_KUNCI_COL = 20;
+
+var SURAT_RW_STATUSES = ['Tidak Perlu', 'Menunggu', 'Disetujui', 'Dikembalikan', 'Ditolak'];
+var LAPOR_RW_STATUSES = ['Tidak Perlu', 'Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW'];
+var RW_DECISIONS = ['Disetujui', 'Dikembalikan', 'Ditolak'];
+var SURAT_RW_MAX_REVISI = 3;
+var RW_TOKEN_PROP = 'RW_TOKEN';
+var RT_ID_PROP = 'RT_ID';
+var RW_SCHEMA_FLAG_PROP = 'RW_SCHEMA_MIGRATED';
+var RW_READ_SHEETS = ['Data_Warga', 'Iuran_Kas', 'Pengumuman', 'Kegiatan_Warga', 'Pengajuan_Surat', 'Lapor_Aspirasi', 'Lapor_Tindak_Lanjut'];
 
 // ================= NOTIFIKASI EMAIL (dapat diubah lewat Script Properties) =================
 // Nama pengirim (From display name) notifikasi email pengajuan surat.
@@ -175,6 +200,59 @@ function unauthorized() {
     "code": "unauthorized",
     "message": "Token admin tidak valid atau belum diatur (Script Properties: ADMIN_TOKEN)."
   };
+}
+
+// ================= TOKEN & IDENTITAS RW =================
+// Token khusus aksi RW (terpisah dari ADMIN_TOKEN). Diatur di Script Properties
+// key "RW_TOKEN" dan hanya disimpan di server orkestrator RW.
+function getRwToken() {
+  return PropertiesService.getScriptProperties().getProperty(RW_TOKEN_PROP) || '';
+}
+
+function isRwAuthorized(token) {
+  var expected = getRwToken();
+  if (!expected) return false;
+  return safeEqual(token, expected);
+}
+
+function rwUnauthorized() {
+  return {
+    "result": "error",
+    "code": "rw_unauthorized",
+    "version": CODE_VERSION,
+    "message": "Token RW tidak valid atau belum diatur (Script Properties: RW_TOKEN)."
+  };
+}
+
+// ID RT untuk kolom "RT ID" pada Lapor_Tindak_Lanjut (opsional, key "RT_ID").
+function getRtId() {
+  var v = PropertiesService.getScriptProperties().getProperty(RT_ID_PROP);
+  return cleanStr(v, 40);
+}
+
+function normalizeSuratRwStatus(value, fallback) {
+  var s = cleanStr(value, 40);
+  return SURAT_RW_STATUSES.indexOf(s) === -1 ? (fallback || 'Tidak Perlu') : s;
+}
+
+function normalizeLaporRwStatus(value, fallback) {
+  var s = cleanStr(value, 40);
+  return LAPOR_RW_STATUSES.indexOf(s) === -1 ? (fallback || 'Tidak Perlu') : s;
+}
+
+function intAtLeast(value, min) {
+  var n = Number(value);
+  if (!isFinite(n)) return min;
+  n = Math.floor(n);
+  return n < min ? min : n;
+}
+
+function rwStamp(date) {
+  return Utilities.formatDate(date || new Date(), TZ, 'yyyy-MM-dd HH:mm');
+}
+
+function rwError(code, message) {
+  return { "result": "error", "code": code, "version": CODE_VERSION, "message": message };
 }
 
 // ================= STATUS PORTAL PUBLIK =================
@@ -344,7 +422,7 @@ function migrateLayout(sheet, name) {
 
   // Sheet yang layoutnya bisa berubah (mis. menyisipkan kolom baru di tengah):
   // susun ulang berdasarkan NAMA header. Aman & idempoten.
-  if (name === 'Data_Warga' || name === 'Pengajuan_Surat' || name === 'Iuran_Kas') {
+  if (name === 'Data_Warga' || name === 'Pengajuan_Surat' || name === 'Iuran_Kas' || name === 'Lapor_Aspirasi') {
     migrateLayoutByName(sheet, desired);
     return;
   }
@@ -538,14 +616,15 @@ var PUBLIC_FORMATS = {
 
 function readAllSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
   var names = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga", "Pengajuan_Surat", "Lapor_Aspirasi"];
   var formats = {
     "Data_Warga": { 7: "yyyy-MM-dd" },
     "Iuran_Kas": { 1: "yyyy-MM-dd" },
     "Pengumuman": { 1: "yyyy-MM-dd" },
     "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" },
-    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm", 10: "yyyy-MM-dd" },
-    "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd" }
+    "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm", 10: "yyyy-MM-dd", 15: "yyyy-MM-dd HH:mm" },
+    "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd", 19: "yyyy-MM-dd HH:mm" }
   };
   var data = {};
 
@@ -603,6 +682,400 @@ function readPublicSheets() {
   return { "result": "success", "version": CODE_VERSION, "portalEnabled": true, "laporEnabled": isLaporEnabled(), "suratEnabled": isSuratEnabled(), "data": data };
 }
 
+// ================= MIGRASI SKEMA RW 06 =================
+// Migrasi berbasis nama header: menambah kolom RW sebelum kolom bantu ID dan
+// menandai surat/pengaduan lama sebagai "Tidak Perlu" (riwayat). Dijalankan
+// sekali per spreadsheet (Script Property RW_SCHEMA_MIGRATED), aman diulang.
+function markBlankRwStatus(sheet, headerName, fallback) {
+  var last = sheet.getLastRow();
+  if (last < 2) return;
+  var width = sheet.getLastColumn();
+  if (width < 1) return;
+  var header = sheet.getRange(1, 1, 1, width).getValues()[0].map(function (h) {
+    return String(h === null || h === undefined ? '' : h).trim();
+  });
+  var idx = header.indexOf(headerName);
+  if (idx === -1) return;
+  var values = sheet.getRange(2, idx + 1, last - 1, 1).getValues();
+  var out = [];
+  var changed = false;
+  for (var i = 0; i < values.length; i++) {
+    var cur = values[i][0];
+    if (cur === '' || cur === null || cur === undefined) {
+      out.push([fallback]);
+      changed = true;
+    } else {
+      out.push([cur]);
+    }
+  }
+  if (changed) sheet.getRange(2, idx + 1, out.length, 1).setValues(out);
+}
+
+function ensureRwSchema(ss) {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(RW_SCHEMA_FLAG_PROP) === 'true') return false;
+
+  ['Pengajuan_Surat', 'Lapor_Aspirasi'].forEach(function (name) {
+    var sheet = getOrCreateSheet(ss, name);
+    if (!sheet) return;
+    ensureSpreadsheetFormat(ss, sheet, name);
+    markBlankRwStatus(sheet, 'Rw Status', 'Tidak Perlu');
+  });
+
+  getOrCreateSheet(ss, 'Lapor_Tindak_Lanjut');
+  props.setProperty(RW_SCHEMA_FLAG_PROP, 'true');
+  return true;
+}
+
+function ensureTimelineSheet(sheet) {
+  if (!sheet) return false;
+  var header = sheet.getRange(1, 1, 1, 9).getValues()[0];
+  if (String(header[0] === undefined || header[0] === null ? '' : header[0]).trim() !== 'ID') {
+    sheet.getRange(1, 1, 1, 9).setValues([DESIRED_HEADERS['Lapor_Tindak_Lanjut']]);
+  }
+  return true;
+}
+
+function appendLaporTimeline(ss, laporId, aktor, peran, catatan, status, visibilitas, waktu) {
+  var sheet = getOrCreateSheet(ss, 'Lapor_Tindak_Lanjut');
+  if (!ensureTimelineSheet(sheet)) return null;
+  var id = 'TL-' + Utilities.formatDate(new Date(), TZ, 'yyMMdd') + '-' + randomCode4();
+  sheet.appendRow([
+    id, laporId, getRtId(), aktor, peran, catatan, status, visibilitas, waktu || rwStamp()
+  ]);
+  return id;
+}
+
+function rwTimeCell(v) {
+  if (v instanceof Date) return rwStamp(v);
+  return cleanStr(v, 40);
+}
+
+// ================= ENDPOINT RW (token RW) =================
+var RW_FORMATS = {
+  "Data_Warga": { 7: "yyyy-MM-dd" },
+  "Iuran_Kas": { 1: "yyyy-MM-dd" },
+  "Pengumuman": { 1: "yyyy-MM-dd" },
+  "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" },
+  "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm", 10: "yyyy-MM-dd", 15: "yyyy-MM-dd HH:mm" },
+  "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd", 19: "yyyy-MM-dd HH:mm" },
+  "Lapor_Tindak_Lanjut": { 8: "yyyy-MM-dd HH:mm" }
+};
+
+function readRwSheet(ss, sheetName, includeArchived, statusFilter, laporIdFilter, limit, offset) {
+  var formats = RW_FORMATS[sheetName] || {};
+  var rows = [];
+  var headers = DESIRED_HEADERS[sheetName] || [];
+
+  if (sheetName === 'Lapor_Tindak_Lanjut') {
+    var tl = ss.getSheetByName('Lapor_Tindak_Lanjut');
+    if (tl && ensureTimelineSheet(tl) && tl.getLastRow() >= 2) {
+      rows = tl.getDataRange().getValues().slice(1);
+    }
+  } else {
+    var sheet = getOrCreateSheet(ss, sheetName);
+    if (sheet) {
+      ensureSpreadsheetFormat(ss, sheet, sheetName);
+      rows = ensureIds(sheet, sheetName);
+    }
+  }
+
+  rows = formatSheetRows(rows, formats);
+  var filtered = [];
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    if (sheetName === 'Pengajuan_Surat' && !includeArchived && isArsip(row[11])) continue;
+    if (sheetName === 'Lapor_Aspirasi' && !includeArchived && isArsip(row[16])) continue;
+    if (statusFilter) {
+      var st = (sheetName === 'Pengajuan_Surat') ? row[SURAT_RW_STATUS_COL]
+        : (sheetName === 'Lapor_Aspirasi') ? row[LAPOR_RW_STATUS_COL] : '';
+      if (String(st === null || st === undefined ? '' : st) !== statusFilter) continue;
+    }
+    if (laporIdFilter && sheetName === 'Lapor_Tindak_Lanjut') {
+      if (String(row[1] === null || row[1] === undefined ? '' : row[1]) !== laporIdFilter) continue;
+    }
+    filtered.push(row);
+  }
+
+  var total = filtered.length;
+  var start = offset > 0 ? offset : 0;
+  var page = filtered.slice(start, start + limit);
+  return { "headers": headers, "rows": page, "total": total, "offset": start, "limit": limit, "truncated": start + page.length < total };
+}
+
+function handleRwRead(data) {
+  var sheetName = cleanStr(data.sheet, 60);
+  if (RW_READ_SHEETS.indexOf(sheetName) === -1) {
+    return rwError('invalid_sheet', 'Sheet tidak diizinkan untuk RW: ' + sheetName);
+  }
+  var includeArchived = (data.includeArchived === true || String(data.includeArchived) === 'true');
+  var statusFilter = cleanStr(data.status, 40);
+  var laporIdFilter = cleanStr(data.laporId, 60);
+  var limit = (data.limit === undefined || data.limit === null || data.limit === '') ? 500 : intAtLeast(data.limit, 1);
+  if (limit > 2000) limit = 2000;
+  var offset = (data.offset === undefined || data.offset === null || data.offset === '') ? 0 : intAtLeast(data.offset, 0);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
+  var page = readRwSheet(ss, sheetName, includeArchived, statusFilter, laporIdFilter, limit, offset);
+  page.result = 'success';
+  page.version = CODE_VERSION;
+  page.sheet = sheetName;
+  return page;
+}
+
+function suratRwSnapshot(row) {
+  return {
+    "id": String(row[EXPECTED_FIELDS['Pengajuan_Surat']] === undefined ? '' : row[EXPECTED_FIELDS['Pengajuan_Surat']]),
+    "rwStatus": normalizeSuratRwStatus(row[SURAT_RW_STATUS_COL], 'Tidak Perlu'),
+    "rwCatatan": cleanStr(row[SURAT_RW_CATATAN_COL], 1000),
+    "rwOleh": cleanStr(row[SURAT_RW_OLEH_COL], 200),
+    "rwTanggal": rwTimeCell(row[SURAT_RW_TANGGAL_COL]),
+    "rwRevisi": intAtLeast(row[SURAT_RW_REVISI_COL], 0),
+    "rwVersi": intAtLeast(row[SURAT_RW_VERSI_COL], 1)
+  };
+}
+
+function handleRwSuratDecision(data) {
+  var id = cleanStr(data.id, 60);
+  var decision = cleanStr(data.decision, 30);
+  var catatan = cleanStr(data.catatan, 1000);
+  var aktor = cleanStr(data.aktor, 200);
+  var kunci = cleanStr(data.kunci, 120);
+  if (!id) return rwError('invalid', 'ID pengajuan wajib diisi.');
+  if (RW_DECISIONS.indexOf(decision) === -1) return rwError('invalid_decision', 'Keputusan RW tidak dikenal.');
+  if (decision !== 'Disetujui' && catatan.length < 3) {
+    return rwError('note_required', 'Catatan wajib diisi untuk keputusan ' + decision + '.');
+  }
+  if (!aktor) return rwError('actor_required', 'Aktor (email/nama) RW wajib diisi.');
+  if (kunci.length < 6) return rwError('idempotency_required', 'Kunci idempotensi wajib diisi (minimal 6 karakter).');
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
+  var sheet = ss.getSheetByName('Pengajuan_Surat');
+  if (!sheet) return rwError('not_found', 'Sheet Pengajuan_Surat tidak ditemukan.');
+  ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
+  ensureIds(sheet, 'Pengajuan_Surat');
+  var rowNum = findRowById(sheet, 'Pengajuan_Surat', id);
+  if (rowNum === -1) return rwError('not_found', 'Pengajuan tidak ditemukan: ' + id);
+
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try { locked = lock.tryLock(20000); } catch (e) { locked = false; }
+  try {
+    var row = sheet.getRange(rowNum, 1, 1, EXPECTED_FIELDS['Pengajuan_Surat'] + 1).getValues()[0];
+    var snapshot = suratRwSnapshot(row);
+    var curStatus = snapshot.rwStatus;
+    var curRevisi = snapshot.rwRevisi;
+    var curVersi = snapshot.rwVersi;
+    var curKunci = cleanStr(row[SURAT_RW_KUNCI_COL], 120);
+
+    if (curKunci && curKunci === kunci) {
+      snapshot.duplicate = true;
+      snapshot.result = 'success';
+      snapshot.version = CODE_VERSION;
+      return snapshot;
+    }
+    if (curStatus !== 'Menunggu') {
+      return rwError('not_pending', 'Pengajuan tidak dalam status Menunggu (saat ini: ' + curStatus + ').');
+    }
+    if (data.expectedVersi !== undefined && data.expectedVersi !== null && data.expectedVersi !== '' &&
+        Number(data.expectedVersi) !== curVersi) {
+      return rwError('stale', 'Pengajuan sudah berubah sejak dibaca. Muat ulang data sebelum memutuskan.');
+    }
+    if (decision !== 'Disetujui' && curRevisi >= SURAT_RW_MAX_REVISI) {
+      return rwError('max_negative', 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai.');
+    }
+
+    var now = new Date();
+    var newRevisi = (decision === 'Disetujui') ? curRevisi : curRevisi + 1;
+    var newVersi = curVersi + 1;
+    sheet.getRange(rowNum, SURAT_RW_STATUS_COL + 1, 1, 7).setValues([[
+      decision,
+      catatan,
+      aktor,
+      rwStamp(now),
+      newRevisi,
+      newVersi,
+      kunci
+    ]]);
+
+    return {
+      "result": "success",
+      "version": CODE_VERSION,
+      "id": id,
+      "rwStatus": decision,
+      "rwCatatan": catatan,
+      "rwOleh": aktor,
+      "rwTanggal": rwStamp(now),
+      "rwRevisi": newRevisi,
+      "rwVersi": newVersi
+    };
+  } finally {
+    if (locked) { try { lock.releaseLock(); } catch (e2) { /* abaikan */ } }
+  }
+}
+
+function laporRwSnapshot(row) {
+  return {
+    "id": String(row[EXPECTED_FIELDS['Lapor_Aspirasi']] === undefined ? '' : row[EXPECTED_FIELDS['Lapor_Aspirasi']]),
+    "rwStatus": normalizeLaporRwStatus(row[LAPOR_RW_STATUS_COL], 'Tidak Perlu'),
+    "rwPetugas": cleanStr(row[LAPOR_RW_PETUGAS_COL], 100),
+    "rwDiperbarui": rwTimeCell(row[LAPOR_RW_DIPERBARUI_COL])
+  };
+}
+
+function handleRwLaporNote(data) {
+  var id = cleanStr(data.id, 60);
+  var catatan = cleanStr(data.catatan, 1000);
+  var aktor = cleanStr(data.aktor, 200);
+  var kunci = cleanStr(data.kunci, 120);
+  var visibilitas = cleanStr(data.visibilitas, 20) || 'Publik';
+  var status = cleanStr(data.status, 40);
+  if (!id) return rwError('invalid', 'ID pengaduan wajib diisi.');
+  if (catatan.length < 3) return rwError('note_required', 'Catatan tindak lanjut wajib diisi (minimal 3 karakter).');
+  if (!aktor) return rwError('actor_required', 'Aktor (email/nama) RW wajib diisi.');
+  if (kunci.length < 6) return rwError('idempotency_required', 'Kunci idempotensi wajib diisi (minimal 6 karakter).');
+  if (visibilitas !== 'Publik' && visibilitas !== 'Internal') {
+    return rwError('invalid_visibility', 'Visibilitas harus Publik atau Internal.');
+  }
+  if (status && ['Ditangani RW', 'Selesai RW'].indexOf(status) === -1) {
+    return rwError('invalid_status', 'Status RW harus Ditangani RW atau Selesai RW.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
+  var sheet = ss.getSheetByName('Lapor_Aspirasi');
+  if (!sheet) return rwError('not_found', 'Sheet Lapor_Aspirasi tidak ditemukan.');
+  ensureSpreadsheetFormat(ss, sheet, 'Lapor_Aspirasi');
+  ensureIds(sheet, 'Lapor_Aspirasi');
+  var rowNum = findRowById(sheet, 'Lapor_Aspirasi', id);
+  if (rowNum === -1) return rwError('not_found', 'Pengaduan tidak ditemukan: ' + id);
+
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try { locked = lock.tryLock(20000); } catch (e) { locked = false; }
+  try {
+    var row = sheet.getRange(rowNum, 1, 1, EXPECTED_FIELDS['Lapor_Aspirasi'] + 1).getValues()[0];
+    var snapshot = laporRwSnapshot(row);
+    var curKunci = cleanStr(row[LAPOR_RW_KUNCI_COL], 120);
+    if (curKunci && curKunci === kunci) {
+      snapshot.duplicate = true;
+      snapshot.result = 'success';
+      snapshot.version = CODE_VERSION;
+      return snapshot;
+    }
+    if (data.expectedDiperbarui !== undefined && data.expectedDiperbarui !== null && data.expectedDiperbarui !== '' &&
+        String(data.expectedDiperbarui) !== String(snapshot.rwDiperbarui)) {
+      return rwError('stale', 'Pengaduan sudah berubah sejak dibaca. Muat ulang data sebelum mengirim tanggapan.');
+    }
+
+    var newStatus = status || snapshot.rwStatus;
+    if (!status) {
+      if (snapshot.rwStatus === 'Tidak Perlu' || snapshot.rwStatus === 'Perlu Tindak Lanjut') newStatus = 'Ditangani RW';
+    }
+    var now = new Date();
+    var stamp = rwStamp(now);
+
+    sheet.getRange(rowNum, LAPOR_RW_STATUS_COL + 1, 1, 4).setValues([[
+      newStatus, aktor, stamp, kunci
+    ]]);
+    if (visibilitas === 'Publik') {
+      // Backward compatibility: portal publik membaca kolom Catatan Tindak Lanjut.
+      sheet.getRange(rowNum, 15).setValue(catatan);
+    }
+
+    var timelineId = appendLaporTimeline(ss, id, aktor, 'RW', catatan, newStatus, visibilitas, stamp);
+
+    return {
+      "result": "success",
+      "version": CODE_VERSION,
+      "id": id,
+      "timelineId": timelineId,
+      "rwStatus": newStatus,
+      "rwPetugas": aktor,
+      "rwDiperbarui": stamp,
+      "visibilitas": visibilitas
+    };
+  } finally {
+    if (locked) { try { lock.releaseLock(); } catch (e2) { /* abaikan */ } }
+  }
+}
+
+function handleRwCheck() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var migrated = false;
+  try {
+    ensureRwSchema(ss);
+    migrated = PropertiesService.getScriptProperties().getProperty(RW_SCHEMA_FLAG_PROP) === 'true';
+  } catch (e) { migrated = false; }
+  return {
+    "result": "success",
+    "version": CODE_VERSION,
+    "rtId": getRtId(),
+    "rwTokenConfigured": !!getRwToken(),
+    "schemaMigrated": migrated,
+    "capabilities": ['rwRead', 'rwSuratDecision', 'rwLaporNote', 'rwCheck'],
+    "suratMaxRevisi": SURAT_RW_MAX_REVISI,
+    "sheets": RW_READ_SHEETS.slice()
+  };
+}
+
+// Aksi admin RT: tandai pengaduan perlu tindak lanjut RW.
+function handleLaporEscalate(data) {
+  if (!isAuthorized(data.token)) return unauthorized();
+  var id = cleanStr(data.id, 60);
+  if (!id) return { "result": "error", "code": "invalid", "message": 'ID pengaduan wajib diisi.' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
+  var sheet = ss.getSheetByName('Lapor_Aspirasi');
+  if (!sheet) return { "result": "error", "code": "not_found", "message": 'Sheet Lapor_Aspirasi tidak ditemukan.' };
+  ensureSpreadsheetFormat(ss, sheet, 'Lapor_Aspirasi');
+  var rowNum = findRowById(sheet, 'Lapor_Aspirasi', id);
+  if (rowNum === -1) return { "result": "error", "code": "not_found", "message": 'Pengaduan tidak ditemukan: ' + id };
+
+  var row = sheet.getRange(rowNum, 1, 1, EXPECTED_FIELDS['Lapor_Aspirasi'] + 1).getValues()[0];
+  var cur = normalizeLaporRwStatus(row[LAPOR_RW_STATUS_COL], 'Tidak Perlu');
+  if (cur !== 'Tidak Perlu') {
+    return { "result": "success", "id": id, "rwStatus": cur, "duplicate": true };
+  }
+  var stamp = rwStamp();
+  sheet.getRange(rowNum, LAPOR_RW_STATUS_COL + 1, 1, 2).setValues([['Perlu Tindak Lanjut', stamp]]);
+  return { "result": "success", "id": id, "rwStatus": 'Perlu Tindak Lanjut', "rwDiperbarui": stamp };
+}
+
+// Aksi admin RT: ajukan kembali surat yang Dikembalikan/Ditolak setelah direvisi.
+function handleResubmitSurat(data) {
+  if (!isAuthorized(data.token)) return unauthorized();
+  var id = cleanStr(data.id, 60);
+  if (!id) return { "result": "error", "code": "invalid", "message": 'ID pengajuan wajib diisi.' };
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
+  var sheet = ss.getSheetByName('Pengajuan_Surat');
+  if (!sheet) return { "result": "error", "code": "not_found", "message": 'Sheet Pengajuan_Surat tidak ditemukan.' };
+  ensureSpreadsheetFormat(ss, sheet, 'Pengajuan_Surat');
+  var rowNum = findRowById(sheet, 'Pengajuan_Surat', id);
+  if (rowNum === -1) return { "result": "error", "code": "not_found", "message": 'Pengajuan tidak ditemukan: ' + id };
+
+  var row = sheet.getRange(rowNum, 1, 1, EXPECTED_FIELDS['Pengajuan_Surat'] + 1).getValues()[0];
+  var cur = normalizeSuratRwStatus(row[SURAT_RW_STATUS_COL], 'Tidak Perlu');
+  var revisi = intAtLeast(row[SURAT_RW_REVISI_COL], 0);
+  var versi = intAtLeast(row[SURAT_RW_VERSI_COL], 1);
+  if (cur === 'Menunggu') {
+    return { "result": "success", "id": id, "rwStatus": 'Menunggu', "duplicate": true };
+  }
+  if (cur !== 'Dikembalikan' && cur !== 'Ditolak') {
+    return { "result": "error", "code": "not_returned", "message": 'Pengajuan tidak berstatus Dikembalikan/Ditolak (saat ini: ' + cur + ').' };
+  }
+  if (revisi >= SURAT_RW_MAX_REVISI) {
+    return { "result": "error", "code": "max_negative", "message": 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai. Buat pengajuan baru.' };
+  }
+  sheet.getRange(rowNum, SURAT_RW_STATUS_COL + 1, 1, 1).setValue('Menunggu');
+  sheet.getRange(rowNum, SURAT_RW_VERSI_COL + 1, 1, 1).setValue(versi + 1);
+  sheet.getRange(rowNum, SURAT_RW_KUNCI_COL + 1, 1, 1).setValue('');
+  return { "result": "success", "id": id, "rwStatus": 'Menunggu', "rwRevisi": revisi, "rwVersi": versi + 1 };
+}
+
 function doPost(e) {
   try {
     var raw = null;
@@ -617,6 +1090,20 @@ function doPost(e) {
     }
 
     var data = JSON.parse(raw);
+
+    // ===== Aksi RW 06 (token RW, terpisah dari ADMIN_TOKEN) =====
+    if (data.action === 'rwCheck' || data.action === 'rwRead' ||
+        data.action === 'rwSuratDecision' || data.action === 'rwLaporNote') {
+      if (!isRwAuthorized(data.token)) return respond(rwUnauthorized());
+      if (data.action === 'rwCheck') return respond(handleRwCheck());
+      if (data.action === 'rwRead') return respond(handleRwRead(data));
+      if (data.action === 'rwSuratDecision') return respond(handleRwSuratDecision(data));
+      return respond(handleRwLaporNote(data));
+    }
+
+    // Aksi admin RT: eskalasi pengaduan ke RW & ajukan ulang surat yang dikembalikan.
+    if (data.action === 'laporEscalate') return respond(handleLaporEscalate(data));
+    if (data.action === 'resubmitSurat') return respond(handleResubmitSurat(data));
 
     // Aksi khusus: mengubah status ON/OFF portal publik (butuh token admin).
     if (data.action === 'setPortalStatus') {
@@ -682,6 +1169,7 @@ function doPost(e) {
     }
 
     var ss = SpreadsheetApp.getActiveSpreadsheet();
+    ensureRwSchema(ss);
     var sheet = getOrCreateSheet(ss, sheetName);
 
     if (!sheet) {
@@ -690,24 +1178,40 @@ function doPost(e) {
 
     ensureSpreadsheetFormat(ss, sheet, sheetName);
 
-    // Aturan bisnis khusus Pengajuan_Surat: status "Selesai" wajib punya No. Surat.
-    var suratErrMsg = suratSaveError(sheetName, data);
-    if (suratErrMsg) {
-      return respond({ "result": "error", "code": "invalid", "message": suratErrMsg });
-    }
-
     // UPDATE: perbarui baris yang sudah ada berdasarkan ID stabil (JANGAN tambah baris baru).
     if (data.action === "update") {
       var updRow = findRowById(sheet, sheetName, data.id);
       if (updRow === -1) {
         return respond({ "result": "error", "message": "ID tidak ditemukan: " + data.id });
       }
-      var existingTs = sheet.getRange(updRow, 1).getValue(); // pertahankan Timestamp asli
-      var existingId = sheet.getRange(updRow, EXPECTED_FIELDS[sheetName] + 1).getValue(); // pertahankan ID
+      var existingRow = sheet.getRange(updRow, 1, 1, EXPECTED_FIELDS[sheetName] + 1).getValues()[0];
+      // Kolom RW hanya boleh diubah oleh endpoint RW (atau aksi eskalasi/ajukan ulang).
+      // Saat admin RT menyimpan, nilai RW yang ada dipertahankan.
+      if (sheetName === 'Pengajuan_Surat') {
+        mergeSuratRwForAdminUpdate(data, existingRow);
+      } else if (sheetName === 'Lapor_Aspirasi') {
+        mergeLaporRwForAdminUpdate(data, existingRow);
+      }
+      var suratErrMsg = suratSaveError(sheetName, data,
+        sheetName === 'Pengajuan_Surat' ? existingRow[SURAT_RW_STATUS_COL] : null);
+      if (suratErrMsg) {
+        return respond({ "result": "error", "code": "invalid", "message": suratErrMsg });
+      }
+      var existingTs = existingRow[0]; // pertahankan Timestamp asli
+      var existingId = existingRow[EXPECTED_FIELDS[sheetName]]; // pertahankan ID
       var updRowData = buildRowData(sheetName, data, existingTs, existingId);
       sheet.getRange(updRow, 1, 1, updRowData.length).setValues([updRowData]);
       sheet.getRange(updRow, 1).setNumberFormat(TS_FORMAT);
       return respond({ "result": "success", "message": "Row updated" });
+    }
+
+    // ADD: baris baru selalu masuk antrean RW (surat: Menunggu, pengaduan: Tidak Perlu).
+    if (sheetName === 'Pengajuan_Surat' || sheetName === 'Lapor_Aspirasi') {
+      data.rwStatus = (sheetName === 'Pengajuan_Surat') ? 'Menunggu' : 'Tidak Perlu';
+      var addSuratErr = suratSaveError(sheetName, data, data.rwStatus);
+      if (addSuratErr) {
+        return respond({ "result": "error", "code": "invalid", "message": addSuratErr });
+      }
     }
 
     // DELETE: hapus baris berdasarkan ID stabil.
@@ -766,7 +1270,14 @@ function buildRowData(sheetName, data, timestamp, id) {
       data.nama, data.nik, data.noHp, data.alamat,
       data.jenisSurat, data.keperluan,
       data.status || "Pending", data.noSurat || "", data.catatan || "",
-      data.tanggalSelesai || "", normalizeArsip(data.arsip)
+      data.tanggalSelesai || "", normalizeArsip(data.arsip),
+      normalizeSuratRwStatus(data.rwStatus, 'Menunggu'),
+      cleanStr(data.rwCatatan, 1000),
+      cleanStr(data.rwOleh, 200),
+      rwTimeCell(data.rwTanggal),
+      intAtLeast(data.rwRevisi, 0),
+      intAtLeast(data.rwVersi, 1),
+      cleanStr(data.rwKunci, 120)
     );
   } else if (sheetName === "Lapor_Aspirasi") {
     rowData.push(
@@ -775,7 +1286,11 @@ function buildRowData(sheetName, data, timestamp, id) {
       data.lokasi || "", data.tanggalKejadian || "", data.foto || "",
       data.harapan || "",
       data.status || "Diterima", data.petugas || "", data.catatanTindakLanjut || "",
-      data.tanggalPenyelesaian || "", normalizeArsip(data.arsip)
+      data.tanggalPenyelesaian || "", normalizeArsip(data.arsip),
+      normalizeLaporRwStatus(data.rwStatus, 'Tidak Perlu'),
+      cleanStr(data.rwPetugas, 100),
+      rwTimeCell(data.rwDiperbarui),
+      cleanStr(data.rwKunci, 120)
     );
   } else {
     return null;
@@ -785,15 +1300,59 @@ function buildRowData(sheetName, data, timestamp, id) {
   return rowData;
 }
 
+// Pertahankan kolom RW saat admin RT menyimpan surat. Bila isi pengajuan
+// berubah, versi dinaikkan agar keputusan RW yang dibuat dari data lama ditolak.
+function mergeSuratRwForAdminUpdate(data, existingRow) {
+  data.rwStatus = normalizeSuratRwStatus(existingRow[SURAT_RW_STATUS_COL], 'Tidak Perlu');
+  data.rwCatatan = existingRow[SURAT_RW_CATATAN_COL] || '';
+  data.rwOleh = existingRow[SURAT_RW_OLEH_COL] || '';
+  data.rwTanggal = existingRow[SURAT_RW_TANGGAL_COL] || '';
+  data.rwRevisi = intAtLeast(existingRow[SURAT_RW_REVISI_COL], 0);
+  data.rwVersi = intAtLeast(existingRow[SURAT_RW_VERSI_COL], 1);
+  data.rwKunci = existingRow[SURAT_RW_KUNCI_COL] || '';
+
+  var fields = [['nama', 1], ['nik', 2], ['noHp', 3], ['alamat', 4], ['jenisSurat', 5], ['keperluan', 6]];
+  var changed = false;
+  for (var i = 0; i < fields.length; i++) {
+    var incoming = (data[fields[i][0]] === undefined || data[fields[i][0]] === null) ? '' : String(data[fields[i][0]]);
+    var current = (existingRow[fields[i][1]] === undefined || existingRow[fields[i][1]] === null) ? '' : String(existingRow[fields[i][1]]);
+    if (incoming !== current) { changed = true; break; }
+  }
+  if (!changed) return;
+
+  data.rwVersi += 1;
+  if (data.rwStatus === 'Disetujui') {
+    data.rwStatus = 'Menunggu';
+    data.rwKunci = '';
+  }
+}
+
+// Pertahankan kolom RW saat admin RT menyimpan pengaduan.
+function mergeLaporRwForAdminUpdate(data, existingRow) {
+  data.rwStatus = normalizeLaporRwStatus(existingRow[LAPOR_RW_STATUS_COL], 'Tidak Perlu');
+  data.rwPetugas = existingRow[LAPOR_RW_PETUGAS_COL] || '';
+  data.rwDiperbarui = existingRow[LAPOR_RW_DIPERBARUI_COL] || '';
+  data.rwKunci = existingRow[LAPOR_RW_KUNCI_COL] || '';
+}
+
 // ===== Pengajuan Surat (intake publik) =====================================
 
-// Aturan bisnis Pengajuan_Surat untuk jalur admin (add/update): bila status
-// "Selesai", No. Surat (nomor surat resmi) wajib diisi. Mengembalikan pesan
-// error atau null bila valid.
-function suratSaveError(sheetName, data) {
+// Aturan bisnis Pengajuan_Surat untuk jalur admin (add/update): status "Selesai"
+// dan No. Surat hanya boleh diisi setelah RW menyetujui (atau surat lama yang
+// ditandai "Tidak Perlu"). Mengembalikan pesan error atau null bila valid.
+function suratSaveError(sheetName, data, rwStatus) {
   if (sheetName !== 'Pengajuan_Surat') return null;
   var status = String(data.status === undefined || data.status === null || data.status === '' ? 'Pending' : data.status);
   var noSurat = cleanStr(data.noSurat, 100);
+  var rw = normalizeSuratRwStatus(rwStatus === undefined ? data.rwStatus : rwStatus, 'Menunggu');
+  if (rw !== 'Disetujui' && rw !== 'Tidak Perlu') {
+    if (noSurat) {
+      return 'No. Surat hanya dapat diisi setelah RW menyetujui pengajuan.';
+    }
+    if (status === 'Selesai') {
+      return 'Status Selesai hanya dapat diatur setelah RW menyetujui pengajuan.';
+    }
+  }
   if (status === 'Selesai' && !noSurat) {
     return 'No. Surat resmi wajib diisi sebelum menandai status Selesai.';
   }
@@ -1327,6 +1886,7 @@ function handleSubmitSurat(data) {
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
   var sheet = getOrCreateSheet(ss, 'Pengajuan_Surat');
   if (!sheet) return suratError('server', 'Sheet Pengajuan_Surat tidak tersedia.');
 
@@ -1345,7 +1905,8 @@ function handleSubmitSurat(data) {
   var rowData = buildRowData('Pengajuan_Surat', {
     nama: nama, nik: nik, noHp: noHp, alamat: alamat,
     jenisSurat: jenisSurat, keperluan: keperluan,
-    status: 'Pending', noSurat: '', catatan: ''
+    status: 'Pending', noSurat: '', catatan: '',
+    rwStatus: 'Menunggu', rwRevisi: 0, rwVersi: 1
   }, new Date(), id);
   sheet.appendRow(rowData);
   sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);
@@ -1717,6 +2278,7 @@ function handleSubmitLapor(data) {
   var fotoSaved = !adaFoto || !!fotoUrl;
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ensureRwSchema(ss);
   var sheet = getOrCreateSheet(ss, 'Lapor_Aspirasi');
   if (!sheet) return suratError('server', 'Sheet Lapor_Aspirasi tidak tersedia.');
 
@@ -1734,7 +2296,8 @@ function handleSubmitLapor(data) {
       nama: warga.nama, noHp: warga.noHp || noHpRaw, alamat: warga.alamat,
       jenisPengaduan: jenis, judul: judul, detail: detail,
       lokasi: lokasi, tanggalKejadian: tanggalKejadian, foto: fotoUrl, harapan: harapan,
-      status: 'Diterima', petugas: '', catatanTindakLanjut: '', tanggalPenyelesaian: '', arsip: 'Tidak'
+      status: 'Diterima', petugas: '', catatanTindakLanjut: '', tanggalPenyelesaian: '', arsip: 'Tidak',
+      rwStatus: 'Tidak Perlu'
     }, new Date(), id);
     sheet.appendRow(rowData);
     sheet.getRange(sheet.getLastRow(), 1).setNumberFormat(TS_FORMAT);

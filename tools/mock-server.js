@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v34-2026-10-24'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v35-2026-10-25'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -39,9 +39,23 @@ const DATA_FIELDS = {
   Iuran_Kas: 9,
   Pengumuman: 7,
   Kegiatan_Warga: 8,
-  Pengajuan_Surat: 12,
-  Lapor_Aspirasi: 17,
+  Pengajuan_Surat: 19,
+  Lapor_Aspirasi: 21,
 };
+
+const DATA_HEADERS = {
+  Data_Warga: ['Timestamp', 'Nomor KK', 'Nama Lengkap', 'Status', 'Jenis Kelamin', 'NIK', 'Tempat Lahir', 'Tanggal Lahir', 'Pendidikan', 'Pekerjaan', 'No HP', 'Status Tempat Tinggal', 'Alamat/No Rumah', 'Diarsipkan', 'ID'],
+  Iuran_Kas: ['Timestamp', 'Tanggal', 'Nama Warga', 'No Rumah', 'Jenis Transaksi', 'Jumlah (Rp)', 'Keterangan', 'Diarsipkan', 'Reversal Dari', 'ID'],
+  Pengumuman: ['Timestamp', 'Tanggal', 'Judul Pengumuman', 'Isi Pengumuman', 'Kategori', 'Penanggung Jawab', 'Publik', 'ID'],
+  Kegiatan_Warga: ['Timestamp', 'Nama Kegiatan', 'Tanggal Pelaksanaan', 'Waktu', 'Lokasi', 'Penanggung Jawab', 'Keterangan', 'Publik', 'ID'],
+  Pengajuan_Surat: ['Timestamp', 'Nama Lengkap Pemohon', 'NIK', 'No. HP / WhatsApp', 'Alamat / No. Rumah', 'Jenis Surat', 'Keperluan / Alasan Pengajuan', 'Status Pengurusan', 'No. Surat', 'Catatan Pengurus', 'Tanggal Selesai', 'Diarsipkan', 'Rw Status', 'Rw Catatan', 'Rw Oleh', 'Rw Tanggal', 'Rw Revisi', 'Rw Versi', 'Rw Kunci', 'ID'],
+  Lapor_Aspirasi: ['Timestamp', 'No. Pengaduan', 'Nama Warga', 'No. HP / WhatsApp', 'Alamat / No. Rumah', 'Jenis Pengaduan', 'Judul Pengaduan', 'Detail Pengaduan', 'Lokasi Kejadian', 'Tanggal Kejadian', 'Foto / Bukti Pendukung', 'Harapan / Solusi', 'Status', 'Petugas / Pengurus', 'Catatan Tindak Lanjut', 'Tanggal Penyelesaian', 'Diarsipkan', 'Rw Status', 'Rw Petugas', 'Rw Diperbarui', 'Rw Kunci', 'ID'],
+  Lapor_Tindak_Lanjut: ['ID', 'Lapor ID', 'RT ID', 'Aktor', 'Peran', 'Catatan', 'Status', 'Visibilitas', 'Waktu'],
+};
+
+const SURAT_RW_STATUSES = ['Tidak Perlu', 'Menunggu', 'Disetujui', 'Dikembalikan', 'Ditolak'];
+const LAPOR_RW_STATUSES = ['Tidak Perlu', 'Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW'];
+const SURAT_RW_MAX_REVISI = 3;
 
 const PUBLIK_SET = ['tidak', 'no', 'false', '0', 'draft'];
 const ARSIP_SET = ['ya', 'yes', 'true', '1', 'arsip'];
@@ -67,6 +81,20 @@ function isArsip(v) {
 }
 function normalizeArsip(v) {
   return isArsip(v) ? 'Ya' : 'Tidak';
+}
+
+function normalizeSuratRwStatus(v, fallback) {
+  const s = cleanStr(v, 40);
+  return SURAT_RW_STATUSES.includes(s) ? s : (fallback || 'Tidak Perlu');
+}
+function normalizeLaporRwStatus(v, fallback) {
+  const s = cleanStr(v, 40);
+  return LAPOR_RW_STATUSES.includes(s) ? s : (fallback || 'Tidak Perlu');
+}
+function intAtLeast(v, min) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.floor(n));
 }
 
 function blank(v) {
@@ -162,7 +190,10 @@ function buildRow(sheetName, data, tsIso, id) {
       blank(data.nama), blank(data.nik), blank(data.noHp), blank(data.alamat),
       blank(data.jenisSurat), blank(data.keperluan),
       data.status ? String(data.status) : 'Pending', blank(data.noSurat), blank(data.catatan),
-      blank(data.tanggalSelesai), normalizeArsip(data.arsip)
+      blank(data.tanggalSelesai), normalizeArsip(data.arsip),
+      normalizeSuratRwStatus(data.rwStatus, 'Tidak Perlu'),
+      blank(data.rwCatatan), blank(data.rwOleh), blank(data.rwTanggal),
+      intAtLeast(data.rwRevisi, 0), intAtLeast(data.rwVersi, 1), blank(data.rwKunci)
     );
   } else if (sheetName === 'Lapor_Aspirasi') {
     row.push(
@@ -170,7 +201,14 @@ function buildRow(sheetName, data, tsIso, id) {
       blank(data.jenisPengaduan), blank(data.judul), blank(data.detail),
       blank(data.lokasi), blank(data.tanggalKejadian), blank(data.foto), blank(data.harapan),
       data.status ? String(data.status) : 'Diterima', blank(data.petugas), blank(data.catatanTindakLanjut),
-      blank(data.tanggalPenyelesaian), normalizeArsip(data.arsip)
+      blank(data.tanggalPenyelesaian), normalizeArsip(data.arsip),
+      normalizeLaporRwStatus(data.rwStatus, 'Tidak Perlu'),
+      blank(data.rwPetugas), blank(data.rwDiperbarui), blank(data.rwKunci)
+    );
+  } else if (sheetName === 'Lapor_Tindak_Lanjut') {
+    row.push(
+      blank(data.id), blank(data.laporId), blank(data.rtId), blank(data.aktor), blank(data.peran),
+      blank(data.catatan), blank(data.status), blank(data.visibilitas), blank(data.waktu)
     );
   } else {
     return null;
@@ -247,6 +285,7 @@ function seedData() {
         buildRow('Lapor_Aspirasi', { noPengaduan: 'ADU/2026-005', nama: 'Ahmad Fauzi', noHp: '081344455566', alamat: 'Jl. Anggrek No. 3', jenisPengaduan: '🗑️ Sampah', judul: 'Tumpukan sampah di ujung gang', detail: 'Sampah menumpuk di ujung gang sejak 2 hari dan menimbulkan bau.', lokasi: 'Ujung gang Anggrek', tanggalKejadian: '2026-10-14', foto: '', harapan: 'Diangkut rutin', status: 'Diterima', petugas: '', catatanTindakLanjut: '', tanggalPenyelesaian: '' }, '2026-10-15T02:15:00.000Z', 'ADU-261015-0005'),
         buildRow('Lapor_Aspirasi', { noPengaduan: 'ADU/2026-006', nama: 'Putri Handayani', noHp: '081344455567', alamat: 'Jl. Anggrek No. 3', jenisPengaduan: '💬 Aspirasi / Saran', judul: 'Usul jadwal ronda', detail: 'Mengusulkan penambahan jadwal ronda malam untuk keamanan lingkungan.', lokasi: '', tanggalKejadian: '2026-10-10', foto: '', harapan: '', status: 'Selesai', petugas: 'Pak RT', catatanTindakLanjut: 'Telah dibahas pengurus', tanggalPenyelesaian: '2026-10-11', arsip: 'Ya' }, '2026-10-11T05:00:00.000Z', 'ADU-261011-0006'),
       ],
+      Lapor_Tindak_Lanjut: [],
     },
   };
 }
@@ -265,6 +304,7 @@ function loadStore() {
     SHEET_NAMES.forEach((n) => {
       if (!Array.isArray(parsed.sheets[n])) parsed.sheets[n] = [];
     });
+    if (!Array.isArray(parsed.sheets.Lapor_Tindak_Lanjut)) parsed.sheets.Lapor_Tindak_Lanjut = [];
     if (typeof parsed.portalEnabled !== 'boolean') parsed.portalEnabled = true;
     if (typeof parsed.laporEnabled !== 'boolean') parsed.laporEnabled = true;
     if (typeof parsed.suratEnabled !== 'boolean') parsed.suratEnabled = true;
@@ -282,6 +322,17 @@ function loadStore() {
     // Baru : [ts, ..., catatan, tanggalSelesai, arsip, ID]
     (parsed.sheets.Pengajuan_Surat || []).forEach((row) => {
       if (Array.isArray(row) && row.length === 12) row.splice(10, 0, '');
+    });
+    // Migrasi lokal: kolom alur RW (v35) disisipkan sebelum kolom bantu ID.
+    (parsed.sheets.Pengajuan_Surat || []).forEach((row) => {
+      if (Array.isArray(row) && row.length === 13) {
+        row.splice(12, 0, 'Tidak Perlu', '', '', '', 0, 1, '');
+      }
+    });
+    (parsed.sheets.Lapor_Aspirasi || []).forEach((row) => {
+      if (Array.isArray(row) && row.length === 18) {
+        row.splice(17, 0, 'Tidak Perlu', '', '', '');
+      }
     });
     return parsed;
   } catch (e) {
@@ -582,6 +633,204 @@ function handleCheckLapor(params) {
   return { result: 'success', version: CODE_VERSION, count: results.length, archived: archivedCount, data: results };
 }
 
+// ================= Handler RW 06 =================
+const SURAT_RW = { STATUS: 12, CATATAN: 13, OLEH: 14, TANGGAL: 15, REVISI: 16, VERSI: 17, KUNCI: 18, ID: 19 };
+const LAPOR_RW = { STATUS: 17, PETUGAS: 18, DIPERBARUI: 19, KUNCI: 20, ID: 21 };
+
+function rwError(code, message) {
+  return { result: 'error', code, version: CODE_VERSION, message };
+}
+
+function suratRwSnapshot(row) {
+  return {
+    id: String(blank(row[SURAT_RW.ID])),
+    rwStatus: normalizeSuratRwStatus(row[SURAT_RW.STATUS], 'Tidak Perlu'),
+    rwCatatan: cleanStr(row[SURAT_RW.CATATAN], 1000),
+    rwOleh: cleanStr(row[SURAT_RW.OLEH], 200),
+    rwTanggal: blank(row[SURAT_RW.TANGGAL]),
+    rwRevisi: intAtLeast(row[SURAT_RW.REVISI], 0),
+    rwVersi: intAtLeast(row[SURAT_RW.VERSI], 1),
+  };
+}
+
+function laporRwSnapshot(row) {
+  return {
+    id: String(blank(row[LAPOR_RW.ID])),
+    rwStatus: normalizeLaporRwStatus(row[LAPOR_RW.STATUS], 'Tidak Perlu'),
+    rwPetugas: cleanStr(row[LAPOR_RW.PETUGAS], 100),
+    rwDiperbarui: blank(row[LAPOR_RW.DIPERBARUI]),
+  };
+}
+
+function handleRwRead(data) {
+  const sheetName = cleanStr(data.sheet, 60);
+  const allowed = Object.keys(DATA_FIELDS).concat(['Lapor_Tindak_Lanjut']);
+  if (!allowed.includes(sheetName)) return rwError('invalid_sheet', 'Sheet tidak diizinkan untuk RW: ' + sheetName);
+  const includeArchived = data.includeArchived === true || String(data.includeArchived) === 'true';
+  const statusFilter = cleanStr(data.status, 40);
+  const laporIdFilter = cleanStr(data.laporId, 60);
+  let limit = (data.limit === undefined || data.limit === null || data.limit === '') ? 500 : intAtLeast(data.limit, 1);
+  if (limit > 2000) limit = 2000;
+  const offset = (data.offset === undefined || data.offset === null || data.offset === '') ? 0 : intAtLeast(data.offset, 0);
+
+  let rows = (store.sheets[sheetName] || []).slice();
+  rows = rows.filter((row) => {
+    if (sheetName === 'Pengajuan_Surat' && !includeArchived && isArsip(row[11])) return false;
+    if (sheetName === 'Lapor_Aspirasi' && !includeArchived && isArsip(row[16])) return false;
+    if (statusFilter) {
+      const st = sheetName === 'Pengajuan_Surat' ? row[SURAT_RW.STATUS]
+        : sheetName === 'Lapor_Aspirasi' ? row[LAPOR_RW.STATUS] : '';
+      if (String(blank(st)) !== statusFilter) return false;
+    }
+    if (laporIdFilter && sheetName === 'Lapor_Tindak_Lanjut' && String(blank(row[1])) !== laporIdFilter) return false;
+    return true;
+  });
+  const total = rows.length;
+  const page = rows.slice(offset, offset + limit);
+  return {
+    result: 'success', version: CODE_VERSION, sheet: sheetName,
+    headers: DATA_HEADERS[sheetName] || [], rows: page, total, offset, limit,
+    truncated: offset + page.length < total,
+  };
+}
+
+function handleRwSuratDecision(data) {
+  const id = cleanStr(data.id, 60);
+  const decision = cleanStr(data.decision, 30);
+  const catatan = cleanStr(data.catatan, 1000);
+  const aktor = cleanStr(data.aktor, 200);
+  const kunci = cleanStr(data.kunci, 120);
+  if (!id) return rwError('invalid', 'ID pengajuan wajib diisi.');
+  if (!['Disetujui', 'Dikembalikan', 'Ditolak'].includes(decision)) return rwError('invalid_decision', 'Keputusan RW tidak dikenal.');
+  if (decision !== 'Disetujui' && catatan.length < 3) return rwError('note_required', 'Catatan wajib diisi untuk keputusan ' + decision + '.');
+  if (!aktor) return rwError('actor_required', 'Aktor (email/nama) RW wajib diisi.');
+  if (kunci.length < 6) return rwError('idempotency_required', 'Kunci idempotensi wajib diisi (minimal 6 karakter).');
+  const idx = findRowIndex('Pengajuan_Surat', id);
+  if (idx === -1) return rwError('not_found', 'Pengajuan tidak ditemukan: ' + id);
+  const row = store.sheets.Pengajuan_Surat[idx];
+  const snap = suratRwSnapshot(row);
+  if (kunci && String(blank(row[SURAT_RW.KUNCI])) === kunci) {
+    return Object.assign({ result: 'success', version: CODE_VERSION, duplicate: true }, snap);
+  }
+  if (snap.rwStatus !== 'Menunggu') return rwError('not_pending', 'Pengajuan tidak dalam status Menunggu (saat ini: ' + snap.rwStatus + ').');
+  if (data.expectedVersi !== undefined && data.expectedVersi !== null && data.expectedVersi !== '' &&
+      Number(data.expectedVersi) !== snap.rwVersi) {
+    return rwError('stale', 'Pengajuan sudah berubah sejak dibaca. Muat ulang data sebelum memutuskan.');
+  }
+  if (decision !== 'Disetujui' && snap.rwRevisi >= SURAT_RW_MAX_REVISI) {
+    return rwError('max_negative', 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai.');
+  }
+  const stamp = nowIso();
+  const newRevisi = decision === 'Disetujui' ? snap.rwRevisi : snap.rwRevisi + 1;
+  const newVersi = snap.rwVersi + 1;
+  row[SURAT_RW.STATUS] = decision;
+  row[SURAT_RW.CATATAN] = catatan;
+  row[SURAT_RW.OLEH] = aktor;
+  row[SURAT_RW.TANGGAL] = stamp;
+  row[SURAT_RW.REVISI] = newRevisi;
+  row[SURAT_RW.VERSI] = newVersi;
+  row[SURAT_RW.KUNCI] = kunci;
+  saveStore();
+  return {
+    result: 'success', version: CODE_VERSION, id,
+    rwStatus: decision, rwCatatan: catatan, rwOleh: aktor, rwTanggal: stamp,
+    rwRevisi: newRevisi, rwVersi: newVersi,
+  };
+}
+
+function handleRwLaporNote(data) {
+  const id = cleanStr(data.id, 60);
+  const catatan = cleanStr(data.catatan, 1000);
+  const aktor = cleanStr(data.aktor, 200);
+  const kunci = cleanStr(data.kunci, 120);
+  const visibilitas = cleanStr(data.visibilitas, 20) || 'Publik';
+  const status = cleanStr(data.status, 40);
+  if (!id) return rwError('invalid', 'ID pengaduan wajib diisi.');
+  if (catatan.length < 3) return rwError('note_required', 'Catatan tindak lanjut wajib diisi (minimal 3 karakter).');
+  if (!aktor) return rwError('actor_required', 'Aktor (email/nama) RW wajib diisi.');
+  if (kunci.length < 6) return rwError('idempotency_required', 'Kunci idempotensi wajib diisi (minimal 6 karakter).');
+  if (visibilitas !== 'Publik' && visibilitas !== 'Internal') return rwError('invalid_visibility', 'Visibilitas harus Publik atau Internal.');
+  if (status && !['Ditangani RW', 'Selesai RW'].includes(status)) return rwError('invalid_status', 'Status RW harus Ditangani RW atau Selesai RW.');
+  const idx = findRowIndex('Lapor_Aspirasi', id);
+  if (idx === -1) return rwError('not_found', 'Pengaduan tidak ditemukan: ' + id);
+  const row = store.sheets.Lapor_Aspirasi[idx];
+  const snap = laporRwSnapshot(row);
+  if (kunci && String(blank(row[LAPOR_RW.KUNCI])) === kunci) {
+    return Object.assign({ result: 'success', version: CODE_VERSION, duplicate: true }, snap);
+  }
+  if (data.expectedDiperbarui !== undefined && data.expectedDiperbarui !== null && data.expectedDiperbarui !== '' &&
+      String(data.expectedDiperbarui) !== String(snap.rwDiperbarui)) {
+    return rwError('stale', 'Pengaduan sudah berubah sejak dibaca. Muat ulang data sebelum mengirim tanggapan.');
+  }
+  let newStatus = status || snap.rwStatus;
+  if (!status && (snap.rwStatus === 'Tidak Perlu' || snap.rwStatus === 'Perlu Tindak Lanjut')) newStatus = 'Ditangani RW';
+  const stamp = nowIso();
+  row[LAPOR_RW.STATUS] = newStatus;
+  row[LAPOR_RW.PETUGAS] = aktor;
+  row[LAPOR_RW.DIPERBARUI] = stamp;
+  row[LAPOR_RW.KUNCI] = kunci;
+  if (visibilitas === 'Publik') row[14] = catatan;
+
+  const timelineId = 'TL-' + jakartaYyMmDd(stamp) + '-' + randomCode4();
+  if (!Array.isArray(store.sheets.Lapor_Tindak_Lanjut)) store.sheets.Lapor_Tindak_Lanjut = [];
+  store.sheets.Lapor_Tindak_Lanjut.push([
+    timelineId, id, store.rtId || '', aktor, 'RW', catatan, newStatus, visibilitas, stamp,
+  ]);
+  saveStore();
+  return {
+    result: 'success', version: CODE_VERSION, id, timelineId,
+    rwStatus: newStatus, rwPetugas: aktor, rwDiperbarui: stamp, visibilitas,
+  };
+}
+
+function handleLaporEscalate(data) {
+  const id = cleanStr(data.id, 60);
+  if (!id) return { result: 'error', code: 'invalid', message: 'ID pengaduan wajib diisi.' };
+  const idx = findRowIndex('Lapor_Aspirasi', id);
+  if (idx === -1) return { result: 'error', code: 'not_found', message: 'Pengaduan tidak ditemukan: ' + id };
+  const row = store.sheets.Lapor_Aspirasi[idx];
+  const cur = normalizeLaporRwStatus(row[LAPOR_RW.STATUS], 'Tidak Perlu');
+  if (cur !== 'Tidak Perlu') return { result: 'success', id, rwStatus: cur, duplicate: true };
+  const stamp = nowIso();
+  row[LAPOR_RW.STATUS] = 'Perlu Tindak Lanjut';
+  row[LAPOR_RW.DIPERBARUI] = stamp;
+  saveStore();
+  return { result: 'success', id, rwStatus: 'Perlu Tindak Lanjut', rwDiperbarui: stamp };
+}
+
+function handleResubmitSurat(data) {
+  const id = cleanStr(data.id, 60);
+  if (!id) return { result: 'error', code: 'invalid', message: 'ID pengajuan wajib diisi.' };
+  const idx = findRowIndex('Pengajuan_Surat', id);
+  if (idx === -1) return { result: 'error', code: 'not_found', message: 'Pengajuan tidak ditemukan: ' + id };
+  const row = store.sheets.Pengajuan_Surat[idx];
+  const cur = normalizeSuratRwStatus(row[SURAT_RW.STATUS], 'Tidak Perlu');
+  const revisi = intAtLeast(row[SURAT_RW.REVISI], 0);
+  const versi = intAtLeast(row[SURAT_RW.VERSI], 1);
+  if (cur === 'Menunggu') return { result: 'success', id, rwStatus: 'Menunggu', duplicate: true };
+  if (cur !== 'Dikembalikan' && cur !== 'Ditolak') {
+    return { result: 'error', code: 'not_returned', message: 'Pengajuan tidak berstatus Dikembalikan/Ditolak (saat ini: ' + cur + ').' };
+  }
+  if (revisi >= SURAT_RW_MAX_REVISI) {
+    return { result: 'error', code: 'max_negative', message: 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai. Buat pengajuan baru.' };
+  }
+  row[SURAT_RW.STATUS] = 'Menunggu';
+  row[SURAT_RW.VERSI] = versi + 1;
+  row[SURAT_RW.KUNCI] = '';
+  saveStore();
+  return { result: 'success', id, rwStatus: 'Menunggu', rwRevisi: revisi, rwVersi: versi + 1 };
+}
+
+function handleRwCheck() {
+  return {
+    result: 'success', version: CODE_VERSION, rtId: store.rtId || '',
+    rwTokenConfigured: true, schemaMigrated: true,
+    capabilities: ['rwRead', 'rwSuratDecision', 'rwLaporNote', 'rwCheck'],
+    suratMaxRevisi: SURAT_RW_MAX_REVISI,
+    sheets: Object.keys(DATA_FIELDS).concat(['Lapor_Tindak_Lanjut']),
+  };
+}
+
 function handleDelete(params) {
   const sheetName = params.sheetName;
   const id = params.id;
@@ -597,6 +846,13 @@ function handleDelete(params) {
 
 function handlePost(data) {
   if (!data || typeof data !== 'object') return { result: 'error', message: 'Body kosong / tidak terbaca' };
+
+  if (data.action === 'rwCheck') return handleRwCheck();
+  if (data.action === 'rwRead') return handleRwRead(data);
+  if (data.action === 'rwSuratDecision') return handleRwSuratDecision(data);
+  if (data.action === 'rwLaporNote') return handleRwLaporNote(data);
+  if (data.action === 'laporEscalate') return handleLaporEscalate(data);
+  if (data.action === 'resubmitSurat') return handleResubmitSurat(data);
 
   if (data.action === 'setPortalStatus') {
     store.portalEnabled = data.enabled === true || String(data.enabled) === 'true';
@@ -655,7 +911,7 @@ function handlePost(data) {
     const ts = nowIso();
     let id = sanitizeSuratRef(data.ref);
     if (!id || findRowIndex('Pengajuan_Surat', id) !== -1) id = makeSuratId(ts);
-    const row = buildRow('Pengajuan_Surat', { nama, nik, noHp, alamat, jenisSurat, keperluan, status: 'Pending', noSurat: '', catatan: '' }, ts, id);
+    const row = buildRow('Pengajuan_Surat', { nama, nik, noHp, alamat, jenisSurat, keperluan, status: 'Pending', noSurat: '', catatan: '', rwStatus: 'Menunggu', rwRevisi: 0, rwVersi: 1 }, ts, id);
     store.sheets.Pengajuan_Surat.push(row);
     saveStore();
     console.log('[mock] submitSurat tercatat:', id);
@@ -697,6 +953,7 @@ function handlePost(data) {
       lokasi: cleanStr(data.lokasi, 200), tanggalKejadian: tglKejadian,
       foto: adaFoto ? '(mock) foto tersimpan' : '', harapan: cleanStr(data.harapan, 1000),
       status: 'Diterima', petugas: '', catatanTindakLanjut: '', tanggalPenyelesaian: '', arsip: 'Tidak',
+      rwStatus: 'Tidak Perlu',
     }, ts, id);
     store.sheets.Lapor_Aspirasi.push(row);
     saveStore();
@@ -719,6 +976,39 @@ function handlePost(data) {
     const existing = store.sheets[sheetName][idx];
     const existingTs = existing[0];
     const existingId = existing[existing.length - 1];
+    if (sheetName === 'Pengajuan_Surat') {
+      data.rwStatus = normalizeSuratRwStatus(existing[SURAT_RW.STATUS], 'Tidak Perlu');
+      data.rwCatatan = existing[SURAT_RW.CATATAN] || '';
+      data.rwOleh = existing[SURAT_RW.OLEH] || '';
+      data.rwTanggal = existing[SURAT_RW.TANGGAL] || '';
+      data.rwRevisi = intAtLeast(existing[SURAT_RW.REVISI], 0);
+      data.rwVersi = intAtLeast(existing[SURAT_RW.VERSI], 1);
+      data.rwKunci = existing[SURAT_RW.KUNCI] || '';
+      const contentChanged = ['nama', 'nik', 'noHp', 'alamat', 'jenisSurat', 'keperluan'].some((key, i) => {
+        const inc = data[key] === undefined || data[key] === null ? '' : String(data[key]);
+        const cur = existing[i + 1] === undefined || existing[i + 1] === null ? '' : String(existing[i + 1]);
+        return inc !== cur;
+      });
+      if (contentChanged) {
+        data.rwVersi += 1;
+        if (data.rwStatus === 'Disetujui') { data.rwStatus = 'Menunggu'; data.rwKunci = ''; }
+      }
+      const rw = normalizeSuratRwStatus(data.rwStatus, 'Tidak Perlu');
+      const status = data.status || 'Pending';
+      const noSurat = cleanStr(data.noSurat, 100);
+      if (rw !== 'Disetujui' && rw !== 'Tidak Perlu') {
+        if (noSurat) return { result: 'error', code: 'invalid', message: 'No. Surat hanya dapat diisi setelah RW menyetujui pengajuan.' };
+        if (status === 'Selesai') return { result: 'error', code: 'invalid', message: 'Status Selesai hanya dapat diatur setelah RW menyetujui pengajuan.' };
+      }
+      if (status === 'Selesai' && !noSurat) {
+        return { result: 'error', code: 'invalid', message: 'No. Surat resmi wajib diisi sebelum menandai status Selesai.' };
+      }
+    } else if (sheetName === 'Lapor_Aspirasi') {
+      data.rwStatus = normalizeLaporRwStatus(existing[LAPOR_RW.STATUS], 'Tidak Perlu');
+      data.rwPetugas = existing[LAPOR_RW.PETUGAS] || '';
+      data.rwDiperbarui = existing[LAPOR_RW.DIPERBARUI] || '';
+      data.rwKunci = existing[LAPOR_RW.KUNCI] || '';
+    }
     store.sheets[sheetName][idx] = buildRow(sheetName, data, existingTs, existingId);
     saveStore();
     return { result: 'success', message: 'Row updated' };
@@ -741,6 +1031,15 @@ function handlePost(data) {
   }
   if (sheetName === 'Lapor_Aspirasi' && !cleanStr(data.noPengaduan, 40)) {
     data.noPengaduan = makeNomorPengaduan();
+  }
+  if (sheetName === 'Pengajuan_Surat' || sheetName === 'Lapor_Aspirasi') {
+    data.rwStatus = sheetName === 'Pengajuan_Surat' ? 'Menunggu' : 'Tidak Perlu';
+    if (sheetName === 'Pengajuan_Surat') {
+      const status = data.status || 'Pending';
+      const noSurat = cleanStr(data.noSurat, 100);
+      if (noSurat) return { result: 'error', code: 'invalid', message: 'No. Surat hanya dapat diisi setelah RW menyetujui pengajuan.' };
+      if (status === 'Selesai') return { result: 'error', code: 'invalid', message: 'Status Selesai hanya dapat diatur setelah RW menyetujui pengajuan.' };
+    }
   }
   store.sheets[sheetName].push(buildRow(sheetName, data, ts, id));
   saveStore();
