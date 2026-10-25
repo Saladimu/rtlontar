@@ -604,6 +604,14 @@ Model branch:
 
 Perubahan kode generik dikerjakan di `main`, lalu di-merge ke branch RT. Jangan merge branch RT kembali ke `main`.
 
+`config.js`, `version.json`, dan `sw.js` bersifat khusus RT. Sekali per clone, aktifkan merge driver agar ketiganya tidak tertimpa saat merge dari `main`:
+
+```bash
+bash tools/setup-git-merge.sh
+```
+
+Driver mempertahankan identitas RT, URL, build, dan nama cache SW, tetapi tetap menerima perubahan generik dari `main`. Setelah setiap merge, wajib jalankan pemeriksaan deployment sebelum bump versi dan push. Bila driver belum aktif, Git akan memberi konflik (bukan menimpa diam-diam).
+
 Sebelum push, periksa konsistensi versi, identitas RT, URL proxy, dan penanda build:
 
 ```bash

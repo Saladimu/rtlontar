@@ -737,6 +737,14 @@ Setelah deploy, jalankan pemeriksaan live:
 node tools/check-deployment.js --live
 ```
 
+Untuk branch RT yang menerima merge dari `main`, aktifkan merge driver sekali per clone agar `config.js`, `version.json`, dan `sw.js` tidak tertimpa:
+
+```bash
+bash tools/setup-git-merge.sh
+```
+
+Selalu jalankan `node tools/check-deployment.js` setelah merge dan sebelum push. Detailnya ada di `MAINTENANCE.md`.
+
 Perintah build ulang CSS (bila tampilan diubah):
 
 ```bash

@@ -39,7 +39,7 @@ Rules:
 
 - Develop and test generic features on `main`.
 - Merge `main` into `rt018` (and other RT branches) for every release.
-- Resolve conflicts only in deployment-specific files: `config.js`, `version.json`, `sw.js`, and possibly the default URL in `functions/api/[[path]].js`.
+- Never resolve deployment-specific values by hand if the merge driver can preserve them.
 - Keep one Cloudflare Pages project per RT, deployed from that RT's branch.
 - Keep one Apps Script project per RT, bound to that RT's spreadsheet.
 - Tag important releases, for example `rt018-2026-10-25`.
@@ -51,6 +51,34 @@ main -> rt018 -> rt019 -> ...
 ```
 
 Never the reverse.
+
+### Protecting per-RT files
+
+`config.js`, `version.json`, and `sw.js` hold values that must differ per RT. A merge driver keeps them intact while still accepting generic changes from `main`.
+
+Enable it once per clone:
+
+```bash
+bash tools/setup-git-merge.sh
+```
+
+The driver is declared in `.gitattributes` as `merge=keeprt` and implemented by `tools/merge-rt-files.js`:
+
+| File | Merge behavior |
+|---|---|
+| `config.js` | Generic fields from `main` are merged; RT identity, URLs, and `version` stay on the RT branch. Shared fields that the RT never overrode still inherit `main`. |
+| `version.json` | Each build key stays on the RT branch when that RT changed it; new keys from `main` are added. |
+| `sw.js` | The shell/asset list from `main` is merged; the RT cache name is preserved. |
+
+Rules for the driver:
+
+- Run the setup command after cloning or when `git config --get merge.keeprt.driver` is empty.
+- Run `node tools/check-deployment.js` immediately after every merge. It fails if any RT file or version marker no longer matches the branch identity.
+- Version bumps remain manual on the target RT branch. The driver prevents accidental overwrites, not missing releases.
+- If a merge reports a conflict in these files, resolve it manually, then run the deployment check again.
+- Without the driver, Git reports conflicts instead of silently overwriting RT values.
+
+If `main` adds a new generic key to `config.js`, it is inherited automatically. If a merge is skipped and the key is missing on an RT branch, runtime behavior may degrade; the deployment check cannot verify every key, so review the merged diff before pushing.
 
 ---
 
@@ -116,6 +144,8 @@ Suggested weekly data checks:
 
 A mismatch between `CODE_VERSION` and `EXPECTED_BACKEND_VERSION` triggers a visible warning in the admin UI.
 
+`config.js`, `version.json`, and `sw.js` are RT-specific. The merge driver preserves their existing values, but each RT release must still bump its own markers according to this matrix after merging.
+
 ---
 
 ## 6. Release checklist
@@ -124,9 +154,21 @@ A mismatch between `CODE_VERSION` and `EXPECTED_BACKEND_VERSION` triggers a visi
 2. Back up the spreadsheet if the release changes schema or stored fields.
 3. Create or update the feature on `main`.
 4. Run the functional test harness.
-5. Merge `main` into the target RT branch.
-6. Apply the version bump matrix.
-7. Run the deployment check:
+5. Enable the merge driver once per clone, then merge `main` into the target RT branch:
+
+```bash
+bash tools/setup-git-merge.sh
+git merge main
+```
+
+6. Confirm the RT files kept their identity, then apply the version bump matrix:
+
+```bash
+git diff --stat HEAD~1 -- config.js version.json sw.js
+node tools/check-deployment.js
+```
+
+7. Run the deployment check again after the version bump:
 
 ```bash
 node tools/check-deployment.js
