@@ -725,6 +725,18 @@ Naikkan penanda versi yang sesuai **sebelum** push, agar pengguna yang masih mem
 | `code.gs` (backend) | `CODE_VERSION` **dan** `EXPECTED_BACKEND_VERSION`, lalu **redeploy New version** | `Apps Script/code.gs`, `index.html` |
 | Kelas Tailwind baru | build ulang `tailwind.css` | lihat perintah di `readme.md` |
 
+Setelah perubahan selesai, jalankan pemeriksaan deployment sebelum push:
+
+```bash
+node tools/check-deployment.js
+```
+
+Setelah deploy, jalankan pemeriksaan live:
+
+```bash
+node tools/check-deployment.js --live
+```
+
 Perintah build ulang CSS (bila tampilan diubah):
 
 ```bash
@@ -740,7 +752,7 @@ Data RT ada sepenuhnya di Google Sheets, sehingga pencadangan sangat mudah:
 - Google Sheets menyimpan **riwayat versi**. Buka **File → Version history → See version history** untuk melihat/mengembalikan kondisi sebelumnya.
 - Penghapusan data di aplikasi umumnya bersifat **arsip** atau **pembatalan (Reversal)**, bukan hapus permanen — jadi kesalahan bisa dipulihkan sendiri lewat tombol **Pulihkan**.
 
-**Backup manual (disarankan tiap bulan):**
+**Backup manual (disarankan tiap minggu, wajib sebelum perubahan schema):**
 
 1. Buka Google Sheets → **File → Make a copy** → beri nama mis. `Backup SAPA RT 017 - Okt 2026`.
 2. Simpan salinan di folder Google Drive RT, bukan di Drive pribadi.
@@ -752,6 +764,8 @@ Data RT ada sepenuhnya di Google Sheets, sehingga pencadangan sangat mudah:
 - Untuk mengembalikan seluruh berkas: buka salinan → klik **Load Data from Sheets** di dashboard untuk memastikan data terbaca.
 
 > **Jangan pernah** menghapus/mengganti nama tab atau memindahkan kolom `ID` — kolom itu kunci edit/hapus yang aman.
+
+> **Beberapa RT dalam satu akun Google:** pin `LAPOR_FOLDER_ID` untuk setiap RT agar foto tidak tercampur, gunakan `ADMIN_TOKEN` berbeda, dan bedakan prefiks subjek email. Prosedur teknis lengkap ada di `MAINTENANCE.md`.
 
 ## Mode Demo dan Pratinjau Lokal
 
@@ -839,6 +853,8 @@ Server ini menyajikan halaman admin & portal publik sekaligus meniru seluruh end
 | `functions/api/[[path]].js` | Proxy same-origin `/api` (Cloudflare Pages Function). |
 | `readme.md` | Gambaran fitur, struktur database, publikasi, dan kontrol akses. |
 | `agents.md` | Arsitektur dan kontrak data untuk pengembang. |
+| `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT. |
+| `tools/check-deployment.js` | Pemeriksa konsistensi versi/identitas deployment (opsional `--live`). |
 | `tools/mock-server.js` | Server pratinjau lokal untuk pelatihan tanpa menyentuh data asli. |
 | `panduan.md` | **Dokumen ini.** |
 
