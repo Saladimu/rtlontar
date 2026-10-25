@@ -232,11 +232,13 @@ Menu ini adalah “meja pelayanan” pengurus untuk permohonan surat pengantar/k
 ### Alur singkat
 
 ```
-Warga mengisi formulir di portal publik  →  status Pending
+Warga mengisi formulir di portal publik  →  status Pending + RW Menunggu
+        ↓
+RW 06 meninjau                           →  Disetujui / Dikembalikan / Ditolak
         ↓
 Pengurus verifikasi & proses              →  status Diproses
         ↓
-Surat ditandatangani, nomor surat dicatat →  status Selesai
+Surat ditandatangani, nomor surat dicatat →  status Selesai (hanya bila RW Disetujui)
         ↓
 Warga cek status di portal & mengambil surat
         ↓
@@ -275,6 +277,22 @@ Untuk permohonan yang disampaikan lisan/datang langsung:
 - **Hubungi pemohon:** saat mengedit, di bawah kolom No. HP muncul tombol **Chat WhatsApp** dan **Telepon**.
 - **Arsip (bukan hapus):** ikon 📦 membuka dialog peringatan seragam **“Arsipkan data?”** berisi **Nama, No. Pengajuan, dan Jenis Surat**; klik **Ya, Arsipkan** untuk melanjutkan. Pengajuan terarsip tidak ikut hitungan kartu status, tampil terpisah di bagian atas tabel dengan latar kuning dan badge **“Arsip”**, serta bisa dipulihkan dengan ikon 📤. **Warga tetap bisa memeriksa status pengajuan yang diarsipkan.**
 
+### Persetujuan RW 06 (Phase 1)
+
+Sejak integrasi RW 06, **setiap pengajuan surat baru wajib disetujui RW** sebelum surat dapat diselesaikan.
+
+- **Status RW** tampil sebagai badge di kolom **Status** dan di panel **Persetujuan RW** pada modal Edit:
+  - **Menunggu** — pengajuan baru/revisi, menunggu keputusan RW.
+  - **Disetujui** — RT boleh melanjutkan proses dan mengisi **No. Surat**.
+  - **Dikembalikan** — perlu perbaikan; baca **Catatan RW**, revisi pengajuan, lalu klik **Ajukan Ulang ke RW**.
+  - **Ditolak** — tidak disetujui; baca alasan, revisi bila memungkinkan, lalu **Ajukan Ulang ke RW**.
+  - **Tidak Perlu** — pengajuan lama sebelum integrasi RW (riwayat, tidak menghalangi penulisan No. Surat).
+- **No. Surat terkunci** selama status RW belum **Disetujui**. Tombol ubah status cepat juga menolak **Selesai** dan menyarankan membuka modal.
+- **Batas revisi:** maksimal **3 keputusan negatif** (`Dikembalikan`/`Ditolak`). Setelah keputusan negatif ketiga, tombol **Ajukan Ulang** dinonaktifkan dan pengajuan harus dibuat baru. Panel menampilkan peringatan batas revisi.
+- **Filter RW:** gunakan dropdown **Semua Status RW** di samping filter status untuk menampilkan pengajuan per status persetujuan.
+- **Perubahan isi oleh RT:** bila pengajuan yang sudah **Disetujui** diubah isinya (nama, NIK, HP, alamat, jenis surat, atau keperluan), status RW otomatis kembali ke **Menunggu** agar RW meninjau ulang. Perubahan kecil seperti **No. Surat** atau **Status Pengurusan** tidak membatalkan persetujuan.
+- **Keputusan RW** dilakukan melalui portal RW 06 (Phase 4). Pengurus RT hanya melihat hasil dan catatannya; kolom RW tidak dapat diedit dari dashboard RT.
+
 ### No. Surat dan hasil untuk warga
 
 - Setelah **No. Surat** diisi, nomornya tampil **di bawah Jenis Surat** pada tabel (dengan ikon) supaya mudah dipantau.
@@ -301,6 +319,17 @@ Menu **Lapor & Aspirasi** menampung **pengaduan, keluhan, dan aspirasi** warga �
 2. Ubah **Status** mengikuti alur **Diterima → Diproses → Selesai**. Saat memilih **Selesai**, isi **Tanggal Penyelesaian** (format **dd-mm-yyyy**, mis. `14-10-2026`). **Tanggal Kejadian** pada form edit juga memakai format **dd-mm-yyyy**. Tanggal dapat **diketik langsung** pada fieldnya, atau dipilih lewat kalender saat field diklik. **Tanggal Kejadian tidak boleh melebihi hari ini**, dan **Tanggal Penyelesaian tidak boleh lebih awal** dari **Tanggal Kejadian** maupun **tanggal laporan** (Timestamp) — sistem akan menolak bila terbalik.
 3. Isi **Petugas/Pengurus** yang menangani dan **Catatan Tindak Lanjut** untuk warga. Saat mengedit, **Nama Warga, No. HP, dan Alamat dikunci** karena berasal dari data warga; **Lokasi Kejadian, Tanggal Kejadian, dan Harapan / Solusi juga dikunci** agar isi laporan asli warga tidak berubah. Lampiran **Foto / Bukti Pendukung** warga tampil sebagai **pratinjau** — tautannya **dikunci** (tidak dapat diubah) dan bisa dibuka ukuran asli lewat tombol **“Buka foto asli”**.
 4. Klik **Simpan**. Ikon **ubah status cepat** (putar) juga bisa dipakai untuk menggilir status tanpa membuka modal.
+
+### Minta Tindak Lanjut RW
+
+Pengaduan dimulai dengan status RW **Tidak Perlu** (ditangani RT). Bila perlu dukungan RW 06:
+
+1. Buka **Edit** pengaduan, lalu klik **Minta Tindak Lanjut RW** di panel **Tindak Lanjut RW**.
+2. Status berubah menjadi **Perlu Tindak Lanjut** dan pengaduan muncul di portal RW.
+3. Setelah RW menanggapi, badge berubah menjadi **Ditangani RW** atau **Selesai RW**, lengkap dengan **catatan**, **aktor**, dan **waktu** tanggapan.
+4. Bila RW memilih visibilitas **Publik**, catatan juga tampil pada **Cek Status Pengaduan** warga; bila **Internal**, catatan hanya tersimpan di audit trail `Lapor_Tindak_Lanjut`.
+
+Gunakan filter **Semua Status RW** di daftar pengaduan untuk memantau yang sudah dieskalasi. Eskalasi hanya dapat dilakukan saat status masih **Tidak Perlu**; pengaduan yang sudah ditangani RW tidak dapat dikembalikan ke RT dari aplikasi.
 
 ### Mencatat pengaduan manual
 
@@ -614,6 +643,10 @@ Buka **Project Settings → Script Properties** di Apps Script dan tambahkan:
 | `LAPOR_FOLDER_ID` | Opsional | ID folder Google Drive untuk menyimpan foto pengaduan. Bila kosong, backend mencari/membuat folder bernama `Lapor`. |
 | `SURAT_ENABLED` | Opsional | `true`/`false` untuk menyalakan/mematikan fitur **Layanan Surat** (default **aktif** bila tidak diisi). Biasanya diubah dari toggle **Layanan Surat** di panel Portal Publik (aksi `setSuratStatus`). |
 | `LAPOR_ENABLED` | Opsional | `true`/`false` untuk menyalakan/mematikan fitur **Lapor & Aspirasi** (default **aktif** bila tidak diisi). Nilai ini biasanya diubah dari tombol **ON/OFF** di panel Portal Publik, tidak perlu diedit manual. |
+| `RW_TOKEN` | Opsional (integrasi RW) | Token rahasia **khusus portal RW 06**, berbeda dari `ADMIN_TOKEN`. Wajib agar aksi `rwCheck`/`rwRead`/`rwSuratDecision`/`rwLaporNote` berfungsi. Jangan bagikan ke pengurus RT. |
+| `RT_ID` | Opsional (integrasi RW) | Identitas RT untuk kolom **RT ID** pada audit `Lapor_Tindak_Lanjut`, mis. `RT018`. |
+
+Setelah `code.gs` v35 di-deploy, buka dashboard admin sekali (atau panggil `action=read`) agar migrasi otomatis berjalan. Migrasi menambah kolom `Rw *` di `Pengajuan_Surat`/`Lapor_Aspirasi`, membuat tab `Lapor_Tindak_Lanjut`, dan mengisi data lama dengan `Tidak Perlu`. Verifikasi lewat `rwCheck`: `schemaMigrated` dan `rwTokenConfigured` harus `true`.
 
 Bila baru mengaktifkan email, jalankan izin sekali: pilih fungsi **`authorizeMail`** pada dropdown editor Apps Script → **Run** → **Review permissions** → **Allow** → lalu deploy **New version**.
 

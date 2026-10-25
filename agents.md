@@ -17,6 +17,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
   - *Fallback / Local State:* `localStorage` browser untuk akses offline dan *instant rendering*.
 - **Delete Sync:** Operasi hapus menggunakan **GET dengan JSONP** untuk memastikan sinkronisasi ke Google Sheets sebelum pembaruan lokal.
 - **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`/`setPortalStatus`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`, dan bisa dimatikan total via `PUBLIC_PORTAL_ENABLED`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
+- **RW 06 Integration (Phase 1):** arsitektur **hub-and-spoke**; setiap RT tetap menjadi *system of record* dengan Spreadsheet + Web App sendiri. Aksi RW memakai **`RW_TOKEN` terpisah** dan hanya boleh menulis kolom `Rw *` pada `Pengajuan_Surat`/`Lapor_Aspirasi` serta append `Lapor_Tindak_Lanjut`. Orkestrator/portal RW (Phase 4) mengonsolidasikan data lintas RT; tidak ada penggabungan spreadsheet. Detail di `BRD-RW06.md`.
 
 ---
 
@@ -196,6 +197,17 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 - Bila `ADMIN_TOKEN` belum diatur, semua operasi terproteksi ditolak (fail-closed).
 - `readPublicSheets()` memakai `PUBLIK_INDEX` (`Pengumuman`: 6, `Kegiatan_Warga`: 7) untuk memfilter, sengaja **tidak** mengembalikan `Data_Warga`/`Iuran_Kas`, dan menolak akses (`portal_disabled`) bila `PUBLIC_PORTAL_ENABLED` bernilai `false`.
 - Frontend admin: input token (`#admin-token-input`) + `saveAdminToken()`, disimpan di `localStorage` `rt_admin_token`; helper `promptForAdminToken()` membuka tab Pengaturan saat token hilang/tidak valid.
+
+#### Token & Kontrak RW 06
+
+- `RW_TOKEN`: properti terpisah; `getRwToken()`/`isRwAuthorized()` memakai `safeEqual()`. Bila kosong → fail-closed (`rw_unauthorized`). Token admin RT **tidak** berlaku untuk aksi RW, dan token RW **tidak** berlaku untuk aksi admin.
+- `RT_ID`: opsional, dipakai sebagai kolom `RT ID` pada `Lapor_Tindak_Lanjut`.
+- Skema RW ditambahkan oleh `ensureRwSchema()` (idempoten, flag `RW_SCHEMA_MIGRATED`): kolom `Rw *` **sebelum** kolom bantu `ID`, baris lama → `Tidak Perlu`, tab `Lapor_Tindak_Lanjut` (9 kolom, append-only).
+- Aksi RW (`POST`, token RW): `rwCheck`, `rwRead` (whitelist + paginasi; `status`/`laporId` filter), `rwSuratDecision` (`Disetujui`/`Dikembalikan`/`Ditolak`; `expectedVersi`; `kunci` ≥ 6; maks. 3 keputusan negatif), `rwLaporNote` (`Ditangani RW`/`Selesai RW`; `visibilitas` `Publik`/`Internal`; `expectedDiperbarui`; audit trail).
+- Aksi admin RT terkait (token admin): `laporEscalate` (`Tidak Perlu` → `Perlu Tindak Lanjut`, idempoten), `resubmitSurat` (`Dikembalikan`/`Ditolak` → `Menunggu`, versi+1, hormati batas 3).
+- Gate: `suratSaveError()` menolak `Selesai` tanpa `No. Surat` **atau** tanpa `Rw Status=Disetujui`; `submitSurat` membuat `Menunggu`, `submitLapor` membuat `Tidak Perlu`.
+- Admin update: `mergeSuratRwForAdminUpdate()`/`mergeLaporRwForAdminUpdate()` mempertahankan kolom RW; perubahan konten surat saat `Disetujui` → `Menunggu` + `Rw Versi+1`.
+- Masking (NIK/HP 4 digit, alamat disembunyikan) dan retensi (login/audit 12 bulan; keputusan/tanggapan/snapshot 24 bulan) adalah tanggung jawab portal/orkestrator RW, bukan `code.gs`.
 
 ---
 
