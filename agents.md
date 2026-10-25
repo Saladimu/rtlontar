@@ -352,12 +352,16 @@ Tombol refresh di:
 | `Apps Script/readme.md` | Dokumentasi lengkap API & Deployment |
 | `readme.md` | Dokumentasi proyek utama |
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
+| `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT |
+| `tools/check-deployment.js` | Pemeriksa konsistensi versi/identitas deployment (`--live` untuk produksi) |
 
 ---
 
 ## 🔧 Recent Changes (2026-10-18)
 
 ## 🔧 Recent Changes (2026-10-22)
+
+- ✅ **Prosedur pemeliharaan & pemeriksa deployment** — dokumen baru **`MAINTENANCE.md`** memuat model branch (`main` untuk RT017, `rtNNN` untuk RT lain), registry deployment, rutinitas mingguan/bulanan, matriks kenaikan versi, checklist rilis, backup/restore, keamanan token, rollback, dan onboarding RT baru. Skrip baru **`tools/check-deployment.js`** memeriksa konsistensi **tanpa hardcode RT/versi**: identitas RT dari nama branch, `RT_CONFIG.version` vs `EXPECTED_CONFIG_VERSION`, `APP_BUILD` vs `version.json`, `CODE_VERSION` vs `EXPECTED_BACKEND_VERSION`/mock, nama cache SW, serta kesamaan URL proxy dengan `publicApiUrl`. Opsi **`--live`** memeriksa backend, proxy `/api`, `version.json`, portal publik, dan redirect Access admin. Diuji pada branch **`rt018`** (18/18 live) dan **`main`** (17/17 live, 11/11 lokal). Dokumentasi diperbarui: `readme.md`, `panduan.md`, `Apps Script/readme.md`.
 
 - ✅ **Peringatan pengaduan serupa di Portal Publik** — setelah **No. WhatsApp** terdaftar dan **Jenis Pengaduan** dipilih, form **Lapor / Aspirasi** memeriksa apakah nomor itu sudah mengirim pengaduan dengan **jenis yang sama pada hari ini** (zona Asia/Jakarta). Bila ada, panel kuning **“Pengaduan serupa sudah dikirim hari ini”** menampilkan jumlahnya; warga **tetap dapat mengirim** (tidak memblokir). Dicek via aksi publik baru **`checkLaporDuplicate`** (`handleCheckLaporDuplicate`) yang menormalkan awalan `0`/`62`, hanya membuka **count** (tanpa judul/detail warga lain), ter-gate portal & `LAPOR_ENABLED`, serta dibatasi per HP+jenis + global. Pemeriksaan dijalankan debounce 400 ms saat jenis berubah / lookup HP berhasil, dan dibatalkan saat No. HP berubah, lookup gagal, atau form direset. `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v34-2026-10-24`** (perlu **redeploy New version**), `APP_BUILD` index → **`2026-10-22-19`**, public → **`2026-10-22-08`**; cache SW → **`sapa-rt-static-v104`**; harness baru **`test_lapor_duplicate.js`** (**6**) + `test_lapor_feature.js` (**160**) & `test_mock_backend.js` (**34**) — suite **86** hijau. Dokumentasi: `readme.md`, `panduan.md`, `Apps Script/readme.md`.
 

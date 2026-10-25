@@ -195,6 +195,8 @@ Menampung pengaduan/aspirasi warga (fitur **Lapor & Aspirasi**). Tab ini **dibua
 5. URL tetap sama, kode baru langsung aktif
 
 > ⚠️ **Penting:** Tanpa buat versi baru, Web App tetap menjalankan kode lama!
+>
+> Prosedur rilis lengkap (backup, kenaikan versi, rollback, pemeriksaan deployment) ada di `MAINTENANCE.md`.
 
 ---
 

@@ -587,3 +587,33 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 > **Performa gambar:** semua `<img>` memakai atribut `width`/`height` (mencegah layout bergeser saat memuat) + `decoding="async"`; gambar QR dimuat `loading="lazy"`. Aset `qr-public.png`, `rt-icon.png`, `icon-192.png`, dan `apple-touch-icon.png` sudah dikompres (QR dari ~50 KB menjadi ~17 KB, tetap dapat dipindai). Bila mengganti berkas gambar, naikkan query `?v=` pada tautan ikon agar cache browser terbarui.
 
 > **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server. Selain itu, seluruh teks yang berasal dari Google Sheets **di-escape** sebelum ditampilkan (Pengumuman/Kegiatan di Portal Publik, kartu Ringkasan di admin) sehingga karakter `<`/`&` tidak dapat menyuntikkan markup.
+
+---
+
+## Pemeliharaan & Rilis
+
+Prosedur lengkap ada di `MAINTENANCE.md`: rutinitas mingguan/bulanan, backup dan uji restore, rotasi token, rollback, onboarding RT baru, serta registry deployment.
+
+Model branch:
+
+| Deployment | Branch | Domain contoh |
+|---|---|---|
+| RT017 | `main` | `sapa-rt017.pages.dev` |
+| RT018 | `rt018` | `sapa-rt018.pages.dev` |
+| RT berikutnya | `rtNNN` | `sapa-rtNNN.pages.dev` |
+
+Perubahan kode generik dikerjakan di `main`, lalu di-merge ke branch RT. Jangan merge branch RT kembali ke `main`.
+
+Sebelum push, periksa konsistensi versi, identitas RT, URL proxy, dan penanda build:
+
+```bash
+node tools/check-deployment.js
+```
+
+Setelah deploy frontend dan backend, jalankan pemeriksaan live:
+
+```bash
+node tools/check-deployment.js --live
+```
+
+Pemeriksaan live juga memastikan backend, proxy `/api`, `version.json`, portal publik, dan proteksi Access sesuai.
