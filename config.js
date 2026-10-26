@@ -18,7 +18,7 @@ window.RT_CONFIG = {
     // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
     // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
     // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
-    version: '11',
+    version: '12',
     appName: 'SAPA RT',
     appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
 
@@ -138,7 +138,7 @@ window.RT_CONFIG = {
         publicSubtitle: 'Portal Publik ' + rtShort(),
         footerAdmin: copyright() + ' \u00B7 ' + c.appVersion,
         footerPublic: copyright() + ' - Portal Publik \u00B7 ' + c.appVersion,
-        titleAdmin: c.appName + ' - Dashboard ' + rtShort(),
+        titleAdmin: c.appName + ' ' + c.rt,
         titlePublic: c.appName + ' - Portal Publik ' + rtShort(),
         aboutTitle: 'Tentang ' + c.appName,
         logoAlt: 'Logo ' + c.appName

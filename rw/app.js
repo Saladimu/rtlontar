@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-26-04';
+    var BUILD = '2026-10-26-05';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
@@ -316,6 +316,13 @@
         return out;
     }
 
+    function sortByTimeDesc(rows, field) {
+        var key = field || 'Timestamp';
+        return rows.slice().sort(function (a, b) {
+            return String(b[key] || '').localeCompare(String(a[key] || ''));
+        });
+    }
+
     function listNotice(res) {
         var html = '';
         if (res && res.masked) {
@@ -347,7 +354,7 @@
 
             var rows = (d.rts || []).map(function (rt) {
                 return '<tr class="clickable" data-rt="' + esc(rt.rtId) + '">' +
-                    '<td><span class="cell-main">' + esc(rt.rtId) + '</span><span class="cell-sub">' + esc(rt.nama || '') + '</span></td>' +
+                    '<td><span class="cell-main">' + esc(rt.rtId) + '</span><span class="cell-sub">' + esc(rt.alamat || rt.nama || '') + '</span></td>' +
                     '<td class="num">' + fmtInt(rt.warga) + '</td>' +
                     '<td class="num">' + fmtMoney(rt.kasSaldo) + '</td>' +
                     '<td class="num">' + fmtInt(rt.suratMenunggu) + '</td>' +
@@ -372,7 +379,7 @@
                     '<span class="sync-pill ' + (stale.length ? 'warn' : 'ok') + '"><i class="fa-solid ' + (stale.length ? 'fa-triangle-exclamation' : 'fa-circle-check') + '"></i><span>' + (stale.length ? 'Sebagian stale' : 'Semua RT aktif') + '</span></span>' +
                     '</div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>RT</th><th class="num">Warga</th><th class="num">Saldo kas</th><th class="num">Surat</th><th class="num">Pengaduan</th><th class="num">Eskalasi</th><th>Kesehatan</th><th>Backend / sinkron</th></tr></thead>' +
+                    '<thead><tr><th>RT</th><th class="num">Warga</th><th class="num">Saldo kas</th><th class="num">Surat</th><th class="num">Pengaduan</th><th class="num">Eskalasi</th><th>Status</th><th>Backend / sinkron</th></tr></thead>' +
                     '<tbody>' + (rows || '<tr><td colspan="8"><div class="empty"><i class="fa-solid fa-server"></i><p>Belum ada RT terdaftar.</p></div></td></tr>') + '</tbody></table></div></div>' +
                 '</section>';
             setSync(stale.length ? 'Sebagian stale' : 'Tersinkron', stale.length ? 'warn' : 'ok');
@@ -510,7 +517,7 @@
             var payload = { rtId: f.rt, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false };
             if (f.status) payload.status = f.status;
             return api('rwList', payload).then(function (res) {
-                var rows = rowsToObjects(res.headers, res.rows);
+                var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var body = rows.map(function (r) {
                     return '<tr class="clickable" data-surat="' + esc(r['ID']) + '">' +
                         '<td class="nowrap"><span class="cell-main">' + fmtDate(r['Timestamp']) + '</span></td>' +
@@ -557,7 +564,7 @@
             var payload = { rtId: f.rt, sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0, includeArchived: false };
             if (f.status) payload.status = f.status;
             return api('rwList', payload).then(function (res) {
-                var rows = rowsToObjects(res.headers, res.rows);
+                var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var body = rows.map(function (r) {
                     return '<tr class="clickable" data-lapor="' + esc(r['ID']) + '">' +
                         '<td class="nowrap"><span class="cell-main">' + fmtDate(r['Timestamp']) + '</span><span class="cell-sub">' + esc(r['No. Pengaduan'] || '') + '</span></td>' +

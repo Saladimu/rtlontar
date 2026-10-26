@@ -370,7 +370,7 @@ Append before the helper `ID` column:
 
 | Sheet | Purpose |
 |---|---|
-| `RT_Registry` | RT ID, name, endpoint, active flag, backend version, last sync |
+| `RT_Registry` | RT ID, name, address, endpoint, active flag, backend version, last sync |
 | `Users` | Authenticated email, role, active flag |
 | `Surat_Decision_Log` | Immutable approval history with idempotency key |
 | `Lapor_Response_Log` | Central audit copy of RW responses |
@@ -498,7 +498,7 @@ RT018 pilot prerequisites are confirmed: spreadsheet backup completed, all exist
 | 0 | Confirm decisions (done 25 Oct 2026), inventory 10 RTs, finalize rules | 2-4 days |
 | 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks — **implemented** (backend v35, v36 adds `saldoAwal`, v37 repairs RW status) |
 | 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **status/filter/panel implemented**; timeline history view pending |
-| 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-25`) |
+| 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-26`) |
 | 4 | RW portal: dashboard, residents, kas, surat, complaints | 2-3 weeks — **read-only milestone implemented** (`rw/`); decisions/responses next |
 | 5 | Access control, pilot, rollout, documentation | 1-2 weeks |
 
@@ -509,7 +509,7 @@ Indicative totals:
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
-The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 read portal plus RW write actions are implemented. RT code is at `publik-v38-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, and complaint responses with public/internal visibility. User management, registry, settings, outbox, and audit pages remain for the next milestone. Only 2 of the maximum 10 RTs are currently deployed.
+The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 read portal plus RW write actions are implemented. RT code is at `publik-v38-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-26`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, and complaint responses with public/internal visibility. User management, registry, settings, outbox, and audit pages remain for the next milestone. Only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -658,3 +658,4 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | 0.7 | 26 October 2026 | Implementation | Phase 4 read-only portal milestone delivered: Cloudflare Pages gateway with Access JWT verification and server-side gateway secret, session/role display, aggregate dashboard, and read pages for residents, kas, letters, and complaints (detail drawer + complaint timeline). Viewer masking is enforced by the orchestrator. Local mock preview and harnesses added. Decision/response writes and admin pages remain |
 | 0.8 | 26 October 2026 | Implementation | Phase 4 RW write actions delivered: RW Admin can approve/return/reject pending letters and append complaint responses (public/internal), with in-app confirmation, note validation, stale-version guards, deterministic idempotency keys, and outbox queued-state messaging. RW Viewer remains read-only. Local mock write actions and portal harness expanded to 16 scenarios. User/registry/settings/outbox/audit pages remain |
 | 0.9 | 26 October 2026 | Implementation | Revision-limit UX refined: the 3-return limit disables only `Kembalikan`; `Setujui` and a final `Tolak` remain available, and RT can resubmit once after the third return for a final decision. Revision count is shown to RW, RT, and residents (neutral wording, no internal notes). RT backend v38; portal harness expanded to 17 scenarios |
+| 1.0 | 26 October 2026 | Implementation | Admin tab title derived as `SAPA RT <rt>`. RW portal dashboard renames the health column to `Status`, shows the RT address on the second line of the RT cell (new `RT_Registry.Alamat` column with automatic migration), and sorts letters/complaints newest-first. Orchestrator `rw-orchestrator-v1-2026-10-26`; portal build `2026-10-26-05` |

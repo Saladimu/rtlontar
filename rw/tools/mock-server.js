@@ -7,7 +7,7 @@ const { HEADERS, RTS, USERS } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-25';
+const VERSION = 'rw-orchestrator-v1-2026-10-26';
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -244,6 +244,7 @@ function dashboardAction() {
         return {
             rtId: rt.rtId,
             nama: rt.nama,
+            alamat: rt.alamat,
             backendVersion: rt.backendVersion,
             lastSync: now,
             lastError: '',
@@ -309,7 +310,7 @@ function handleApi(body, headers) {
             status: 200,
             data: {
                 result: 'success', version: VERSION,
-                registry: RTS.map((rt) => ({ rtId: rt.rtId, nama: rt.nama, endpoint: 'https://script.google.com/macros/s/' + rt.rtId + '/exec', aktif: true, backendVersion: rt.backendVersion, lastSync: new Date().toISOString(), lastError: '' }))
+                registry: RTS.map((rt) => ({ rtId: rt.rtId, nama: rt.nama, alamat: rt.alamat, endpoint: 'https://script.google.com/macros/s/' + rt.rtId + '/exec', aktif: true, backendVersion: rt.backendVersion, lastSync: new Date().toISOString(), lastError: '' }))
             }
         };
     }

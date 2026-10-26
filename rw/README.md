@@ -4,7 +4,7 @@ Portal pengurus RW 06. Aplikasi statis + Cloudflare Pages Function sebagai gatew
 
 ## Status
 
-Milestone 2 (Phase 4): portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, dan pengaduan. RW Admin dapat menyetujui/mengembalikan/menolak surat dan mengirim tanggapan pengaduan (Publik/Internal). RW Viewer tetap baca-saja dan data sensitif dimasking. Halaman pengguna, registry, outbox, audit, dan pengaturan menyusul.
+Milestone 2 (Phase 4): portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, dan pengaduan. Tabel ringkasan menampilkan kolom **Status** (kesehatan RT) dan **alamat RT** pada baris kedua kolom RT; daftar surat dan pengaduan diurutkan **terbaru di atas**. RW Admin dapat menyetujui/mengembalikan/menolak surat dan mengirim tanggapan pengaduan (Publik/Internal). RW Viewer tetap baca-saja dan data sensitif dimasking. Halaman pengguna, registry, outbox, audit, dan pengaturan menyusul.
 
 ## Aksi tulis
 

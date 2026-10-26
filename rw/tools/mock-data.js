@@ -10,6 +10,7 @@ const HEADERS = {
 const RT018 = {
     rtId: 'RT018',
     nama: 'RT 018 / Lontar',
+    alamat: 'Lontar Timur',
     backendVersion: 'publik-v38-2026-10-26',
     saldoAwal: 50000,
     rows: {
@@ -43,6 +44,7 @@ const RT018 = {
 const RT017 = {
     rtId: 'RT017',
     nama: 'RT 017 / Lontar',
+    alamat: 'Lontar Barat',
     backendVersion: 'publik-v38-2026-10-26',
     saldoAwal: 0,
     rows: {
