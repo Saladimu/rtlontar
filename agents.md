@@ -17,7 +17,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
   - *Fallback / Local State:* `localStorage` browser untuk akses offline dan *instant rendering*.
 - **Delete Sync:** Operasi hapus menggunakan **GET dengan JSONP** untuk memastikan sinkronisasi ke Google Sheets sebelum pembaruan lokal.
 - **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`/`setPortalStatus`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`, dan bisa dimatikan total via `PUBLIC_PORTAL_ENABLED`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
-- **RW 06 Integration (Phase 1 + Phase 3):** arsitektur **hub-and-spoke**; setiap RT tetap menjadi *system of record* dengan Spreadsheet + Web App sendiri. Aksi RW memakai **`RW_TOKEN` terpisah** dan hanya boleh menulis kolom `Rw *` pada `Pengajuan_Surat`/`Lapor_Aspirasi` serta append `Lapor_Tindak_Lanjut`. Orkestrator RW (`RW Apps Script/code.gs`) mengonsolidasikan data lintas RT dengan registry, cache/stale fallback, masking, outbox idempoten, audit, dan retensi; portal RW tetap Phase 4. Tidak ada penggabungan spreadsheet. Detail di `BRD-RW06.md` dan `RW Apps Script/readme.md`.
+- **RW 06 Integration (Phase 1 + 3 + 4):** arsitektur **hub-and-spoke**; setiap RT tetap menjadi *system of record* dengan Spreadsheet + Web App sendiri. Aksi RW memakai **`RW_TOKEN` terpisah** dan hanya boleh menulis kolom `Rw *` pada `Pengajuan_Surat`/`Lapor_Aspirasi` serta append `Lapor_Tindak_Lanjut`. Orkestrator RW (`RW Apps Script/code.gs`) mengonsolidasikan data lintas RT dengan registry, cache/stale fallback, masking, outbox idempoten, audit, dan retensi. Portal RW (`rw/`) adalah aplikasi statis Cloudflare Pages dengan gateway Access JWT; milestone saat ini **baca-saja** (dashboard, warga, kas, surat, lapor). Tidak ada penggabungan spreadsheet. Detail di `BRD-RW06.md`, `RW Apps Script/readme.md`, dan `rw/README.md`.
 
 ---
 
@@ -222,6 +222,16 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 - Masking RW Viewer: NIK/HP 4 digit terakhir, alamat `[disembunyikan]`; dapat dimatikan lewat `RW_MASK_VIEWER`.
 - Pengujian: `/tmp/opencode/test_rw_orchestrator.js` (82 assertion) memakai VM + mock backend RT.
 
+#### Portal RW 06 (Phase 4, read-only)
+
+- Lokasi: `rw/`; statis + Cloudflare Pages Function `rw/functions/api/[[path]].js`. Root directory Pages harus `rw`.
+- Browser hanya memanggil same-origin `/api`. Gateway memverifikasi `Cf-Access-Jwt-Assertion`/cookie `CF_Authorization` (RS256 + JWKS + `aud` + `iss`), lalu menimpa `email` dan `gateway` sebelum meneruskan ke `ORCHESTRATOR_URL`.
+- Rahasia hanya di environment Pages: `ORCHESTRATOR_URL`, `GATEWAY_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`. `DEV_MODE=true` hanya untuk preview lokal; jangan pernah di produksi.
+- Halaman: Ringkasan, Data Warga, Kas RT, Pengajuan Surat, Pengaduan. Detail surat/pengaduan memakai drawer; riwayat pengaduan membaca `Lapor_Tindak_Lanjut` lewat `rwList` + `laporId`.
+- Masking RW Viewer berasal dari orkestrator (`res.masked`); UI hanya menampilkan notice. Jangan menambah fallback identitas/role dari browser.
+- Preview lokal: `PORT=8010 node rw/tools/mock-server.js`; akun `rw@example.com` dan `viewer@example.com` (`?devEmail=`).
+- Pengujian: `/tmp/opencode/test_rw_gateway.js` (22 assertion) dan `/tmp/opencode/test_rw_portal.js` (10 assertion).
+
 ---
 
 ## 🛠️ New Features & Implementation Details
@@ -387,6 +397,8 @@ Tombol refresh di:
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 | `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT |
 | `RW Apps Script/readme.md` | Setup, API, skema, outbox, dan keamanan orkestrator RW 06 |
+| `rw/` | Portal RW 06 (Cloudflare Pages, gateway Access, halaman baca-saja) |
+| `rw/README.md` | Setup portal, environment variables, Access, dan preview lokal |
 | `tools/check-deployment.js` | Pemeriksa konsistensi versi/identitas deployment (`--live` untuk produksi) |
 | `.gitattributes` | Menandai berkas khusus RT memakai merge driver `keeprt` |
 | `tools/merge-rt-files.js` | Driver merge: pertahankan nilai RT sambil menerima perubahan generik |
@@ -394,7 +406,9 @@ Tombol refresh di:
 
 ---
 
-## 🔧 Recent Changes (2026-10-25)
+## 🔧 Recent Changes (2026-10-25 – 2026-10-26)
+
+- ✅ **Phase 4 — Portal RW 06 (milestone baca-saja)** — `rw/` menambahkan Cloudflare Pages Function sebagai gateway Access JWT (RS256/JWKS/aud/iss), dashboard agregat, serta halaman Data Warga, Kas, Pengajuan Surat, dan Pengaduan dengan drawer detail + riwayat tindak lanjut. `DEV_MODE` hanya untuk preview lokal; produksi memakai `ORCHESTRATOR_URL` + `GATEWAY_SECRET` + Access. Mock preview dan harness gateway/portal ditambahkan. Dokumentasi: `rw/README.md`, `MAINTENANCE.md` §6.3, `BRD-RW06.md` v0.7.
 
 - ✅ **Phase 3 — Orkestrator RW 06 + RT backend v37** — `RW Apps Script/code.gs` (`rw-orchestrator-v1-2026-10-25`) menyediakan registry RT, pengguna/peran, dashboard fan-out dengan cache `KPI_Snapshot` dan stale fallback, pembacaan per RT dengan masking RW Viewer, keputusan surat/tanggapan pengaduan idempoten lewat `Outbox`, retry terjadwal, audit, dan retensi. Identitas hanya dari `email` gateway; token RT per `RT_TOKEN_<RTID>`; `GATEWAY_SECRET` wajib. RT backend v37 memperbaiki status/timestamp RW dan menampilkan No. Pengaduan; v36 menambahkan `saldoAwal` pada `rwRead` (`Iuran_Kas`) agar saldo agregat benar. `rwUsersSave` memakai `userEmail` untuk target agar tidak bertabrakan dengan identitas gateway. Harness `test_rw_orchestrator.js` (82 assertion) hijau bersama regresi RT. Dokumentasi: `RW Apps Script/readme.md`, `MAINTENANCE.md` §6.2, `BRD-RW06.md` v0.6, `readme.md`.
 

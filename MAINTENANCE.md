@@ -239,6 +239,29 @@ Set up the orchestrator once for RW 06. It runs in its own Apps Script project a
 
 Full API, schema, and security detail is in `RW Apps Script/readme.md`.
 
+### 6.3 RW 06 portal deployment
+
+The portal lives in `rw/` and is deployed as its own Cloudflare Pages project. It is read-only in the current milestone.
+
+1. Create a Cloudflare Pages project connected to this repository. Set **Root directory** to `rw`, build command empty, and output directory `.`.
+2. Set environment variables for Production:
+   - `ORCHESTRATOR_URL` — orchestrator Web App URL ending in `/exec`.
+   - `GATEWAY_SECRET` — the same value as the orchestrator Script Property, at least 32 random characters.
+   - `CF_ACCESS_TEAM_DOMAIN` — for example `rw06.cloudflareaccess.com` (no `https://`).
+   - `CF_ACCESS_AUD` — audience tag of the RW Access application. Separate multiple values with commas.
+   - Do **not** set `DEV_MODE` in production. Even if set, the gateway rejects it outside `localhost`/`127.0.0.1`.
+3. In Cloudflare Access, create an application for the portal domain and allow only RW pengurus emails. Do not bypass `/api`; the gateway must verify every request.
+4. Make sure each Access email also exists in the orchestrator `Users` tab with role `RW Admin` or `RW Viewer`.
+5. Deploy and smoke test:
+   - Open the portal root; Access login succeeds and the dashboard shows both RTs.
+   - Open Data Warga, Kas, Pengajuan Surat, and Pengaduan; open a detail drawer and load the complaint timeline.
+   - Sign in as a `RW Viewer`; NIK/HP show only the last four digits and addresses show `[disembunyikan]`.
+   - `GET /api/health` reports `orchestrator`, `gatewaySecret`, and `access` as configured.
+6. For local preview only, run `PORT=8010 node rw/tools/mock-server.js` and open `http://localhost:8010`. Demo accounts are `rw@example.com` and `viewer@example.com`.
+7. After changing portal files, bump `BUILD` in `rw/app.js` and `rw/version.json` together. No service worker is used by the portal, so no cache version bump is needed.
+
+When an RW operator leaves, remove the Access policy entry, deactivate the orchestrator user, and rotate `GATEWAY_SECRET` if exposure is suspected.
+
 > Deploying new code requires **Manage deployments > Edit > New version**; the URL stays the same.
 
 ---
@@ -289,6 +312,7 @@ Full API, schema, and security detail is in `RW Apps Script/readme.md`.
 - After token rotation, ask every admin to update the token in the dashboard.
 - Verify that `/` and `/index.html` require Access.
 - Verify that `/public`, `/public.html`, `/api`, `config.js`, `version.json`, icons, fonts, manifests, `sw.js`, and `qr-public.png` are bypassed.
+- Verify the RW portal domain requires Access and that `/api/*` is **not** bypassed.
 - Never place a token, spreadsheet ID, or private URL in this repository.
 
 When RTs share one Google account:

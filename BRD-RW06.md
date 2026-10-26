@@ -4,11 +4,11 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 0.5 |
-| Status | Phase 1, Phase 2 status/filter/panel, and Phase 3 orchestrator implemented; RW portal remains Phase 4 |
-| Date | 25 October 2026 |
+| Version | 0.7 |
+| Status | Phase 1, Phase 2 status/filter/panel, Phase 3 orchestrator, and Phase 4 read-only portal milestone implemented |
+| Date | 26 October 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
-| Related documents | `readme.md`, `panduan.md`, `agents.md`, `RW Apps Script/readme.md` |
+| Related documents | `readme.md`, `panduan.md`, `agents.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Owner | RW 06 |
 | Approver | TBD |
 
@@ -499,7 +499,7 @@ RT018 pilot prerequisites are confirmed: spreadsheet backup completed, all exist
 | 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks — **implemented** (backend v35, v36 adds `saldoAwal`, v37 repairs RW status) |
 | 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **status/filter/panel implemented**; timeline history view pending |
 | 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-25`) |
-| 4 | RW portal: dashboard, residents, kas, surat, complaints | 2-3 weeks |
+| 4 | RW portal: dashboard, residents, kas, surat, complaints | 2-3 weeks — **read-only milestone implemented** (`rw/`); decisions/responses next |
 | 5 | Access control, pilot, rollout, documentation | 1-2 weeks |
 
 Indicative totals:
@@ -509,7 +509,7 @@ Indicative totals:
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
-The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), and the Phase 3 orchestrator are implemented. RT code is at `publik-v37-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The RW portal (Phase 4) is not started. Only 2 of the maximum 10 RTs are currently deployed.
+The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 read-only portal milestone are implemented. RT code is at `publik-v37-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The portal lives in `rw/` with a Cloudflare Access gateway and read pages for dashboard, residents, kas, letters, and complaints; decision/response writes, user management, registry, settings, outbox, and audit pages remain for the next milestone. Only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -654,3 +654,4 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | 0.4 | 25 October 2026 | Implementation | Phase 1 delivered: backend v35 (`ensureRwSchema`, `RW_TOKEN`, RW endpoints, approval gate, escalation/resubmit) + RT admin UI (RW badges, filters, panels). Pilot branch `rt018` merged. RW portal remains Phase 4 |
 | 0.5 | 25 October 2026 | Implementation | Phase 3 orchestrator delivered: registry, users, fan-out dashboard with cache/stale fallback, per-RT reads with viewer masking, idempotent surat/lapor writes via outbox, retry triggers, audit, retention. RT backend v36 adds `saldoAwal` to `rwRead`; v37 repairs invalid `Rw Status`, escalation timestamps, and shows No. Pengaduan in the RT panel. Portal remains Phase 4 |
 | 0.6 | 26 October 2026 | Implementation | RT backend v37 repairs invalid `Rw Status` (self-heal), writes escalation timestamps to `Rw Diperbarui`, and shows No. Pengaduan in the RT RW panel. Portal remains Phase 4 |
+| 0.7 | 26 October 2026 | Implementation | Phase 4 read-only portal milestone delivered: Cloudflare Pages gateway with Access JWT verification and server-side gateway secret, session/role display, aggregate dashboard, and read pages for residents, kas, letters, and complaints (detail drawer + complaint timeline). Viewer masking is enforced by the orchestrator. Local mock preview and harnesses added. Decision/response writes and admin pages remain |
