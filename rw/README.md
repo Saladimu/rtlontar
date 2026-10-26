@@ -70,6 +70,7 @@ Pesan ini muncul **sebelum** orkestrator memeriksa tab `Users`, jadi email yang 
 - `CF_ACCESS_AUD` harus audience tag dari aplikasi Access yang sama.
 - Setelah mengubah environment variable, buat **deployment baru** di Cloudflare Pages agar nilai baru dipakai.
 - Uji `https://<team-domain>/cdn-cgi/access/certs`; respons harus JSON berisi `keys`. Jika 404, team domain masih salah.
+- Cara menemukan team domain: buka portal tanpa sesi, lalu lihat header `Location` pada redirect Access; host-nya adalah team domain (mis. `rt017.cloudflareaccess.com`). Nilai `aud` pada parameter `meta` adalah audience tag aplikasi.
 - Baru setelah JWT terverifikasi, email dicek di tab `Users` orkestrator (`Aktif=Ya`, peran `RW Admin`/`RW Viewer`).
 
 ## Preview lokal
