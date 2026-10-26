@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0f766e">
+    <title>RW 06 Lontar - Portal RW</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="preload" as="font" type="font/woff2" href="fonts/inter-latin.woff2" crossorigin>
+    <link rel="preload" as="font" type="font/woff2" href="fonts/fa-solid.woff2" crossorigin>
+    <link rel="stylesheet" href="fonts.css">
+    <link rel="stylesheet" href="tailwind.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div id="boot" class="boot">
+        <div class="boot-card">
+            <span class="brand-mark"><i class="fa-solid fa-tower-broadcast"></i></span>
+            <p class="boot-title">Portal RW 06</p>
+            <p class="boot-text" id="boot-text">Memeriksa akses...</p>
+            <div class="boot-bar"><span></span></div>
+        </div>
+    </div>
+
+    <div id="access" class="access hidden">
+        <div class="access-card">
+            <span class="access-icon"><i class="fa-solid fa-shield-halved"></i></span>
+            <h1>Akses belum tersedia</h1>
+            <p id="access-message">Portal RW hanya dapat dibuka oleh pengguna yang terdaftar.</p>
+            <div class="access-actions">
+                <button type="button" class="btn btn-primary" id="access-retry"><i class="fa-solid fa-arrows-rotate"></i> Coba lagi</button>
+                <a class="btn btn-ghost" href="/cdn-cgi/access/logout"><i class="fa-solid fa-arrow-right"></i> Keluar</a>
+            </div>
+            <p class="access-hint">Hubungi pengurus RW bila email Anda belum terdaftar.</p>
+        </div>
+    </div>
+
+    <div id="app" class="app hidden">
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-head">
+                <span class="brand-mark"><i class="fa-solid fa-tower-broadcast"></i></span>
+                <div>
+                    <p class="brand-name">RW 06</p>
+                    <p class="brand-sub">Portal Pengurus</p>
+                </div>
+                <button type="button" class="icon-btn sidebar-close" id="sidebar-close" aria-label="Tutup menu"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <nav class="nav" id="nav">
+                <button type="button" class="nav-item" data-page="dashboard"><i class="fa-solid fa-chart-pie"></i><span>Ringkasan</span></button>
+                <button type="button" class="nav-item" data-page="warga"><i class="fa-solid fa-users"></i><span>Data Warga</span></button>
+                <button type="button" class="nav-item" data-page="kas"><i class="fa-solid fa-wallet"></i><span>Kas RT</span></button>
+                <button type="button" class="nav-item" data-page="surat"><i class="fa-solid fa-file-signature"></i><span>Pengajuan Surat</span></button>
+                <button type="button" class="nav-item" data-page="lapor"><i class="fa-solid fa-comment-dots"></i><span>Pengaduan</span></button>
+            </nav>
+            <div class="sidebar-foot">
+                <div class="session-card">
+                    <span class="avatar" id="session-avatar"><i class="fa-solid fa-user"></i></span>
+                    <div class="session-info">
+                        <p id="session-name">-</p>
+                        <span id="session-email">-</span>
+                    </div>
+                </div>
+                <span class="role-badge" id="session-role">-</span>
+                <p class="build-info" id="build-info">-</p>
+            </div>
+        </aside>
+
+        <div class="main">
+            <header class="topbar">
+                <button type="button" class="icon-btn menu-btn" id="menu-btn" aria-label="Buka menu"><i class="fa-solid fa-bars"></i></button>
+                <div class="topbar-title">
+                    <h1 id="page-title">Ringkasan</h1>
+                    <p id="page-subtitle">Kondisi terkini seluruh RT</p>
+                </div>
+                <div class="topbar-actions">
+                    <span class="sync-pill" id="sync-pill"><i class="fa-solid fa-circle-notch"></i><span>Memuat</span></span>
+                    <button type="button" class="btn btn-ghost" id="refresh-btn"><i class="fa-solid fa-arrows-rotate"></i><span class="hide-sm">Muat ulang</span></button>
+                </div>
+            </header>
+
+            <main class="page" id="page"></main>
+        </div>
+    </div>
+
+    <div id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+        <div class="drawer-backdrop" data-close-drawer></div>
+        <section class="drawer-panel">
+            <header class="drawer-head">
+                <div>
+                    <p class="drawer-eyebrow" id="drawer-eyebrow">Detail</p>
+                    <h2 id="drawer-title">Detail</h2>
+                </div>
+                <button type="button" class="icon-btn" data-close-drawer aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </header>
+            <div class="drawer-body" id="drawer-body"></div>
+        </section>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status" aria-live="polite">
+        <i class="fa-solid fa-circle-info" id="toast-icon"></i>
+        <span id="toast-text"></span>
+        <button type="button" class="icon-btn" id="toast-close" aria-label="Tutup notifikasi"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+</body>
+</html>
