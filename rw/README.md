@@ -62,6 +62,16 @@ Deploy sebagai Cloudflare Pages project terpisah dengan **root directory `rw`**.
 
 Gateway menerima `Cf-Access-Jwt-Assertion` atau cookie `CF_Authorization`, memverifikasi RS256 terhadap JWKS Access, lalu mengirim `email` terverifikasi + `gateway` ke orkestrator. Identitas/role dari browser diabaikan.
 
+### Verifikasi Access gagal (`JWKS HTTP 404`)
+
+Pesan ini muncul **sebelum** orkestrator memeriksa tab `Users`, jadi email yang sudah terdaftar tetap bisa gagal.
+
+- `CF_ACCESS_TEAM_DOMAIN` harus **team domain Zero Trust**, mis. `rw06.cloudflareaccess.com`, **bukan** domain portal seperti `sapa-rw06.pages.dev`, dan tanpa path `/cdn-cgi/access/certs`.
+- `CF_ACCESS_AUD` harus audience tag dari aplikasi Access yang sama.
+- Setelah mengubah environment variable, buat **deployment baru** di Cloudflare Pages agar nilai baru dipakai.
+- Uji `https://<team-domain>/cdn-cgi/access/certs`; respons harus JSON berisi `keys`. Jika 404, team domain masih salah.
+- Baru setelah JWT terverifikasi, email dicek di tab `Users` orkestrator (`Aktif=Ya`, peran `RW Admin`/`RW Viewer`).
+
 ## Preview lokal
 
 ```bash
