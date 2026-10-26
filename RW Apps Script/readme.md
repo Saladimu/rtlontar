@@ -3,12 +3,12 @@
 Backend orkestrator untuk portal RW 06. Berkas ini **bukan** backend RT dan tidak boleh dipasang di spreadsheet RT. Setiap RT tetap memakai `Apps Script/code.gs` sendiri; orkestrator hanya membaca dan menulis kolom workflow RW melalui endpoint `rw*` RT.
 
 - Versi kode: `rw-orchestrator-v1-2026-10-25`
-- RT minimum: `publik-v36-2026-10-25` (v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
+- RT minimum: `publik-v37-2026-10-26` (v37 memperbaiki status/timestamp RW; v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
 - Pola: hub-and-spoke. Browser RW tidak pernah memanggil Web App RT secara langsung.
 
 ## 1. Prasyarat
 
-1. Setiap RT sudah deploy backend v36 atau lebih baru.
+1. Setiap RT sudah deploy backend v37 atau lebih baru.
 2. Setiap RT memiliki `RW_TOKEN` unik dan `RT_ID` (mis. `RT018`) di Script Properties RT.
 3. Tersedia satu Spreadsheet khusus orkestrator dan satu project Apps Script yang terikat padanya.
 4. Portal RW (Phase 4) akan memakai Cloudflare Pages Function sebagai gateway. Fungsi tersebut memverifikasi Cloudflare Access lalu mengirim `gateway` + `email` terverifikasi ke orkestrator.

@@ -646,7 +646,7 @@ Buka **Project Settings → Script Properties** di Apps Script dan tambahkan:
 | `RW_TOKEN` | Opsional (integrasi RW) | Token rahasia **khusus portal RW 06**, berbeda dari `ADMIN_TOKEN`. Wajib agar aksi `rwCheck`/`rwRead`/`rwSuratDecision`/`rwLaporNote` berfungsi. Jangan bagikan ke pengurus RT. |
 | `RT_ID` | Opsional (integrasi RW) | Identitas RT untuk kolom **RT ID** pada audit `Lapor_Tindak_Lanjut`, mis. `RT018`. |
 
-Setelah `code.gs` v36 di-deploy, buka dashboard admin sekali (atau panggil `action=read`) agar migrasi otomatis berjalan. Migrasi menambah kolom `Rw *` di `Pengajuan_Surat`/`Lapor_Aspirasi`, membuat tab `Lapor_Tindak_Lanjut`, dan mengisi data lama dengan `Tidak Perlu`. Verifikasi lewat `rwCheck`: `schemaMigrated` dan `rwTokenConfigured` harus `true`.
+Setelah `code.gs` v37 di-deploy, buka dashboard admin sekali (atau panggil `action=read`) agar migrasi otomatis berjalan. Migrasi menambah kolom `Rw *` di `Pengajuan_Surat`/`Lapor_Aspirasi`, membuat tab `Lapor_Tindak_Lanjut`, dan mengisi data lama dengan `Tidak Perlu`. Verifikasi lewat `rwCheck`: `schemaMigrated` dan `rwTokenConfigured` harus `true`.
 
 Bila baru mengaktifkan email, jalankan izin sekali: pilih fungsi **`authorizeMail`** pada dropdown editor Apps Script → **Run** → **Review permissions** → **Allow** → lalu deploy **New version**.
 

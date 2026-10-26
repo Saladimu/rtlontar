@@ -197,12 +197,12 @@ node tools/check-deployment.js --live
 
 Do not skip step 8. Updating `code.gs` without creating a new deployment leaves the old backend running.
 
-### 6.1 RW 06 schema rollout (backend v36)
+### 6.1 RW 06 schema rollout (backend v37)
 
 Run this once per RT when adopting the RW 06 integration:
 
 1. Back up the spreadsheet (**File > Make a copy**) and note the current Apps Script deployment version.
-2. Deploy `code.gs` **publik-v36-2026-10-25** as a **New version**. v36 hanya menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`; skema kolom tidak berubah dari v35.
+2. Deploy `code.gs` **publik-v37-2026-10-26** as a **New version**. v37 memperbaiki penulisan `Rw Diperbarui` saat eskalasi pengaduan dan memulihkan otomatis nilai `Rw Status` yang tidak dikenal (mis. ID baris lama) menjadi `Tidak Perlu`. Skema kolom tidak berubah dari v35/v36.
 3. In **Project Settings > Script Properties**, set:
    - `RW_TOKEN` — a unique secret per RT, shared only with the RW orchestrator. Never reuse `ADMIN_TOKEN`, and do not give it to RT admins.
    - `RT_ID` — optional, for example `RT018`, written to `Lapor_Tindak_Lanjut`.
@@ -210,7 +210,7 @@ Run this once per RT when adopting the RW 06 integration:
 5. Verify the migration:
    - `Pengajuan_Surat` has 7 `Rw *` columns before `ID`; `Lapor_Aspirasi` has 4.
    - `Lapor_Tindak_Lanjut` exists with 9 headers.
-   - Existing rows show `Rw Status=Tidak Perlu`.
+   - Existing rows show `Rw Status=Tidak Perlu`; nilai rusak (mis. `ADU-...`) otomatis dipulihkan saat dashboard dimuat.
    - `rwCheck` returns `schemaMigrated:true` and `rwTokenConfigured:true`.
 6. Smoke test:
    - Submit a new letter → `Rw Status=Menunggu`; `Selesai` is rejected until a `rwSuratDecision` approves it.
@@ -396,3 +396,4 @@ Review this document quarterly and after every critical incident.
 | 1.0 | 25 October 2026 | Initial maintenance and release procedure |
 | 1.1 | 25 October 2026 | Added RW 06 schema rollout, `RW_TOKEN` rotation, and pilot verification steps |
 | 1.2 | 25 October 2026 | RT backend v36 (`saldoAwal`), RW orchestrator setup, trigger/outbox operations, and orchestrator tests |
+| 1.3 | 26 October 2026 | RT backend v37 repairs invalid `Rw Status`, escalation timestamp column, and shows No. Pengaduan in the RT RW panel |

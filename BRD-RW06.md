@@ -496,7 +496,7 @@ RT018 pilot prerequisites are confirmed: spreadsheet backup completed, all exist
 | Phase | Scope | Estimate |
 |---|---|---|
 | 0 | Confirm decisions (done 25 Oct 2026), inventory 10 RTs, finalize rules | 2-4 days |
-| 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks — **implemented** (backend v35, v36 adds `saldoAwal`) |
+| 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks — **implemented** (backend v35, v36 adds `saldoAwal`, v37 repairs RW status) |
 | 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **status/filter/panel implemented**; timeline history view pending |
 | 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-25`) |
 | 4 | RW portal: dashboard, residents, kas, surat, complaints | 2-3 weeks |
@@ -509,7 +509,7 @@ Indicative totals:
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
-The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), and the Phase 3 orchestrator are implemented. RT code is at `publik-v36-2026-10-25`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The RW portal (Phase 4) is not started. Only 2 of the maximum 10 RTs are currently deployed.
+The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), and the Phase 3 orchestrator are implemented. RT code is at `publik-v37-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The RW portal (Phase 4) is not started. Only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -652,4 +652,5 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | 0.2 | 25 October 2026 | Discussion | Resolved OD-01 to OD-11; added operational parameters, approval gate, 3-return limit, visibility toggle, masking, digest, and 24-month retention |
 | 0.3 | 25 October 2026 | Discussion | All new letters require approval; rejection permits same-request revision within 3 negative decisions; complaints start `Tidak Perlu`; viewer masking narrowed; login/audit retention set to 12 months; RT018 confirmed as pilot |
 | 0.4 | 25 October 2026 | Implementation | Phase 1 delivered: backend v35 (`ensureRwSchema`, `RW_TOKEN`, RW endpoints, approval gate, escalation/resubmit) + RT admin UI (RW badges, filters, panels). Pilot branch `rt018` merged. RW portal remains Phase 4 |
-| 0.5 | 25 October 2026 | Implementation | Phase 3 orchestrator delivered: registry, users, fan-out dashboard with cache/stale fallback, per-RT reads with viewer masking, idempotent surat/lapor writes via outbox, retry triggers, audit, retention. RT backend v36 adds `saldoAwal` to `rwRead`. Portal remains Phase 4 |
+| 0.5 | 25 October 2026 | Implementation | Phase 3 orchestrator delivered: registry, users, fan-out dashboard with cache/stale fallback, per-RT reads with viewer masking, idempotent surat/lapor writes via outbox, retry triggers, audit, retention. RT backend v36 adds `saldoAwal` to `rwRead`; v37 repairs invalid `Rw Status`, escalation timestamps, and shows No. Pengaduan in the RT panel. Portal remains Phase 4 |
+| 0.6 | 26 October 2026 | Implementation | RT backend v37 repairs invalid `Rw Status` (self-heal), writes escalation timestamps to `Rw Diperbarui`, and shows No. Pengaduan in the RT RW panel. Portal remains Phase 4 |

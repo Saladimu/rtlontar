@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v36-2026-10-25";
+var CODE_VERSION = "publik-v37-2026-10-26";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -522,6 +522,46 @@ function ensureSpreadsheetFormat(ss, sheet, name) {
   }
 }
 
+// Perbaiki nilai Rw Status pengaduan yang tidak dikenal (mis. ID baris lama
+// yang tertulis karena layout sheet belum termigrasi). Header diverifikasi
+// lebih dulu agar kolom ID tidak pernah tertimpa.
+function healInvalidLaporRwStatus(sheet) {
+  if (!sheet || sheet.getLastRow() < 2) return;
+  var idCol = EXPECTED_FIELDS['Lapor_Aspirasi'] + 1;
+  if (sheet.getLastColumn() < idCol) return;
+  var statusHeader = String(sheet.getRange(1, LAPOR_RW_STATUS_COL + 1).getValue() || '').trim();
+  var idHeader = String(sheet.getRange(1, idCol).getValue() || '').trim();
+  if (statusHeader !== 'Rw Status' || idHeader !== 'ID') return;
+
+  var range = sheet.getRange(2, LAPOR_RW_STATUS_COL + 1, sheet.getLastRow() - 1, 1);
+  var values = range.getValues();
+  var changed = false;
+  for (var i = 0; i < values.length; i++) {
+    var raw = values[i][0];
+    var normalized = normalizeLaporRwStatus(raw, 'Tidak Perlu');
+    if (String(raw === null || raw === undefined ? '' : raw) !== normalized) {
+      values[i][0] = normalized;
+      changed = true;
+    }
+  }
+  if (changed) range.setValues(values);
+
+  // Versi lama sempat menulis timestamp ke kolom Rw Petugas saat eskalasi.
+  if (String(sheet.getRange(1, LAPOR_RW_PETUGAS_COL + 1).getValue() || '').trim() === 'Rw Petugas') {
+    var pRange = sheet.getRange(2, LAPOR_RW_PETUGAS_COL + 1, sheet.getLastRow() - 1, 1);
+    var pValues = pRange.getValues();
+    var stampRe = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/;
+    var pChanged = false;
+    for (var j = 0; j < pValues.length; j++) {
+      if (stampRe.test(String(pValues[j][0] === null || pValues[j][0] === undefined ? '' : pValues[j][0]))) {
+        pValues[j][0] = '';
+        pChanged = true;
+      }
+    }
+    if (pChanged) pRange.setValues(pValues);
+  }
+}
+
 // Pastikan setiap baris punya ID stabil di kolom bantu terakhir.
 // Mengembalikan array data rows (tanpa header), dengan ID di elemen terakhir.
 function ensureIds(sheet, name) {
@@ -636,6 +676,7 @@ function readAllSheets() {
     }
 
     ensureSpreadsheetFormat(ss, sheet, name);
+    if (name === 'Lapor_Aspirasi') healInvalidLaporRwStatus(sheet);
     var rows = ensureIds(sheet, name);
 
     data[name] = formatSheetRows(rows, formats[name]);
@@ -776,6 +817,7 @@ function readRwSheet(ss, sheetName, includeArchived, statusFilter, laporIdFilter
     var sheet = getOrCreateSheet(ss, sheetName);
     if (sheet) {
       ensureSpreadsheetFormat(ss, sheet, sheetName);
+      if (sheetName === 'Lapor_Aspirasi') healInvalidLaporRwStatus(sheet);
       rows = ensureIds(sheet, sheetName);
     }
   }
@@ -1042,7 +1084,7 @@ function handleLaporEscalate(data) {
     return { "result": "success", "id": id, "rwStatus": cur, "duplicate": true };
   }
   var stamp = rwStamp();
-  sheet.getRange(rowNum, LAPOR_RW_STATUS_COL + 1, 1, 2).setValues([['Perlu Tindak Lanjut', stamp]]);
+  sheet.getRange(rowNum, LAPOR_RW_STATUS_COL + 1, 1, 4).setValues([['Perlu Tindak Lanjut', '', stamp, '']]);
   return { "result": "success", "id": id, "rwStatus": 'Perlu Tindak Lanjut', "rwDiperbarui": stamp };
 }
 
