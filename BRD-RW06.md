@@ -190,7 +190,7 @@ Permission model:
 | FR-SRT-04 | Require a note for return and rejection. | Must |
 | FR-SRT-05 | Write the decision back to the originating RT. | Must |
 | FR-SRT-06 | Expose the RW decision and note in the RT admin app. | Must |
-| FR-SRT-07 | Allow RT to revise and resubmit the same request after `Dikembalikan` or `Ditolak`, up to 3 negative decisions; the third closes the request for revision. | Must |
+| FR-SRT-07 | Allow RT to revise and resubmit the same request after `Dikembalikan` or `Ditolak`, up to 3 returns. At the limit, `Kembalikan` is disabled; RT may resubmit once after the third return so RW can issue a final `Setujui` or `Tolak`. A final `Tolak` closes the request. | Must |
 | FR-SRT-08 | Prevent a stale approval from overwriting a newer RT edit. | Must |
 | FR-SRT-09 | Keep historical letters out of the new approval queue by marking them `Tidak Perlu` during migration. | Must |
 
@@ -232,7 +232,7 @@ Permission model:
 | BRL-03 | RW decisions are `Disetujui`, `Dikembalikan`, or `Ditolak`. |
 | BRL-04 | `Dikembalikan` and `Ditolak` require a note. |
 | BRL-05 | RT must not be able to overwrite RW decision fields. |
-| BRL-06 | `Dikembalikan` and `Ditolak` both allow RT to revise and resubmit the same request; each negative decision increments the revision counter and requires a note. RW may issue at most 3 negative decisions per request; the third closes the request for revision, and RT must create a new request if still needed. |
+| BRL-06 | `Dikembalikan` and `Ditolak` both allow RT to revise and resubmit the same request; each decision increments the revision counter (except a final `Tolak` at the limit) and requires a note. RW may return a request at most 3 times. At the limit, `Kembalikan` is disabled, `Setujui` and `Tolak` remain available, and RT may resubmit once after the third return for a final decision. A final `Tolak` closes the request; RT must create a new request if still needed. |
 | BRL-07 | Approval writes use optimistic concurrency so an outdated decision cannot overwrite a newer record. |
 | BRL-08 | Historical letters are marked `Tidak Perlu` or otherwise excluded from the queue unless RW decides to review them. |
 
@@ -509,7 +509,7 @@ Indicative totals:
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
-The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 read portal plus RW write actions are implemented. RT code is at `publik-v37-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, and complaint responses with public/internal visibility. User management, registry, settings, outbox, and audit pages remain for the next milestone. Only 2 of the maximum 10 RTs are currently deployed.
+The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 read portal plus RW write actions are implemented. RT code is at `publik-v38-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-25`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, and complaint responses with public/internal visibility. User management, registry, settings, outbox, and audit pages remain for the next milestone. Only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -553,7 +553,7 @@ Resolved on 25 October 2026. These decisions are binding for Phase 1.
 | ID | Decision | Status |
 |---|---|---|
 | OD-01 | RW approval is required before RT can set `Selesai` and save `No. Surat`. Records marked `Tidak Perlu` are exempt. | Resolved |
-| OD-02 | RT may revise and resubmit the same request after `Dikembalikan` or `Ditolak`. Each negative decision counts toward a maximum of 3; the third closes the request for revision. | Resolved |
+| OD-02 | RT may revise and resubmit the same request after `Dikembalikan` or `Ditolak`. RW may return a request at most 3 times. At the limit, `Kembalikan` is disabled and RT may resubmit once for a final `Setujui`/`Tolak`; a final `Tolak` closes the request. | Resolved |
 | OD-03 | Each RW complaint response has a public/internal toggle. Default is public; internal responses are never shown to residents. | Resolved |
 | OD-04 | RT remains the complaint owner and closes it; RW marks its part as `Selesai RW`. | Resolved |
 | OD-05 | Roles are `RW Admin` and optional `RW Viewer`. | Resolved |
@@ -572,7 +572,7 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | Parameter | Default | Notes |
 |---|---|---|
 | `RW_CACHE_TTL_MINUTES` | 10 | 1-60 minutes; per-RT override allowed; detail views bypass the cache |
-| `RW_SURAT_MAX_ROUNDS` | 3 | Maximum returns before RW must approve or reject |
+| `RW_SURAT_MAX_ROUNDS` | 3 | Maximum returns before `Kembalikan` is disabled; RW must then approve or issue a final reject |
 | `RW_LAPOR_DEFAULT_VISIBILITY` | `Publik` | Per-response toggle; `Internal` is never public |
 | `RW_MASK_VIEWER` | `true` | RW Viewer sees NIK/phone last 4 digits; address is hidden |
 | `RW_DIGEST_ENABLED` | `false` | Enable during pilot when needed |
@@ -600,7 +600,8 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 - RW can return it with a required note, and RT can revise and resubmit.
 - RT cannot set `Selesai` or save `No. Surat` before approval; `Tidak Perlu` is exempt.
 - RW can return or reject the same request, and RT can revise and resubmit it.
-- RW cannot issue more than 3 negative decisions; the third closes the request for revision.
+- RW can return a request at most 3 times. At the limit, `Kembalikan` is disabled, `Setujui`/`Tolak` remain available, and RT can resubmit once after the third return for a final decision.
+- A final `Tolak` closes the request and cannot be resubmitted; a new request is required.
 - A stale approval is rejected when the RT record changed.
 - Approval and rejection are recorded in the audit log.
 - Historical letters are excluded from the queue as `Tidak Perlu` by migration rule.
@@ -656,3 +657,4 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | 0.6 | 26 October 2026 | Implementation | RT backend v37 repairs invalid `Rw Status` (self-heal), writes escalation timestamps to `Rw Diperbarui`, and shows No. Pengaduan in the RT RW panel. Portal remains Phase 4 |
 | 0.7 | 26 October 2026 | Implementation | Phase 4 read-only portal milestone delivered: Cloudflare Pages gateway with Access JWT verification and server-side gateway secret, session/role display, aggregate dashboard, and read pages for residents, kas, letters, and complaints (detail drawer + complaint timeline). Viewer masking is enforced by the orchestrator. Local mock preview and harnesses added. Decision/response writes and admin pages remain |
 | 0.8 | 26 October 2026 | Implementation | Phase 4 RW write actions delivered: RW Admin can approve/return/reject pending letters and append complaint responses (public/internal), with in-app confirmation, note validation, stale-version guards, deterministic idempotency keys, and outbox queued-state messaging. RW Viewer remains read-only. Local mock write actions and portal harness expanded to 16 scenarios. User/registry/settings/outbox/audit pages remain |
+| 0.9 | 26 October 2026 | Implementation | Revision-limit UX refined: the 3-return limit disables only `Kembalikan`; `Setujui` and a final `Tolak` remain available, and RT can resubmit once after the third return for a final decision. Revision count is shown to RW, RT, and residents (neutral wording, no internal notes). RT backend v38; portal harness expanded to 17 scenarios |

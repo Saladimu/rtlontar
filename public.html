@@ -1446,7 +1446,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-22-08';
+        const APP_BUILD = '2026-10-26-02';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {
@@ -2498,6 +2498,7 @@
                             '<i class="fa-regular fa-clock mr-1"></i>' + escapeHtml(it.tanggal) +
                             (it.ref ? ' &middot; ' + escapeHtml(it.ref) : '') +
                         '</div>' +
+                        ((Number(it.revisi) || 0) > 0 ? '<div class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Sudah direvisi ' + escapeHtml(String(Number(it.revisi) || 0)) + ' kali.</div>' : '') +
                         (it.noSurat ? '<div class="mt-2 flex items-center gap-2 text-sm font-medium text-amber-900 dark:text-amber-100 bg-amber-100 dark:bg-amber-500/25 border border-amber-300 dark:border-amber-500 p-2.5 rounded-lg"><i class="fa-solid fa-file-signature text-amber-500 dark:text-amber-300"></i><span>No. Surat: <b class="font-bold">' + escapeHtml(it.noSurat) + '</b></span></div>' : '') +
                         (it.catatan ? '<div class="mt-2 text-[11px] text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/50 p-2 rounded"><i class="fa-regular fa-comment mr-1"></i>' + escapeHtml(it.catatan) + '</div>' : '') +
                     '</div>';

@@ -197,12 +197,12 @@ node tools/check-deployment.js --live
 
 Do not skip step 8. Updating `code.gs` without creating a new deployment leaves the old backend running.
 
-### 6.1 RW 06 schema rollout (backend v37)
+### 6.1 RW 06 schema rollout (backend v38)
 
 Run this once per RT when adopting the RW 06 integration:
 
 1. Back up the spreadsheet (**File > Make a copy**) and note the current Apps Script deployment version.
-2. Deploy `code.gs` **publik-v37-2026-10-26** as a **New version**. v37 memperbaiki penulisan `Rw Diperbarui` saat eskalasi pengaduan dan memulihkan otomatis nilai `Rw Status` yang tidak dikenal (mis. ID baris lama) menjadi `Tidak Perlu`. Skema kolom tidak berubah dari v35/v36.
+2. Deploy `code.gs` **publik-v38-2026-10-26** as a **New version**. v38 membatasi `Kembalikan` pada 3 revisi namun tetap menyediakan `Setujui`/`Tolak` sebagai keputusan final dan mengizinkan ajukan ulang setelah pengembalian ketiga; v37 memperbaiki penulisan `Rw Diperbarui` saat eskalasi dan memulihkan nilai `Rw Status` yang tidak dikenal menjadi `Tidak Perlu`. Skema kolom tidak berubah dari v35/v36/v37.
 3. In **Project Settings > Script Properties**, set:
    - `RW_TOKEN` — a unique secret per RT, shared only with the RW orchestrator. Never reuse `ADMIN_TOKEN`, and do not give it to RT admins.
    - `RT_ID` — optional, for example `RT018`, written to `Lapor_Tindak_Lanjut`.
@@ -215,7 +215,9 @@ Run this once per RT when adopting the RW 06 integration:
 6. Smoke test:
    - Submit a new letter → `Rw Status=Menunggu`; `Selesai` is rejected until a `rwSuratDecision` approves it.
    - Send `rwSuratDecision` with `Disetujui`, then set `Selesai` with a No. Surat.
-   - Send `Dikembalikan`, revise, then `resubmitSurat`; confirm `Rw Versi` increments and the third negative decision returns `max_negative`.
+   - Send `Dikembalikan` three times, calling `resubmitSurat` between rounds; confirm `Rw Versi` increments and the third return is accepted.
+   - Resubmit after the third return; confirm `Dikembalikan` is rejected (`max_negative`) but `Ditolak` succeeds as the final decision without adding a revision.
+   - Confirm `resubmitSurat` after that final `Ditolak` returns `max_negative`.
    - Escalate a complaint with `laporEscalate`; send `rwLaporNote`; confirm the audit row and public/internal visibility.
 7. Repeat for RT018 first, then the remaining RTs. Never merge an RT branch back into `main`.
 
