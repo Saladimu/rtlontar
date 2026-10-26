@@ -222,15 +222,17 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 - Masking RW Viewer: NIK/HP 4 digit terakhir, alamat `[disembunyikan]`; dapat dimatikan lewat `RW_MASK_VIEWER`.
 - Pengujian: `/tmp/opencode/test_rw_orchestrator.js` (82 assertion) memakai VM + mock backend RT.
 
-#### Portal RW 06 (Phase 4, read-only)
+#### Portal RW 06 (Phase 4)
 
 - Lokasi: `rw/`; statis + Cloudflare Pages Function `rw/functions/api/[[path]].js`. Root directory Pages harus `rw`.
 - Browser hanya memanggil same-origin `/api`. Gateway memverifikasi `Cf-Access-Jwt-Assertion`/cookie `CF_Authorization` (RS256 + JWKS + `aud` + `iss`), lalu menimpa `email` dan `gateway` sebelum meneruskan ke `ORCHESTRATOR_URL`.
 - Rahasia hanya di environment Pages: `ORCHESTRATOR_URL`, `GATEWAY_SECRET`, `CF_ACCESS_TEAM_DOMAIN`, `CF_ACCESS_AUD`. `DEV_MODE=true` hanya untuk preview lokal; jangan pernah di produksi.
 - Halaman: Ringkasan, Data Warga, Kas RT, Pengajuan Surat, Pengaduan. Detail surat/pengaduan memakai drawer; riwayat pengaduan membaca `Lapor_Tindak_Lanjut` lewat `rwList` + `laporId`.
+- Aksi tulis hanya untuk `RW Admin`: keputusan surat (`rwSuratDecision`) dan tanggapan pengaduan (`rwLaporNote`). Form memakai modal konfirmasi `#modal-warning`, catatan wajib untuk keputusan negatif/tanggapan, `expectedVersi`/`expectedDiperbarui`, dan kunci idempotensi deterministik dari RT + ID + versi/waktu + aksi + catatan. `RW Viewer` tidak menerima kontrol tulis.
+- Respons `queued:true` ditampilkan sebagai pengiriman tertunda (outbox). Error `stale`/`not_pending` menutup drawer dan memuat ulang daftar. Kegagalan jaringan/5xx yang ambigu juga menutup drawer dan memuat ulang agar pengguna memeriksa status sebelum mengirim ulang.
 - Masking RW Viewer berasal dari orkestrator (`res.masked`); UI hanya menampilkan notice. Jangan menambah fallback identitas/role dari browser.
-- Preview lokal: `PORT=8010 node rw/tools/mock-server.js`; akun `rw@example.com` dan `viewer@example.com` (`?devEmail=`).
-- Pengujian: `/tmp/opencode/test_rw_gateway.js` (22 assertion) dan `/tmp/opencode/test_rw_portal.js` (10 assertion).
+- Preview lokal: `PORT=8010 node rw/tools/mock-server.js`; akun `rw@example.com` dan `viewer@example.com` (`?devEmail=`). Mock server ikut meniru `rwSuratDecision`/`rwLaporNote` dan memutasi data demo.
+- Pengujian: `/tmp/opencode/test_rw_gateway.js` (22 assertion) dan `/tmp/opencode/test_rw_portal.js` (15 assertion).
 
 ---
 
@@ -407,6 +409,8 @@ Tombol refresh di:
 ---
 
 ## 🔧 Recent Changes (2026-10-25 – 2026-10-26)
+
+- ✅ **Phase 4 — Aksi tulis Portal RW 06** — drawer Pengajuan Surat kini menyediakan **Setujui / Kembalikan / Tolak** untuk `RW Admin` saat `Rw Status=Menunggu`; catatan wajib minimal 3 karakter untuk keputusan negatif, tombol negatif dinonaktifkan setelah 3 keputusan, dan `Rw Versi` dikirim sebagai `expectedVersi`. Drawer Pengaduan menyediakan **Kirim tanggapan** dengan status opsional (`Ditangani RW`/`Selesai RW`), visibilitas `Publik`/`Internal`, catatan wajib, serta `Rw Diperbarui` sebagai `expectedDiperbarui`. Semua aksi memakai modal konfirmasi in-app **`#modal-warning`** (bukan `confirm()`), kunci idempotensi deterministik dari RT + ID + versi/waktu + aksi + catatan, dan menampilkan status `queued` bila masuk outbox. Error `stale`/`not_pending` menutup drawer dan memuat ulang daftar. `RW Viewer` tetap tanpa kontrol tulis. Mock server meniru kedua aksi dan memutasi data demo; harness portal diperluas menjadi **15** skenario. `BUILD` portal → **`2026-10-26-02`**; `version.json` → **`2026-10-26-02`**. Dokumentasi: `rw/README.md`, `MAINTENANCE.md` §6.3, `BRD-RW06.md` v0.8.
 
 - ✅ **Phase 4 — Portal RW 06 (milestone baca-saja)** — `rw/` menambahkan Cloudflare Pages Function sebagai gateway Access JWT (RS256/JWKS/aud/iss), dashboard agregat, serta halaman Data Warga, Kas, Pengajuan Surat, dan Pengaduan dengan drawer detail + riwayat tindak lanjut. `DEV_MODE` hanya untuk preview lokal; produksi memakai `ORCHESTRATOR_URL` + `GATEWAY_SECRET` + Access. Mock preview dan harness gateway/portal ditambahkan. Dokumentasi: `rw/README.md`, `MAINTENANCE.md` §6.3, `BRD-RW06.md` v0.7.
 

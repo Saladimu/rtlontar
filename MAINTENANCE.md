@@ -241,7 +241,7 @@ Full API, schema, and security detail is in `RW Apps Script/readme.md`.
 
 ### 6.3 RW 06 portal deployment
 
-The portal lives in `rw/` and is deployed as its own Cloudflare Pages project. It is read-only in the current milestone.
+The portal lives in `rw/` and is deployed as its own Cloudflare Pages project. RW Admin can decide letters and respond to complaints; RW Viewer remains read-only.
 
 1. Create a Cloudflare Pages project connected to this repository. Set **Root directory** to `rw`, build command empty, and output directory `.`.
 2. Set environment variables for Production:
@@ -255,7 +255,9 @@ The portal lives in `rw/` and is deployed as its own Cloudflare Pages project. I
 5. Deploy and smoke test:
    - Open the portal root; Access login succeeds and the dashboard shows both RTs.
    - Open Data Warga, Kas, Pengajuan Surat, and Pengaduan; open a detail drawer and load the complaint timeline.
-   - Sign in as a `RW Viewer`; NIK/HP show only the last four digits and addresses show `[disembunyikan]`.
+   - As `RW Admin`, approve a disposable letter and send a complaint response. Confirm the in-app warning modal appears before the write, the RT row/list refreshes, and the toast reports success or queued delivery.
+   - Verify negative letter decisions require a note and that public complaint notes appear on the RT public status page while internal notes do not.
+   - Sign in as a `RW Viewer`; NIK/HP show only the last four digits, addresses show `[disembunyikan]`, and no write controls are rendered.
    - `GET /api/health` reports `orchestrator`, `gatewaySecret`, and `access` as configured.
 6. For local preview only, run `PORT=8010 node rw/tools/mock-server.js` and open `http://localhost:8010`. Demo accounts are `rw@example.com` and `viewer@example.com`.
 7. After changing portal files, bump `BUILD` in `rw/app.js` and `rw/version.json` together. No service worker is used by the portal, so no cache version bump is needed.
@@ -407,7 +409,7 @@ Before releasing the orchestrator, also run `test_rw_phase1.js`, `test_codegs_re
 
 - System owner: maintains the repository, deployments, tokens, backups, and this procedure.
 - RT admin: maintains residents, kas, announcements, activities, letters, and complaints.
-- RW 06: approves letters and responds to escalated complaints through the RW portal (Phase 4). The orchestrator (Phase 3) is implemented and tested; the RT admin UI for RW status/filter/panel is already available.
+- RW 06: approves letters and responds to escalated complaints through the RW portal (Phase 4). The orchestrator (Phase 3) and the portal read/write UI are implemented and tested; the RT admin UI for RW status/filter/panel is already available.
 
 Review this document quarterly and after every critical incident.
 

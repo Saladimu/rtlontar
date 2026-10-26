@@ -1,10 +1,28 @@
 # Portal RW 06
 
-Portal baca-saja untuk pengurus RW 06. Aplikasi statis + Cloudflare Pages Function sebagai gateway ke orkestrator RW (`RW Apps Script`). Browser tidak pernah memegang `GATEWAY_SECRET` atau token RT.
+Portal pengurus RW 06. Aplikasi statis + Cloudflare Pages Function sebagai gateway ke orkestrator RW (`RW Apps Script`). Browser tidak pernah memegang `GATEWAY_SECRET` atau token RT.
 
 ## Status
 
-Milestone 1 (Phase 4): kerangka portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, dan pengaduan. Keputusan surat/tanggapan pengaduan, pengguna, registry, outbox, audit, dan pengaturan menyusul pada milestone berikutnya.
+Milestone 2 (Phase 4): portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, dan pengaduan. RW Admin dapat menyetujui/mengembalikan/menolak surat dan mengirim tanggapan pengaduan (Publik/Internal). RW Viewer tetap baca-saja dan data sensitif dimasking. Halaman pengguna, registry, outbox, audit, dan pengaturan menyusul.
+
+## Aksi tulis
+
+- **Keputusan surat** hanya untuk `RW Admin` dan hanya saat `Rw Status=Menunggu`.
+  - Setujui boleh tanpa catatan.
+  - Kembalikan/Tolak wajib catatan minimal 3 karakter.
+  - Tombol negatif dinonaktifkan setelah 3 keputusan negatif.
+  - `expectedVersi` dikirim dari `Rw Versi`; perubahan bersamaan ditolak sebagai `stale`.
+- **Tanggapan pengaduan** hanya untuk `RW Admin`.
+  - Catatan wajib minimal 3 karakter.
+  - Status dapat dipertahankan, diubah ke `Ditangani RW`, atau `Selesai RW`.
+  - Visibilitas `Publik` juga menyalin catatan ke kolom RT untuk portal warga; `Internal` hanya tersimpan untuk pengurus RW.
+  - `expectedDiperbarui` dikirim dari `Rw Diperbarui`.
+- Semua aksi memakai modal konfirmasi in-app (`#modal-warning`), bukan `confirm()` bawaan browser.
+- Kunci idempotensi dibuat deterministik dari RT, ID, versi/waktu data, aksi, dan isi catatan. Percobaan ulang dengan isi yang sama tidak membuat duplikat.
+- Bila RT tidak dapat dihubungi, orkestrator menyimpan aksi di outbox dan UI menampilkan bahwa pengiriman akan dicoba ulang otomatis.
+- Kegagalan jaringan/5xx yang membuat hasil tidak pasti akan menutup drawer dan memuat ulang daftar; periksa status/riwayat sebelum mengirim ulang.
+
 
 ## Struktur
 
@@ -76,4 +94,6 @@ Mock server tidak memakai Cloudflare Access dan tidak boleh dipakai di produksi.
 - `node --check rw/app.js`
 - `node --check rw/functions/api/[[path]].js`
 - `node --check rw/tools/mock-server.js`
-- Uji lokal: login admin, buka semua halaman, ganti ke viewer, pastikan NIK/HP/alamat tersamar.
+- Uji lokal: login admin, setujui/kembalikan/tolak surat, kirim tanggapan pengaduan, lalu ganti ke viewer dan pastikan tidak ada kontrol tulis serta NIK/HP/alamat tersamar.
+- Harness: `/tmp/opencode/test_rw_portal.js` mencakup konfirmasi, pembatalan, validasi catatan, penolakan, tanggapan pengaduan, pemulihan setelah kegagalan koneksi yang ambigu, dan gating Viewer.
+
