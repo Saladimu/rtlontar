@@ -78,7 +78,7 @@ async function loadJwks(url) {
     const now = Date.now();
     if (jwksCache.url === url && jwksCache.keys && jwksCache.expiresAt > now) return jwksCache.keys;
     const res = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
-    if (!res.ok) throw new Error('JWKS HTTP ' + res.status);
+    if (!res.ok) throw new Error('JWKS HTTP ' + res.status + ' (' + url + ')');
     const data = await res.json();
     const keys = Array.isArray(data.keys) ? data.keys : [];
     if (!keys.length) throw new Error('JWKS kosong');

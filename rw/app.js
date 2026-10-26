@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-26-02';
+    var BUILD = '2026-10-26-03';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
@@ -1022,7 +1022,9 @@
             renderChrome();
             navigate('dashboard');
         }).catch(function (err) {
-            if (err.code === 'forbidden' || err.code === 'unauthorized' || err.status === 401 || err.status === 403) {
+            if (err.code === 'unauthorized') {
+                showAccess('Verifikasi Cloudflare Access gagal (' + (err.message || 'JWT tidak valid') + '). Periksa CF_ACCESS_TEAM_DOMAIN dan CF_ACCESS_AUD pada environment gateway, lalu deploy ulang.');
+            } else if (err.code === 'forbidden') {
                 showAccess('Akun ' + (getDevEmail() || 'Anda') + ' belum terdaftar sebagai pengguna RW. ' + (err.message || ''));
             } else {
                 showAccess(err.message || 'Gagal memeriksa akses ke portal RW.');
