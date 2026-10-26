@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v35-2026-10-25";
+var CODE_VERSION = "publik-v36-2026-10-25";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -821,6 +821,8 @@ function handleRwRead(data) {
   page.result = 'success';
   page.version = CODE_VERSION;
   page.sheet = sheetName;
+  // Saldo awal dibutuhkan orkestrator RW untuk menghitung saldo kas yang benar.
+  if (sheetName === 'Iuran_Kas') page.saldoAwal = getSaldoAwal();
   return page;
 }
 

@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v35-2026-10-25'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v36-2026-10-25'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -687,11 +687,13 @@ function handleRwRead(data) {
   });
   const total = rows.length;
   const page = rows.slice(offset, offset + limit);
-  return {
+  const out = {
     result: 'success', version: CODE_VERSION, sheet: sheetName,
     headers: DATA_HEADERS[sheetName] || [], rows: page, total, offset, limit,
     truncated: offset + page.length < total,
   };
+  if (sheetName === 'Iuran_Kas') out.saldoAwal = Number(store.saldoAwal) || 0;
+  return out;
 }
 
 function handleRwSuratDecision(data) {
