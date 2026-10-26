@@ -13,14 +13,14 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-25';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-26';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
 var RT_TOKEN_PREFIX = 'RT_TOKEN_';
 
 var SCHEMA = {
-  'RT_Registry': ['RT ID', 'Nama', 'Endpoint', 'Aktif', 'Backend Version', 'Last Sync', 'Last Error', 'Diperbarui'],
+  'RT_Registry': ['RT ID', 'Nama', 'Alamat', 'Endpoint', 'Aktif', 'Backend Version', 'Last Sync', 'Last Error', 'Diperbarui'],
   'Users': ['Email', 'Nama', 'Peran', 'Aktif', 'Dibuat', 'Diperbarui'],
   'Surat_Decision_Log': ['ID', 'Kunci', 'RT ID', 'Surat ID', 'Ref', 'Keputusan', 'Catatan', 'Aktor', 'Waktu', 'Versi', 'Status Kirim'],
   'Lapor_Response_Log': ['ID', 'Kunci', 'RT ID', 'Lapor ID', 'Catatan', 'Status RW', 'Visibilitas', 'Aktor', 'Waktu', 'Timeline ID', 'Status Kirim'],
@@ -157,9 +157,28 @@ function ensureHeaders(sheet, headers, name) {
   }
   if (same) return;
   if (sheet.getLastRow() > 1 || String(current.join('')).trim() !== '') {
+    if (name === 'RT_Registry' && migrateRegistryAlamat(sheet, current, headers)) return;
     throw new Error('Header sheet ' + name + ' tidak cocok. Periksa migrasi manual.');
   }
   sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+}
+
+// Menambahkan kolom `Alamat` ke `RT_Registry` lama tanpa menghapus data.
+// Hanya dijalankan bila header lama sama persis dengan skema baru tanpa `Alamat`.
+function migrateRegistryAlamat(sheet, current, headers) {
+  var targetIndex = headers.indexOf('Alamat');
+  if (targetIndex === -1) return false;
+  var expected = headers.filter(function (h) { return h !== 'Alamat'; });
+  var actual = [];
+  for (var i = 0; i < expected.length; i++) {
+    actual.push(String(current[i] === undefined || current[i] === null ? '' : current[i]).trim());
+  }
+  for (var j = 0; j < expected.length; j++) {
+    if (actual[j] !== expected[j]) return false;
+  }
+  sheet.insertColumnBefore(targetIndex + 1);
+  sheet.getRange(1, targetIndex + 1).setValue('Alamat');
+  return true;
 }
 
 function ensureSchema() {
@@ -382,6 +401,7 @@ function listRegistry() {
     return {
       rtId: clean(r['RT ID'], 20).toUpperCase(),
       nama: clean(r['Nama'], 120),
+      alamat: clean(r['Alamat'], 200),
       endpoint: clean(r['Endpoint'], 500),
       aktif: isActive(r['Aktif']),
       backendVersion: clean(r['Backend Version'], 80),
@@ -416,6 +436,7 @@ function saveRegistry(user, data) {
   if (!requireAdmin(user)) return fail('forbidden', 'Hanya RW Admin yang dapat mengubah registry RT.');
   var rtId = clean(data.rtId, 20).toUpperCase();
   var nama = clean(data.nama, 120);
+  var alamat = clean(data.alamat, 200);
   var endpoint = clean(data.endpoint, 500);
   var aktif = data.aktif === undefined ? true : (data.aktif === true || String(data.aktif).toLowerCase() === 'ya' || String(data.aktif) === 'true');
   if (!isValidRtId(rtId)) return fail('invalid_rt', 'RT ID harus berformat RTNNN, mis. RT018.');
@@ -428,6 +449,7 @@ function saveRegistry(user, data) {
   if (existing) {
     updateObject('RT_Registry', 'RT ID', rtId, {
       'Nama': nama,
+      'Alamat': alamat,
       'Endpoint': endpoint,
       'Aktif': aktif ? 'Ya' : 'Tidak',
       'Diperbarui': now
@@ -436,6 +458,7 @@ function saveRegistry(user, data) {
     appendObject('RT_Registry', {
       'RT ID': rtId,
       'Nama': nama,
+      'Alamat': alamat,
       'Endpoint': endpoint,
       'Aktif': aktif ? 'Ya' : 'Tidak',
       'Backend Version': '',
@@ -749,6 +772,7 @@ function handleDashboard(user, data) {
     result.push({
       rtId: rt.rtId,
       nama: rt.nama,
+      alamat: rt.alamat,
       endpoint: rt.endpoint,
       backendVersion: rt.backendVersion,
       lastSync: rt.lastSync,

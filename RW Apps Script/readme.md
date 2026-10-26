@@ -2,7 +2,7 @@
 
 Backend orkestrator untuk portal RW 06. Berkas ini **bukan** backend RT dan tidak boleh dipasang di spreadsheet RT. Setiap RT tetap memakai `Apps Script/code.gs` sendiri; orkestrator hanya membaca dan menulis kolom workflow RW melalui endpoint `rw*` RT.
 
-- Versi kode: `rw-orchestrator-v1-2026-10-25`
+- Versi kode: `rw-orchestrator-v1-2026-10-26`
 - RT minimum: `publik-v38-2026-10-26` (v38: batas 3 revisi hanya menutup `Kembalikan`; `Tolak` final tetap tersedia; v37 memperbaiki status/timestamp RW; v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
 - Pola: hub-and-spoke. Browser RW tidak pernah memanggil Web App RT secara langsung.
 
@@ -45,7 +45,7 @@ Jangan menyimpan `RW_TOKEN`, `GATEWAY_SECRET`, atau token RT lain di spreadsheet
 
 | Tab | Isi |
 |---|---|
-| `RT_Registry` | `RT ID`, `Nama`, `Endpoint`, `Aktif`, `Backend Version`, `Last Sync`, `Last Error`, `Diperbarui` |
+| `RT_Registry` | `RT ID`, `Nama`, `Alamat`, `Endpoint`, `Aktif`, `Backend Version`, `Last Sync`, `Last Error`, `Diperbarui` |
 | `Users` | `Email`, `Nama`, `Peran`, `Aktif`, `Dibuat`, `Diperbarui` |
 | `Surat_Decision_Log` | Riwayat keputusan surat, termasuk `Kunci` idempotensi dan `Status Kirim` |
 | `Lapor_Response_Log` | Salinan audit tanggapan pengaduan dan `Timeline ID` |
@@ -81,7 +81,7 @@ Semua aksi data memakai `POST` dengan body JSON:
 | `rwDashboard` | Semua | Fan-out snapshot semua RT aktif; memakai cache `CACHE_TTL_SECONDS`. `forceRefresh` hanya berlaku untuk RW Admin. |
 | `rwRefresh` | Semua | Paksa refresh; `forceRefresh` diabaikan untuk RW Viewer. |
 | `rwRegistryList` | Semua | Daftar RT. |
-| `rwRegistrySave` | RW Admin | Tambah/ubah RT. Endpoint wajib `https://.../exec` dan tidak boleh duplikat. |
+| `rwRegistrySave` | RW Admin | Tambah/ubah RT (`nama`, `alamat` opsional). Endpoint wajib `https://.../exec` dan tidak boleh duplikat. |
 | `rwUsersList` | RW Admin | Daftar pengguna. |
 | `rwUsersSave` | RW Admin | Tambah/ubah pengguna. Gunakan `userEmail` untuk email target agar tidak bertabrakan dengan `email` identitas gateway. |
 | `rwSettingsGet` | Semua | Daftar pengaturan. |

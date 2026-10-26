@@ -138,7 +138,7 @@ window.RT_CONFIG = {
         publicSubtitle: 'Portal Publik ' + rtShort(),
         footerAdmin: copyright() + ' \u00B7 ' + c.appVersion,
         footerPublic: copyright() + ' - Portal Publik \u00B7 ' + c.appVersion,
-        titleAdmin: c.appName + ' - Dashboard ' + rtShort(),
+        titleAdmin: c.appName + ' ' + c.rt,
         titlePublic: c.appName + ' - Portal Publik ' + rtShort(),
         aboutTitle: 'Tentang ' + c.appName,
         logoAlt: 'Logo ' + c.appName
