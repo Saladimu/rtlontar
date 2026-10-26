@@ -4,7 +4,7 @@
 |---|---|
 | Document | Maintenance and release runbook |
 | Applies to | Every SAPA-RT deployment (RT017, RT018, and future RTs) |
-| Related documents | `readme.md`, `panduan.md`, `agents.md`, `Apps Script/readme.md`, `BRD-RW06.md` |
+| Related documents | `readme.md`, `panduan.md`, `agents.md`, `Apps Script/readme.md`, `RW Apps Script/readme.md`, `BRD-RW06.md` |
 | Owner | System owner together with each RT admin |
 | Review cycle | Every quarter, or after a major incident |
 
@@ -197,12 +197,12 @@ node tools/check-deployment.js --live
 
 Do not skip step 8. Updating `code.gs` without creating a new deployment leaves the old backend running.
 
-### 6.1 RW 06 schema rollout (backend v35)
+### 6.1 RW 06 schema rollout (backend v36)
 
 Run this once per RT when adopting the RW 06 integration:
 
 1. Back up the spreadsheet (**File > Make a copy**) and note the current Apps Script deployment version.
-2. Deploy `code.gs` **publik-v35-2026-10-25** as a **New version**.
+2. Deploy `code.gs` **publik-v36-2026-10-25** as a **New version**. v36 hanya menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`; skema kolom tidak berubah dari v35.
 3. In **Project Settings > Script Properties**, set:
    - `RW_TOKEN` — a unique secret per RT, shared only with the RW orchestrator. Never reuse `ADMIN_TOKEN`, and do not give it to RT admins.
    - `RT_ID` — optional, for example `RT018`, written to `Lapor_Tindak_Lanjut`.
@@ -220,6 +220,26 @@ Run this once per RT when adopting the RW 06 integration:
 7. Repeat for RT018 first, then the remaining RTs. Never merge an RT branch back into `main`.
 
 If migration fails, restore the spreadsheet copy. The added columns are additive, so reverting the backend deployment leaves existing data readable.
+
+### 6.2 RW 06 orchestrator setup
+
+Set up the orchestrator once for RW 06. It runs in its own Apps Script project and spreadsheet, never inside an RT project.
+
+1. Create a spreadsheet and a bound Apps Script project for RW 06.
+2. Paste `RW Apps Script/code.gs` and deploy it as a Web app (**Execute as: Me**, **Who has access: Anyone**).
+3. Set Script Properties:
+   - `GATEWAY_SECRET` — random string of at least 32 characters, shared only with the RW gateway.
+   - `RW_BOOTSTRAP_ADMIN` — email of the first RW Admin.
+   - `RT_TOKEN_RT018`, `RT_TOKEN_RT017`, and so on — must equal the `RW_TOKEN` value of the matching RT.
+4. Run `setupOrchestrator()` once to create the tabs and default settings.
+5. Run `installTriggers()` once to install outbox retry (every 5 minutes) and retention cleanup (daily at 02:00).
+6. Register each RT with `rwRegistrySave` using `https://script.google.com/macros/s/.../exec`; endpoints must be unique.
+7. Create RW users with `rwUsersSave`. Use `userEmail` for the target email so it does not collide with the gateway identity field `email`.
+8. Verify with `GET ?action=version`, then `POST action=rwSession`, `rwDashboard`, and `rwRtHealth` for every RT.
+
+Full API, schema, and security detail is in `RW Apps Script/readme.md`.
+
+> Deploying new code requires **Manage deployments > Edit > New version**; the URL stays the same.
 
 ---
 
@@ -262,7 +282,7 @@ If migration fails, restore the spreadsheet copy. The added columns are additive
 - Keep recovery codes in a password manager.
 - Use a different `ADMIN_TOKEN` for every RT.
 - Use a different `RW_TOKEN` for every RT and keep it separate from `ADMIN_TOKEN`; only the RW orchestrator/portal holds it.
-- Store tokens only in Script Properties and browser `localStorage`.
+- Store `ADMIN_TOKEN` only in Script Properties and browser `localStorage`. Store `RW_TOKEN` and `GATEWAY_SECRET` only in Script Properties; never in a browser.
 - Review Cloudflare Access users monthly.
 - Revoke sessions immediately when an admin leaves.
 - Rotate `ADMIN_TOKEN` quarterly or after any suspected exposure; rotate `RW_TOKEN` when an RW operator leaves or a spoke is retired.
@@ -316,9 +336,10 @@ After recovery, record the incident, cause, and corrective action in `agents.md`
 9. Add the new hostname to the existing **RT Admin** Access application for `/` and `/index.html`.
 10. Add the new hostname to the **RT Public Assets** bypass application for every public path.
 11. Generate a new `qr-public.png` for the public portal URL.
-12. Run `node tools/check-deployment.js --live`.
-13. Smoke test admin and public flows.
-14. Register the deployment and schedule the first backup.
+12. Add the RT's `RW_TOKEN` to the orchestrator as `RT_TOKEN_<RTID>`, then run `rwRegistrySave`.
+13. Run `node tools/check-deployment.js --live`.
+14. Smoke test admin, public, and RW flows (`rwCheck`, `rwRead`, dashboard, one decision, one complaint response).
+15. Register the deployment and schedule the first backup.
 
 Do not reuse another RT's token, Apps Script project, Drive folder, or Pages project.
 
@@ -347,13 +368,22 @@ node tools/check-deployment.js --live
 
 The full functional test harness is external to the repository and must not hardcode one RT's identity or versions. When adding tests, derive expectations from `config.js`, `version.json`, and the current branch. Moving that harness into a repository `tests/` folder and running it before release is recommended.
 
+RW orchestrator tests use a VM harness with mocked RT backends:
+
+```bash
+cd /tmp/opencode
+node test_rw_orchestrator.js
+```
+
+Before releasing the orchestrator, also run `test_rw_phase1.js`, `test_codegs_read.js`, and `test_kas_feature.js` to confirm the RT contract still matches.
+
 ---
 
 ## 12. Ownership and review
 
 - System owner: maintains the repository, deployments, tokens, backups, and this procedure.
 - RT admin: maintains residents, kas, announcements, activities, letters, and complaints.
-- RW 06: approves letters and responds to escalated complaints through the RW portal (Phase 4); RT data remains read-only outside the RW workflow columns. The RT admin UI for RW status/filter/panel is already available.
+- RW 06: approves letters and responds to escalated complaints through the RW portal (Phase 4). The orchestrator (Phase 3) is implemented and tested; the RT admin UI for RW status/filter/panel is already available.
 
 Review this document quarterly and after every critical incident.
 
@@ -365,3 +395,4 @@ Review this document quarterly and after every critical incident.
 |---|---|---|
 | 1.0 | 25 October 2026 | Initial maintenance and release procedure |
 | 1.1 | 25 October 2026 | Added RW 06 schema rollout, `RW_TOKEN` rotation, and pilot verification steps |
+| 1.2 | 25 October 2026 | RT backend v36 (`saldoAwal`), RW orchestrator setup, trigger/outbox operations, and orchestrator tests |
