@@ -11,7 +11,7 @@ Milestone 2 (Phase 4): portal, gateway Access JWT, sesi/peran, ringkasan, data w
 - **Keputusan surat** hanya untuk `RW Admin` dan hanya saat `Rw Status=Menunggu`.
   - Setujui boleh tanpa catatan.
   - Kembalikan/Tolak wajib catatan minimal 3 karakter.
-  - Tombol negatif dinonaktifkan setelah 3 keputusan negatif.
+  - Setelah 3 kali revisi, **Kembalikan** dinonaktifkan; **Setujui** dan **Tolak** tetap tersedia sebagai keputusan final.
   - `expectedVersi` dikirim dari `Rw Versi`; perubahan bersamaan ditolak sebagai `stale`.
 - **Tanggapan pengaduan** hanya untuk `RW Admin`.
   - Catatan wajib minimal 3 karakter.

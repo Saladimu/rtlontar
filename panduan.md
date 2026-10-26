@@ -288,7 +288,8 @@ Sejak integrasi RW 06, **setiap pengajuan surat baru wajib disetujui RW** sebelu
   - **Ditolak** — tidak disetujui; baca alasan, revisi bila memungkinkan, lalu **Ajukan Ulang ke RW**.
   - **Tidak Perlu** — pengajuan lama sebelum integrasi RW (riwayat, tidak menghalangi penulisan No. Surat).
 - **No. Surat terkunci** selama status RW belum **Disetujui**. Tombol ubah status cepat juga menolak **Selesai** dan menyarankan membuka modal.
-- **Batas revisi:** maksimal **3 keputusan negatif** (`Dikembalikan`/`Ditolak`). Setelah keputusan negatif ketiga, tombol **Ajukan Ulang** dinonaktifkan dan pengajuan harus dibuat baru. Panel menampilkan peringatan batas revisi.
+- **Batas revisi:** maksimal **3 kali pengembalian** (`Dikembalikan`). Setelah pengembalian ketiga, **Kembalikan** dinonaktifkan, tetapi RT tetap dapat **Ajukan Ulang** sekali agar RW memberi keputusan final: **Setujui** atau **Tolak**. **Tolak** pada batas ini bersifat final dan RT tidak dapat mengajukan ulang; buat pengajuan baru bila masih diperlukan. Panel menampilkan **Revisi: N kali** dan peringatan batas revisi.
+- **Jumlah revisi untuk warga:** hasil **Cek Status** menampilkan keterangan netral **“Sudah direvisi N kali.”** tanpa membuka catatan internal RW.
 - **Filter RW:** gunakan dropdown **Semua Status RW** di samping filter status untuk menampilkan pengajuan per status persetujuan.
 - **Perubahan isi oleh RT:** bila pengajuan yang sudah **Disetujui** diubah isinya (nama, NIK, HP, alamat, jenis surat, atau keperluan), status RW otomatis kembali ke **Menunggu** agar RW meninjau ulang. Perubahan kecil seperti **No. Surat** atau **Status Pengurusan** tidak membatalkan persetujuan.
 - **Keputusan RW** dilakukan melalui portal RW 06 (Phase 4). Pengurus RT hanya melihat hasil dan catatannya; kolom RW tidak dapat diedit dari dashboard RT.

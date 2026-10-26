@@ -2029,7 +2029,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v37-2026-10-26';
+        const EXPECTED_BACKEND_VERSION = 'publik-v38-2026-10-26';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -2039,7 +2039,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-26-01';
+        const APP_BUILD = '2026-10-26-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5125,20 +5125,23 @@
             const parts = [];
             if (item && item.rwOleh) parts.push('Oleh: ' + item.rwOleh);
             if (item && item.rwTanggal) parts.push('Tanggal: ' + fmtTimestamp(item.rwTanggal));
-            parts.push('Revisi: ' + revisi + '/3');
+            parts.push('Revisi: ' + revisi + ' kali');
             meta.textContent = parts.join(' \u00B7 ');
 
             const blocked = !isSuratRwApprovedStatus(rw);
-            const maxed = (rw === 'Dikembalikan' || rw === 'Ditolak') && revisi >= 3;
+            const returnedAtLimit = rw === 'Dikembalikan' && revisi >= 3;
+            const rejectedFinal = rw === 'Ditolak' && revisi >= 3;
             if (warning) {
                 warning.classList.toggle('hidden', !blocked);
                 if (blocked) {
-                    warning.textContent = maxed
-                        ? 'Batas 3 keputusan negatif sudah tercapai. Buat pengajuan baru bila masih diperlukan.'
-                        : 'No. Surat dan status Selesai baru aktif setelah RW menyetujui pengajuan.';
+                    warning.textContent = rejectedFinal
+                        ? 'Pengajuan ditolak final setelah 3 revisi. Buat pengajuan baru bila masih diperlukan.'
+                        : returnedAtLimit
+                            ? 'Batas 3 revisi tercapai. Ajukan ulang untuk meminta keputusan final RW (Setujui atau Tolak).'
+                            : 'No. Surat dan status Selesai baru aktif setelah RW menyetujui pengajuan.';
                 }
             }
-            const canResubmit = (rw === 'Dikembalikan' || rw === 'Ditolak') && revisi < 3;
+            const canResubmit = rw === 'Dikembalikan' || (rw === 'Ditolak' && revisi < 3);
             if (btn) {
                 btn.classList.toggle('hidden', !canResubmit);
                 btn.classList.toggle('inline-flex', canResubmit);
@@ -5185,7 +5188,7 @@
             if (!item) return;
             const rw = item.rwStatus || 'Tidak Perlu';
             const revisi = Number(item.rwRevisi) || 0;
-            if (!((rw === 'Dikembalikan' || rw === 'Ditolak') && revisi < 3)) {
+            if (!(rw === 'Dikembalikan' || (rw === 'Ditolak' && revisi < 3))) {
                 showToast('Pengajuan ini tidak dapat diajukan ulang.', 'error');
                 return;
             }
@@ -6032,6 +6035,7 @@
                             ${suratStatusBadge(item.status)}
                             ${suratDurationHtml(item)}
                             ${suratRwBadge(item.rwStatus)}
+                            ${(Number(item.rwRevisi) || 0) > 0 ? `<div class="text-[10px] text-slate-500">Revisi: ${Number(item.rwRevisi) || 0} kali</div>` : ''}
                             ${(item.rwStatus === 'Dikembalikan' || item.rwStatus === 'Ditolak') && item.rwCatatan ? `<div class="text-[10px] text-slate-500 max-w-[10rem] truncate" title="${escAttr(item.rwCatatan)}">${escAttr(item.rwCatatan)}</div>` : ''}
                         </div>
                     </td>

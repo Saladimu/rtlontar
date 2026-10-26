@@ -10,7 +10,7 @@ const HEADERS = {
 const RT018 = {
     rtId: 'RT018',
     nama: 'RT 018 / Lontar',
-    backendVersion: 'publik-v37-2026-10-26',
+    backendVersion: 'publik-v38-2026-10-26',
     saldoAwal: 50000,
     rows: {
         Data_Warga: [
@@ -43,7 +43,7 @@ const RT018 = {
 const RT017 = {
     rtId: 'RT017',
     nama: 'RT 017 / Lontar',
-    backendVersion: 'publik-v37-2026-10-26',
+    backendVersion: 'publik-v38-2026-10-26',
     saldoAwal: 0,
     rows: {
         Data_Warga: [

@@ -203,11 +203,11 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 - `RW_TOKEN`: properti terpisah; `getRwToken()`/`isRwAuthorized()` memakai `safeEqual()`. Bila kosong → fail-closed (`rw_unauthorized`). Token admin RT **tidak** berlaku untuk aksi RW, dan token RW **tidak** berlaku untuk aksi admin.
 - `RT_ID`: opsional, dipakai sebagai kolom `RT ID` pada `Lapor_Tindak_Lanjut`.
 - Skema RW ditambahkan oleh `ensureRwSchema()` (idempoten, flag `RW_SCHEMA_MIGRATED`): kolom `Rw *` **sebelum** kolom bantu `ID`, baris lama → `Tidak Perlu`, tab `Lapor_Tindak_Lanjut` (9 kolom, append-only).
-- Aksi RW (`POST`, token RW): `rwCheck`, `rwRead` (whitelist + paginasi; `status`/`laporId` filter), `rwSuratDecision` (`Disetujui`/`Dikembalikan`/`Ditolak`; `expectedVersi`; `kunci` ≥ 6; maks. 3 keputusan negatif), `rwLaporNote` (`Ditangani RW`/`Selesai RW`; `visibilitas` `Publik`/`Internal`; `expectedDiperbarui`; audit trail).
-- Aksi admin RT terkait (token admin): `laporEscalate` (`Tidak Perlu` → `Perlu Tindak Lanjut`, idempoten), `resubmitSurat` (`Dikembalikan`/`Ditolak` → `Menunggu`, versi+1, hormati batas 3).
+- Aksi RW (`POST`, token RW): `rwCheck`, `rwRead` (whitelist + paginasi; `status`/`laporId` filter), `rwSuratDecision` (`Disetujui`/`Dikembalikan`/`Ditolak`; `expectedVersi`; `kunci` ≥ 6; maks. 3 kali `Kembalikan`, sedangkan `Tolak` final tetap tersedia pada batas), `rwLaporNote` (`Ditangani RW`/`Selesai RW`; `visibilitas` `Publik`/`Internal`; `expectedDiperbarui`; audit trail).
+- Aksi admin RT terkait (token admin): `laporEscalate` (`Tidak Perlu` → `Perlu Tindak Lanjut`, idempoten), `resubmitSurat` (`Dikembalikan`/`Ditolak` → `Menunggu`, versi+1; `Dikembalikan` pada batas 3 tetap boleh untuk keputusan final, `Ditolak` pada batas 3 final).
 - Gate: `suratSaveError()` menolak `Selesai` tanpa `No. Surat` **atau** tanpa `Rw Status=Disetujui`; `submitSurat` membuat `Menunggu`, `submitLapor` membuat `Tidak Perlu`.
 - Admin update: `mergeSuratRwForAdminUpdate()`/`mergeLaporRwForAdminUpdate()` mempertahankan kolom RW; perubahan konten surat saat `Disetujui` → `Menunggu` + `Rw Versi+1`.
-- Backend v37 memulihkan `Rw Status` yang tidak dikenal dan menulis `Rw Diperbarui` dengan benar saat eskalasi; panel RW menampilkan No. Pengaduan. Backend v36 menambahkan `saldoAwal` pada respons `rwRead` untuk `Iuran_Kas`; tanpa ini orkestrator tidak dapat menghitung saldo kas yang benar.
+- Backend v38 membatasi **Kembalikan** pada 3 revisi namun tetap menyediakan **Setujui/Tolak** sebagai keputusan final dan mengizinkan ajukan ulang setelah pengembalian ketiga; jumlah revisi tampil di portal RW, panel RT, dan Cek Status warga. Backend v37 memulihkan `Rw Status` yang tidak dikenal dan menulis `Rw Diperbarui` dengan benar saat eskalasi; panel RW menampilkan No. Pengaduan. Backend v36 menambahkan `saldoAwal` pada respons `rwRead` untuk `Iuran_Kas`; tanpa ini orkestrator tidak dapat menghitung saldo kas yang benar.
 - Masking (NIK/HP 4 digit, alamat disembunyikan) dan retensi (login/audit 12 bulan; keputusan/tanggapan/snapshot 24 bulan) adalah tanggung jawab orkestrator RW, bukan `code.gs`.
 
 #### Orkestrator RW 06 (Phase 3)
@@ -409,6 +409,8 @@ Tombol refresh di:
 ---
 
 ## 🔧 Recent Changes (2026-10-25 – 2026-10-26)
+
+- ✅ **Batas revisi surat disempurnakan (RT backend v38)** — batas 3 kini hanya menutup **Kembalikan**; **Setujui** dan **Tolak** tetap tersedia sebagai keputusan final. Setelah pengembalian ketiga, RT boleh **Ajukan Ulang** sekali untuk meminta keputusan final; **Tolak** pada batas bersifat final dan tidak menambah revisi. Jumlah revisi ditampilkan sebagai **Revisi: N kali** di portal RW (daftar + drawer), panel RT (tabel + panel), dan Cek Status warga dengan kalimat netral tanpa catatan internal. `CODE_VERSION`/`EXPECTED_BACKEND_VERSION` → **`publik-v38-2026-10-26`**; `APP_BUILD` index/public → **`2026-10-26-02`**; `BUILD` portal → **`2026-10-26-04`**; cache SW → **`sapa-rt-static-v109`**; harness portal **17** skenario. Dokumentasi: `Apps Script/readme.md`, `panduan.md`, `BRD-RW06.md` v0.9, `rw/README.md`.
 
 - ✅ **Perbaikan pesan akses Portal RW** — kegagalan verifikasi Cloudflare Access (`unauthorized`, mis. `JWKS HTTP 404`) kini tampil sebagai masalah konfigurasi gateway, bukan "email belum terdaftar". Tab `Users` orkestrator baru diperiksa setelah JWT valid; panduan `CF_ACCESS_TEAM_DOMAIN`/`CF_ACCESS_AUD` ditambahkan ke `rw/README.md`. `BUILD` portal → **`2026-10-26-03`**.
 

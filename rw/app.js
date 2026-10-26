@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-26-03';
+    var BUILD = '2026-10-26-04';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
@@ -518,6 +518,7 @@
                         '<td>' + esc(r['Jenis Surat'] || '-') + '</td>' +
                         '<td>' + rtSuratBadge(r['Status Pengurusan']) + '</td>' +
                         '<td>' + rwSuratBadge(r['Rw Status']) + '</td>' +
+                        '<td class="nowrap">' + fmtInt(r['Rw Revisi'] || 0) + ' kali</td>' +
                         '<td class="nowrap">' + esc(r['No. Surat'] || '-') + '</td>' +
                         '</tr>';
                 }).join('');
@@ -528,8 +529,8 @@
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(res.total) + ' pengajuan · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Tanggal</th><th>Pemohon</th><th>Jenis surat</th><th>Status RT</th><th>Status RW</th><th>No. surat</th></tr></thead>' +
-                    '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+                    '<thead><tr><th>Tanggal</th><th>Pemohon</th><th>Jenis surat</th><th>Status RT</th><th>Status RW</th><th>Revisi</th><th>No. surat</th></tr></thead>' +
+                    '<tbody>' + (body || '<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div></section>';
                 $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; renderSurat(); });
                 $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; renderSurat(); });
                 document.querySelectorAll('[data-surat]').forEach(function (tr) {
@@ -624,30 +625,30 @@
             return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
                 '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-circle-info"></i><div>Tidak ada keputusan yang menunggu. Status RW saat ini <strong>' + esc(status) + '</strong>.</div></div></div>';
         }
-        var maxNeg = revisi >= 3;
+        var maxed = revisi >= 3;
         return '<div class="drawer-section action-panel">' +
             '<h3>Tindakan RW</h3>' +
-            '<p class="action-current">' + esc(rtLabel(rtId)) + ' · revisi negatif ' + fmtInt(revisi) + ' dari 3 · versi data ' + fmtInt(versi) + '</p>' +
+            '<p class="action-current">' + esc(rtLabel(rtId)) + ' · revisi ' + fmtInt(revisi) + ' kali · versi data ' + fmtInt(versi) + '</p>' +
             '<div class="field"><label for="surat-catatan">Catatan keputusan</label>' +
             '<textarea id="surat-catatan" class="control textarea" maxlength="1000" rows="4" placeholder="Wajib untuk Dikembalikan atau Ditolak"></textarea>' +
             '<p class="form-hint">Catatan minimal 3 karakter untuk keputusan negatif. Keputusan dikirim ke RT tujuan.</p></div>' +
             '<div class="action-buttons">' +
             '<button type="button" class="btn btn-primary" id="surat-approve"><i class="fa-solid fa-circle-check"></i> Setujui</button>' +
-            '<button type="button" class="btn btn-blue" id="surat-return"' + (maxNeg ? ' disabled title="Batas 3 keputusan negatif tercapai"' : '') + '><i class="fa-solid fa-arrow-right"></i> Kembalikan</button>' +
-            '<button type="button" class="btn btn-danger" id="surat-reject"' + (maxNeg ? ' disabled title="Batas 3 keputusan negatif tercapai"' : '') + '><i class="fa-solid fa-circle-exclamation"></i> Tolak</button>' +
+            '<button type="button" class="btn btn-blue" id="surat-return"' + (maxed ? ' disabled title="Batas 3 revisi tercapai"' : '') + '><i class="fa-solid fa-arrow-right"></i> Kembalikan</button>' +
+            '<button type="button" class="btn btn-danger" id="surat-reject"><i class="fa-solid fa-circle-exclamation"></i> Tolak</button>' +
             '</div>' +
-            (maxNeg ? '<p class="form-hint" style="margin-top:8px">Batas 3 keputusan negatif sudah tercapai. Hanya persetujuan yang tersedia.</p>' : '') +
+            (maxed ? '<p class="form-hint" style="margin-top:8px">Batas 3 revisi sudah tercapai. Kembalikan tidak tersedia; gunakan Setujui atau Tolak sebagai keputusan final.</p>' : '') +
             '</div>';
     }
 
     function setSuratActionBusy(r, busy) {
         var approve = $('surat-approve');
         if (approve) approve.disabled = busy;
-        var maxNeg = (Number(r['Rw Revisi'] || 0) || 0) >= 3;
-        ['surat-return', 'surat-reject'].forEach(function (id) {
-            var btn = $(id);
-            if (btn) btn.disabled = busy || maxNeg;
-        });
+        var maxed = (Number(r['Rw Revisi'] || 0) || 0) >= 3;
+        var returnBtn = $('surat-return');
+        if (returnBtn) returnBtn.disabled = busy || maxed;
+        var rejectBtn = $('surat-reject');
+        if (rejectBtn) rejectBtn.disabled = busy;
     }
 
     function bindSuratActions(r, rtId) {
@@ -669,8 +670,8 @@
             if (noteEl && noteEl.focus) noteEl.focus();
             return;
         }
-        if (decision !== 'Disetujui' && revisi >= 3) {
-            toast('Batas 3 keputusan negatif sudah tercapai.', 'error');
+        if (decision === 'Dikembalikan' && revisi >= 3) {
+            toast('Batas 3 revisi sudah tercapai. Gunakan Setujui atau Tolak sebagai keputusan final.', 'error');
             return;
         }
         var tone = decision === 'Disetujui' ? 'primary' : decision === 'Dikembalikan' ? 'blue' : 'danger';
@@ -683,7 +684,9 @@
             '</div>' +
             '<p class="modal-note">' + (decision === 'Disetujui'
                 ? 'Pengajuan akan disetujui dan dapat diselesaikan oleh RT.'
-                : 'RT akan menerima catatan dan dapat memperbaiki lalu mengajukan ulang.') + '</p>';
+                : decision === 'Ditolak' && revisi >= 3
+                    ? 'RT akan menerima catatan. Karena batas 3 revisi sudah tercapai, keputusan ini bersifat final.'
+                    : 'RT akan menerima catatan dan dapat memperbaiki lalu mengajukan ulang.') + '</p>';
         openWarning({
             eyebrow: 'Keputusan pengajuan surat',
             title: decision === 'Disetujui' ? 'Setujui pengajuan surat?' : decision === 'Dikembalikan' ? 'Kembalikan pengajuan surat?' : 'Tolak pengajuan surat?',
@@ -720,7 +723,7 @@
         }).catch(function (err) {
             state.actionBusy = false;
             setSuratActionBusy(r, false);
-            if (err.code === 'stale' || err.code === 'not_pending') {
+            if (err.code === 'stale' || err.code === 'not_pending' || err.code === 'max_negative') {
                 closeDrawer();
                 state.dashboard = null;
                 state.dashboardLoadedAt = 0;
@@ -880,7 +883,8 @@
             detailRow('Catatan RW', esc(r['Rw Catatan'] || '-')) +
             detailRow('Oleh', esc(r['Rw Oleh'] || '-')) +
             detailRow('Tanggal', fmtDate(r['Rw Tanggal'])) +
-            detailRow('Revisi / versi', esc((r['Rw Revisi'] || 0) + ' / ' + (r['Rw Versi'] || 1))) +
+            detailRow('Revisi', esc((Number(r['Rw Revisi'] || 0) || 0) + ' kali')) +
+            detailRow('Versi data', esc(r['Rw Versi'] || 1)) +
             '</dl></div>' +
             suratActionPanel(r, rtId);
         openDrawer('Pengajuan surat · ' + (r['ID'] || ''), r['Jenis Surat'] || 'Detail pengajuan', html);

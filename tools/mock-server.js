@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v37-2026-10-26'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v38-2026-10-26'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -517,6 +517,7 @@ function handleCheckSurat(params) {
         status: cleanStr(row[7], 20) || 'Pending',
         noSurat: cleanStr(row[8], 100),
         catatan: cleanStr(row[9], 500),
+        revisi: intAtLeast(row[16], 0),
       });
     }
   }
@@ -719,11 +720,12 @@ function handleRwSuratDecision(data) {
       Number(data.expectedVersi) !== snap.rwVersi) {
     return rwError('stale', 'Pengajuan sudah berubah sejak dibaca. Muat ulang data sebelum memutuskan.');
   }
-  if (decision !== 'Disetujui' && snap.rwRevisi >= SURAT_RW_MAX_REVISI) {
-    return rwError('max_negative', 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai.');
+  if (decision === 'Dikembalikan' && snap.rwRevisi >= SURAT_RW_MAX_REVISI) {
+    return rwError('max_negative', 'Batas ' + SURAT_RW_MAX_REVISI + ' revisi sudah tercapai. Gunakan Setujui atau Tolak sebagai keputusan final.');
   }
   const stamp = nowIso();
-  const newRevisi = decision === 'Disetujui' ? snap.rwRevisi : snap.rwRevisi + 1;
+  const finalReject = decision === 'Ditolak' && snap.rwRevisi >= SURAT_RW_MAX_REVISI;
+  const newRevisi = (decision === 'Disetujui' || finalReject) ? snap.rwRevisi : snap.rwRevisi + 1;
   const newVersi = snap.rwVersi + 1;
   row[SURAT_RW.STATUS] = decision;
   row[SURAT_RW.CATATAN] = catatan;
@@ -813,8 +815,8 @@ function handleResubmitSurat(data) {
   if (cur !== 'Dikembalikan' && cur !== 'Ditolak') {
     return { result: 'error', code: 'not_returned', message: 'Pengajuan tidak berstatus Dikembalikan/Ditolak (saat ini: ' + cur + ').' };
   }
-  if (revisi >= SURAT_RW_MAX_REVISI) {
-    return { result: 'error', code: 'max_negative', message: 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai. Buat pengajuan baru.' };
+  if (cur === 'Ditolak' && revisi >= SURAT_RW_MAX_REVISI) {
+    return { result: 'error', code: 'max_negative', message: 'Pengajuan sudah ditolak final setelah ' + SURAT_RW_MAX_REVISI + ' revisi. Buat pengajuan baru bila masih diperlukan.' };
   }
   row[SURAT_RW.STATUS] = 'Menunggu';
   row[SURAT_RW.VERSI] = versi + 1;

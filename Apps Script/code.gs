@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v37-2026-10-26";
+var CODE_VERSION = "publik-v38-2026-10-26";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -927,12 +927,16 @@ function handleRwSuratDecision(data) {
         Number(data.expectedVersi) !== curVersi) {
       return rwError('stale', 'Pengajuan sudah berubah sejak dibaca. Muat ulang data sebelum memutuskan.');
     }
-    if (decision !== 'Disetujui' && curRevisi >= SURAT_RW_MAX_REVISI) {
-      return rwError('max_negative', 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai.');
+    // Batas 3 revisi hanya menutup opsi Kembalikan. Keputusan Tolak tetap
+    // tersedia sebagai keputusan final agar permintaan dapat ditutup tanpa
+    // membuat pengajuan baru.
+    if (decision === 'Dikembalikan' && curRevisi >= SURAT_RW_MAX_REVISI) {
+      return rwError('max_negative', 'Batas ' + SURAT_RW_MAX_REVISI + ' revisi sudah tercapai. Gunakan Setujui atau Tolak sebagai keputusan final.');
     }
 
     var now = new Date();
-    var newRevisi = (decision === 'Disetujui') ? curRevisi : curRevisi + 1;
+    var finalReject = decision === 'Ditolak' && curRevisi >= SURAT_RW_MAX_REVISI;
+    var newRevisi = (decision === 'Disetujui' || finalReject) ? curRevisi : curRevisi + 1;
     var newVersi = curVersi + 1;
     sheet.getRange(rowNum, SURAT_RW_STATUS_COL + 1, 1, 7).setValues([[
       decision,
@@ -1111,8 +1115,11 @@ function handleResubmitSurat(data) {
   if (cur !== 'Dikembalikan' && cur !== 'Ditolak') {
     return { "result": "error", "code": "not_returned", "message": 'Pengajuan tidak berstatus Dikembalikan/Ditolak (saat ini: ' + cur + ').' };
   }
-  if (revisi >= SURAT_RW_MAX_REVISI) {
-    return { "result": "error", "code": "max_negative", "message": 'Batas ' + SURAT_RW_MAX_REVISI + ' keputusan negatif sudah tercapai. Buat pengajuan baru.' };
+  // Setelah revisi ketiga (Dikembalikan), RT tetap boleh mengajukan ulang
+  // sekali agar RW memberi keputusan final (Setujui/Tolak). Ditolak pada
+  // revisi maksimum bersifat final dan tidak dapat diajukan ulang.
+  if (cur === 'Ditolak' && revisi >= SURAT_RW_MAX_REVISI) {
+    return { "result": "error", "code": "max_negative", "message": 'Pengajuan sudah ditolak final setelah ' + SURAT_RW_MAX_REVISI + ' revisi. Buat pengajuan baru bila masih diperlukan.' };
   }
   sheet.getRange(rowNum, SURAT_RW_STATUS_COL + 1, 1, 1).setValue('Menunggu');
   sheet.getRange(rowNum, SURAT_RW_VERSI_COL + 1, 1, 1).setValue(versi + 1);
@@ -1712,7 +1719,8 @@ function handleCheckSurat(params) {
           "jenisSurat": cleanStr(row[5], 120),
           "status": cleanStr(row[7], 20) || 'Pending',
           "noSurat": cleanStr(row[8], 100),
-          "catatan": cleanStr(row[9], 500)
+          "catatan": cleanStr(row[9], 500),
+          "revisi": intAtLeast(row[SURAT_RW_REVISI_COL], 0)
         });
       }
     }

@@ -105,10 +105,11 @@ function writeSuratDecision(body, user) {
         Number(body.expectedVersi) !== curVersi) {
         return { result: 'error', code: 'stale', message: 'Pengajuan sudah berubah sejak dibaca. Muat ulang data.' };
     }
-    if (decision !== 'Disetujui' && curRevisi >= 3) {
-        return { result: 'error', code: 'max_negative', message: 'Batas 3 keputusan negatif sudah tercapai.' };
+    if (decision === 'Dikembalikan' && curRevisi >= 3) {
+        return { result: 'error', code: 'max_negative', message: 'Batas 3 revisi sudah tercapai. Gunakan Setujui atau Tolak sebagai keputusan final.' };
     }
-    const newRevisi = decision === 'Disetujui' ? curRevisi : curRevisi + 1;
+    const finalReject = decision === 'Ditolak' && curRevisi >= 3;
+    const newRevisi = (decision === 'Disetujui' || finalReject) ? curRevisi : curRevisi + 1;
     const newVersi = curVersi + 1;
     const stamp = stampNow();
     row[12] = decision;
