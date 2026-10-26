@@ -2029,7 +2029,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v36-2026-10-25';
+        const EXPECTED_BACKEND_VERSION = 'publik-v37-2026-10-26';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -2039,7 +2039,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-25-04';
+        const APP_BUILD = '2026-10-26-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -6183,8 +6183,13 @@
 
         // Status tindak lanjut RW pada pengaduan (kolom terpisah dari status RT).
         const LAPOR_RW_STATUS_OPTIONS = ['Tidak Perlu', 'Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW'];
+        function normalizeLaporRwStatus(status) {
+            const s = String(status === null || status === undefined ? '' : status).trim();
+            return LAPOR_RW_STATUS_OPTIONS.indexOf(s) !== -1 ? s : 'Tidak Perlu';
+        }
+
         function laporRwBadge(status) {
-            const s = String(status || 'Tidak Perlu');
+            const s = normalizeLaporRwStatus(status);
             const map = {
                 'Tidak Perlu': 'bg-slate-100 text-slate-600',
                 'Perlu Tindak Lanjut': 'bg-amber-100 text-amber-700',
@@ -6202,7 +6207,7 @@
             if (editMode.lapor === null || editMode.lapor === undefined) return 'Tidak Perlu';
             const idx = findIndexById(appState.lapor, editMode.lapor);
             if (idx === -1) return 'Tidak Perlu';
-            return appState.lapor[idx].rwStatus || 'Tidak Perlu';
+            return normalizeLaporRwStatus(appState.lapor[idx].rwStatus);
         }
 
         // Panel tindak lanjut RW pada modal pengaduan. RT hanya dapat meminta
@@ -6226,12 +6231,14 @@
 
             const idx = findIndexById(appState.lapor, editMode.lapor);
             const item = idx !== -1 ? appState.lapor[idx] : null;
-            const rw = (item && item.rwStatus) || 'Tidak Perlu';
+            const rw = normalizeLaporRwStatus(item && item.rwStatus);
             badge.innerHTML = laporRwBadge(rw);
             note.textContent = (item && item.catatan)
                 ? 'Catatan tindak lanjut terakhir: ' + item.catatan
                 : (rw === 'Tidak Perlu' ? 'Belum ada permintaan tindak lanjut ke RW.' : 'Belum ada tanggapan RW.');
             const parts = [];
+            const nomorPengaduan = item && (item.noPengaduan || item._id);
+            if (nomorPengaduan) parts.push('No. Pengaduan: ' + nomorPengaduan);
             if (item && item.rwPetugas) parts.push('Oleh: ' + item.rwPetugas);
             if (item && item.rwDiperbarui) parts.push('Diperbarui: ' + fmtTimestamp(item.rwDiperbarui));
             meta.textContent = parts.join(' \u00B7 ');
@@ -8611,7 +8618,7 @@
                 jenisPengaduan: r[5], judul: r[6], detail: r[7], lokasi: r[8], tanggalKejadian: fmtDate(r[9]),
                 foto: r[10], harapan: r[11], status: r[12] || 'Diterima', petugas: r[13], catatan: r[14],
                 tanggalSelesai: fmtDate(r[15]), arsip: r[16],
-                rwStatus: r[17] || 'Tidak Perlu', rwPetugas: r[18] || '', rwDiperbarui: r[19] || ''
+                rwStatus: normalizeLaporRwStatus(r[17]), rwPetugas: r[18] || '', rwDiperbarui: r[19] || ''
             })));
             saveLocalState();
             updateNewRecordNotes();
