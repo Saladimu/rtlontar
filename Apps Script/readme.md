@@ -157,7 +157,7 @@ Menampung permohonan surat dari warga (fitur **Pengajuan Surat**). Tab ini **dib
 
 > Kolom `ID` bantu tetap ditambahkan otomatis di ujung kanan. Kolom **`Tanggal Selesai`** juga ditambahkan otomatis (sebelum `Diarsipkan`) saat backend baru pertama kali dijalankan; baris lama tidak diubah sehingga tampil `-` sampai tanggalnya dilengkapi lewat Edit. Kolom ini menyimpan **tanggal akhir** baik untuk pengajuan `Selesai` maupun `Ditolak`.
 >
-> **Kolom RW** (7 kolom) disisipkan otomatis **sebelum** kolom bantu `ID` oleh `ensureRwSchema()` saat backend v35 pertama kali dijalankan. Migrasi berbasis **nama header**, idempoten, dan ditandai Script Property `RW_SCHEMA_MIGRATED=true`. Baris lama yang belum punya status RW diisi **`Tidak Perlu`** (riwayat), sehingga tidak memblokir pengajuan lama. Pengajuan baru selalu masuk dengan `Rw Status=Menunggu`.
+> **Kolom RW** (7 kolom) disisipkan otomatis **sebelum** kolom bantu `ID` oleh `ensureRwSchema()` saat backend v35 pertama kali dijalankan. Backend v36 tidak mengubah skema; v36 hanya menambahkan `saldoAwal` pada `rwRead` (`Iuran_Kas`) untuk orkestrator. Migrasi berbasis **nama header**, idempoten, dan ditandai Script Property `RW_SCHEMA_MIGRATED=true`. Baris lama yang belum punya status RW diisi **`Tidak Perlu`** (riwayat), sehingga tidak memblokir pengajuan lama. Pengajuan baru selalu masuk dengan `Rw Status=Menunggu`.
 >
 > **Aturan bisnis:** saat status diubah menjadi `Selesai`, server menolak simpan bila `No. Surat` kosong (`{result:"error", code:"invalid"}`) **atau** pengajuan belum `Rw Status=Disetujui`. Warga dapat melihat `No. Surat` pada hasil `checkSurat` setelah surat selesai.
 >
@@ -245,7 +245,7 @@ Audit trail tanggapan RW untuk pengaduan. Tab ini dibuat otomatis oleh `ensureRw
 
 > ⚠️ **Penting:** Tanpa buat versi baru, Web App tetap menjalankan kode lama!
 >
-> **Migrasi skema RW (v35):** setelah deploy versi baru, buka dashboard admin **sekali** (login + muat data) **atau** panggil `action=read`/`version` agar `ensureRwSchema()` berjalan. Proses ini menambah kolom `Rw *` (surat 7, lapor 4) di depan kolom `ID`, membuat tab `Lapor_Tindak_Lanjut`, mengisi baris lama dengan `Tidak Perlu`, lalu menandai `RW_SCHEMA_MIGRATED=true`. Aman diulang dan tidak menghapus data. Setelah itu isi Script Property **`RW_TOKEN`** dan opsional **`RT_ID`**, lalu verifikasi lewat `rwCheck` (`rwTokenConfigured` & `schemaMigrated` harus `true`).
+> **Migrasi skema RW (v35, tetap berlaku di v36):** setelah deploy versi baru, buka dashboard admin **sekali** (login + muat data) **atau** panggil `action=read`/`version` agar `ensureRwSchema()` berjalan. Proses ini menambah kolom `Rw *` (surat 7, lapor 4) di depan kolom `ID`, membuat tab `Lapor_Tindak_Lanjut`, mengisi baris lama dengan `Tidak Perlu`, lalu menandai `RW_SCHEMA_MIGRATED=true`. Aman diulang dan tidak menghapus data. Setelah itu isi Script Property **`RW_TOKEN`** dan opsional **`RT_ID`**, lalu verifikasi lewat `rwCheck` (`rwTokenConfigured` & `schemaMigrated` harus `true`).
 >
 > Prosedur rilis lengkap (backup, kenaikan versi, rollback, pemeriksaan deployment) ada di `MAINTENANCE.md`.
 

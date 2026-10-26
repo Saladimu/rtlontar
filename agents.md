@@ -17,7 +17,7 @@ Dokumen ini berisi arsitektur sistem, aturan integrasi data, serta petunjuk tekn
   - *Fallback / Local State:* `localStorage` browser untuk akses offline dan *instant rendering*.
 - **Delete Sync:** Operasi hapus menggunakan **GET dengan JSONP** untuk memastikan sinkronisasi ke Google Sheets sebelum pembaruan lokal.
 - **Security Layer:** Web App berjalan sebagai *Anyone*, sehingga `code.gs` melindungi diri dengan **token admin** (`ADMIN_TOKEN` di Script Properties). Semua tulis (`add`/`update`/`delete`/`setPortalStatus`) & baca lengkap (`read`) wajib token; portal publik memakai `readPublic` (tanpa token, hanya data `Publik=Ya`, dan bisa dimatikan total via `PUBLIC_PORTAL_ENABLED`). Frontend menyimpan token di `localStorage` (`rt_admin_token`).
-- **RW 06 Integration (Phase 1):** arsitektur **hub-and-spoke**; setiap RT tetap menjadi *system of record* dengan Spreadsheet + Web App sendiri. Aksi RW memakai **`RW_TOKEN` terpisah** dan hanya boleh menulis kolom `Rw *` pada `Pengajuan_Surat`/`Lapor_Aspirasi` serta append `Lapor_Tindak_Lanjut`. Orkestrator/portal RW (Phase 4) mengonsolidasikan data lintas RT; tidak ada penggabungan spreadsheet. Detail di `BRD-RW06.md`.
+- **RW 06 Integration (Phase 1 + Phase 3):** arsitektur **hub-and-spoke**; setiap RT tetap menjadi *system of record* dengan Spreadsheet + Web App sendiri. Aksi RW memakai **`RW_TOKEN` terpisah** dan hanya boleh menulis kolom `Rw *` pada `Pengajuan_Surat`/`Lapor_Aspirasi` serta append `Lapor_Tindak_Lanjut`. Orkestrator RW (`RW Apps Script/code.gs`) mengonsolidasikan data lintas RT dengan registry, cache/stale fallback, masking, outbox idempoten, audit, dan retensi; portal RW tetap Phase 4. Tidak ada penggabungan spreadsheet. Detail di `BRD-RW06.md` dan `RW Apps Script/readme.md`.
 
 ---
 
@@ -207,7 +207,20 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 - Aksi admin RT terkait (token admin): `laporEscalate` (`Tidak Perlu` → `Perlu Tindak Lanjut`, idempoten), `resubmitSurat` (`Dikembalikan`/`Ditolak` → `Menunggu`, versi+1, hormati batas 3).
 - Gate: `suratSaveError()` menolak `Selesai` tanpa `No. Surat` **atau** tanpa `Rw Status=Disetujui`; `submitSurat` membuat `Menunggu`, `submitLapor` membuat `Tidak Perlu`.
 - Admin update: `mergeSuratRwForAdminUpdate()`/`mergeLaporRwForAdminUpdate()` mempertahankan kolom RW; perubahan konten surat saat `Disetujui` → `Menunggu` + `Rw Versi+1`.
-- Masking (NIK/HP 4 digit, alamat disembunyikan) dan retensi (login/audit 12 bulan; keputusan/tanggapan/snapshot 24 bulan) adalah tanggung jawab portal/orkestrator RW, bukan `code.gs`.
+- Backend v36 menambahkan `saldoAwal` pada respons `rwRead` untuk `Iuran_Kas`; tanpa ini orkestrator tidak dapat menghitung saldo kas yang benar.
+- Masking (NIK/HP 4 digit, alamat disembunyikan) dan retensi (login/audit 12 bulan; keputusan/tanggapan/snapshot 24 bulan) adalah tanggung jawab orkestrator RW, bukan `code.gs`.
+
+#### Orkestrator RW 06 (Phase 3)
+
+- Lokasi: `RW Apps Script/code.gs`, versi `rw-orchestrator-v1-2026-10-25`; Spreadsheet dan Apps Script terpisah dari RT.
+- Identitas pengguna **hanya** dari `email` yang dikirim gateway setelah verifikasi Cloudflare Access; peran dibaca dari tab `Users`, tidak pernah dari browser.
+- `GATEWAY_SECRET` melindungi semua POST. Token RT disimpan sebagai Script Property `RT_TOKEN_<RTID>` dan harus sama dengan `RW_TOKEN` RT.
+- Aksi: `rwSession`, `rwDashboard`, `rwRegistryList/Save`, `rwUsersList/Save`, `rwSettingsGet/Save`, `rwList`, `rwSuratDecision`, `rwLaporNote`, `rwOutboxList/Retry`, `rwRefresh`, `rwAuditList`, `rwRtHealth`.
+- `rwUsersSave` memakai `userEmail` untuk email target agar tidak bertabrakan dengan `email` identitas gateway.
+- Dashboard memakai `KPI_Snapshot` + `CACHE_TTL_SECONDS`; kegagalan refresh mempertahankan snapshot `OK` terakhir sebagai `Stale`.
+- Semua tulis masuk `Outbox` dengan `Kunci` idempoten. Retry eksponensial; error permanen (`stale`, `not_pending`, `max_negative`, `rt_token_missing`, dan sejenisnya) langsung `Failed`. Trigger `processOutboxTrigger` dan `cleanupRetention` dipasang lewat `installTriggers()`.
+- Masking RW Viewer: NIK/HP 4 digit terakhir, alamat `[disembunyikan]`; dapat dimatikan lewat `RW_MASK_VIEWER`.
+- Pengujian: `/tmp/opencode/test_rw_orchestrator.js` (82 assertion) memakai VM + mock backend RT.
 
 ---
 
@@ -373,6 +386,7 @@ Tombol refresh di:
 | `readme.md` | Dokumentasi proyek utama |
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 | `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT |
+| `RW Apps Script/readme.md` | Setup, API, skema, outbox, dan keamanan orkestrator RW 06 |
 | `tools/check-deployment.js` | Pemeriksa konsistensi versi/identitas deployment (`--live` untuk produksi) |
 | `.gitattributes` | Menandai berkas khusus RT memakai merge driver `keeprt` |
 | `tools/merge-rt-files.js` | Driver merge: pertahankan nilai RT sambil menerima perubahan generik |
@@ -381,6 +395,8 @@ Tombol refresh di:
 ---
 
 ## 🔧 Recent Changes (2026-10-25)
+
+- ✅ **Phase 3 — Orkestrator RW 06 + RT backend v36** — `RW Apps Script/code.gs` (`rw-orchestrator-v1-2026-10-25`) menyediakan registry RT, pengguna/peran, dashboard fan-out dengan cache `KPI_Snapshot` dan stale fallback, pembacaan per RT dengan masking RW Viewer, keputusan surat/tanggapan pengaduan idempoten lewat `Outbox`, retry terjadwal, audit, dan retensi. Identitas hanya dari `email` gateway; token RT per `RT_TOKEN_<RTID>`; `GATEWAY_SECRET` wajib. RT backend v36 menambahkan `saldoAwal` pada `rwRead` (`Iuran_Kas`) agar saldo agregat benar. `rwUsersSave` memakai `userEmail` untuk target agar tidak bertabrakan dengan identitas gateway. Harness `test_rw_orchestrator.js` (82 assertion) hijau bersama regresi RT. Dokumentasi: `RW Apps Script/readme.md`, `MAINTENANCE.md` §6.2, `BRD-RW06.md` v0.5, `readme.md`.
 
 - ✅ **Proteksi berkas khusus RT saat merge** — `config.js`, `version.json`, dan `sw.js` kini memakai merge driver **`keeprt`** (`.gitattributes`) sehingga nilai RT tidak tertimpa saat `main` di-merge ke branch `rtNNN`. Driver **`tools/merge-rt-files.js`** menggabungkan perubahan generik dari `main` (kunci/daftar baru, shell SW, kunci `version.json` baru) tetapi mempertahankan field yang memang di-override RT: `version`, identitas RT/RW/wilayah, alamat, URL `publicApiUrl`/`publicPortalUrl`, serta nama cache SW. Field bersama yang tidak diubah RT tetap mengikuti `main`. Pasang sekali per clone dengan **`bash tools/setup-git-merge.sh`**; tanpa driver Git memberi konflik, bukan menimpa diam-diam. **`tools/check-deployment.js`** menambah 4 pemeriksaan (tiga entri `.gitattributes` + driver terpasang). Diuji dengan merge sintetis: perubahan generik `main` masuk, identitas/build/cache RT tetap. Dokumentasi: `MAINTENANCE.md`, `readme.md`, `panduan.md`.
 
