@@ -59,6 +59,121 @@ function rtById(id) {
     return RTS.find((rt) => rt.rtId === id) || null;
 }
 
+let mockIdSeq = 0;
+
+function stampNow() {
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+function makeMockId(prefix) {
+    mockIdSeq += 1;
+    return prefix + '-' + Date.now().toString(36).toUpperCase() + '-' + mockIdSeq;
+}
+
+function writeSuratDecision(body, user) {
+    if (user.peran !== 'RW Admin') return { result: 'error', code: 'forbidden', message: 'Hanya RW Admin yang dapat memutuskan surat.' };
+    const rt = rtById(String(body.rtId || '').toUpperCase());
+    if (!rt) return { result: 'error', code: 'rt_not_found', message: 'RT tidak ditemukan.' };
+    const id = String(body.id || body.suratId || '').trim();
+    const decision = String(body.decision || '').trim();
+    const catatan = String(body.catatan || '').trim();
+    const kunci = String(body.kunci || '').trim();
+    if (!id) return { result: 'error', code: 'invalid', message: 'ID surat wajib diisi.' };
+    if (['Disetujui', 'Dikembalikan', 'Ditolak'].indexOf(decision) === -1) {
+        return { result: 'error', code: 'invalid_decision', message: 'Keputusan tidak dikenal.' };
+    }
+    if (decision !== 'Disetujui' && catatan.length < 3) {
+        return { result: 'error', code: 'note_required', message: 'Catatan wajib diisi untuk keputusan negatif.' };
+    }
+    if (kunci.length < 6) return { result: 'error', code: 'idempotency_required', message: 'Kunci idempotensi minimal 6 karakter.' };
+    const rows = rt.rows.Pengajuan_Surat || [];
+    const row = rows.find((r) => String(r[19]) === id);
+    if (!row) return { result: 'error', code: 'not_found', message: 'Pengajuan tidak ditemukan: ' + id };
+    const curStatus = String(row[12] || 'Tidak Perlu');
+    const curKunci = String(row[18] || '');
+    const curRevisi = Number(row[16] || 0) || 0;
+    const curVersi = Number(row[17] || 1) || 1;
+    if (curKunci && curKunci === kunci) {
+        return { result: 'success', version: VERSION, duplicate: true, kunci: kunci, id: id, rwStatus: curStatus, rwRevisi: curRevisi, rwVersi: curVersi };
+    }
+    if (curStatus !== 'Menunggu') {
+        return { result: 'error', code: 'not_pending', message: 'Pengajuan tidak dalam status Menunggu (saat ini: ' + curStatus + ').' };
+    }
+    if (body.expectedVersi !== undefined && body.expectedVersi !== null && body.expectedVersi !== '' &&
+        Number(body.expectedVersi) !== curVersi) {
+        return { result: 'error', code: 'stale', message: 'Pengajuan sudah berubah sejak dibaca. Muat ulang data.' };
+    }
+    if (decision !== 'Disetujui' && curRevisi >= 3) {
+        return { result: 'error', code: 'max_negative', message: 'Batas 3 keputusan negatif sudah tercapai.' };
+    }
+    const newRevisi = decision === 'Disetujui' ? curRevisi : curRevisi + 1;
+    const newVersi = curVersi + 1;
+    const stamp = stampNow();
+    row[12] = decision;
+    row[13] = catatan;
+    row[14] = user.email;
+    row[15] = stamp;
+    row[16] = newRevisi;
+    row[17] = newVersi;
+    row[18] = kunci;
+    return {
+        result: 'success', version: VERSION, kunci: kunci, sent: true, queued: false,
+        id: id, rwStatus: decision, rwCatatan: catatan, rwOleh: user.email,
+        rwTanggal: stamp, rwRevisi: newRevisi, rwVersi: newVersi
+    };
+}
+
+function writeLaporNote(body, user) {
+    if (user.peran !== 'RW Admin') return { result: 'error', code: 'forbidden', message: 'Hanya RW Admin yang dapat menanggapi pengaduan.' };
+    const rt = rtById(String(body.rtId || '').toUpperCase());
+    if (!rt) return { result: 'error', code: 'rt_not_found', message: 'RT tidak ditemukan.' };
+    const id = String(body.id || body.laporId || '').trim();
+    const catatan = String(body.catatan || '').trim();
+    const status = String(body.status || '').trim();
+    const visibilitas = String(body.visibilitas || 'Publik').trim();
+    const kunci = String(body.kunci || '').trim();
+    if (!id) return { result: 'error', code: 'invalid', message: 'ID pengaduan wajib diisi.' };
+    if (catatan.length < 3) return { result: 'error', code: 'note_required', message: 'Catatan tindak lanjut wajib diisi minimal 3 karakter.' };
+    if (kunci.length < 6) return { result: 'error', code: 'idempotency_required', message: 'Kunci idempotensi minimal 6 karakter.' };
+    if (status && ['Ditangani RW', 'Selesai RW'].indexOf(status) === -1) {
+        return { result: 'error', code: 'invalid_status', message: 'Status RW harus Ditangani RW atau Selesai RW.' };
+    }
+    if (['Publik', 'Internal'].indexOf(visibilitas) === -1) {
+        return { result: 'error', code: 'invalid_visibility', message: 'Visibilitas harus Publik atau Internal.' };
+    }
+    const rows = rt.rows.Lapor_Aspirasi || [];
+    const row = rows.find((r) => String(r[21]) === id);
+    if (!row) return { result: 'error', code: 'not_found', message: 'Pengaduan tidak ditemukan: ' + id };
+    const curStatus = String(row[17] || 'Tidak Perlu');
+    const curKunci = String(row[20] || '');
+    const curDiperbarui = String(row[19] || '');
+    if (curKunci && curKunci === kunci) {
+        return { result: 'success', version: VERSION, duplicate: true, kunci: kunci, id: id, rwStatus: curStatus, rwDiperbarui: curDiperbarui };
+    }
+    if (body.expectedDiperbarui !== undefined && body.expectedDiperbarui !== null && body.expectedDiperbarui !== '' &&
+        String(body.expectedDiperbarui) !== curDiperbarui) {
+        return { result: 'error', code: 'stale', message: 'Pengaduan sudah berubah sejak dibaca. Muat ulang data.' };
+    }
+    let newStatus = status || curStatus;
+    if (!status && (curStatus === 'Tidak Perlu' || curStatus === 'Perlu Tindak Lanjut')) newStatus = 'Ditangani RW';
+    const stamp = stampNow();
+    row[17] = newStatus;
+    row[18] = user.email;
+    row[19] = stamp;
+    row[20] = kunci;
+    if (visibilitas === 'Publik') row[14] = catatan;
+    const timelineId = makeMockId('TL');
+    rt.rows.Lapor_Tindak_Lanjut = rt.rows.Lapor_Tindak_Lanjut || [];
+    rt.rows.Lapor_Tindak_Lanjut.push([timelineId, id, rt.rtId, user.email, 'RW', catatan, newStatus, visibilitas, stamp]);
+    return {
+        result: 'success', version: VERSION, kunci: kunci, sent: true, queued: false,
+        id: id, timelineId: timelineId, rwStatus: newStatus, rwPetugas: user.email,
+        rwDiperbarui: stamp, visibilitas: visibilitas
+    };
+}
+
 function listAction(body, user) {
     const rt = rtById(body.rtId);
     if (!rt) return { result: 'error', code: 'not_found', message: 'RT tidak ditemukan.' };
@@ -206,6 +321,12 @@ function handleApi(body, headers) {
     }
     if (action === 'rwList') {
         return { status: 200, data: listAction(body, user) };
+    }
+    if (action === 'rwSuratDecision') {
+        return { status: 200, data: writeSuratDecision(body, user) };
+    }
+    if (action === 'rwLaporNote') {
+        return { status: 200, data: writeLaporNote(body, user) };
     }
     if (action === 'rwOutboxList') {
         return { status: 200, data: { result: 'success', version: VERSION, outbox: [] } };

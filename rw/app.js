@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-26-01';
+    var BUILD = '2026-10-26-02';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
@@ -23,8 +23,10 @@
             lapor: { rt: '', status: '' }
         },
         busy: false,
+        actionBusy: false,
         dashboardLoadedAt: 0
     };
+    var warningState = { onConfirm: null };
 
     function $(id) { return document.getElementById(id); }
     function esc(value) {
@@ -33,6 +35,37 @@
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
     function isBlank(v) { return v === null || v === undefined || String(v).trim() === ''; }
+    function escLines(value) {
+        return esc(value).replace(/\r?\n/g, '<br>');
+    }
+    function isAdmin() {
+        return !!(state.session && state.session.user && state.session.user.peran === 'RW Admin');
+    }
+    function hashText(text) {
+        var h = 2166136261;
+        var s = String(text || '');
+        for (var i = 0; i < s.length; i++) {
+            h ^= s.charCodeAt(i);
+            h = Math.imul(h, 16777619);
+        }
+        return (h >>> 0).toString(36);
+    }
+    function makeKunci(prefix, parts) {
+        var base = (parts || []).map(function (p) {
+            return String(p === null || p === undefined ? '' : p);
+        }).join('|');
+        return prefix + '-' + hashText(base) + '-' + base.length;
+    }
+    function isAmbiguousWriteError(err) {
+        var code = String((err && err.code) || '');
+        return code === 'network' || code === 'upstream_unreachable' || code === 'upstream_error' ||
+            code === 'upstream_invalid' || /^http_5\d\d$/.test(code);
+    }
+    function rtLabel(rtId) {
+        var rts = (state.dashboard && state.dashboard.rts) || [];
+        var found = rts.find(function (rt) { return rt.rtId === rtId; });
+        return found && found.nama ? rtId + ' · ' + found.nama : (rtId || 'RT');
+    }
     function isArchived(v) {
         var s = String(v === null || v === undefined ? '' : v).trim().toLowerCase();
         return s === 'ya' || s === 'yes' || s === 'true' || s === '1' || s === 'arsip';
@@ -121,6 +154,42 @@
         icon.className = 'fa-solid ' + (type === 'error' ? 'fa-circle-exclamation' : type === 'success' ? 'fa-circle-check' : 'fa-circle-info');
         clearTimeout(toast._t);
         toast._t = setTimeout(function () { el.classList.add('hidden'); }, type === 'error' ? 7000 : 4000);
+    }
+
+    function openWarning(opts) {
+        var options = opts || {};
+        var tone = options.tone || 'primary';
+        var iconClass = tone === 'danger' ? 'danger' : tone === 'blue' ? 'blue' : 'primary';
+        var buttonClass = tone === 'danger' ? 'btn-danger' : tone === 'blue' ? 'btn-blue' : 'btn-primary';
+        $('warning-eyebrow').textContent = options.eyebrow || 'Konfirmasi tindakan';
+        $('warning-title').textContent = options.title || 'Konfirmasi';
+        $('warning-message').innerHTML = options.message || '';
+        $('warning-icon').className = 'modal-icon ' + iconClass;
+        $('warning-icon').innerHTML = '<i class="fa-solid ' + (options.icon || 'fa-triangle-exclamation') + '"></i>';
+        $('warning-confirm').className = 'btn ' + buttonClass;
+        $('warning-confirm').innerHTML = '<i class="fa-solid ' + (options.confirmIcon || 'fa-circle-check') + '"></i> ' +
+            esc(options.confirmLabel || 'Ya, Lanjutkan');
+        $('warning-confirm').disabled = false;
+        warningState.onConfirm = typeof options.onConfirm === 'function' ? options.onConfirm : null;
+        $('modal-warning').classList.remove('hidden');
+        document.body.classList.add('modal-open');
+        var cancel = $('warning-cancel');
+        if (cancel && cancel.focus) cancel.focus();
+    }
+
+    function closeWarning() {
+        warningState.onConfirm = null;
+        var modal = $('modal-warning');
+        if (modal) modal.classList.add('hidden');
+        document.body.classList.remove('modal-open');
+        var confirm = $('warning-confirm');
+        if (confirm) confirm.disabled = false;
+    }
+
+    function runWarningConfirm() {
+        var callback = warningState.onConfirm;
+        closeWarning();
+        if (callback) callback();
     }
 
     function getDevEmail() {
@@ -543,7 +612,255 @@
         document.body.classList.remove('drawer-open');
     }
 
+    function suratActionPanel(r, rtId) {
+        var status = String(r['Rw Status'] || 'Tidak Perlu');
+        var revisi = Number(r['Rw Revisi'] || 0) || 0;
+        var versi = Number(r['Rw Versi'] || 1) || 1;
+        if (!isAdmin()) {
+            return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
+                '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-eye"></i><div>Anda masuk sebagai <strong>RW Viewer</strong>. Keputusan surat hanya dapat dilakukan RW Admin.</div></div></div>';
+        }
+        if (status !== 'Menunggu') {
+            return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
+                '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-circle-info"></i><div>Tidak ada keputusan yang menunggu. Status RW saat ini <strong>' + esc(status) + '</strong>.</div></div></div>';
+        }
+        var maxNeg = revisi >= 3;
+        return '<div class="drawer-section action-panel">' +
+            '<h3>Tindakan RW</h3>' +
+            '<p class="action-current">' + esc(rtLabel(rtId)) + ' · revisi negatif ' + fmtInt(revisi) + ' dari 3 · versi data ' + fmtInt(versi) + '</p>' +
+            '<div class="field"><label for="surat-catatan">Catatan keputusan</label>' +
+            '<textarea id="surat-catatan" class="control textarea" maxlength="1000" rows="4" placeholder="Wajib untuk Dikembalikan atau Ditolak"></textarea>' +
+            '<p class="form-hint">Catatan minimal 3 karakter untuk keputusan negatif. Keputusan dikirim ke RT tujuan.</p></div>' +
+            '<div class="action-buttons">' +
+            '<button type="button" class="btn btn-primary" id="surat-approve"><i class="fa-solid fa-circle-check"></i> Setujui</button>' +
+            '<button type="button" class="btn btn-blue" id="surat-return"' + (maxNeg ? ' disabled title="Batas 3 keputusan negatif tercapai"' : '') + '><i class="fa-solid fa-arrow-right"></i> Kembalikan</button>' +
+            '<button type="button" class="btn btn-danger" id="surat-reject"' + (maxNeg ? ' disabled title="Batas 3 keputusan negatif tercapai"' : '') + '><i class="fa-solid fa-circle-exclamation"></i> Tolak</button>' +
+            '</div>' +
+            (maxNeg ? '<p class="form-hint" style="margin-top:8px">Batas 3 keputusan negatif sudah tercapai. Hanya persetujuan yang tersedia.</p>' : '') +
+            '</div>';
+    }
+
+    function setSuratActionBusy(r, busy) {
+        var approve = $('surat-approve');
+        if (approve) approve.disabled = busy;
+        var maxNeg = (Number(r['Rw Revisi'] || 0) || 0) >= 3;
+        ['surat-return', 'surat-reject'].forEach(function (id) {
+            var btn = $(id);
+            if (btn) btn.disabled = busy || maxNeg;
+        });
+    }
+
+    function bindSuratActions(r, rtId) {
+        if (!isAdmin()) return;
+        [['surat-approve', 'Disetujui'], ['surat-return', 'Dikembalikan'], ['surat-reject', 'Ditolak']].forEach(function (pair) {
+            var btn = $(pair[0]);
+            if (!btn || btn.disabled) return;
+            btn.addEventListener('click', function () { submitSuratDecision(r, rtId, pair[1]); });
+        });
+    }
+
+    function submitSuratDecision(r, rtId, decision) {
+        if (state.actionBusy) return;
+        var noteEl = $('surat-catatan');
+        var note = noteEl ? String(noteEl.value || '').trim() : '';
+        var revisi = Number(r['Rw Revisi'] || 0) || 0;
+        if (decision !== 'Disetujui' && note.length < 3) {
+            toast('Catatan wajib diisi minimal 3 karakter untuk keputusan ' + decision + '.', 'error');
+            if (noteEl && noteEl.focus) noteEl.focus();
+            return;
+        }
+        if (decision !== 'Disetujui' && revisi >= 3) {
+            toast('Batas 3 keputusan negatif sudah tercapai.', 'error');
+            return;
+        }
+        var tone = decision === 'Disetujui' ? 'primary' : decision === 'Dikembalikan' ? 'blue' : 'danger';
+        var icon = decision === 'Disetujui' ? 'fa-circle-check' : decision === 'Dikembalikan' ? 'fa-arrow-right' : 'fa-circle-exclamation';
+        var message = '<p><strong>' + esc(r['Nama Lengkap Pemohon'] || '-') + '</strong> · ' + esc(r['Jenis Surat'] || '-') + '</p>' +
+            '<div class="warning-summary">' +
+                '<p>Keputusan: <strong>' + esc(decision) + '</strong></p>' +
+                '<p>Catatan: ' + (note ? escLines(note) : '-') + '</p>' +
+                '<p>RT: ' + esc(rtLabel(rtId)) + '</p>' +
+            '</div>' +
+            '<p class="modal-note">' + (decision === 'Disetujui'
+                ? 'Pengajuan akan disetujui dan dapat diselesaikan oleh RT.'
+                : 'RT akan menerima catatan dan dapat memperbaiki lalu mengajukan ulang.') + '</p>';
+        openWarning({
+            eyebrow: 'Keputusan pengajuan surat',
+            title: decision === 'Disetujui' ? 'Setujui pengajuan surat?' : decision === 'Dikembalikan' ? 'Kembalikan pengajuan surat?' : 'Tolak pengajuan surat?',
+            message: message,
+            tone: tone,
+            icon: icon,
+            confirmIcon: icon,
+            confirmLabel: decision === 'Disetujui' ? 'Ya, Setujui' : decision === 'Dikembalikan' ? 'Ya, Kembalikan' : 'Ya, Tolak',
+            onConfirm: function () { performSuratDecision(r, rtId, decision, note); }
+        });
+    }
+
+    function performSuratDecision(r, rtId, decision, note) {
+        state.actionBusy = true;
+        setSuratActionBusy(r, true);
+        var versi = Number(r['Rw Versi'] || 1) || 1;
+        var kunci = makeKunci('SRT', [rtId, r['ID'], versi, decision, note]);
+        api('rwSuratDecision', {
+            rtId: rtId,
+            id: r['ID'],
+            decision: decision,
+            catatan: note,
+            expectedVersi: versi,
+            kunci: kunci
+        }).then(function (res) {
+            state.actionBusy = false;
+            closeDrawer();
+            state.dashboard = null;
+            state.dashboardLoadedAt = 0;
+            renderers[state.page]();
+            toast(res && res.queued
+                ? 'Keputusan tersimpan. Pengiriman ke RT akan dicoba ulang otomatis.'
+                : 'Keputusan berhasil dikirim ke RT.', 'success');
+        }).catch(function (err) {
+            state.actionBusy = false;
+            setSuratActionBusy(r, false);
+            if (err.code === 'stale' || err.code === 'not_pending') {
+                closeDrawer();
+                state.dashboard = null;
+                state.dashboardLoadedAt = 0;
+                renderers[state.page]();
+                toast(err.message || 'Data sudah berubah. Daftar dimuat ulang.', 'error');
+                return;
+            }
+            if (isAmbiguousWriteError(err)) {
+                closeDrawer();
+                state.dashboard = null;
+                state.dashboardLoadedAt = 0;
+                renderers[state.page]();
+                toast('Koneksi ke gateway terputus. Data dimuat ulang; periksa status sebelum mencoba lagi.', 'error');
+                return;
+            }
+            toast(err.message || 'Keputusan gagal dikirim.', 'error');
+        });
+    }
+
+    function laporActionPanel(r) {
+        var status = String(r['Rw Status'] || 'Tidak Perlu');
+        if (!isAdmin()) {
+            return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
+                '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-eye"></i><div>Anda masuk sebagai <strong>RW Viewer</strong>. Tanggapan pengaduan hanya dapat dikirim RW Admin.</div></div></div>';
+        }
+        var suggested = (status === 'Tidak Perlu' || status === 'Perlu Tindak Lanjut') ? 'Ditangani RW' : '';
+        return '<div class="drawer-section action-panel">' +
+            '<h3>Tindakan RW</h3>' +
+            '<p class="action-current">Status saat ini: ' + rwLaporBadge(status) + '</p>' +
+            '<div class="form-grid">' +
+                '<div class="field"><label for="lapor-action-status">Status setelah tanggapan</label>' +
+                '<select id="lapor-action-status" class="control">' +
+                    '<option value="">Pertahankan status</option>' +
+                    '<option value="Ditangani RW"' + (suggested === 'Ditangani RW' ? ' selected' : '') + '>Ditangani RW</option>' +
+                    '<option value="Selesai RW">Selesai RW</option>' +
+                '</select></div>' +
+                '<div class="field"><label for="lapor-visibility">Visibilitas</label>' +
+                '<select id="lapor-visibility" class="control">' +
+                    '<option value="Publik">Publik</option>' +
+                    '<option value="Internal">Internal</option>' +
+                '</select><p class="form-hint">Internal hanya terlihat pengurus RW.</p></div>' +
+            '</div>' +
+            '<div class="field"><label for="lapor-catatan">Catatan tindak lanjut</label>' +
+            '<textarea id="lapor-catatan" class="control textarea" maxlength="1000" rows="4" placeholder="Tuliskan tindak lanjut RW..."></textarea>' +
+            '<p class="form-hint">Wajib minimal 3 karakter. Tanggapan Publik juga tampil di portal warga.</p></div>' +
+            '<div class="action-buttons"><button type="button" class="btn btn-primary" id="lapor-submit"><i class="fa-solid fa-paper-plane"></i> Kirim tanggapan</button></div>' +
+            '</div>';
+    }
+
+    function bindLaporActions(r, rtId) {
+        var btn = $('lapor-submit');
+        if (!btn) return;
+        btn.addEventListener('click', function () { submitLaporNote(r, rtId); });
+    }
+
+    function submitLaporNote(r, rtId) {
+        if (state.actionBusy) return;
+        var noteEl = $('lapor-catatan');
+        var statusEl = $('lapor-action-status');
+        var visEl = $('lapor-visibility');
+        var note = noteEl ? String(noteEl.value || '').trim() : '';
+        var status = statusEl ? String(statusEl.value || '') : '';
+        var visibilitas = visEl ? String(visEl.value || 'Publik') : 'Publik';
+        if (note.length < 3) {
+            toast('Catatan tindak lanjut wajib diisi minimal 3 karakter.', 'error');
+            if (noteEl && noteEl.focus) noteEl.focus();
+            return;
+        }
+        var current = String(r['Rw Status'] || 'Tidak Perlu');
+        var next = status || ((current === 'Tidak Perlu' || current === 'Perlu Tindak Lanjut') ? 'Ditangani RW' : current);
+        var statusLabel = status || ((current === 'Tidak Perlu' || current === 'Perlu Tindak Lanjut') ? 'Ditangani RW (otomatis)' : 'Tetap ' + current);
+        openWarning({
+            eyebrow: 'Tanggapan pengaduan',
+            title: 'Kirim tanggapan RW?',
+            message: '<p><strong>' + esc(r['Nama Warga'] || '-') + '</strong> · ' + esc(r['Judul Pengaduan'] || '-') + '</p>' +
+                '<div class="warning-summary">' +
+                    '<p>Status: ' + esc(current) + ' → <strong>' + esc(statusLabel) + '</strong></p>' +
+                    '<p>Visibilitas: <strong>' + esc(visibilitas) + '</strong></p>' +
+                    '<p>Catatan: ' + escLines(note) + '</p>' +
+                    '<p>RT: ' + esc(rtLabel(rtId)) + '</p>' +
+                '</div>' +
+                '<p class="modal-note">' + (visibilitas === 'Publik'
+                    ? 'Tanggapan Publik akan terlihat pada status pengaduan warga.'
+                    : 'Tanggapan Internal hanya tersimpan untuk pengurus RW.') + '</p>',
+            tone: status === 'Selesai RW' ? 'primary' : 'blue',
+            icon: 'fa-paper-plane',
+            confirmIcon: 'fa-paper-plane',
+            confirmLabel: 'Ya, Kirim',
+            onConfirm: function () { performLaporNote(r, rtId, note, status, visibilitas); }
+        });
+    }
+
+    function performLaporNote(r, rtId, note, status, visibilitas) {
+        state.actionBusy = true;
+        var btn = $('lapor-submit');
+        if (btn) btn.disabled = true;
+        var expected = r['Rw Diperbarui'];
+        var payload = {
+            rtId: rtId,
+            id: r['ID'],
+            catatan: note,
+            visibilitas: visibilitas,
+            kunci: makeKunci('LPR', [rtId, r['ID'], expected, status, visibilitas, note])
+        };
+        if (status) payload.status = status;
+        if (!isBlank(expected)) payload.expectedDiperbarui = expected;
+        api('rwLaporNote', payload).then(function (res) {
+            state.actionBusy = false;
+            closeDrawer();
+            state.dashboard = null;
+            state.dashboardLoadedAt = 0;
+            renderers[state.page]();
+            toast(res && res.queued
+                ? 'Tanggapan tersimpan. Pengiriman ke RT akan dicoba ulang otomatis.'
+                : 'Tanggapan RW berhasil dikirim.', 'success');
+        }).catch(function (err) {
+            state.actionBusy = false;
+            if (btn) btn.disabled = false;
+            if (err.code === 'stale') {
+                closeDrawer();
+                state.dashboard = null;
+                state.dashboardLoadedAt = 0;
+                renderers[state.page]();
+                toast(err.message || 'Pengaduan sudah berubah. Daftar dimuat ulang.', 'error');
+                return;
+            }
+            if (isAmbiguousWriteError(err)) {
+                closeDrawer();
+                state.dashboard = null;
+                state.dashboardLoadedAt = 0;
+                renderers[state.page]();
+                toast('Koneksi ke gateway terputus. Data dimuat ulang; periksa riwayat sebelum mengirim ulang.', 'error');
+                return;
+            }
+            toast(err.message || 'Tanggapan gagal dikirim.', 'error');
+        });
+    }
+
     function openSurat(r) {
+        var rtId = state.filters.surat.rt;
         var html = '<div class="drawer-section"><h3>Pemohon</h3><dl class="detail-list">' +
             detailRow('Nama', esc(r['Nama Lengkap Pemohon'])) +
             detailRow('NIK', esc(r['NIK'])) +
@@ -564,12 +881,15 @@
             detailRow('Oleh', esc(r['Rw Oleh'] || '-')) +
             detailRow('Tanggal', fmtDate(r['Rw Tanggal'])) +
             detailRow('Revisi / versi', esc((r['Rw Revisi'] || 0) + ' / ' + (r['Rw Versi'] || 1))) +
-            '</dl></div>';
+            '</dl></div>' +
+            suratActionPanel(r, rtId);
         openDrawer('Pengajuan surat · ' + (r['ID'] || ''), r['Jenis Surat'] || 'Detail pengajuan', html);
+        bindSuratActions(r, rtId);
     }
 
     function openLapor(r) {
         var laporId = r['ID'];
+        var rtId = state.filters.lapor.rt;
         openDrawer('Pengaduan · ' + (r['No. Pengaduan'] || laporId || ''), r['Judul Pengaduan'] || 'Detail pengaduan',
             '<div class="drawer-section"><h3>Pengaduan</h3><dl class="detail-list">' +
             detailRow('No. pengaduan', esc(r['No. Pengaduan'])) +
@@ -589,12 +909,14 @@
             detailRow('Petugas RW', esc(r['Rw Petugas'] || '-')) +
             detailRow('Diperbarui', fmtDate(r['Rw Diperbarui'])) +
             '</dl></div>' +
+            laporActionPanel(r) +
             '<div class="drawer-section"><h3>Riwayat tindak lanjut RW</h3><div id="lapor-timeline" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i>Memuat riwayat...</div></div>');
+        bindLaporActions(r, rtId);
         if (!laporId) {
             $('lapor-timeline').innerHTML = '<div class="empty"><i class="fa-solid fa-clock-rotate-left"></i><p>Riwayat tidak tersedia.</p></div>';
             return;
         }
-        api('rwList', { rtId: state.filters.lapor.rt, sheet: 'Lapor_Tindak_Lanjut', laporId: laporId, limit: 200, offset: 0 }).then(function (res) {
+        api('rwList', { rtId: rtId, sheet: 'Lapor_Tindak_Lanjut', laporId: laporId, limit: 200, offset: 0 }).then(function (res) {
             var items = rowsToObjects(res.headers, res.rows);
             var el = $('lapor-timeline');
             if (!el) return;
@@ -658,11 +980,24 @@
         $('menu-btn').addEventListener('click', function () { $('sidebar').classList.add('open'); });
         $('sidebar-close').addEventListener('click', function () { $('sidebar').classList.remove('open'); });
         $('toast-close').addEventListener('click', function () { $('toast').classList.add('hidden'); });
+        var warningCancel = $('warning-cancel');
+        if (warningCancel) warningCancel.addEventListener('click', closeWarning);
+        var warningClose = $('warning-close');
+        if (warningClose) warningClose.addEventListener('click', closeWarning);
+        var warningBackdrop = $('warning-backdrop');
+        if (warningBackdrop) warningBackdrop.addEventListener('click', closeWarning);
+        var warningConfirm = $('warning-confirm');
+        if (warningConfirm) warningConfirm.addEventListener('click', runWarningConfirm);
         document.querySelectorAll('[data-close-drawer]').forEach(function (el) {
             el.addEventListener('click', closeDrawer);
         });
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') { closeDrawer(); $('sidebar').classList.remove('open'); }
+            if (e.key === 'Escape') {
+                var modal = $('modal-warning');
+                if (modal && !modal.classList.contains('hidden')) { closeWarning(); return; }
+                closeDrawer();
+                $('sidebar').classList.remove('open');
+            }
         });
         document.addEventListener('click', function (e) {
             var retry = e.target.closest('[data-retry]');

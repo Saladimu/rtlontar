@@ -98,6 +98,25 @@
         </section>
     </div>
 
+    <div id="modal-warning" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="warning-title">
+        <div class="modal-backdrop" id="warning-backdrop" data-close-warning></div>
+        <section class="modal-card">
+            <header class="modal-head">
+                <span class="modal-icon" id="warning-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                <div class="modal-heading">
+                    <p class="modal-eyebrow" id="warning-eyebrow">Konfirmasi tindakan</p>
+                    <h2 id="warning-title">Konfirmasi</h2>
+                </div>
+                <button type="button" class="icon-btn" id="warning-close" data-close-warning aria-label="Tutup"><i class="fa-solid fa-xmark"></i></button>
+            </header>
+            <div class="modal-body" id="warning-message"></div>
+            <footer class="modal-actions">
+                <button type="button" class="btn btn-ghost" id="warning-cancel" data-close-warning><i class="fa-solid fa-xmark"></i> Batal</button>
+                <button type="button" class="btn btn-primary" id="warning-confirm"><i class="fa-solid fa-circle-check"></i> Ya, Lanjutkan</button>
+            </footer>
+        </section>
+    </div>
+
     <div id="toast" class="toast hidden" role="status" aria-live="polite">
         <i class="fa-solid fa-circle-info" id="toast-icon"></i>
         <span id="toast-text"></span>
