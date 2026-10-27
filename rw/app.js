@@ -2,14 +2,19 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-26-05';
+    var BUILD = '2026-10-26-06';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
         warga: ['Data Warga', 'Daftar warga per RT (baca saja)'],
         kas: ['Kas RT', 'Saldo dan riwayat transaksi per RT'],
         surat: ['Pengajuan Surat', 'Antrean dan keputusan RW'],
-        lapor: ['Pengaduan', 'Tindak lanjut RW atas aspirasi warga']
+        lapor: ['Pengaduan', 'Tindak lanjut RW atas aspirasi warga'],
+        pengguna: ['Pengguna RW', 'Akses portal dan peran pengurus'],
+        registry: ['Registry RT', 'Daftar RT, alamat, dan endpoint'],
+        pengaturan: ['Pengaturan', 'Parameter operasional orkestrator'],
+        outbox: ['Outbox', 'Antrean pengiriman ke RT'],
+        audit: ['Audit', 'Riwayat tindakan pengurus RW']
     };
 
     var state = {
@@ -263,8 +268,16 @@
         var meta = PAGE_META[state.page] || PAGE_META.dashboard;
         $('page-title').textContent = meta[0];
         $('page-subtitle').textContent = meta[1];
+        var admin = isAdmin();
         document.querySelectorAll('.nav-item').forEach(function (btn) {
-            btn.classList.toggle('active', btn.getAttribute('data-page') === state.page);
+            var page = btn.getAttribute('data-page');
+            btn.classList.toggle('active', page === state.page);
+            if (isAdminPage(page)) {
+                btn.disabled = !admin;
+                btn.setAttribute('aria-disabled', admin ? 'false' : 'true');
+                if (admin) btn.removeAttribute('title');
+                else btn.setAttribute('title', 'Hanya RW Admin');
+            }
         });
         renderSession();
         document.body.classList.remove('drawer-open');
@@ -606,6 +619,30 @@
 
     function detailRow(label, value) {
         return '<div class="detail-row"><dt>' + esc(label) + '</dt><dd>' + (value === undefined || value === null || value === '' ? '-' : value) + '</dd></div>';
+    }
+
+    function isAdminPage(page) {
+        return ['pengguna', 'registry', 'pengaturan', 'outbox', 'audit'].indexOf(page) !== -1;
+    }
+
+    function adminOnlyNotice(title) {
+        return '<div class="card"><div class="empty">' +
+            '<i class="fa-solid fa-lock"></i>' +
+            '<p><strong>' + esc(title) + '</strong> hanya dapat diakses RW Admin.</p>' +
+            '</div></div>';
+    }
+
+    function fmtBool(v) {
+        var s = String(v === null || v === undefined ? '' : v).trim().toLowerCase();
+        return (s === 'true' || s === '1' || s === 'ya');
+    }
+
+    function statusBadge(status) {
+        var s = String(status || '');
+        if (s === 'Sent') return badge(s, 'badge-green', 'fa-circle-check');
+        if (s === 'Failed') return badge(s, 'badge-red', 'fa-circle-exclamation');
+        if (s === 'Pending') return badge(s, 'badge-amber', 'fa-hourglass-half');
+        return badge(s || '-', 'badge-neutral', 'fa-circle-info');
     }
 
     function openDrawer(eyebrow, title, html) {
@@ -950,10 +987,345 @@
         });
     }
 
-    var renderers = { dashboard: renderDashboard, warga: renderWarga, kas: renderKas, surat: renderSurat, lapor: renderLapor };
+    function renderPengguna() {
+        if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Pengguna RW'); return; }
+        pageLoading('Memuat pengguna RW...');
+        api('rwUsersList').then(function (res) {
+            var users = res.users || [];
+            var body = users.map(function (u) {
+                return '<tr>' +
+                    '<td><span class="cell-main">' + esc(u.nama || '-') + '</span><span class="cell-sub">' + esc(u.email) + '</span></td>' +
+                    '<td>' + badge(u.peran || '-', u.peran === 'RW Admin' ? 'badge-blue' : 'badge-neutral', u.peran === 'RW Admin' ? 'fa-user-gear' : 'fa-eye') + '</td>' +
+                    '<td>' + (u.aktif ? badge('Aktif', 'badge-green', 'fa-circle-check') : badge('Nonaktif', 'badge-neutral', 'fa-user')) + '</td>' +
+                    '<td class="nowrap">' + fmtDate(u.diperbarui) + '</td>' +
+                    '<td class="nowrap"><button type="button" class="btn btn-ghost" data-user-edit="' + esc(u.email) + '"><i class="fa-solid fa-pen-to-square"></i> Ubah</button></td>' +
+                    '</tr>';
+            }).join('');
+            $('page').innerHTML =
+                '<div class="toolbar">' +
+                    '<button type="button" class="btn btn-primary" id="user-add"><i class="fa-solid fa-user-plus"></i> Tambah pengguna</button>' +
+                    '<span class="cell-sub">' + fmtInt(users.length) + ' pengguna terdaftar</span>' +
+                '</div>' +
+                '<section class="card"><div class="card-head"><div><h2>Pengguna RW</h2><p>Hanya RW Admin yang dapat mengelola akses portal.</p></div></div>' +
+                '<div class="card-body flush"><div class="table-wrap"><table>' +
+                '<thead><tr><th>Nama / email</th><th>Peran</th><th>Status</th><th>Diperbarui</th><th>Aksi</th></tr></thead>' +
+                '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-user-gear"></i><p>Belum ada pengguna.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+            $('user-add').addEventListener('click', function () { openUserForm(null, users); });
+            document.querySelectorAll('[data-user-edit]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var email = btn.getAttribute('data-user-edit');
+                    var found = users.find(function (u) { return u.email === email; });
+                    openUserForm(found || null, users);
+                });
+            });
+            setSync('Pengguna RW', 'ok');
+        }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    function openUserForm(user, users) {
+        var isNew = !user;
+        var email = user ? user.email : '';
+        var nama = user ? user.nama : '';
+        var peran = user ? user.peran : 'RW Viewer';
+        var aktif = user ? !!user.aktif : true;
+        openDrawer(isNew ? 'Pengguna baru' : 'Ubah pengguna', isNew ? 'Tambah pengguna RW' : (nama || email),
+            '<div class="drawer-section"><div class="form-grid">' +
+                '<div class="field"><label>Email</label><input class="control" id="user-email" type="email" value="' + esc(email) + '"' + (isNew ? '' : ' readonly') + '></div>' +
+                '<div class="field"><label>Nama</label><input class="control" id="user-nama" value="' + esc(nama) + '"></div>' +
+                '<div class="field"><label>Peran</label><select class="control" id="user-peran">' +
+                    '<option value="RW Admin"' + (peran === 'RW Admin' ? ' selected' : '') + '>RW Admin</option>' +
+                    '<option value="RW Viewer"' + (peran === 'RW Viewer' ? ' selected' : '') + '>RW Viewer</option>' +
+                '</select></div>' +
+                '<div class="field"><label>Status</label><select class="control" id="user-aktif">' +
+                    '<option value="true"' + (aktif ? ' selected' : '') + '>Aktif</option>' +
+                    '<option value="false"' + (aktif ? '' : ' selected') + '>Nonaktif</option>' +
+                '</select></div>' +
+            '</div>' +
+            '<p class="form-hint">Email harus sama dengan identitas Google yang terverifikasi Cloudflare Access. Minimal satu RW Admin aktif harus tetap ada.</p></div>' +
+            '<div class="action-buttons"><button type="button" class="btn btn-primary" id="user-save"><i class="fa-solid fa-floppy-disk"></i> Simpan</button></div>');
+        $('user-save').addEventListener('click', function () {
+            var data = {
+                userEmail: $('user-email').value.trim().toLowerCase(),
+                nama: $('user-nama').value.trim(),
+                peran: $('user-peran').value,
+                aktif: $('user-aktif').value === 'true'
+            };
+            if (!data.userEmail) { toast('Email wajib diisi.', 'error'); return; }
+            if (!data.nama) { toast('Nama wajib diisi.', 'error'); return; }
+            var dirty = isNew || data.nama !== nama || data.peran !== peran || data.aktif !== aktif;
+            if (!dirty) { closeDrawer(); return; }
+            var losesAdmin = !isNew && user.peran === 'RW Admin' && user.aktif && (data.peran !== 'RW Admin' || !data.aktif);
+            if (losesAdmin) {
+                var admins = (users || []).filter(function (u) { return u.aktif && u.peran === 'RW Admin'; });
+                if (admins.length <= 1) { toast('Tidak dapat menonaktifkan/menurunkan RW Admin terakhir.', 'error'); return; }
+                openWarning({
+                    eyebrow: 'Konfirmasi peran',
+                    title: 'Turunkan akses RW Admin?',
+                    message: 'Pengguna <b>' + esc(data.userEmail) + '</b> akan kehilangan hak menyetujui surat dan menanggapi pengaduan.',
+                    tone: 'danger',
+                    icon: 'fa-user-gear',
+                    confirmIcon: 'fa-user-gear',
+                    confirmLabel: 'Ya, ubah akses',
+                    onConfirm: function () { saveUser(data); }
+                });
+                return;
+            }
+            saveUser(data);
+        });
+    }
+
+    function saveUser(data) {
+        api('rwUsersSave', data).then(function () {
+            closeDrawer();
+            renderers.pengguna();
+            toast('Pengguna ' + data.userEmail + ' disimpan.', 'success');
+        }).catch(function (err) { toast(err.message || 'Gagal menyimpan pengguna.', 'error'); });
+    }
+
+    function renderRegistry() {
+        if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Registry RT'); return; }
+        pageLoading('Memuat registry RT...');
+        api('rwRegistryList').then(function (res) {
+            var rows = res.registry || [];
+            var body = rows.map(function (rt) {
+                return '<tr>' +
+                    '<td><span class="cell-main">' + esc(rt.rtId) + '</span><span class="cell-sub">' + esc(rt.alamat || '-') + '</span></td>' +
+                    '<td><span class="cell-main">' + esc(rt.nama || '-') + '</span><span class="cell-sub">' + esc(rt.endpoint || '') + '</span></td>' +
+                    '<td>' + (rt.aktif ? badge('Aktif', 'badge-green', 'fa-circle-check') : badge('Nonaktif', 'badge-neutral', 'fa-plug-circle-check')) + '</td>' +
+                    '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span></td>' +
+                    '<td>' + (rt.lastError ? '<span class="cell-sub" style="color:#be123c">' + esc(rt.lastError) + '</span>' : '<span class="cell-sub">-</span>') + '</td>' +
+                    '<td class="nowrap">' +
+                        '<button type="button" class="btn btn-ghost" data-rt-edit="' + esc(rt.rtId) + '"><i class="fa-solid fa-pen-to-square"></i> Ubah</button> ' +
+                        '<button type="button" class="btn btn-ghost" data-rt-health="' + esc(rt.rtId) + '"><i class="fa-solid fa-plug-circle-check"></i> Cek</button>' +
+                    '</td>' +
+                    '</tr>';
+            }).join('');
+            $('page').innerHTML =
+                '<div class="toolbar">' +
+                    '<button type="button" class="btn btn-primary" id="rt-add"><i class="fa-solid fa-plus-circle"></i> Tambah RT</button>' +
+                    '<span class="cell-sub">Maksimal 10 RT · token RT disimpan di Script Properties orkestrator</span>' +
+                '</div>' +
+                '<section class="card"><div class="card-head"><div><h2>Registry RT</h2><p>Alamat dan endpoint dipakai dashboard serta fan-out data.</p></div></div>' +
+                '<div class="card-body flush"><div class="table-wrap"><table>' +
+                '<thead><tr><th>RT / alamat</th><th>Nama / endpoint</th><th>Aktif</th><th>Backend / sinkron</th><th>Error terakhir</th><th>Aksi</th></tr></thead>' +
+                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-server"></i><p>Belum ada RT terdaftar.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+            $('rt-add').addEventListener('click', function () { openRegistryForm(null); });
+            document.querySelectorAll('[data-rt-edit]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-rt-edit');
+                    openRegistryForm(rows.find(function (rt) { return rt.rtId === id; }) || null);
+                });
+            });
+            document.querySelectorAll('[data-rt-health]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-rt-health');
+                    btn.disabled = true;
+                    api('rwRtHealth', { rtId: id }).then(function (check) {
+                        btn.disabled = false;
+                        toast('RT ' + id + ' sehat' + (check && check.check && check.check.version ? ' · ' + check.check.version : '') + '.', 'success');
+                        renderers.registry();
+                    }).catch(function (err) {
+                        btn.disabled = false;
+                        toast(err.message || ('RT ' + id + ' tidak dapat dihubungi.'), 'error');
+                        renderers.registry();
+                    });
+                });
+            });
+            setSync('Registry RT', 'ok');
+        }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    function openRegistryForm(rt) {
+        var isNew = !rt;
+        var v = rt || { rtId: '', nama: '', alamat: '', endpoint: '', aktif: true };
+        openDrawer(isNew ? 'RT baru' : 'Ubah RT', isNew ? 'Tambah RT' : (v.rtId + ' · ' + (v.nama || '')),
+            '<div class="drawer-section"><div class="form-grid">' +
+                '<div class="field"><label>RT ID</label><input class="control" id="rt-id" value="' + esc(v.rtId) + '" placeholder="RT019"' + (isNew ? '' : ' readonly') + '></div>' +
+                '<div class="field"><label>Nama</label><input class="control" id="rt-nama" value="' + esc(v.nama) + '" placeholder="RT 019 / Lontar"></div>' +
+                '<div class="field"><label>Alamat</label><input class="control" id="rt-alamat" value="' + esc(v.alamat || '') + '" placeholder="Lontar Barat"></div>' +
+                '<div class="field"><label>Status</label><select class="control" id="rt-aktif">' +
+                    '<option value="true"' + (v.aktif ? ' selected' : '') + '>Aktif</option>' +
+                    '<option value="false"' + (v.aktif ? '' : ' selected') + '>Nonaktif</option>' +
+                '</select></div>' +
+                '<div class="field" style="grid-column:1/-1"><label>Endpoint Web App</label><input class="control" id="rt-endpoint" value="' + esc(v.endpoint) + '" placeholder="https://script.google.com/macros/s/.../exec"></div>' +
+            '</div>' +
+            '<p class="form-hint">Endpoint wajib <code>https://.../exec</code> dan tidak boleh dipakai RT lain. Alamat tampil pada dashboard sebagai baris kedua kolom RT. Token akses diatur di Script Property <code>RT_TOKEN_&lt;RTID&gt;</code>.</p></div>' +
+            '<div class="action-buttons"><button type="button" class="btn btn-primary" id="rt-save"><i class="fa-solid fa-floppy-disk"></i> Simpan</button></div>');
+        $('rt-save').addEventListener('click', function () {
+            var data = {
+                rtId: $('rt-id').value.trim().toUpperCase(),
+                nama: $('rt-nama').value.trim(),
+                alamat: $('rt-alamat').value.trim(),
+                endpoint: $('rt-endpoint').value.trim(),
+                aktif: $('rt-aktif').value === 'true'
+            };
+            if (!/^RT\d{3}$/.test(data.rtId)) { toast('RT ID harus berformat RTNNN, mis. RT019.', 'error'); return; }
+            if (!data.nama) { toast('Nama RT wajib diisi.', 'error'); return; }
+            if (!/^https:\/\/.+\/exec(\?|$)/.test(data.endpoint)) { toast('Endpoint harus https://.../exec.', 'error'); return; }
+            if (!isNew && v.aktif && !data.aktif) {
+                openWarning({
+                    eyebrow: 'Konfirmasi status RT',
+                    title: 'Nonaktifkan ' + data.rtId + '?',
+                    message: 'RT nonaktif tidak lagi muncul di dashboard dan tidak dapat dibaca melalui portal RW.',
+                    tone: 'danger',
+                    icon: 'fa-plug-circle-check',
+                    confirmIcon: 'fa-plug-circle-check',
+                    confirmLabel: 'Ya, nonaktifkan',
+                    onConfirm: function () { saveRegistry(data); }
+                });
+                return;
+            }
+            saveRegistry(data);
+        });
+    }
+
+    function saveRegistry(data) {
+        api('rwRegistrySave', data).then(function () {
+            closeDrawer();
+            state.dashboard = null;
+            state.dashboardLoadedAt = 0;
+            renderers.registry();
+            toast('RT ' + data.rtId + ' disimpan.', 'success');
+        }).catch(function (err) { toast(err.message || 'Gagal menyimpan RT.', 'error'); });
+    }
+
+    function renderPengaturan() {
+        if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Pengaturan'); return; }
+        pageLoading('Memuat pengaturan...');
+        api('rwSettingsGet').then(function (res) {
+            var items = res.settings || [];
+            var body = items.map(function (s) {
+                var bool = s.key === 'RW_MASK_VIEWER' || s.key === 'DIGEST_ENABLED';
+                var input = bool
+                    ? '<select class="control" data-setting="' + esc(s.key) + '"><option value="true"' + (fmtBool(s.value) ? ' selected' : '') + '>true</option><option value="false"' + (fmtBool(s.value) ? '' : ' selected') + '>false</option></select>'
+                    : '<input class="control" data-setting="' + esc(s.key) + '" value="' + esc(s.value) + '">';
+                return '<tr>' +
+                    '<td><span class="cell-main">' + esc(s.key) + '</span><span class="cell-sub">' + esc(s.keterangan || '-') + '</span></td>' +
+                    '<td style="min-width:180px">' + input + '</td>' +
+                    '<td class="nowrap">' + fmtDate(s.diperbarui) + '</td>' +
+                    '<td class="nowrap"><button type="button" class="btn btn-ghost" data-setting-save="' + esc(s.key) + '"><i class="fa-solid fa-floppy-disk"></i> Simpan</button></td>' +
+                    '</tr>';
+            }).join('');
+            $('page').innerHTML =
+                '<div class="notice notice-info"><i class="fa-solid fa-circle-info"></i><div>Perubahan berlaku pada permintaan berikutnya. Retensi audit 12 bulan, keputusan/tanggapan dan snapshot 24 bulan.</div></div>' +
+                '<section class="card"><div class="card-head"><div><h2>Pengaturan orkestrator</h2><p>Tanpa deploy ulang portal.</p></div></div>' +
+                '<div class="card-body flush"><div class="table-wrap"><table>' +
+                '<thead><tr><th>Parameter</th><th>Nilai</th><th>Diperbarui</th><th>Aksi</th></tr></thead>' +
+                '<tbody>' + (body || '<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-sliders"></i><p>Belum ada pengaturan.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+            document.querySelectorAll('[data-setting-save]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var key = btn.getAttribute('data-setting-save');
+                    var input = document.querySelector('[data-setting="' + key + '"]');
+                    if (!input) return;
+                    var value = String(input.value).trim();
+                    btn.disabled = true;
+                    api('rwSettingsSave', { key: key, value: value }).then(function () {
+                        toast(key + ' disimpan.', 'success');
+                        renderers.pengaturan();
+                    }).catch(function (err) {
+                        btn.disabled = false;
+                        toast(err.message || 'Gagal menyimpan pengaturan.', 'error');
+                    });
+                });
+            });
+            setSync('Pengaturan', 'ok');
+        }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    function renderOutbox() {
+        if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Outbox'); return; }
+        pageLoading('Memuat outbox...');
+        api('rwOutboxList').then(function (res) {
+            var rows = (res.outbox || []).slice().reverse();
+            var body = rows.map(function (o) {
+                return '<tr>' +
+                    '<td><span class="cell-main">' + esc(o.Aksi || '-') + '</span><span class="cell-sub">' + esc(o.ID || '') + '</span></td>' +
+                    '<td>' + esc(o['RT ID'] || '-') + '</td>' +
+                    '<td><span class="cell-main">' + esc(o['Target ID'] || '-') + '</span><span class="cell-sub">Percobaan ' + fmtInt(o.Percobaan || 0) + '</span></td>' +
+                    '<td>' + statusBadge(o.Status) + '</td>' +
+                    '<td class="nowrap"><span class="cell-main">' + fmtRelative(o['Next Retry']) + '</span><span class="cell-sub">' + esc(o['Last Error'] || '-') + '</span></td>' +
+                    '<td class="nowrap"><button type="button" class="btn btn-ghost" data-outbox-retry="' + esc(o.ID) + '"' + (String(o.Status) === 'Sent' ? ' disabled' : '') + '><i class="fa-solid fa-rotate-right"></i> Kirim</button></td>' +
+                    '</tr>';
+            }).join('');
+            var pending = (res.outbox || []).filter(function (o) { return String(o.Status) !== 'Sent'; }).length;
+            $('page').innerHTML =
+                '<div class="toolbar">' +
+                    '<button type="button" class="btn btn-primary" id="outbox-process"><i class="fa-solid fa-paper-plane"></i> Proses antrean</button>' +
+                    '<span class="cell-sub">' + fmtInt(pending) + ' belum terkirim · ' + fmtInt((res.outbox || []).length) + ' total</span>' +
+                '</div>' +
+                '<section class="card"><div class="card-head"><div><h2>Outbox</h2><p>Keputusan/tanggapan yang menunggu pengiriman ulang ke RT.</p></div></div>' +
+                '<div class="card-body flush"><div class="table-wrap"><table>' +
+                '<thead><tr><th>Aksi / ID</th><th>RT</th><th>Target</th><th>Status</th><th>Jadwal / error</th><th>Aksi</th></tr></thead>' +
+                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-inbox"></i><p>Outbox kosong.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+            $('outbox-process').addEventListener('click', function () {
+                openWarning({
+                    eyebrow: 'Konfirmasi pengiriman',
+                    title: 'Proses antrean outbox?',
+                    message: 'Orkestrator akan mencoba mengirim semua entri yang sudah jatuh tempo ke RT tujuan.',
+                    icon: 'fa-paper-plane',
+                    confirmIcon: 'fa-paper-plane',
+                    confirmLabel: 'Ya, proses',
+                    onConfirm: function () {
+                        api('rwOutboxRetry', { limit: 50 }).then(function (r) {
+                            toast('Antrean diproses: ' + fmtInt(r.processed || 0) + ' entri.', 'success');
+                            renderers.outbox();
+                        }).catch(function (err) { toast(err.message || 'Gagal memproses outbox.', 'error'); });
+                    }
+                });
+            });
+            document.querySelectorAll('[data-outbox-retry]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var id = btn.getAttribute('data-outbox-retry');
+                    openWarning({
+                        eyebrow: 'Konfirmasi kirim ulang',
+                        title: 'Kirim ulang entri ini?',
+                        message: 'Entri <b>' + esc(id) + '</b> akan dikirim ke RT tujuan sekarang.',
+                        icon: 'fa-rotate-right',
+                        confirmIcon: 'fa-paper-plane',
+                        confirmLabel: 'Ya, kirim',
+                        onConfirm: function () {
+                            api('rwOutboxRetry', { id: id }).then(function (r) {
+                                toast(r && r.retry && r.retry.duplicate ? 'Entri sudah terkirim sebelumnya.' : 'Entri berhasil dikirim.', 'success');
+                                renderers.outbox();
+                            }).catch(function (err) { toast(err.message || 'Gagal mengirim entri.', 'error'); });
+                        }
+                    });
+                });
+            });
+            setSync('Outbox', 'ok');
+        }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    function renderAudit() {
+        if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Audit'); return; }
+        pageLoading('Memuat audit...');
+        api('rwAuditList', { limit: 200 }).then(function (res) {
+            var rows = res.audit || [];
+            var body = rows.map(function (a) {
+                return '<tr>' +
+                    '<td class="nowrap">' + fmtDate(a.Waktu) + '</td>' +
+                    '<td><span class="cell-main">' + esc(a.Aktor || '-') + '</span><span class="cell-sub">' + esc(a.Email || '') + '</span></td>' +
+                    '<td>' + badge(a.Aksi || '-', 'badge-neutral', 'fa-list-check') + '</td>' +
+                    '<td><span class="cell-main">' + esc(a['RT ID'] || '-') + '</span><span class="cell-sub">' + esc(a.Target || '') + '</span></td>' +
+                    '<td>' + (a.Hasil === 'ok' ? badge('ok', 'badge-green', 'fa-circle-check') : badge(a.Hasil || '-', 'badge-red', 'fa-circle-exclamation')) + '</td>' +
+                    '<td class="cell-sub">' + esc(a.Detail || '-') + '</td>' +
+                    '</tr>';
+            }).join('');
+            $('page').innerHTML =
+                '<div class="toolbar"><span class="cell-sub">' + fmtInt(rows.length) + ' entri terakhir · retensi audit 12 bulan</span></div>' +
+                '<section class="card"><div class="card-head"><div><h2>Audit log</h2><p>Login, keputusan, tanggapan, registry, dan pengaturan.</p></div></div>' +
+                '<div class="card-body flush"><div class="table-wrap"><table>' +
+                '<thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>RT / target</th><th>Hasil</th><th>Detail</th></tr></thead>' +
+                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-list-check"></i><p>Belum ada entri audit.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+            setSync('Audit', 'ok');
+        }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    var renderers = { dashboard: renderDashboard, warga: renderWarga, kas: renderKas, surat: renderSurat, lapor: renderLapor, pengguna: renderPengguna, registry: renderRegistry, pengaturan: renderPengaturan, outbox: renderOutbox, audit: renderAudit };
 
     function navigate(page) {
         if (!renderers[page]) page = 'dashboard';
+        if (isAdminPage(page) && !isAdmin()) page = 'dashboard';
         state.page = page;
         closeDrawer();
         renderChrome();
@@ -984,7 +1356,10 @@
 
     function bindGlobal() {
         document.querySelectorAll('.nav-item').forEach(function (btn) {
-            btn.addEventListener('click', function () { navigate(btn.getAttribute('data-page')); });
+            btn.addEventListener('click', function () {
+                if (btn.disabled) return;
+                navigate(btn.getAttribute('data-page'));
+            });
         });
         $('refresh-btn').addEventListener('click', refresh);
         $('access-retry').addEventListener('click', function () { location.reload(); });

@@ -3,7 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { HEADERS, RTS, USERS } = require('./mock-data');
+const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
@@ -278,18 +278,149 @@ function dashboardAction() {
     };
 }
 
+const settingState = SETTINGS.map((s) => ({ key: s[0], value: s[1], keterangan: s[2], diperbarui: '2026-10-01 08:00' }));
+const registryState = RTS.map((rt) => ({
+    rtId: rt.rtId,
+    nama: rt.nama,
+    alamat: rt.alamat,
+    endpoint: 'https://script.google.com/macros/s/' + rt.rtId + '/exec',
+    aktif: true,
+    backendVersion: rt.backendVersion,
+    lastSync: '2026-10-26 09:00',
+    lastError: ''
+}));
+const outboxState = OUTBOX.map((o) => Object.assign({}, o));
+const auditState = AUDIT.map((a) => Object.assign({}, a));
+
 function settings() {
-    return [
-        ['CACHE_TTL_SECONDS', '300', 'Umur snapshot KPI sebelum diambil ulang (detik).'],
-        ['OUTBOX_MAX_ATTEMPTS', '8', 'Batas percobaan pengiriman outbox.'],
-        ['OUTBOX_BASE_DELAY_SECONDS', '60', 'Jeda dasar retry outbox (detik, exponential).'],
-        ['AUDIT_RETENTION_MONTHS', '12', 'Retensi login/audit (bulan, 12-36).'],
-        ['DECISION_RETENTION_MONTHS', '24', 'Retensi keputusan/tanggapan (bulan, 12-36).'],
-        ['SNAPSHOT_RETENTION_MONTHS', '24', 'Retensi snapshot KPI (bulan, 12-36).'],
-        ['RW_MASK_VIEWER', 'true', 'Masking NIK/HP/alamat untuk RW Viewer.'],
-        ['DIGEST_ENABLED', 'false', 'Aktifkan digest harian (Phase 4).'],
-        ['DIGEST_HOUR', '7', 'Jam kirim digest (0-23, Asia/Jakarta).']
-    ].map((s) => ({ key: s[0], value: s[1], keterangan: s[2], diperbarui: new Date().toISOString() }));
+    return settingState.map((s) => Object.assign({}, s));
+}
+
+function validateSetting(key, value) {
+    const def = settingState.find((s) => s.key === key);
+    if (!def) return 'Key pengaturan tidak dikenal: ' + key;
+    const numKeys = ['CACHE_TTL_SECONDS', 'OUTBOX_MAX_ATTEMPTS', 'OUTBOX_BASE_DELAY_SECONDS',
+        'AUDIT_RETENTION_MONTHS', 'DECISION_RETENTION_MONTHS', 'SNAPSHOT_RETENTION_MONTHS', 'DIGEST_HOUR'];
+    if (numKeys.indexOf(key) !== -1) {
+        const n = Number(value);
+        if (!isFinite(n) || n < 0) return 'Nilai ' + key + ' harus angka >= 0.';
+    }
+    if (key === 'RW_MASK_VIEWER' || key === 'DIGEST_ENABLED') {
+        if (['true', 'false', '1', '0', 'ya', 'tidak'].indexOf(String(value).toLowerCase()) === -1) {
+            return 'Nilai ' + key + ' harus true/false.';
+        }
+    }
+    if (key === 'DIGEST_HOUR' && (Number(value) < 0 || Number(value) > 23)) return 'DIGEST_HOUR harus 0-23.';
+    return '';
+}
+
+function pushAudit(user, aksi, rtId, target, hasil, detail) {
+    auditState.push({
+        'ID': makeMockId('AUD'),
+        'Waktu': stampNow(),
+        'Aktor': user ? (user.nama || user.email) : 'system',
+        'Email': user ? user.email : 'system',
+        'Peran': user ? user.peran : 'system',
+        'Aksi': aksi,
+        'RT ID': rtId || '',
+        'Target': target || '',
+        'Hasil': hasil || '',
+        'Detail': detail === undefined || detail === null ? '' : String(detail).slice(0, 1000)
+    });
+}
+
+function saveUser(body, user) {
+    if (user.peran !== 'RW Admin') return { result: 'error', code: 'forbidden', message: 'Hanya RW Admin yang dapat mengubah pengguna.' };
+    const email = String(body.userEmail || body.targetEmail || body.email || '').trim().toLowerCase();
+    const nama = String(body.nama || '').trim();
+    const peran = String(body.peran || '').trim();
+    const aktif = body.aktif === undefined ? true : (body.aktif === true || String(body.aktif).toLowerCase() === 'ya' || String(body.aktif) === 'true');
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { result: 'error', code: 'invalid_email', message: 'Format email tidak valid.' };
+    if (['RW Admin', 'RW Viewer'].indexOf(peran) === -1) return { result: 'error', code: 'invalid_role', message: 'Peran harus RW Admin atau RW Viewer.' };
+    if (!nama) return { result: 'error', code: 'invalid', message: 'Nama wajib diisi.' };
+    const existing = USERS.find((u) => u.email === email);
+    if (existing) {
+        const activeAdmins = USERS.filter((u) => u.aktif && u.peran === 'RW Admin');
+        const losesAdmin = existing.peran === 'RW Admin' && existing.aktif && (peran !== 'RW Admin' || !aktif);
+        if (losesAdmin && activeAdmins.length <= 1) {
+            return { result: 'error', code: 'last_admin', message: 'Tidak dapat menonaktifkan/menurunkan RW Admin terakhir.' };
+        }
+        existing.nama = nama;
+        existing.peran = peran;
+        existing.aktif = aktif;
+        existing.diperbarui = stampNow();
+    } else {
+        USERS.push({ email, nama, peran, aktif, dibuat: stampNow(), diperbarui: stampNow() });
+    }
+    pushAudit(user, 'user_save', '', email, 'ok', peran + (aktif ? '' : ' (nonaktif)'));
+    return { result: 'success', version: VERSION, users: USERS };
+}
+
+function saveRegistry(body, user) {
+    if (user.peran !== 'RW Admin') return { result: 'error', code: 'forbidden', message: 'Hanya RW Admin yang dapat mengubah registry RT.' };
+    const rtId = String(body.rtId || '').trim().toUpperCase();
+    const nama = String(body.nama || '').trim();
+    const alamat = String(body.alamat || '').trim();
+    const endpoint = String(body.endpoint || '').trim();
+    const aktif = body.aktif === undefined ? true : (body.aktif === true || String(body.aktif).toLowerCase() === 'ya' || String(body.aktif) === 'true');
+    if (!/^RT\d{3}$/.test(rtId)) return { result: 'error', code: 'invalid_rt', message: 'RT ID harus berformat RTNNN, mis. RT018.' };
+    if (!nama) return { result: 'error', code: 'invalid', message: 'Nama RT wajib diisi.' };
+    if (!/^https:\/\//i.test(endpoint) || !/\/exec(\?|$)/i.test(endpoint)) return { result: 'error', code: 'invalid_endpoint', message: 'Endpoint harus https://.../exec.' };
+    if (registryState.some((rt) => rt.rtId !== rtId && rt.endpoint === endpoint)) return { result: 'error', code: 'duplicate_endpoint', message: 'Endpoint sudah dipakai RT lain.' };
+    const existing = registryState.find((rt) => rt.rtId === rtId);
+    if (existing) {
+        existing.nama = nama;
+        existing.alamat = alamat;
+        existing.endpoint = endpoint;
+        existing.aktif = aktif;
+    } else {
+        registryState.push({ rtId, nama, alamat, endpoint, aktif, backendVersion: '', lastSync: '', lastError: '' });
+    }
+    pushAudit(user, 'registry_save', rtId, endpoint, 'ok', aktif ? 'aktif' : 'nonaktif');
+    return { result: 'success', version: VERSION, rt: registryState.find((rt) => rt.rtId === rtId) };
+}
+
+function saveSetting(body, user) {
+    if (user.peran !== 'RW Admin') return { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' };
+    const key = String(body.key || '').trim();
+    const value = String(body.value === undefined || body.value === null ? '' : body.value).trim();
+    const invalid = validateSetting(key, value);
+    if (invalid) return { result: 'error', code: 'invalid_setting', message: invalid };
+    const found = settingState.find((s) => s.key === key);
+    found.value = value;
+    found.diperbarui = stampNow();
+    pushAudit(user, 'settings_save', '', key, 'ok', value);
+    return { result: 'success', version: VERSION, settings: settings() };
+}
+
+function outboxRetry(body, user) {
+    if (user.peran !== 'RW Admin') return { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' };
+    const id = String(body.id || '').trim();
+    if (id) {
+        const item = outboxState.find((o) => o.ID === id);
+        if (!item) return { result: 'error', code: 'outbox_not_found', message: 'Outbox tidak ditemukan.' };
+        if (String(item.Status) === 'Sent') return { result: 'success', version: VERSION, retry: { ok: true, sent: true, duplicate: true } };
+        item.Status = 'Sent';
+        item.Percobaan = Number(item.Percobaan || 0) + 1;
+        item['Next Retry'] = '';
+        item['Last Error'] = '';
+        item.Hasil = '{"ok":true}';
+        item.Diperbarui = stampNow();
+        pushAudit(user, 'outbox_retry', item['RT ID'], item.ID, 'ok', 'manual');
+        return { result: 'success', version: VERSION, retry: { ok: true, sent: true } };
+    }
+    const limit = Number(body.limit || 20);
+    const due = outboxState.filter((o) => String(o.Status) !== 'Sent').slice(0, limit);
+    due.forEach((item) => {
+        item.Status = 'Sent';
+        item.Percobaan = Number(item.Percobaan || 0) + 1;
+        item['Next Retry'] = '';
+        item['Last Error'] = '';
+        item.Hasil = '{"ok":true}';
+        item.Diperbarui = stampNow();
+    });
+    pushAudit(user, 'outbox_process', '', '', 'ok', String(due.length) + ' entri');
+    return { result: 'success', version: VERSION, processed: due.length };
 }
 
 function handleApi(body, headers) {
@@ -306,13 +437,11 @@ function handleApi(body, headers) {
         return { status: 200, data: dashboardAction() };
     }
     if (action === 'rwRegistryList') {
-        return {
-            status: 200,
-            data: {
-                result: 'success', version: VERSION,
-                registry: RTS.map((rt) => ({ rtId: rt.rtId, nama: rt.nama, alamat: rt.alamat, endpoint: 'https://script.google.com/macros/s/' + rt.rtId + '/exec', aktif: true, backendVersion: rt.backendVersion, lastSync: new Date().toISOString(), lastError: '' }))
-            }
-        };
+        if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
+        return { status: 200, data: { result: 'success', version: VERSION, registry: registryState.map((rt) => Object.assign({}, rt)) } };
+    }
+    if (action === 'rwRegistrySave') {
+        return { status: 200, data: saveRegistry(body, user) };
     }
     if (action === 'rwSettingsGet') {
         return { status: 200, data: { result: 'success', version: VERSION, settings: settings() } };
@@ -330,15 +459,33 @@ function handleApi(body, headers) {
     if (action === 'rwLaporNote') {
         return { status: 200, data: writeLaporNote(body, user) };
     }
+    if (action === 'rwUsersSave') {
+        return { status: 200, data: saveUser(body, user) };
+    }
+    if (action === 'rwSettingsSave') {
+        return { status: 200, data: saveSetting(body, user) };
+    }
     if (action === 'rwOutboxList') {
-        return { status: 200, data: { result: 'success', version: VERSION, outbox: [] } };
+        if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
+        return { status: 200, data: { result: 'success', version: VERSION, outbox: outboxState.map((o) => Object.assign({}, o)) } };
+    }
+    if (action === 'rwOutboxRetry') {
+        return { status: 200, data: outboxRetry(body, user) };
     }
     if (action === 'rwAuditList') {
-        return { status: 200, data: { result: 'success', version: VERSION, audit: [] } };
+        if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
+        const limit = Math.min(Math.max(Number(body.limit || 100), 1), 500);
+        return { status: 200, data: { result: 'success', version: VERSION, audit: auditState.slice(-limit).reverse().map((a) => Object.assign({}, a)) } };
     }
     if (action === 'rwRtHealth') {
-        const rt = rtById(body.rtId);
-        return { status: 200, data: rt ? { result: 'success', version: VERSION, rt: { rtId: rt.rtId, status: 'OK', backendVersion: rt.backendVersion } } : { result: 'error', code: 'not_found', message: 'RT tidak ditemukan.' } };
+        const id = String(body.rtId || '').trim().toUpperCase();
+        const rt = registryState.find((x) => x.rtId === id);
+        if (!rt) return { status: 200, data: { result: 'error', code: 'rt_not_found', message: 'RT tidak ditemukan.' } };
+        rt.lastError = '';
+        rt.lastSync = stampNow();
+        rt.backendVersion = rt.backendVersion || 'publik-v38-2026-10-26';
+        pushAudit(user, 'rt_health', id, '', 'ok', rt.backendVersion);
+        return { status: 200, data: { result: 'success', version: VERSION, rtId: id, check: { version: rt.backendVersion } } };
     }
     return { status: 200, data: { result: 'error', code: 'not_implemented', message: 'Aksi demo belum tersedia: ' + action } };
 }

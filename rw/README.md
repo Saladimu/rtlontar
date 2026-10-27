@@ -4,7 +4,7 @@ Portal pengurus RW 06. Aplikasi statis + Cloudflare Pages Function sebagai gatew
 
 ## Status
 
-Milestone 2 (Phase 4): portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, dan pengaduan. Tabel ringkasan menampilkan kolom **Status** (kesehatan RT) dan **alamat RT** pada baris kedua kolom RT; daftar surat dan pengaduan diurutkan **terbaru di atas**. RW Admin dapat menyetujui/mengembalikan/menolak surat dan mengirim tanggapan pengaduan (Publik/Internal). RW Viewer tetap baca-saja dan data sensitif dimasking. Halaman pengguna, registry, outbox, audit, dan pengaturan menyusul.
+Milestone 3 (Phase 4 selesai): portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, pengaduan, dan lima halaman **Administrasi** (`Pengguna RW`, `Registry RT`, `Pengaturan`, `Outbox`, `Audit`). Tabel ringkasan menampilkan kolom **Status** (kesehatan RT) dan **alamat RT** pada baris kedua kolom RT; daftar surat dan pengaduan diurutkan **terbaru di atas**. RW Admin dapat menyetujui/mengembalikan/menolak surat, mengirim tanggapan pengaduan (Publik/Internal), mengelola pengguna dan registry RT, mengubah pengaturan orkestrator, mengirim ulang outbox, serta membaca audit log. RW Viewer tetap baca-saja: menu Administrasi dinonaktifkan, halaman tidak dapat dibuka, dan data sensitif dimasking.
 
 ## Aksi tulis
 
@@ -23,6 +23,18 @@ Milestone 2 (Phase 4): portal, gateway Access JWT, sesi/peran, ringkasan, data w
 - Bila RT tidak dapat dihubungi, orkestrator menyimpan aksi di outbox dan UI menampilkan bahwa pengiriman akan dicoba ulang otomatis.
 - Kegagalan jaringan/5xx yang membuat hasil tidak pasti akan menutup drawer dan memuat ulang daftar; periksa status/riwayat sebelum mengirim ulang.
 
+
+## Halaman administrasi
+
+Semua halaman di bawah hanya untuk `RW Admin`. Bila `RW Viewer` membuka portal, item menu Administrasi tampil nonaktif (`disabled` + tooltip "Hanya RW Admin") dan `navigate()` mengalihkan ke Ringkasan tanpa memanggil API admin.
+
+- **Pengguna RW** (`rwUsersList`/`rwUsersSave`) — daftar email, nama, peran, status, dan waktu pembaruan. Form menambah pengguna baru atau mengubah nama/peran/status. Menurunkan atau menonaktifkan **RW Admin aktif terakhir** diblokir di klien dan orkestrator (`last_admin`); penurunan peran lain meminta konfirmasi in-app. Email harus sama dengan identitas Google terverifikasi Cloudflare Access.
+- **Registry RT** (`rwRegistryList`/`rwRegistrySave`) — RT ID, nama, **alamat**, endpoint Web App, status aktif, backend version, sinkron terakhir, dan error terakhir. Validasi: `RTNNN`, nama wajib, endpoint `https://.../exec`, endpoint tidak boleh dipakai RT lain. Tombol **Cek** memanggil `rwRtHealth`. Menonaktifkan RT meminta konfirmasi karena RT hilang dari dashboard.
+- **Pengaturan** (`rwSettingsGet`/`rwSettingsSave`) — parameter orkestrator tanpa deploy ulang: `CACHE_TTL_SECONDS`, `OUTBOX_MAX_ATTEMPTS`, `OUTBOX_BASE_DELAY_SECONDS`, retensi audit/keputusan/snapshot, `RW_MASK_VIEWER`, `DIGEST_ENABLED`, `DIGEST_HOUR`. Nilai divalidasi di orkestrator (`invalid_setting`) dan disimpan per baris.
+- **Outbox** (`rwOutboxList`/`rwOutboxRetry`) — antrean pengiriman ke RT beserta status `Pending`/`Failed`/`Sent`, jumlah percobaan, jadwal retry, dan error terakhir. **Kirim** mengirim ulang satu entri (entri `Sent` dinonaktifkan), **Proses antrean** memproses hingga 50 entri; keduanya memakai konfirmasi in-app.
+- **Audit** (`rwAuditList`) — 200 entri terakhir: waktu, aktor/email, aksi, RT/target, hasil, dan detail. Retensi audit 12 bulan; keputusan/tanggapan dan snapshot 24 bulan.
+
+Mock server lokal menyediakan data contoh untuk kelima halaman dan meniru penyimpanan pengguna, registry, pengaturan, serta retry outbox sehingga alur dapat dicoba tanpa orkestrator.
 
 ## Struktur
 
@@ -105,6 +117,6 @@ Mock server tidak memakai Cloudflare Access dan tidak boleh dipakai di produksi.
 - `node --check rw/app.js`
 - `node --check rw/functions/api/[[path]].js`
 - `node --check rw/tools/mock-server.js`
-- Uji lokal: login admin, setujui/kembalikan/tolak surat, kirim tanggapan pengaduan, lalu ganti ke viewer dan pastikan tidak ada kontrol tulis serta NIK/HP/alamat tersamar.
-- Harness: `/tmp/opencode/test_rw_portal.js` mencakup konfirmasi, pembatalan, validasi catatan, penolakan, tanggapan pengaduan, pemulihan setelah kegagalan koneksi yang ambigu, dan gating Viewer.
+- Uji lokal: login admin, setujui/kembalikan/tolak surat, kirim tanggapan pengaduan, tambah/ubah pengguna, simpan registry dan pengaturan, kirim ulang outbox, buka audit; lalu ganti ke viewer dan pastikan menu Administrasi nonaktif, tidak ada kontrol tulis, serta NIK/HP/alamat tersamar.
+- Harness: `/tmp/opencode/test_rw_portal.js` mencakup konfirmasi, pembatalan, validasi catatan, penolakan, tanggapan pengaduan, pemulihan setelah kegagalan koneksi yang ambigu, lima halaman administrasi (pengguna, registry, pengaturan, outbox, audit), guard `last_admin`, dan gating Viewer.
 

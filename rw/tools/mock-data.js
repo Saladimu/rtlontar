@@ -67,8 +67,70 @@ const RT017 = {
 };
 
 const USERS = [
-    { email: 'rw@example.com', nama: 'Bootstrap Admin', peran: 'RW Admin', aktif: true },
-    { email: 'viewer@example.com', nama: 'RW Viewer', peran: 'RW Viewer', aktif: true }
+    { email: 'rw@example.com', nama: 'Bootstrap Admin', peran: 'RW Admin', aktif: true, dibuat: '2026-10-01 08:00', diperbarui: '2026-10-01 08:00' },
+    { email: 'viewer@example.com', nama: 'RW Viewer', peran: 'RW Viewer', aktif: true, dibuat: '2026-10-02 08:00', diperbarui: '2026-10-02 08:00' },
+    { email: 'sekretaris@example.com', nama: 'Sekretaris RW', peran: 'RW Viewer', aktif: false, dibuat: '2026-09-15 08:00', diperbarui: '2026-10-10 08:00' }
 ];
 
-module.exports = { HEADERS, RTS: [RT018, RT017], USERS };
+const SETTINGS = [
+    ['CACHE_TTL_SECONDS', '300', 'Umur snapshot KPI sebelum diambil ulang (detik).'],
+    ['OUTBOX_MAX_ATTEMPTS', '8', 'Batas percobaan pengiriman outbox.'],
+    ['OUTBOX_BASE_DELAY_SECONDS', '60', 'Jeda dasar retry outbox (detik, exponential).'],
+    ['AUDIT_RETENTION_MONTHS', '12', 'Retensi login/audit (bulan, 12-36).'],
+    ['DECISION_RETENTION_MONTHS', '24', 'Retensi keputusan/tanggapan (bulan, 12-36).'],
+    ['SNAPSHOT_RETENTION_MONTHS', '24', 'Retensi snapshot KPI (bulan, 12-36).'],
+    ['RW_MASK_VIEWER', 'true', 'Masking NIK/HP/alamat untuk RW Viewer.'],
+    ['DIGEST_ENABLED', 'false', 'Aktifkan digest harian (Phase 4).'],
+    ['DIGEST_HOUR', '7', 'Jam kirim digest (0-23, Asia/Jakarta).']
+];
+
+const OUTBOX = [
+    {
+        'ID': 'OBX-018-1', 'Aksi': 'rwSuratDecision', 'RT ID': 'RT018', 'Target ID': 'SRT-018-1',
+        'Payload': '{"decision":"Disetujui","id":"SRT-018-1"}', 'Kunci': 'surat-SRT-018-1-v1',
+        'Status': 'Sent', 'Percobaan': 1, 'Next Retry': '', 'Last Error': '',
+        'Dibuat': '2026-10-22 10:00', 'Diperbarui': '2026-10-22 10:01', 'Hasil': '{"ok":true}'
+    },
+    {
+        'ID': 'OBX-018-2', 'Aksi': 'rwLaporNote', 'RT ID': 'RT018', 'Target ID': 'ADU-018-2',
+        'Payload': '{"status":"Ditangani RW","catatan":"Koordinasi petugas"}', 'Kunci': 'lapor-ADU-018-2-2026-10-24',
+        'Status': 'Failed', 'Percobaan': 3, 'Next Retry': '2026-10-26 10:00',
+        'Last Error': 'RT tidak merespons dalam 30 detik.', 'Dibuat': '2026-10-24 08:00',
+        'Diperbarui': '2026-10-26 09:05', 'Hasil': ''
+    },
+    {
+        'ID': 'OBX-017-1', 'Aksi': 'rwSuratDecision', 'RT ID': 'RT017', 'Target ID': 'SRT-017-1',
+        'Payload': '{"decision":"Dikembalikan","id":"SRT-017-1"}', 'Kunci': 'surat-SRT-017-1-v1',
+        'Status': 'Pending', 'Percobaan': 0, 'Next Retry': '2026-10-26 11:00', 'Last Error': '',
+        'Dibuat': '2026-10-26 10:55', 'Diperbarui': '2026-10-26 10:55', 'Hasil': ''
+    }
+];
+
+const AUDIT = [
+    {
+        'ID': 'AUD-1', 'Waktu': '2026-10-26 10:55', 'Aktor': 'Bootstrap Admin', 'Email': 'rw@example.com',
+        'Peran': 'RW Admin', 'Aksi': 'surat_decision', 'RT ID': 'RT017', 'Target': 'SRT-017-1',
+        'Hasil': 'ok', 'Detail': 'Dikembalikan'
+    },
+    {
+        'ID': 'AUD-2', 'Waktu': '2026-10-26 10:40', 'Aktor': 'Bootstrap Admin', 'Email': 'rw@example.com',
+        'Peran': 'RW Admin', 'Aksi': 'settings_save', 'RT ID': '', 'Target': 'OUTBOX_MAX_ATTEMPTS',
+        'Hasil': 'ok', 'Detail': '8'
+    },
+    {
+        'ID': 'AUD-3', 'Waktu': '2026-10-26 10:20', 'Aktor': 'Bootstrap Admin', 'Email': 'rw@example.com',
+        'Peran': 'RW Admin', 'Aksi': 'registry_save', 'RT ID': 'RT018', 'Target': 'https://script.google.com/macros/s/RT018/exec',
+        'Hasil': 'ok', 'Detail': 'aktif'
+    },
+    {
+        'ID': 'AUD-4', 'Waktu': '2026-10-26 09:30', 'Aktor': 'RW Viewer', 'Email': 'viewer@example.com',
+        'Peran': 'RW Viewer', 'Aksi': 'login', 'RT ID': '', 'Target': '', 'Hasil': 'ok', 'Detail': 'Cloudflare Access'
+    },
+    {
+        'ID': 'AUD-5', 'Waktu': '2026-10-26 09:05', 'Aktor': 'Bootstrap Admin', 'Email': 'rw@example.com',
+        'Peran': 'RW Admin', 'Aksi': 'rt_health', 'RT ID': 'RT018', 'Target': '',
+        'Hasil': 'error', 'Detail': 'RT tidak merespons dalam 30 detik.'
+    }
+];
+
+module.exports = { HEADERS, RTS: [RT018, RT017], USERS, SETTINGS, OUTBOX, AUDIT };
