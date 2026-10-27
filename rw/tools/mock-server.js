@@ -7,7 +7,7 @@ const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-26';
+const VERSION = 'rw-orchestrator-v1-2026-10-27';
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -114,14 +114,14 @@ function writeSuratDecision(body, user) {
     const stamp = stampNow();
     row[12] = decision;
     row[13] = catatan;
-    row[14] = user.email;
+    row[14] = user.nama || user.email;
     row[15] = stamp;
     row[16] = newRevisi;
     row[17] = newVersi;
     row[18] = kunci;
     return {
         result: 'success', version: VERSION, kunci: kunci, sent: true, queued: false,
-        id: id, rwStatus: decision, rwCatatan: catatan, rwOleh: user.email,
+        id: id, rwStatus: decision, rwCatatan: catatan, rwOleh: user.nama || user.email,
         rwTanggal: stamp, rwRevisi: newRevisi, rwVersi: newVersi
     };
 }
@@ -161,16 +161,16 @@ function writeLaporNote(body, user) {
     if (!status && (curStatus === 'Tidak Perlu' || curStatus === 'Perlu Tindak Lanjut')) newStatus = 'Ditangani RW';
     const stamp = stampNow();
     row[17] = newStatus;
-    row[18] = user.email;
+    row[18] = user.nama || user.email;
     row[19] = stamp;
     row[20] = kunci;
     if (visibilitas === 'Publik') row[14] = catatan;
     const timelineId = makeMockId('TL');
     rt.rows.Lapor_Tindak_Lanjut = rt.rows.Lapor_Tindak_Lanjut || [];
-    rt.rows.Lapor_Tindak_Lanjut.push([timelineId, id, rt.rtId, user.email, 'RW', catatan, newStatus, visibilitas, stamp]);
+    rt.rows.Lapor_Tindak_Lanjut.push([timelineId, id, rt.rtId, user.nama || user.email, 'RW', catatan, newStatus, visibilitas, stamp]);
     return {
         result: 'success', version: VERSION, kunci: kunci, sent: true, queued: false,
-        id: id, timelineId: timelineId, rwStatus: newStatus, rwPetugas: user.email,
+        id: id, timelineId: timelineId, rwStatus: newStatus, rwPetugas: user.nama || user.email,
         rwDiperbarui: stamp, visibilitas: visibilitas
     };
 }

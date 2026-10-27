@@ -1548,7 +1548,7 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">No. Surat <span id="surat-nosurat-req" class="hidden text-rose-500">*</span></label>
                     <input type="text" id="surat-nosurat" maxlength="100" class="w-full px-3 py-2 text-sm border rounded-xl focus:ring-2 focus:ring-cyan-500 outline-none" data-rt-placeholder="suratNo" placeholder="mis. 474/RT/RW/X/2026">
-                    <p class="text-xs text-slate-400 mt-1">Nomor surat resmi. Wajib diisi bila status pengurusan <b>Selesai</b> dan tidak boleh sama dengan pengajuan lain.</p>
+                    <p class="text-xs text-slate-400 mt-1">Nomor surat resmi. Hanya dapat diisi bila pengajuan <b>disetujui RW</b> dan status pengurusan <b>Selesai</b>, serta tidak boleh sama dengan pengajuan lain.</p>
                     <div class="mt-1.5 flex flex-wrap items-center gap-2">
                         <button type="button" id="surat-nosurat-suggestion" onclick="fillSuratNoSuggestion()" title="Isi contoh nomor surat; hanya angka 123 yang perlu diganti" class="inline-flex items-center gap-1.5 text-xs text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 px-2.5 py-1 rounded-full transition">
                             <i class="fa-solid fa-lightbulb"></i><span id="surat-nosurat-suggestion-label">Contoh nomor</span>
@@ -2039,7 +2039,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-26-03';
+        const APP_BUILD = '2026-10-27-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5049,7 +5049,7 @@
         // tinggal diketik nomor aslinya, sisanya tetap bisa diedit manual.
         function fillSuratNoSuggestion() {
             const input = document.getElementById('surat-nosurat');
-            if (!input) return;
+            if (!input || input.readOnly || input.disabled) return;
             const text = suratNoSuggestionText();
             if (!text) return;
             input.value = text;
@@ -5157,8 +5157,31 @@
             const approved = isSuratRwApprovedStatus(currentSuratRwStatus());
             const mark = document.getElementById('surat-nosurat-req');
             if (mark) mark.classList.toggle('hidden', !isSelesai);
+            // No. Surat hanya bisa diisi saat pengajuan disetujui RW DAN status
+            // pengurusan sudah Selesai; selain itu kolom dikunci agar nomor
+            // resmi tidak diisi sebelum surat benar-benar terbit.
+            const noSuratLocked = !approved || !isSelesai;
             const noSuratEl = document.getElementById('surat-nosurat');
-            if (noSuratEl) noSuratEl.readOnly = !approved;
+            if (noSuratEl) {
+                noSuratEl.readOnly = noSuratLocked;
+                noSuratEl.classList.toggle('bg-slate-100', noSuratLocked);
+                noSuratEl.classList.toggle('text-slate-500', noSuratLocked);
+                noSuratEl.classList.toggle('cursor-not-allowed', noSuratLocked);
+                noSuratEl.title = noSuratLocked
+                    ? (!approved
+                        ? 'No. Surat aktif setelah RW menyetujui pengajuan.'
+                        : 'Ubah status ke Selesai untuk mengisi No. Surat.')
+                    : '';
+            }
+            const suggestionBtn = document.getElementById('surat-nosurat-suggestion');
+            if (suggestionBtn) {
+                suggestionBtn.disabled = noSuratLocked;
+                suggestionBtn.classList.toggle('opacity-60', noSuratLocked);
+                suggestionBtn.classList.toggle('cursor-not-allowed', noSuratLocked);
+                suggestionBtn.title = noSuratLocked
+                    ? 'Contoh nomor surat aktif setelah pengajuan disetujui RW dan status Selesai.'
+                    : 'Isi contoh nomor surat; hanya angka 123 yang perlu diganti';
+            }
             updateSuratRwPanel();
 
             // Tanggal akhir: tampil untuk Selesai/Ditolak dan terisi otomatis.

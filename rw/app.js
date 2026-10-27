@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-26-06';
+    var BUILD = '2026-10-27-01';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
@@ -205,14 +205,55 @@
         } catch (e) { return ''; }
     }
 
+    var API_TIMEOUT_MS = 25000;
+    var READ_ACTIONS = {
+        rwSession: true, rwDashboard: true, rwList: true, rwAuditList: true, rwOutboxList: true,
+        rwUsersList: true, rwRegistryList: true, rwSettingsGet: true, rwRtHealth: true
+    };
+    var inflight = {};
+
+    function delay(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function isRetryableReadError(err) {
+        var code = String((err && err.code) || '');
+        return code === 'network' || code === 'timeout' || code === 'upstream_unreachable' ||
+            code === 'upstream_error' || code === 'upstream_invalid' || /^http_5\d\d$/.test(code);
+    }
+
+    // Gabungkan permintaan baca identik yang berjalan bersamaan agar satu klik
+    // tidak memicu dashboard/list berkali-kali saat pengguna berpindah cepat.
     function api(action, payload) {
+        if (!READ_ACTIONS[action]) return apiOnce(action, payload, 0);
+        var key = action + '|' + JSON.stringify(payload || {});
+        if (inflight[key]) return inflight[key];
+        var promise = apiOnce(action, payload, 1);
+        inflight[key] = promise;
+        var clear = function () { if (inflight[key] === promise) delete inflight[key]; };
+        promise.then(clear, clear);
+        return promise;
+    }
+
+    function apiOnce(action, payload, retriesLeft) {
         var headers = { 'Content-Type': 'application/json' };
         var devEmail = getDevEmail();
         if (devEmail) headers['X-RW-Dev-Email'] = devEmail;
         var body = Object.assign({ action: action }, payload || {});
-        return fetch('/api', { method: 'POST', headers: headers, body: JSON.stringify(body) })
+        var options = { method: 'POST', headers: headers, body: JSON.stringify(body) };
+        var timer = null;
+        var controller = null;
+        if (typeof AbortController !== 'undefined') {
+            controller = new AbortController();
+            options.signal = controller.signal;
+            timer = setTimeout(function () { controller.abort(); }, API_TIMEOUT_MS);
+        }
+        function clearTimer() { if (timer) { clearTimeout(timer); timer = null; } }
+        return Promise.resolve()
+            .then(function () { return fetch('/api', options); })
             .then(function (res) {
                 return res.text().then(function (text) {
+                    clearTimer();
                     var data;
                     try { data = text ? JSON.parse(text) : {}; } catch (e) { data = {}; }
                     if (!res.ok) {
@@ -227,10 +268,27 @@
                         throw err2;
                     }
                     return data;
-                });
-            }, function () {
-                var err = new Error('Tidak dapat menghubungi gateway RW.');
-                err.code = 'network';
+                }, function (err) { clearTimer(); throw err; });
+            })
+            .catch(function (err) {
+                clearTimer();
+                if (err && err.name === 'AbortError') {
+                    var timeoutErr = new Error('Gateway RW tidak merespons dalam ' + Math.round(API_TIMEOUT_MS / 1000) + ' detik.');
+                    timeoutErr.code = 'timeout';
+                    err = timeoutErr;
+                } else if (err && !err.code && String(err.message || '') === 'Failed to fetch') {
+                    var netErr = new Error('Tidak dapat menghubungi gateway RW.');
+                    netErr.code = 'network';
+                    err = netErr;
+                } else if (err && !err.code && /network|fetch|load failed/i.test(String(err.message || ''))) {
+                    var netErr2 = new Error('Tidak dapat menghubungi gateway RW.');
+                    netErr2.code = 'network';
+                    err = netErr2;
+                }
+                if (retriesLeft > 0 && isRetryableReadError(err)) {
+                    return delay(500).then(function () { return apiOnce(action, payload, retriesLeft - 1); });
+                }
+                if (!err.code) err.code = 'network';
                 throw err;
             });
     }
@@ -295,14 +353,22 @@
             '</div></div>';
     }
 
+    var dashboardPromise = null;
+
     function ensureDashboard(force) {
         var fresh = state.dashboard && (Date.now() - state.dashboardLoadedAt < 60000);
         if (state.dashboard && fresh && !force) return Promise.resolve(state.dashboard);
-        return api('rwDashboard').then(function (res) {
+        if (dashboardPromise) return dashboardPromise;
+        dashboardPromise = api('rwDashboard').then(function (res) {
+            dashboardPromise = null;
             state.dashboard = res;
             state.dashboardLoadedAt = Date.now();
             return res;
+        }, function (err) {
+            dashboardPromise = null;
+            throw err;
         });
+        return dashboardPromise;
     }
 
     function rtOptions(selected) {
@@ -1338,10 +1404,17 @@
         var btn = $('refresh-btn');
         if (btn) btn.disabled = true;
         setSync('Menyegarkan', '');
-        api('rwRefresh').then(function () {
-            state.dashboard = null;
-            state.dashboardLoadedAt = 0;
-            return ensureDashboard(true);
+        api('rwRefresh').then(function (res) {
+            // rwRefresh sudah mengembalikan dashboard terbaru; pakai langsung agar
+            // tidak ada fan-out kedua yang memperlambat dan memicu timeout.
+            if (res && res.rts) {
+                state.dashboard = res;
+                state.dashboardLoadedAt = Date.now();
+            } else {
+                state.dashboard = null;
+                state.dashboardLoadedAt = 0;
+                return ensureDashboard(true);
+            }
         }).then(function () {
             renderers[state.page]();
             toast('Data RW berhasil disegarkan.', 'success');
