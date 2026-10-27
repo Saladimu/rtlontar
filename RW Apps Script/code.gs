@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-26';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-27';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -532,7 +532,7 @@ function saveUser(user, data) {
 
 // ================= RT CALLS =================
 
-function callRt(rt, action, payload) {
+function rtRequest(rt, action, payload) {
   var token = getRtToken(rt.rtId);
   if (!token) {
     var tokenErr = new Error('RW_TOKEN untuk ' + rt.rtId + ' belum diatur (Script Property ' + RT_TOKEN_PREFIX + rt.rtId + ').');
@@ -543,13 +543,16 @@ function callRt(rt, action, payload) {
   Object.keys(payload || {}).forEach(function (k) { body[k] = payload[k]; });
   body.action = action;
   body.token = token;
-  var res = UrlFetchApp.fetch(rt.endpoint, {
+  return {
     method: 'post',
     contentType: 'text/plain;charset=utf-8',
     payload: JSON.stringify(body),
     muteHttpExceptions: true,
     followRedirects: true
-  });
+  };
+}
+
+function parseRtResponse(rt, res) {
   var code = res.getResponseCode();
   var text = res.getContentText();
   if (code < 200 || code >= 300) {
@@ -570,24 +573,8 @@ function callRt(rt, action, payload) {
   return json;
 }
 
-function readAllRtRows(rt, sheet, extra) {
-  var all = [];
-  var headers = [];
-  var offset = 0;
-  var limit = 2000;
-  var saldoAwal = null;
-  for (var page = 0; page < 50; page++) {
-    var payload = { sheet: sheet, limit: limit, offset: offset };
-    Object.keys(extra || {}).forEach(function (k) { payload[k] = extra[k]; });
-    var res = callRt(rt, 'rwRead', payload);
-    headers = res.headers || headers;
-    var rows = res.rows || [];
-    all = all.concat(rows);
-    if (res.saldoAwal !== undefined && res.saldoAwal !== null && res.saldoAwal !== '') saldoAwal = Number(res.saldoAwal) || 0;
-    if (!res.truncated || rows.length === 0) break;
-    offset += rows.length;
-  }
-  return { headers: headers, rows: all, saldoAwal: saldoAwal };
+function callRt(rt, action, payload) {
+  return parseRtResponse(rt, UrlFetchApp.fetch(rt.endpoint, rtRequest(rt, action, payload)));
 }
 
 // ================= KPI / CACHE =================
@@ -690,41 +677,135 @@ function countComplaints(headers, rows) {
   return { open: open, escalated: escalated };
 }
 
-function refreshRt(rt) {
-  var started = Date.now();
-  try {
-    var check = callRt(rt, 'rwCheck', {});
-    var warga = readAllRtRows(rt, 'Data_Warga');
-    var kas = readAllRtRows(rt, 'Iuran_Kas');
-    var surat = callRt(rt, 'rwRead', { sheet: 'Pengajuan_Surat', status: 'Menunggu', limit: 1, offset: 0 });
-    var lapor = readAllRtRows(rt, 'Lapor_Aspirasi');
-    var complaintCounts = countComplaints(lapor.headers, lapor.rows);
-    var snap = {
-      waktu: nowIso(),
-      rtId: rt.rtId,
-      warga: countResidents(warga.headers, warga.rows),
-      kasSaldo: computeKasSaldo(kas.headers, kas.rows, kas.saldoAwal),
-      suratMenunggu: toInt(surat.total, 0),
-      laporTerbuka: complaintCounts.open,
-      laporEskalasi: complaintCounts.escalated,
-      status: 'OK',
-      error: '',
-      durasiMs: Date.now() - started
-    };
-    saveSnapshot(snap);
-    updateRegistryRuntime(rt.rtId, {
-      'Backend Version': clean(check.version, 80),
-      'Last Sync': snap.waktu,
-      'Last Error': ''
-    });
-    return snap;
-  } catch (e) {
-    var errorSnap = emptySnapshot(rt.rtId, 'Error', String(e && e.message ? e.message : e), Date.now() - started);
-    saveSnapshot(errorSnap);
-    updateRegistryRuntime(rt.rtId, { 'Last Error': errorSnap.error, 'Last Sync': nowIso() });
-    return errorSnap;
+function completeRtRows(rt, first, sheet) {
+  var out = { headers: first.headers || [], rows: first.rows || [], saldoAwal: first.saldoAwal };
+  if (!first.truncated || out.rows.length === 0) return out;
+  var offset = out.rows.length;
+  for (var page = 0; page < 49; page++) {
+    var res = callRt(rt, 'rwRead', { sheet: sheet, limit: 2000, offset: offset });
+    out.headers = res.headers || out.headers;
+    var more = res.rows || [];
+    out.rows = out.rows.concat(more);
+    if (res.saldoAwal !== undefined && res.saldoAwal !== null && res.saldoAwal !== '') out.saldoAwal = Number(res.saldoAwal) || 0;
+    if (!res.truncated || more.length === 0) break;
+    offset += more.length;
   }
+  return out;
 }
+
+var RT_KPI_CALL_COUNT = 5;
+var RT_ERROR_RETRY_SECONDS = 30;
+
+function rtKpiCalls(rt) {
+  return [
+    { rt: rt, action: 'rwCheck', payload: {} },
+    { rt: rt, action: 'rwRead', payload: { sheet: 'Data_Warga', limit: 2000, offset: 0 } },
+    { rt: rt, action: 'rwRead', payload: { sheet: 'Iuran_Kas', limit: 2000, offset: 0 } },
+    { rt: rt, action: 'rwRead', payload: { sheet: 'Pengajuan_Surat', status: 'Menunggu', limit: 1, offset: 0 } },
+    { rt: rt, action: 'rwRead', payload: { sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0 } }
+  ];
+}
+
+// Jalankan semua permintaan KPI dalam satu fetchAll (paralel). Hasil per entri
+// dikembalikan sebagai { ok, data | error } agar satu RT bermasalah tidak
+// menggagalkan RT lain.
+function callRtEntries(entries) {
+  var results = [];
+  if (typeof UrlFetchApp.fetchAll !== 'function') {
+    entries.forEach(function (entry, i) {
+      try { results[i] = { ok: true, data: callRt(entry.rt, entry.action, entry.payload) }; }
+      catch (e) { results[i] = { ok: false, error: e }; }
+    });
+    return results;
+  }
+  var prepared = [];
+  entries.forEach(function (entry, i) {
+    try {
+      var req = rtRequest(entry.rt, entry.action, entry.payload);
+      req.url = entry.rt.endpoint;
+      prepared.push({ index: i, req: req });
+    } catch (e) {
+      results[i] = { ok: false, error: e };
+    }
+  });
+  var responses;
+  try {
+    responses = UrlFetchApp.fetchAll(prepared.map(function (p) { return p.req; }));
+  } catch (e) {
+    // fetchAll gagal total (mis. satu URL tidak valid): ulangi per entri agar
+    // hanya RT yang benar-benar bermasalah yang ditandai Error.
+    entries.forEach(function (entry, i) {
+      if (results[i]) return;
+      try { results[i] = { ok: true, data: callRt(entry.rt, entry.action, entry.payload) }; }
+      catch (err) { results[i] = { ok: false, error: err }; }
+    });
+    return results;
+  }
+  prepared.forEach(function (p, idx) {
+    try { results[p.index] = { ok: true, data: parseRtResponse(entries[p.index].rt, responses[idx]) }; }
+    catch (err) { results[p.index] = { ok: false, error: err }; }
+  });
+  return results;
+}
+
+function rtErrorSnapshot(rt, err, started) {
+  var errorSnap = emptySnapshot(rt.rtId, 'Error', String(err && err.message ? err.message : err), Date.now() - started);
+  saveSnapshot(errorSnap);
+  updateRegistryRuntime(rt.rtId, { 'Last Error': errorSnap.error, 'Last Sync': nowIso() });
+  return errorSnap;
+}
+
+function rtSnapshotFromPages(rt, pages, started) {
+  var check = pages[0];
+  var warga = completeRtRows(rt, pages[1], 'Data_Warga');
+  var kas = completeRtRows(rt, pages[2], 'Iuran_Kas');
+  var surat = pages[3];
+  var lapor = completeRtRows(rt, pages[4], 'Lapor_Aspirasi');
+  var complaintCounts = countComplaints(lapor.headers, lapor.rows);
+  var snap = {
+    waktu: nowIso(),
+    rtId: rt.rtId,
+    warga: countResidents(warga.headers, warga.rows),
+    kasSaldo: computeKasSaldo(kas.headers, kas.rows, kas.saldoAwal),
+    suratMenunggu: toInt(surat.total, 0),
+    laporTerbuka: complaintCounts.open,
+    laporEskalasi: complaintCounts.escalated,
+    status: 'OK',
+    error: '',
+    durasiMs: Date.now() - started
+  };
+  saveSnapshot(snap);
+  updateRegistryRuntime(rt.rtId, {
+    'Backend Version': clean(check.version, 80),
+    'Last Sync': snap.waktu,
+    'Last Error': ''
+  });
+  return snap;
+}
+
+// Ambil KPI untuk beberapa RT sekaligus. Semua permintaan pertama (5 per RT)
+// dikirim dalam satu fetchAll sehingga total waktu mendekati RT paling lambat,
+// bukan jumlah seluruh RT. Ini mencegah dashboard melewati batas waktu gateway
+// pada percobaan pertama (gejala "harus refresh 2-3 kali").
+function refreshRts(rtList) {
+  var started = Date.now();
+  if (!rtList || !rtList.length) return [];
+  var entries = [];
+  rtList.forEach(function (rt) { entries = entries.concat(rtKpiCalls(rt)); });
+  var results = callRtEntries(entries);
+  return rtList.map(function (rt, rtIndex) {
+    var pages = results.slice(rtIndex * RT_KPI_CALL_COUNT, (rtIndex + 1) * RT_KPI_CALL_COUNT);
+    var failure = null;
+    pages.forEach(function (r) { if (!failure && r && !r.ok) failure = r.error || new Error('RT tidak merespons.'); });
+    if (failure || pages.length !== RT_KPI_CALL_COUNT) return rtErrorSnapshot(rt, failure, started);
+    try {
+      return rtSnapshotFromPages(rt, pages.map(function (r) { return r.data; }), started);
+    } catch (e) {
+      return rtErrorSnapshot(rt, e, started);
+    }
+  });
+}
+
 
 function secondsSince(iso) {
   if (!iso) return Number.MAX_VALUE;
@@ -745,28 +826,44 @@ function handleDashboard(user, data) {
   var totals = { warga: 0, kasSaldo: 0, suratMenunggu: 0, laporTerbuka: 0, laporEskalasi: 0 };
   var lastSync = '';
 
+  // Tentukan dulu RT mana yang perlu diambil ulang, lalu jalankan semuanya
+  // paralel agar total latensi mengikuti RT paling lambat (bukan jumlah RT).
+  // RT yang baru saja gagal diberi jeda singkat sebelum dicoba lagi agar satu
+  // RT bermasalah tidak memperlambat setiap pemuatan dashboard berikutnya.
+  var prevs = {};
+  var pending = [];
   list.forEach(function (rt) {
     var prev = latestSnapshot(rt.rtId);
+    prevs[rt.rtId] = prev;
     var age = prev ? secondsSince(prev.waktu) : Number.MAX_VALUE;
-    var need = force || !prev || prev.status !== 'OK' || age > ttl;
-    var snap = prev;
-    if (need) {
-      snap = refreshRt(rt);
-      rt = findRt(rt.rtId) || rt;
-      if (snap.status !== 'OK' && prev && prev.status === 'OK') {
-        snap = {
-          waktu: prev.waktu,
-          rtId: prev.rtId,
-          warga: prev.warga,
-          kasSaldo: prev.kasSaldo,
-          suratMenunggu: prev.suratMenunggu,
-          laporTerbuka: prev.laporTerbuka,
-          laporEskalasi: prev.laporEskalasi,
-          status: 'Stale',
-          error: String(snap.error || 'Gagal memperbarui'),
-          durasiMs: snap.durasiMs
-        };
-      }
+    var need = !prev || (prev.status === 'OK' ? age > ttl : age > RT_ERROR_RETRY_SECONDS);
+    if (force || need) pending.push(rt);
+  });
+  var refreshed = {};
+  if (pending.length) {
+    refreshRts(pending).forEach(function (snap) { refreshed[snap.rtId] = snap; });
+    // Ambil ulang registry agar backendVersion/Last Sync yang baru tersaji.
+    var runtime = {};
+    listRegistry().forEach(function (r) { runtime[r.rtId] = r; });
+    list = list.map(function (rt) { return runtime[rt.rtId] || rt; });
+  }
+
+  list.forEach(function (rt) {
+    var prev = prevs[rt.rtId];
+    var snap = refreshed[rt.rtId] || prev;
+    if (snap && snap.status !== 'OK' && prev && prev.status === 'OK') {
+      snap = {
+        waktu: prev.waktu,
+        rtId: prev.rtId,
+        warga: prev.warga,
+        kasSaldo: prev.kasSaldo,
+        suratMenunggu: prev.suratMenunggu,
+        laporTerbuka: prev.laporTerbuka,
+        laporEskalasi: prev.laporEskalasi,
+        status: 'Stale',
+        error: String(snap.error || 'Gagal memperbarui'),
+        durasiMs: snap.durasiMs
+      };
     }
     var stale = snap.status !== 'OK' || secondsSince(snap.waktu) > ttl;
     result.push({
@@ -1019,7 +1116,7 @@ function handleSuratDecision(user, data) {
     id: id,
     decision: decision,
     catatan: catatan,
-    aktor: user.email,
+    aktor: user.nama || user.email,
     kunci: kunci
   };
   if (expectedVersi !== undefined && expectedVersi !== null && expectedVersi !== '') payload.expectedVersi = expectedVersi;
@@ -1032,7 +1129,7 @@ function handleSuratDecision(user, data) {
     'Ref': clean(data.ref, 60),
     'Keputusan': decision,
     'Catatan': catatan,
-    'Aktor': user.email,
+    'Aktor': user.nama || user.email,
     'Waktu': nowIso(),
     'Versi': expectedVersi === undefined || expectedVersi === null ? '' : expectedVersi,
     'Status Kirim': 'Pending'
@@ -1093,7 +1190,7 @@ function handleLaporNote(user, data) {
   var payload = {
     id: id,
     catatan: catatan,
-    aktor: user.email,
+    aktor: user.nama || user.email,
     kunci: kunci,
     visibilitas: visibilitas
   };
@@ -1110,7 +1207,7 @@ function handleLaporNote(user, data) {
     'Catatan': catatan,
     'Status RW': status,
     'Visibilitas': visibilitas,
-    'Aktor': user.email,
+    'Aktor': user.nama || user.email,
     'Waktu': nowIso(),
     'Timeline ID': '',
     'Status Kirim': 'Pending'

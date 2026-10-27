@@ -105,6 +105,13 @@ http://localhost:8001/?devEmail=viewer@example.com
 
 Mock server tidak memakai Cloudflare Access dan tidak boleh dipakai di produksi.
 
+## Keandalan pemuatan data
+
+- Orkestrator menjalankan KPI semua RT dalam satu `UrlFetchApp.fetchAll` (paralel), bukan berurutan per RT, sehingga latensi mengikuti RT paling lambat dan dashboard tidak melewati batas waktu gateway.
+- Portal memakai timeout 25 detik per permintaan, satu kali percobaan ulang otomatis untuk kegagalan baca yang bersifat sementara (jaringan/timeout/5xx), serta menggabungkan permintaan baca identik yang berjalan bersamaan.
+- Tombol **Segarkan** memakai dashboard yang dikembalikan `rwRefresh` sehingga tidak memicu fan-out kedua.
+- Jika tetap gagal, halaman menampilkan tombol **Coba lagi**; data terakhir yang berhasil dimuat tetap dipertahankan orkestrator sebagai snapshot `Stale`.
+
 ## Catatan keamanan
 
 - Jangan menaruh `GATEWAY_SECRET`, `RT_TOKEN_*`, atau `RW_TOKEN` di file statis, `localStorage`, atau repositori.

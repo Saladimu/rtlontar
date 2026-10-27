@@ -27,8 +27,8 @@ const RT018 = {
         ],
         Pengajuan_Surat: [
             ['2026-10-20 09:00', 'Budi Santoso', '3173010101010001', '081234567890', 'Jl. Mawar 1', 'Surat Domisili', 'Persyaratan sekolah anak', 'Pending', '', '', '', 'Tidak', 'Menunggu', '', '', '', 0, 1, '', 'SRT-018-1'],
-            ['2026-10-18 09:00', 'Siti Aminah', '3173010101010002', '081298765432', 'Jl. Mawar 2', 'Surat Usaha', 'Pengajuan kredit usaha', 'Selesai', '474/018/2026', 'Disetujui RW', '2026-10-19', 'Tidak', 'Disetujui', 'Usaha sudah berjalan.', 'rw@example.com', '2026-10-19 08:00', 0, 2, 'K-SURAT-018-1', 'SRT-018-2'],
-            ['2026-10-15 09:00', 'Agus Salim', '3173010101010003', '081377788899', 'Jl. Mawar 3', 'Surat Keterangan Tidak Mampu', 'Bantuan pendidikan', 'Pending', '', '', '', 'Tidak', 'Dikembalikan', 'Lengkapi surat pengantar RT.', 'rw@example.com', '2026-10-16 09:00', 1, 2, 'K-SURAT-018-2', 'SRT-018-3']
+            ['2026-10-18 09:00', 'Siti Aminah', '3173010101010002', '081298765432', 'Jl. Mawar 2', 'Surat Usaha', 'Pengajuan kredit usaha', 'Selesai', '474/018/2026', 'Disetujui RW', '2026-10-19', 'Tidak', 'Disetujui', 'Usaha sudah berjalan.', 'Bootstrap Admin', '2026-10-19 08:00', 0, 2, 'K-SURAT-018-1', 'SRT-018-2'],
+            ['2026-10-15 09:00', 'Agus Salim', '3173010101010003', '081377788899', 'Jl. Mawar 3', 'Surat Keterangan Tidak Mampu', 'Bantuan pendidikan', 'Pending', '', '', '', 'Tidak', 'Dikembalikan', 'Lengkapi surat pengantar RT.', 'Bootstrap Admin', '2026-10-16 09:00', 1, 2, 'K-SURAT-018-2', 'SRT-018-3']
         ],
         Lapor_Aspirasi: [
             ['2026-10-22 09:00', 'ADU/2026-012', 'Budi Santoso', '081234567890', 'Jl. Mawar 1', 'Lingkungan', 'Sampah menumpuk', 'Sampah di depan gang belum diangkut tiga hari.', 'Gang Mawar', '2026-10-21', '', 'Diangkut rutin', 'Diterima', '', '', '', 'Tidak', 'Perlu Tindak Lanjut', '', '2026-10-22 10:00', '', 'ADU-018-1'],
@@ -36,7 +36,7 @@ const RT018 = {
             ['2026-10-24 09:00', 'ADU/2026-014', 'Agus Salim', '081377788899', 'Jl. Mawar 3', 'Sosial', 'Bantuan warga sakit', 'Warga lanjut usia membutuhkan bantuan.', 'Jl. Mawar 3', '2026-10-24', '', 'Dana bantuan', 'Diterima', '', '', '', 'Tidak', 'Tidak Perlu', '', '', '', 'ADU-018-3']
         ],
         Lapor_Tindak_Lanjut: [
-            ['TL-018-1', 'ADU-018-2', 'RT018', 'rw@example.com', 'RW Admin', 'Sudah dikoordinasikan dengan petugas keamanan.', 'Ditangani RW', 'Publik', '2026-10-24 08:00']
+            ['TL-018-1', 'ADU-018-2', 'RT018', 'Bootstrap Admin', 'RW Admin', 'Sudah dikoordinasikan dengan petugas keamanan.', 'Ditangani RW', 'Publik', '2026-10-24 08:00']
         ]
     }
 };
