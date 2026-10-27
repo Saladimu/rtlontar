@@ -713,8 +713,8 @@
                                 <th class="p-4"><span class="block">No. HP /</span><span class="block">Alamat</span></th>
                                 <th class="p-4">Jenis Surat</th>
                                 <th class="p-4">Keperluan</th>
-                                <th class="p-4 text-center"><span class="block">Status</span><span class="block text-xs font-normal text-slate-400">Durasi</span></th>
-                                <th class="p-4 text-center">Aksi</th>
+                                <th class="p-4 text-center" style="min-width:12rem"><span class="block">Status</span><span class="block text-xs font-normal text-slate-400">Durasi</span></th>
+                                <th class="p-4 text-center whitespace-nowrap">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="table-surat-body" class="divide-y divide-slate-100 text-slate-700">
@@ -2039,7 +2039,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-26-02';
+        const APP_BUILD = '2026-10-26-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5192,7 +5192,11 @@
                 showToast('Pengajuan ini tidak dapat diajukan ulang.', 'error');
                 return;
             }
-            postToSheets({ action: 'resubmitSurat', id: id }, {
+            if (!appState.adminToken) {
+                promptForAdminToken('Token admin belum diatur. Simpan token di Pengaturan sebelum mengajukan ulang ke RW.');
+                return;
+            }
+            postToSheets({ action: 'resubmitSurat', id: id, token: appState.adminToken }, {
                 onSuccess: (res) => {
                     item.rwStatus = 'Menunggu';
                     item.rwKunci = '';
@@ -5358,7 +5362,7 @@
                 : s === 'Menunggu' ? 'fa-hourglass-half'
                 : s === 'Tidak Perlu' ? 'fa-circle-info'
                 : 'fa-circle-exclamation';
-            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full font-medium ${map[s] || 'bg-slate-100 text-slate-600'}"><i class="fa-solid ${icon}"></i>RW: ${escAttr(s)}</span>`;
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full font-medium whitespace-nowrap ${map[s] || 'bg-slate-100 text-slate-600'}"><i class="fa-solid ${icon}"></i>RW: ${escAttr(s)}</span>`;
         }
         function isSuratRwApprovedStatus(status) {
             return status === 'Disetujui' || status === 'Tidak Perlu';
@@ -6030,7 +6034,7 @@
                         ${item.noSurat ? `<div class="text-slate-500 mt-0.5"><i class="fa-solid fa-file-signature mr-1 text-amber-500"></i>${escAttr(item.noSurat)}</div>` : ''}
                     </td>
                     <td class="p-4 text-slate-500 text-xs" style="max-width:16rem">${escAttr(item.keperluan || '-')}</td>
-                    <td class="p-4 text-center">
+                    <td class="p-4 text-center" style="min-width:12rem">
                         <div class="flex flex-col items-center gap-1">
                             ${suratStatusBadge(item.status)}
                             ${suratDurationHtml(item)}
@@ -6271,7 +6275,11 @@
                 showToast('Pengaduan ini sudah diteruskan ke RW.', 'info');
                 return;
             }
-            postToSheets({ action: 'laporEscalate', id: id }, {
+            if (!appState.adminToken) {
+                promptForAdminToken('Token admin belum diatur. Simpan token di Pengaturan sebelum meneruskan ke RW.');
+                return;
+            }
+            postToSheets({ action: 'laporEscalate', id: id, token: appState.adminToken }, {
                 onSuccess: (res) => {
                     item.rwStatus = (res && res.rwStatus) || 'Perlu Tindak Lanjut';
                     item.rwDiperbarui = (res && res.rwDiperbarui) || new Date().toISOString();
