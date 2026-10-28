@@ -460,7 +460,7 @@ Cache TTL, digest schedule, and retention must be configurable through the RW `S
 
 ## 14. Migration and rollout
 
-> The per-RT rollout checklist (phases A-H with gates, sign-off, and rollback) is maintained in `MAINTENANCE.md` section 6.4. Use it for every RT after RT018.
+> The step-by-step procedure for enabling a new RT is `ROLLOUT-RT.md` (commands, configuration tables, smoke tests, troubleshooting). The condensed gate checklist (phases A-H with sign-off and rollback) is maintained in `MAINTENANCE.md` section 6.4. Use both for every RT after RT018.
 
 
 ### 14.1 RT migration

@@ -111,6 +111,19 @@ if (publicPortalUrl) {
   console.log('SKIP publicPortalUrl kosong');
 }
 
+// Sisa penanda konflik merge berarti nilai RT bisa tertimpa nilai main tanpa
+// terlihat: tolak lebih awal daripada membiarkan deployment memakai URL salah.
+const trackedFiles = [
+  'config.js', 'version.json', 'sw.js', 'index.html', 'public.html',
+  'functions/api/[[path]].js', 'Apps Script/code.gs', 'RW Apps Script/code.gs',
+  'rw/app.js', 'rw/version.json'
+];
+const conflicted = trackedFiles.filter((file) => {
+  if (!fs.existsSync(path.join(ROOT, file))) return false;
+  return /^(<{7}|={7}|>{7})(\s|$)/m.test(read(file));
+});
+check(conflicted.length === 0, 'tidak ada sisa konflik merge', conflicted.join(', '));
+
 const attributesPath = path.join(ROOT, '.gitattributes');
 const attributes = fs.existsSync(attributesPath) ? fs.readFileSync(attributesPath, 'utf8') : '';
 for (const file of ['config.js', 'version.json', 'sw.js']) {

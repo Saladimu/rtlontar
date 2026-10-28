@@ -75,7 +75,7 @@ Rules for the driver:
 - Run the setup command after cloning or when `git config --get merge.keeprt.driver` is empty.
 - Run `node tools/check-deployment.js` immediately after every merge. It fails if any RT file or version marker no longer matches the branch identity.
 - Version bumps remain manual on the target RT branch. The driver prevents accidental overwrites, not missing releases.
-- If a merge reports a conflict in these files, resolve it manually, then run the deployment check again.
+- If a merge reports a conflict in these files, resolve it manually, then run the deployment check again. The check also fails when leftover conflict markers remain in any tracked deployment file.
 - Without the driver, Git reports conflicts instead of silently overwriting RT values.
 
 If `main` adds a new generic key to `config.js`, it is inherited automatically. If a merge is skipped and the key is missing on an RT branch, runtime behavior may degrade; the deployment check cannot verify every key, so review the merged diff before pushing.
@@ -272,6 +272,10 @@ When an RW operator leaves, remove the Access policy entry, deactivate the orche
 
 ### 6.4 Rollout checklist for the next RT (RW 06)
 
+For a step-by-step procedure with exact commands, configuration tables, and
+troubleshooting, follow `ROLLOUT-RT.md`. The checklist below is the condensed gate
+list; the runbook expands each phase into concrete actions.
+
 Use this checklist once per RT when enabling the RW 06 oversight flow. Copy it into the
 rollout ticket and tick each line. RT018 is the pilot and RT017 is the reference
 deployment; every later RT follows the same order. Do not skip a gate; if one fails,
@@ -437,6 +441,9 @@ After recovery, record the incident, cause, and corrective action in `agents.md`
 ---
 
 ## 10. Adding a new RT
+
+The detailed, copy-pasteable procedure lives in `ROLLOUT-RT.md`. The summary below
+lists the required actions in order.
 
 1. Create a new spreadsheet and bound Apps Script project.
 2. Paste the current `Apps Script/code.gs` and deploy a Web App.

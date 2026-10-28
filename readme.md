@@ -598,7 +598,7 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 
 ## Pemeliharaan & Rilis
 
-Prosedur lengkap ada di `MAINTENANCE.md`: rutinitas mingguan/bulanan, backup dan uji restore, rotasi token, rollback, onboarding RT baru, serta registry deployment. Untuk mengaktifkan alur RW 06 pada RT berikutnya, gunakan **checklist rollout Fase A–H** di `MAINTENANCE.md` §6.4 (prasyarat, backend, frontend/hostname, registrasi orkestrator, smoke test, tinjauan akses, gerbang pilot, rollback).
+Prosedur lengkap ada di `MAINTENANCE.md`: rutinitas mingguan/bulanan, backup dan uji restore, rotasi token, rollback, onboarding RT baru, serta registry deployment. Untuk menambah RT baru, ikuti panduan langkah demi langkah di **`ROLLOUT-RT.md`** (perintah, tabel konfigurasi, smoke test, dan troubleshooting); ringkasan gate-nya ada di **checklist rollout Fase A–H** `MAINTENANCE.md` §6.4.
 
 Model branch:
 
