@@ -3,7 +3,7 @@
 Backend orkestrator untuk portal RW 06. Berkas ini **bukan** backend RT dan tidak boleh dipasang di spreadsheet RT. Setiap RT tetap memakai `Apps Script/code.gs` sendiri; orkestrator hanya membaca dan menulis kolom workflow RW melalui endpoint `rw*` RT.
 
 - Versi kode: `rw-orchestrator-v1-2026-10-28`
-- RT minimum: `publik-v38-2026-10-26` (v38: batas 3 revisi hanya menutup `Kembalikan`; `Tolak` final tetap tersedia; v37 memperbaiki status/timestamp RW; v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
+- RT minimum: `publik-v39-2026-10-28` (v39: `action=read` mengirim `Lapor_Tindak_Lanjut` untuk timeline di panel RT; v38: batas 3 revisi hanya menutup `Kembalikan`; `Tolak` final tetap tersedia; v37 memperbaiki status/timestamp RW; v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
 - Pola: hub-and-spoke. Browser RW tidak pernah memanggil Web App RT secara langsung.
 
 ## 1. Prasyarat

@@ -1694,6 +1694,10 @@
                     <p id="lapor-rw-meta" class="text-xs text-slate-500"></p>
                     <div id="lapor-rw-warning" class="hidden text-xs text-amber-800 bg-amber-100 border border-amber-200 rounded-lg px-2 py-1.5"></div>
                     <button type="button" id="lapor-rw-escalate" onclick="escalateLaporRw()" class="hidden items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-lg"><i class="fa-solid fa-paper-plane"></i>Minta Tindak Lanjut RW</button>
+                    <div id="lapor-rw-timeline-wrap" class="hidden border-t border-slate-200 pt-2">
+                        <p class="text-[11px] font-semibold text-slate-600 mb-1"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Riwayat tanggapan RW</p>
+                        <div id="lapor-rw-timeline" class="max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y divide-slate-100"></div>
+                    </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -2029,7 +2033,7 @@
         let editMode = { warga: null, kas: null, pengumuman: null, kegiatan: null, surat: null, lapor: null };
 
         // Versi backend yang diharapkan (harus sama dengan CODE_VERSION di code.gs).
-        const EXPECTED_BACKEND_VERSION = 'publik-v38-2026-10-26';
+        const EXPECTED_BACKEND_VERSION = 'publik-v39-2026-10-28';
 
         // Versi config.js yang diharapkan (harus sama dengan RT_CONFIG.version).
         // Bila berbeda, halaman di-hard refresh sekali agar HTML & config.js sinkron.
@@ -2039,7 +2043,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-27-01';
+        const APP_BUILD = '2026-10-28-02';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -2590,6 +2594,7 @@
             adminEmail: localStorage.getItem('rt_admin_email') || '',
             saldoAwal: Number(localStorage.getItem('rt_saldo_awal')) || 0,
             backendVersion: '',
+            laporTimeline: [],
             activeBase: '',
             portalEnabled: true,
             laporEnabled: true,
@@ -6241,6 +6246,39 @@
             return normalizeLaporRwStatus(appState.lapor[idx].rwStatus);
         }
 
+        // Riwayat tanggapan RW untuk satu pengaduan, diambil dari sheet
+        // Lapor_Tindak_Lanjut yang ikut terkirim pada action=read.
+        function renderLaporRwTimeline(laporId) {
+            const wrap = document.getElementById('lapor-rw-timeline-wrap');
+            const list = document.getElementById('lapor-rw-timeline');
+            if (!wrap || !list) return;
+            const items = (appState.laporTimeline || []).filter(function (t) {
+                return String(t.laporId) === String(laporId);
+            }).sort(function (a, b) {
+                return String(a.waktu).localeCompare(String(b.waktu));
+            });
+            if (!laporId || !items.length) {
+                wrap.classList.add('hidden');
+                list.innerHTML = '';
+                return;
+            }
+            wrap.classList.remove('hidden');
+            list.innerHTML = items.map(function (t) {
+                const publik = String(t.visibilitas || 'Publik').toLowerCase() !== 'internal';
+                const vis = publik
+                    ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-blue-100 text-blue-700"><i class="fa-solid fa-globe"></i>Publik</span>'
+                    : '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded-full font-medium bg-slate-100 text-slate-600"><i class="fa-solid fa-lock"></i>Internal</span>';
+                const meta = [t.waktu, t.aktor, t.peran ? '(' + t.peran + ')' : ''].filter(Boolean).join(' \u00B7 ');
+                return '<div class="px-2 py-1.5 space-y-1">' +
+                    '<div class="flex items-center justify-between gap-2">' +
+                        '<span class="text-[10px] text-slate-500">' + escAttr(meta) + '</span>' + vis +
+                    '</div>' +
+                    '<p class="text-xs text-slate-700 break-words">' + escAttr(t.catatan || '-') + '</p>' +
+                    '<p class="text-[10px] text-slate-500">Status: ' + escAttr(t.status || '-') + '</p>' +
+                '</div>';
+            }).join('');
+        }
+
         // Panel tindak lanjut RW pada modal pengaduan. RT hanya dapat meminta
         // tindak lanjut; catatan RW tetap milik RW dan tidak ditimpa RT.
         function updateLaporRwPanel() {
@@ -6257,6 +6295,7 @@
                 meta.textContent = '';
                 if (warning) warning.classList.add('hidden');
                 if (btn) { btn.classList.add('hidden'); btn.classList.remove('inline-flex'); }
+                renderLaporRwTimeline('');
                 return;
             }
 
@@ -6286,6 +6325,7 @@
                 btn.classList.toggle('hidden', !canEscalate);
                 btn.classList.toggle('inline-flex', canEscalate);
             }
+            renderLaporRwTimeline(item && item._id);
         }
 
         function escalateLaporRw() {
@@ -8655,6 +8695,12 @@
                 tanggalSelesai: fmtDate(r[15]), arsip: r[16],
                 rwStatus: normalizeLaporRwStatus(r[17]), rwPetugas: r[18] || '', rwDiperbarui: r[19] || ''
             })));
+            appState.laporTimeline = (d.Lapor_Tindak_Lanjut || []).map(r => ({
+                id: r[0] || '', laporId: r[1] || '', rtId: r[2] || '',
+                aktor: r[3] || '', peran: r[4] || '', catatan: r[5] || '',
+                status: r[6] || '', visibilitas: r[7] || 'Publik',
+                waktu: fmtTimestampDisplay(r[8] || '')
+            })).filter(t => t.laporId);
             saveLocalState();
             updateNewRecordNotes();
             appState.portalEnabled = res.portalEnabled !== false;

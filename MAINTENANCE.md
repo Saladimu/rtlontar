@@ -197,12 +197,12 @@ node tools/check-deployment.js --live
 
 Do not skip step 8. Updating `code.gs` without creating a new deployment leaves the old backend running.
 
-### 6.1 RW 06 schema rollout (backend v38)
+### 6.1 RW 06 schema rollout (backend v39)
 
 Run this once per RT when adopting the RW 06 integration:
 
 1. Back up the spreadsheet (**File > Make a copy**) and note the current Apps Script deployment version.
-2. Deploy `code.gs` **publik-v38-2026-10-26** as a **New version**. v38 membatasi `Kembalikan` pada 3 revisi namun tetap menyediakan `Setujui`/`Tolak` sebagai keputusan final dan mengizinkan ajukan ulang setelah pengembalian ketiga; v37 memperbaiki penulisan `Rw Diperbarui` saat eskalasi dan memulihkan nilai `Rw Status` yang tidak dikenal menjadi `Tidak Perlu`. Skema kolom tidak berubah dari v35/v36/v37.
+2. Deploy `code.gs` **publik-v39-2026-10-28** as a **New version**. v39 mengirim `Lapor_Tindak_Lanjut` pada `action=read` agar panel RT dapat menampilkan **Riwayat tanggapan RW**; v38 membatasi `Kembalikan` pada 3 revisi namun tetap menyediakan `Setujui`/`Tolak` sebagai keputusan final dan mengizinkan ajukan ulang setelah pengembalian ketiga; v37 memperbaiki penulisan `Rw Diperbarui` saat eskalasi dan memulihkan nilai `Rw Status` yang tidak dikenal menjadi `Tidak Perlu`. Skema kolom tidak berubah dari v35/v36/v37/v38.
 3. In **Project Settings > Script Properties**, set:
    - `RW_TOKEN` — a unique secret per RT, shared only with the RW orchestrator. Never reuse `ADMIN_TOKEN`, and do not give it to RT admins.
    - `RT_ID` — optional, for example `RT018`, written to `Lapor_Tindak_Lanjut`.
@@ -212,6 +212,7 @@ Run this once per RT when adopting the RW 06 integration:
    - `Lapor_Tindak_Lanjut` exists with 9 headers.
    - Existing rows show `Rw Status=Tidak Perlu`; nilai rusak (mis. `ADU-...`) otomatis dipulihkan saat dashboard dimuat.
    - `rwCheck` returns `schemaMigrated:true` and `rwTokenConfigured:true`.
+   - `action=read` includes a `Lapor_Tindak_Lanjut` array (empty is fine before the first RW response).
 6. Smoke test:
    - Submit a new letter → `Rw Status=Menunggu`; `Selesai` is rejected until a `rwSuratDecision` approves it.
    - Send `rwSuratDecision` with `Disetujui`, then set `Selesai` with a No. Surat.
@@ -219,7 +220,8 @@ Run this once per RT when adopting the RW 06 integration:
    - Resubmit after the third return; confirm `Dikembalikan` is rejected (`max_negative`) but `Ditolak` succeeds as the final decision without adding a revision.
    - Confirm `resubmitSurat` after that final `Ditolak` returns `max_negative`.
    - Escalate a complaint with `laporEscalate`; send `rwLaporNote`; confirm the audit row and public/internal visibility.
-7. Repeat for RT018 first, then the remaining RTs. Never merge an RT branch back into `main`.
+7. Verify the RT panel shows **Riwayat tanggapan RW** in the complaint modal after `rwLaporNote` (see section 6.4).
+8. Repeat for RT018 first, then the remaining RTs following the full checklist in section 6.4. Never merge an RT branch back into `main`.
 
 If migration fails, restore the spreadsheet copy. The added columns are additive, so reverting the backend deployment leaves existing data readable.
 
@@ -267,6 +269,89 @@ The portal lives in `rw/` and is deployed as its own Cloudflare Pages project. R
 When an RW operator leaves, remove the Access policy entry, deactivate the orchestrator user, and rotate `GATEWAY_SECRET` if exposure is suspected.
 
 > Deploying new code requires **Manage deployments > Edit > New version**; the URL stays the same.
+
+### 6.4 Rollout checklist for the next RT (RW 06)
+
+Use this checklist once per RT when enabling the RW 06 oversight flow. Copy it into the
+rollout ticket and tick each line. RT018 is the pilot and RT017 is the reference
+deployment; every later RT follows the same order. Do not skip a gate; if one fails,
+stop and fix it before continuing.
+
+**Phase A - Preconditions (RW 06 owner + RT admin)**
+
+- [ ] RT is registered in the rollout plan with its ID (`RTNNN`), address, and penanggung jawab.
+- [ ] RT admin contact is confirmed (name, WhatsApp, email) and available on the cutover day.
+- [ ] Spreadsheet backup created (**File > Make a copy**) and the copy verified to open.
+- [ ] Current Apps Script deployment version and `ADMIN_TOKEN` recorded in the deployment registry.
+- [ ] The RT runs the same codebase as `main`; no local-only changes exist on its branch.
+- [ ] Historical letters decision confirmed: existing rows are marked `Tidak Perlu`, so only new submissions enter the RW queue.
+- [ ] Target window agreed (outside peak citizen hours) and RW admins available to test decisions.
+
+**Phase B - Backend deployment**
+
+- [ ] `rtNNN` branch created from the latest `main` (never reuse another RT branch).
+- [ ] `code.gs` deployed as **New version** with `CODE_VERSION` matching `EXPECTED_BACKEND_VERSION`.
+- [ ] `RW_TOKEN` set in Script Properties as a new unique secret; never reuse `ADMIN_TOKEN` or another RT's token.
+- [ ] `RT_ID` set in Script Properties (for example `RT019`) for `Lapor_Tindak_Lanjut`.
+- [ ] Admin dashboard opened once so `ensureRwSchema()` runs.
+- [ ] `rwCheck` returns `schemaMigrated:true` and `rwTokenConfigured:true`.
+
+**Phase C - Frontend and hostname**
+
+- [ ] `config.js` updated (`rt`, `rw`, `alamatrt`, `publicApiUrl`, `publicPortalUrl`), `RT_CONFIG.version` bumped.
+- [ ] `EXPECTED_CONFIG_VERSION` updated in both `index.html` and `public.html`.
+- [ ] `APP_BUILD`, `version.json`, and `sw.js` `CACHE` bumped per the version matrix (section 5).
+- [ ] Cloudflare Pages project created from the branch with `APPS_SCRIPT_URL` set.
+- [ ] Admin hostname added to the **RT Admin** Access application; public paths kept on **RT Public Assets**.
+- [ ] New `qr-public.png` generated for the public portal URL.
+- [ ] `node tools/check-deployment.js --live` passes on the new branch.
+
+**Phase D - Orchestrator registration**
+
+- [ ] `RT_TOKEN_<RTID>` added to the orchestrator Script Properties with the same value as the RT `RW_TOKEN`.
+- [ ] `rwRegistrySave` called with the RT ID, name, address, and `/exec` endpoint (endpoint must be unique).
+- [ ] `rwRtHealth` for the new RT returns a healthy backend version.
+- [ ] RW dashboard shows the new RT as `OK` and included in the aggregate totals.
+
+**Phase E - Smoke test (must all pass)**
+
+- [ ] `action=read` works from the admin UI; residents, kas, letters, and complaints render correctly.
+- [ ] New letter submission sets `Rw Status=Menunggu`; `Selesai` is rejected until RW approves.
+- [ ] `rwSuratDecision` **Disetujui** then RT sets `Selesai` with a unique No. Surat.
+- [ ] **Dikembalikan** three times with resubmit between rounds increments `Rw Revisi`; the third return is accepted.
+- [ ] Resubmit after the third return is allowed; `Kembalikan` is rejected with `max_negative` while `Tolak` succeeds as the final decision.
+- [ ] `laporEscalate` moves a complaint to `Perlu Tindak Lanjut`.
+- [ ] `rwLaporNote` response appears in the RT panel **Riwayat tanggapan RW** with actor, timestamp, status, and Publik/Internal badge.
+- [ ] An **Internal** response does not appear on the public status page; a **Publik** response does.
+- [ ] Public portal still works: announcements, activities, letter status check, complaint status check, QR, and PWA install.
+- [ ] Email notification for a new letter arrives at the RT admin address.
+
+**Phase F - Access and disclosure review**
+
+- [ ] Every RW Access email exists in the orchestrator `Users` tab with role `RW Admin` or `RW Viewer`.
+- [ ] No RT token, `GATEWAY_SECRET`, or `ADMIN_TOKEN` appears in the browser, logs, or ticket text.
+- [ ] RT admins do not receive the `RW_TOKEN`.
+- [ ] RW Viewer masking verified: NIK/phone last four digits only, address `[disembunyikan]`.
+
+**Phase G - Pilot gate before the next RT**
+
+- [ ] RT runs for at least one week with no RW-related incident.
+- [ ] At least one approved letter, one returned letter, and one complaint response completed end to end.
+- [ ] Outbox has no permanently failed entries (`Status Kirim` resolved for all rows).
+- [ ] Audit log shows the expected actor and GMT+7 timestamps for every action.
+- [ ] RT admin confirms the flow is understood and no extra training is needed.
+- [ ] Deployment registry, `agents.md`, and the rollout ticket updated with the RT ID, versions, and date.
+
+**Phase H - Rollback (run only if a gate fails and cannot be fixed the same day)**
+
+- [ ] Stop RW traffic for the RT by deactivating it with `rwRegistrySave` (`aktif=false`); the RT disappears from the dashboard but keeps its data.
+- [ ] Revert the RT Apps Script to the previous deployment version (the URL stays the same).
+- [ ] Restore the spreadsheet copy if the schema migration is suspected of corrupting data.
+- [ ] Keep the additive `Rw *` and `Lapor_Tindak_Lanjut` columns; they are safe when unused.
+- [ ] Record the incident, the failing gate, and the recovery step in `agents.md`.
+- [ ] Re-run Phases D to F before enabling the RT again.
+
+Sign-off: RW 06 owner, RT admin, and the person running `check-deployment.js --live`.
 
 ---
 

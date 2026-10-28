@@ -328,7 +328,8 @@ Pengaduan dimulai dengan status RW **Tidak Perlu** (ditangani RT). Bila perlu du
 1. Buka **Edit** pengaduan, lalu klik **Minta Tindak Lanjut RW** di panel **Tindak Lanjut RW**.
 2. Status berubah menjadi **Perlu Tindak Lanjut** dan pengaduan muncul di portal RW.
 3. Setelah RW menanggapi, badge berubah menjadi **Ditangani RW** atau **Selesai RW**, lengkap dengan **catatan**, **aktor**, dan **waktu** tanggapan.
-4. Bila RW memilih visibilitas **Publik**, catatan juga tampil pada **Cek Status Pengaduan** warga; bila **Internal**, catatan hanya tersimpan di audit trail `Lapor_Tindak_Lanjut`.
+4. Panel **Tindak Lanjut RW** menampilkan **Riwayat tanggapan RW** — seluruh tanggapan berurutan (terlama di atas) dengan waktu, aktor, status, dan penanda **Publik**/**Internal**. Daftar ini dapat digulir dan hanya muncul bila pengaduan sudah punya tanggapan.
+5. Bila RW memilih visibilitas **Publik**, catatan juga tampil pada **Cek Status Pengaduan** warga; bila **Internal**, catatan hanya tersimpan di audit trail `Lapor_Tindak_Lanjut` dan hanya terlihat oleh pengurus RT/RW.
 
 Gunakan filter **Semua Status RW** di daftar pengaduan untuk memantau yang sudah dieskalasi. Eskalasi hanya dapat dilakukan saat status masih **Tidak Perlu**; pengaduan yang sudah ditangani RW tidak dapat dikembalikan ke RT dari aplikasi.
 

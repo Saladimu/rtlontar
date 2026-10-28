@@ -207,7 +207,7 @@ Menampung pengaduan/aspirasi warga (fitur **Lapor & Aspirasi**). Tab ini **dibua
 
 ### 7. Tab `Lapor_Tindak_Lanjut` (dibuat otomatis)
 
-Audit trail tanggapan RW untuk pengaduan. Tab ini dibuat otomatis oleh `ensureRwSchema()` dan **tidak** ikut `readAllSheets` (admin RT) maupun `readPublic`. Portal RW membacanya lewat `rwRead` dengan filter `laporId`.
+Audit trail tanggapan RW untuk pengaduan. Tab ini dibuat otomatis oleh `ensureRwSchema()` dan **tidak** ikut `readPublic`. Sejak **v39**, `readAllSheets` (admin RT, `action=read`) juga mengirim array `Lapor_Tindak_Lanjut` agar panel RT dapat menampilkan **Riwayat tanggapan RW** di modal pengaduan tanpa permintaan tambahan. Portal RW tetap membacanya lewat `rwRead` dengan filter `laporId`.
 
 | Kolom | Tipe | Contoh |
 |-------|------|--------|
@@ -245,7 +245,7 @@ Audit trail tanggapan RW untuk pengaduan. Tab ini dibuat otomatis oleh `ensureRw
 
 > ⚠️ **Penting:** Tanpa buat versi baru, Web App tetap menjalankan kode lama!
 >
-> **Migrasi skema RW (v35, tetap berlaku di v38):** setelah deploy versi baru, buka dashboard admin **sekali** (login + muat data) **atau** panggil `action=read`/`version` agar `ensureRwSchema()` berjalan. Proses ini menambah kolom `Rw *` (surat 7, lapor 4) di depan kolom `ID`, membuat tab `Lapor_Tindak_Lanjut`, mengisi baris lama dengan `Tidak Perlu`, lalu menandai `RW_SCHEMA_MIGRATED=true`. Aman diulang dan tidak menghapus data. Setelah itu isi Script Property **`RW_TOKEN`** dan opsional **`RT_ID`**, lalu verifikasi lewat `rwCheck` (`rwTokenConfigured` & `schemaMigrated` harus `true`).
+> **Migrasi skema RW (v35, tetap berlaku di v39):** setelah deploy versi baru, buka dashboard admin **sekali** (login + muat data) **atau** panggil `action=read`/`version` agar `ensureRwSchema()` berjalan. Proses ini menambah kolom `Rw *` (surat 7, lapor 4) di depan kolom `ID`, membuat tab `Lapor_Tindak_Lanjut`, mengisi baris lama dengan `Tidak Perlu`, lalu menandai `RW_SCHEMA_MIGRATED=true`. Aman diulang dan tidak menghapus data. Setelah itu isi Script Property **`RW_TOKEN`** dan opsional **`RT_ID`**, lalu verifikasi lewat `rwCheck` (`rwTokenConfigured` & `schemaMigrated` harus `true`).
 >
 > Prosedur rilis lengkap (backup, kenaikan versi, rollback, pemeriksaan deployment) ada di `MAINTENANCE.md`.
 
