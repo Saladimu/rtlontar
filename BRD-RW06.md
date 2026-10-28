@@ -4,11 +4,11 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 1.3 |
+| Version | 1.4 |
 | Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions and administration); Phase 5 rollout in progress |
 | Date | 28 October 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
-| Related documents | `readme.md`, `panduan.md`, `agents.md`, `RW Apps Script/readme.md`, `rw/README.md` |
+| Related documents | `readme.md`, `panduan.md`, `agents.md`, `MAINTENANCE.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Owner | RW 06 |
 | Approver | TBD |
 
@@ -460,6 +460,9 @@ Cache TTL, digest schedule, and retention must be configurable through the RW `S
 
 ## 14. Migration and rollout
 
+> The per-RT rollout checklist (phases A-H with gates, sign-off, and rollback) is maintained in `MAINTENANCE.md` section 6.4. Use it for every RT after RT018.
+
+
 ### 14.1 RT migration
 
 1. Back up each RT spreadsheet.
@@ -497,7 +500,7 @@ RT018 pilot prerequisites are confirmed: spreadsheet backup completed, all exist
 |---|---|---|
 | 0 | Confirm decisions (done 25 Oct 2026), inventory 10 RTs, finalize rules | 2-4 days |
 | 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks — **implemented** (backend v35, v36 adds `saldoAwal`, v37 repairs RW status) |
-| 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **status/filter/panel implemented**; timeline history view pending |
+| 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **implemented** (status/filter/panel + complaint response timeline in the RT modal) |
 | 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-28`) |
 | 4 | RW portal: dashboard, residents, kas, surat, complaints, administration | 2-3 weeks — **implemented** (`rw/`): read pages, decisions/responses, and admin pages |
 | 5 | Access control, pilot, rollout, documentation | 1-2 weeks |
@@ -509,7 +512,7 @@ Indicative totals:
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
-The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 portal are implemented. RT code is at `publik-v38-2026-10-26`; the orchestrator is `rw-orchestrator-v1-2026-10-28`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, complaint responses with public/internal visibility, and five RW Admin administration pages: users, RT registry, operational settings, outbox retry, and audit log. RW Viewer sees the administration group disabled, cannot open those pages, and receives masked sensitive data. Only 2 of the maximum 10 RTs are currently deployed.
+The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 portal are implemented. RT code is at `publik-v39-2026-10-28`; the orchestrator is `rw-orchestrator-v1-2026-10-28`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, complaint responses with public/internal visibility, and five RW Admin administration pages: users, RT registry, operational settings, outbox retry, and audit log. RW Viewer sees the administration group disabled, cannot open those pages, and receives masked sensitive data. Only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -662,3 +665,4 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | 1.1 | 26 October 2026 | Implementation | Phase 4 administration pages delivered: RW Admin manages users (with `last_admin` guard), RT registry (address/endpoint validation and health check), orchestrator settings (validated per key), outbox retry, and audit log. RW Viewer gets a disabled administration group and page-level fallback; local mocks persist user/registry/settings changes and seed outbox/audit samples. Portal build `2026-10-26-06` |
 | 1.2 | 27 October 2026 | Implementation | No. Surat (RT admin) locked until the letter is approved by RW **and** its handling status is Selesai; the example-number chip is disabled too. The orchestrator now sends the manager **name** (`user.nama || user.email`) as the RW actor, so the portal and RT panel show Nama instead of email on "Oleh". RW portal reliability: the orchestrator refreshes all RT KPIs in one parallel `UrlFetchApp.fetchAll` (5 calls per RT), the portal adds a 25 s timeout, one automatic retry for transient read failures, de-duplicates concurrent reads and shares one `ensureDashboard` promise, and **Segarkan** reuses the dashboard returned by `rwRefresh` instead of fanning out again. `APP_BUILD` index → `2026-10-27-01`; SW cache → `sapa-rt-static-v111`; orchestrator `rw-orchestrator-v1-2026-10-27`; portal build `2026-10-27-01` |
 | 1.3 | 28 October 2026 | Implementation | Portal polish for RW 06: all admin timestamps (audit, users, settings, letters, complaints) render in GMT+7 as `DD-Mmm-YYYY`, while pure date columns use `DD-Mmm-YYYY` only; lists paginate at 10 rows per screen with working prev/next controls; the left menu scrolls independently so long menus stay reachable; the letters table stacks Pemohon/NIK and Jenis surat/No. Surat into two-line headers; and user-facing copy drops "orkestrator" in favour of "sistem" (plus removing the "(baca saja)" residents subtitle). Orchestrator writes its own RW timestamps with `nowStamp()` in Asia/Jakarta. Orchestrator `rw-orchestrator-v1-2026-10-28`; portal build `2026-10-28-01` |
+| 1.4 | 28 October 2026 | Implementation | RT complaint panel now shows **Riwayat tanggapan RW**: `action=read` returns `Lapor_Tindak_Lanjut`, and the RT complaint modal renders each RW response with time, actor, role, status, and a Publik/Internal badge (new complaints and complaints without responses hide the section). Backend `publik-v39-2026-10-28`; index `APP_BUILD` `2026-10-28-02`; SW cache `sapa-rt-static-v112`. Rollout is now codified as a per-RT checklist in `MAINTENANCE.md` section 6.4 (phases A-H: preconditions, backend, frontend/hostname, orchestrator registration, smoke test, access review, pilot gate, rollback) with sign-off, replacing the scattered Phase 5 notes |

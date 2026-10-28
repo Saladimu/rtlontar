@@ -1,4 +1,4 @@
-var CODE_VERSION = "publik-v38-2026-10-26";
+var CODE_VERSION = "publik-v39-2026-10-28";
 
 // Semua Timestamp disimpan sebagai Date asli, ditampilkan dd-mm-yyyy hh:mm (GMT+7).
 // CATATAN: pada Utilities.formatDate (Java) bulan = 'MM' & jam 24 = 'HH'; pada
@@ -664,7 +664,8 @@ function readAllSheets() {
     "Pengumuman": { 1: "yyyy-MM-dd" },
     "Kegiatan_Warga": { 2: "yyyy-MM-dd", 3: "HH:mm" },
     "Pengajuan_Surat": { 0: "yyyy-MM-dd HH:mm", 10: "yyyy-MM-dd", 15: "yyyy-MM-dd HH:mm" },
-    "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd", 19: "yyyy-MM-dd HH:mm" }
+    "Lapor_Aspirasi": { 0: "yyyy-MM-dd HH:mm", 9: "yyyy-MM-dd", 15: "yyyy-MM-dd", 19: "yyyy-MM-dd HH:mm" },
+    "Lapor_Tindak_Lanjut": { 8: "yyyy-MM-dd HH:mm" }
   };
   var data = {};
 
@@ -681,6 +682,19 @@ function readAllSheets() {
 
     data[name] = formatSheetRows(rows, formats[name]);
   });
+
+  // Riwayat tindak lanjut RW dikirim bersama data admin agar panel RT dapat
+  // menampilkan timeline tanpa permintaan tambahan. Sheet ini tidak memakai
+  // kolom bantu ID, jadi dibaca langsung tanpa ensureIds().
+  var timeline = getOrCreateSheet(ss, 'Lapor_Tindak_Lanjut');
+  if (timeline && ensureTimelineSheet(timeline) && timeline.getLastRow() >= 2) {
+    var tlRows = timeline.getDataRange().getValues().slice(1).filter(function (row) {
+      return String(row[0] === null || row[0] === undefined ? '' : row[0]).trim() !== '';
+    });
+    data['Lapor_Tindak_Lanjut'] = formatSheetRows(tlRows, formats['Lapor_Tindak_Lanjut']);
+  } else {
+    data['Lapor_Tindak_Lanjut'] = [];
+  }
 
   return { "result": "success", "version": CODE_VERSION, "portalEnabled": isPortalEnabled(), "laporEnabled": isLaporEnabled(), "suratEnabled": isSuratEnabled(), "adminEmail": getAdminEmail(), "saldoAwal": getSaldoAwal(), "data": data };
 }

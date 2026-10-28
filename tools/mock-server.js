@@ -30,7 +30,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 const DATA_FILE = process.env.MOCK_DATA_FILE
   ? path.resolve(process.env.MOCK_DATA_FILE)
   : path.join(__dirname, 'mock-data.json');
-const CODE_VERSION = 'publik-v38-2026-10-26'; // sama dengan EXPECTED_BACKEND_VERSION
+const CODE_VERSION = 'publik-v39-2026-10-28'; // sama dengan EXPECTED_BACKEND_VERSION
 const RESET = process.argv.indexOf('--reset') !== -1;
 
 // ================= Model data (mirip code.gs) =================
@@ -378,6 +378,9 @@ function readAllSheets() {
       return out;
     });
   });
+  // Riwayat tindak lanjut RW ikut dikirim agar panel RT bisa merender timeline
+  // tanpa permintaan tambahan, sama seperti readAllSheets() di code.gs.
+  data.Lapor_Tindak_Lanjut = (store.sheets.Lapor_Tindak_Lanjut || []).map((row) => row.slice());
   return { result: 'success', version: CODE_VERSION, portalEnabled: store.portalEnabled !== false, laporEnabled: store.laporEnabled !== false, suratEnabled: store.suratEnabled !== false, adminEmail: store.adminEmail || '', saldoAwal: Number(store.saldoAwal) || 0, data };
 }
 
@@ -777,8 +780,9 @@ function handleRwLaporNote(data) {
 
   const timelineId = 'TL-' + jakartaYyMmDd(stamp) + '-' + randomCode4();
   if (!Array.isArray(store.sheets.Lapor_Tindak_Lanjut)) store.sheets.Lapor_Tindak_Lanjut = [];
+  // Sama seperti backend: Waktu disimpan sebagai "yyyy-MM-dd HH:mm" GMT+7.
   store.sheets.Lapor_Tindak_Lanjut.push([
-    timelineId, id, store.rtId || '', aktor, 'RW', catatan, newStatus, visibilitas, stamp,
+    timelineId, id, store.rtId || '', aktor, 'RW', catatan, newStatus, visibilitas, jakartaDateTime(stamp),
   ]);
   saveStore();
   return {

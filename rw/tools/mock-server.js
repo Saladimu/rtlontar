@@ -488,7 +488,7 @@ function handleApi(body, headers) {
         if (!rt) return { status: 200, data: { result: 'error', code: 'rt_not_found', message: 'RT tidak ditemukan.' } };
         rt.lastError = '';
         rt.lastSync = stampNow();
-        rt.backendVersion = rt.backendVersion || 'publik-v38-2026-10-26';
+        rt.backendVersion = rt.backendVersion || 'publik-v39-2026-10-28';
         pushAudit(user, 'rt_health', id, '', 'ok', rt.backendVersion);
         return { status: 200, data: { result: 'success', version: VERSION, rtId: id, check: { version: rt.backendVersion } } };
     }
