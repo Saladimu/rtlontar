@@ -2,20 +2,22 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-27-01';
+    var BUILD = '2026-10-28-01';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    var TZ = 'Asia/Jakarta';
     var PAGE_META = {
         dashboard: ['Ringkasan', 'Kondisi terkini seluruh RT'],
-        warga: ['Data Warga', 'Daftar warga per RT (baca saja)'],
+        warga: ['Data Warga', 'Daftar warga per RT'],
         kas: ['Kas RT', 'Saldo dan riwayat transaksi per RT'],
         surat: ['Pengajuan Surat', 'Antrean dan keputusan RW'],
         lapor: ['Pengaduan', 'Tindak lanjut RW atas aspirasi warga'],
         pengguna: ['Pengguna RW', 'Akses portal dan peran pengurus'],
         registry: ['Registry RT', 'Daftar RT, alamat, dan endpoint'],
-        pengaturan: ['Pengaturan', 'Parameter operasional orkestrator'],
+        pengaturan: ['Pengaturan', 'Parameter operasional sistem'],
         outbox: ['Outbox', 'Antrean pengiriman ke RT'],
         audit: ['Audit', 'Riwayat tindakan pengurus RW']
     };
+    var PAGE_SIZE = 10;
 
     var state = {
         page: 'dashboard',
@@ -29,7 +31,8 @@
         },
         busy: false,
         actionBusy: false,
-        dashboardLoadedAt: 0
+        dashboardLoadedAt: 0,
+        pages: { warga: 1, kas: 1, surat: 1, lapor: 1, pengguna: 1, registry: 1, pengaturan: 1, outbox: 1, audit: 1 }
     };
     var warningState = { onConfirm: null };
 
@@ -85,14 +88,50 @@
         if (!isFinite(v)) v = 0;
         return 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(v));
     }
-    function fmtDate(value) {
+    // Nilai waktu dari orkestrator disimpan sebagai ISO/UTC, sedangkan RT
+    // menyimpan waktu lokal Asia/Jakarta. Keduanya dinormalkan ke GMT+7 agar
+    // Audit, Pengaturan, Pengguna RW, surat, dan pengaduan menampilkan jam yang
+    // sama dengan yang dilihat pengurus.
+    function jakartaParts(value) {
+        var s = String(value);
+        if (!/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s) || !/(Z|[+-]\d{2}:?\d{2})$/.test(s)) return null;
+        var d = new Date(s);
+        if (isNaN(d.getTime())) return null;
+        try {
+            var parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', hour12: false
+            }).formatToParts(d);
+            var out = {};
+            parts.forEach(function (p) { out[p.type] = p.value; });
+            if (out.hour === '24') out.hour = '00';
+            return out;
+        } catch (e) {
+            return null;
+        }
+    }
+    function fmtStamp(value) {
         if (isBlank(value)) return '-';
         var s = String(value);
-        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})?/);
+        var j = jakartaParts(s);
+        if (j) {
+            var t = j.year + '-' + j.month + '-' + j.day;
+            if (j.hour !== undefined) t += ' ' + j.hour + ':' + j.minute;
+            return t.slice(8, 10) + '-' + MONTHS[Number(t.slice(5, 7)) - 1] + '-' + t.slice(0, 4) + t.slice(10);
+        }
+        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
         if (!m) return esc(s);
         var out = m[3] + '-' + MONTHS[Number(m[2]) - 1] + '-' + m[1];
-        if (m[4]) out += ' ' + m[4];
+        if (m[4]) out += ' ' + m[4] + (m[5] ? ':' + m[5] : '');
         return out;
+    }
+    function fmtDate(value) {
+        return fmtStamp(value);
+    }
+    // Tanggal saja (DD-Mmm-YYYY) untuk kolom daftar surat, pengaduan, dan kas.
+    function fmtDay(value) {
+        var full = fmtStamp(value);
+        return /^\d{2}-[A-Z][a-z]{2}-\d{4}/.test(full) ? full.slice(0, 11) : full;
     }
     function fmtRelative(value) {
         if (isBlank(value)) return '-';
@@ -319,7 +358,7 @@
         $('session-email').textContent = user.email || '-';
         $('session-role').textContent = user.peran || '-';
         $('session-avatar').innerHTML = '<i class="fa-solid ' + (user.peran === 'RW Viewer' ? 'fa-eye' : 'fa-user-gear') + '"></i>';
-        $('build-info').textContent = 'Portal build ' + BUILD + ' · ' + (state.session && state.session.version ? state.session.version : 'orkestrator');
+        $('build-info').textContent = 'Portal build ' + BUILD + ' · ' + (state.session && state.session.version ? state.session.version : 'sistem');
     }
 
     function renderChrome() {
@@ -399,6 +438,60 @@
         var key = field || 'Timestamp';
         return rows.slice().sort(function (a, b) {
             return String(b[key] || '').localeCompare(String(a[key] || ''));
+        });
+    }
+
+    // Potong daftar panjang menjadi 10 baris per layar dan sediakan navigasi
+    // halaman. Data tetap diambil sekali agar filter/pencarian tidak memicu
+    // permintaan baru ke orkestrator.
+    function pageSlice(rows, key) {
+        var list = rows || [];
+        var pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+        var current = Math.min(Math.max(Number(state.pages[key]) || 1, 1), pages);
+        state.pages[key] = current;
+        var start = (current - 1) * PAGE_SIZE;
+        return {
+            rows: list.slice(start, start + PAGE_SIZE),
+            total: list.length,
+            page: current,
+            pages: pages,
+            start: list.length ? start + 1 : 0,
+            end: Math.min(start + PAGE_SIZE, list.length)
+        };
+    }
+
+    function pagerHtml(key, sliced) {
+        if (!sliced || sliced.total <= PAGE_SIZE) {
+            return sliced && sliced.total
+                ? '<div class="pager"><span class="pager-info">Menampilkan ' + fmtInt(sliced.total) + ' data</span></div>'
+                : '';
+        }
+        var prevDisabled = sliced.page <= 1 ? ' disabled' : '';
+        var nextDisabled = sliced.page >= sliced.pages ? ' disabled' : '';
+        return '<div class="pager">' +
+            '<span class="pager-info">Menampilkan ' + fmtInt(sliced.start) + '\u2013' + fmtInt(sliced.end) +
+                ' dari ' + fmtInt(sliced.total) + '</span>' +
+            '<div class="pager-actions">' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-page-prev="' + esc(key) + '"' + prevDisabled + '><i class="fa-solid fa-chevron-left"></i> Sebelumnya</button>' +
+                '<span class="pager-page">Halaman ' + fmtInt(sliced.page) + ' / ' + fmtInt(sliced.pages) + '</span>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-page-next="' + esc(key) + '"' + nextDisabled + '>Berikutnya <i class="fa-solid fa-chevron-right"></i></button>' +
+            '</div></div>';
+    }
+
+    function bindPager(key, rerender) {
+        document.querySelectorAll('[data-page-prev]').forEach(function (btn) {
+            if (btn.getAttribute('data-page-prev') !== key) return;
+            btn.addEventListener('click', function () {
+                state.pages[key] = Math.max(1, (Number(state.pages[key]) || 1) - 1);
+                rerender();
+            });
+        });
+        document.querySelectorAll('[data-page-next]').forEach(function (btn) {
+            if (btn.getAttribute('data-page-next') !== key) return;
+            btn.addEventListener('click', function () {
+                state.pages[key] = (Number(state.pages[key]) || 1) + 1;
+                rerender();
+            });
         });
     }
 
@@ -488,13 +581,15 @@
                     '<section class="card"><div class="card-head"><div><h2>' + esc(f.rt) + '</h2><p id="warga-count">' + fmtInt(res.total) + ' warga aktif</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Warga</th><th>NIK</th><th>No HP</th><th>Alamat</th><th>Status</th><th>Pekerjaan</th></tr></thead>' +
-                    '<tbody id="warga-body"></tbody></table></div></div></section>';
+                    '<tbody id="warga-body"></tbody></table></div></div>' +
+                    '<div id="warga-pager"></div></section>';
                 paintWarga();
                 $('warga-rt').addEventListener('change', function (e) {
-                    f.rt = e.target.value; f.q = ''; renderWarga();
+                    f.rt = e.target.value; f.q = ''; state.pages.warga = 1; renderWarga();
                 });
                 $('warga-q').addEventListener('input', function (e) {
                     f.q = e.target.value;
+                    state.pages.warga = 1;
                     paintWarga();
                 });
                 setSync('Data ' + f.rt, 'ok');
@@ -511,7 +606,8 @@
             return [r['Nama Lengkap'], r['Nomor KK'], r['NIK'], r['No HP'], r['Alamat/No Rumah'], r['Pekerjaan']]
                 .some(function (v) { return String(v || '').toLowerCase().indexOf(q) !== -1; });
         }) : data.rows;
-        var body = filtered.map(function (r) {
+        var sliced = pageSlice(filtered, 'warga');
+        var body = sliced.rows.map(function (r) {
             return '<tr>' +
                 '<td><span class="cell-main">' + esc(r['Nama Lengkap'] || '-') + '</span><span class="cell-sub">KK ' + esc(r['Nomor KK'] || '-') + '</span></td>' +
                 '<td class="nowrap">' + esc(r['NIK'] || '-') + '</td>' +
@@ -523,6 +619,9 @@
         }).join('');
         var tbody = $('warga-body');
         if (tbody) tbody.innerHTML = body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-users"></i><p>Tidak ada warga yang cocok.</p></div></td></tr>';
+        var pager = $('warga-pager');
+        if (pager) pager.innerHTML = pagerHtml('warga', sliced);
+        bindPager('warga', paintWarga);
         var count = $('warga-count');
         if (count) count.textContent = fmtInt(filtered.length) + ' dari ' + fmtInt(data.res.total) + ' warga aktif';
     }
@@ -553,13 +652,14 @@
                     var db = String(b['Tanggal'] || b['Timestamp'] || '');
                     return db.localeCompare(da);
                 });
-                var body = rows.map(function (r) {
+                var sliced = pageSlice(rows, 'kas');
+                var body = sliced.rows.map(function (r) {
                     var archived = isArchived(r['Diarsipkan']);
                     var reversal = !isBlank(r['Reversal Dari']);
                     var jenis = String(r['Jenis Transaksi'] || '');
                     var isOut = jenis.toLowerCase() === 'pengeluaran' || jenis.toLowerCase() === 'reversal keluar';
                     return '<tr' + (archived ? ' style="opacity:.55"' : '') + '>' +
-                        '<td class="nowrap"><span class="cell-main">' + fmtDate(r['Tanggal'] || r['Timestamp']) + '</span></td>' +
+                        '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Tanggal'] || r['Timestamp']) + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Nama Warga'] || '-') + '</span><span class="cell-sub">Rumah ' + esc(r['No Rumah'] || '-') + '</span></td>' +
                         '<td>' + esc(jenis || '-') + (reversal ? ' ' + badge('Reversal', 'badge-blue') : '') + (archived ? ' ' + badge('Arsip', 'badge-neutral') : '') + '</td>' +
                         '<td class="num" style="color:' + (isOut ? '#be123c' : '#047857') + '">' + (isOut ? '-' : '+') + ' ' + fmtMoney(r['Jumlah (Rp)']) + '</td>' +
@@ -577,8 +677,10 @@
                     '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · arsip tidak dihitung</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal</th><th>Warga</th><th>Jenis</th><th class="num">Nominal</th><th>Keterangan</th></tr></thead>' +
-                    '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada transaksi.</p></div></td></tr>') + '</tbody></table></div></div></section>';
-                $('kas-rt').addEventListener('change', function (e) { f.rt = e.target.value; renderKas(); });
+                    '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada transaksi.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                    pagerHtml('kas', sliced) + '</section>';
+                $('kas-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.kas = 1; renderKas(); });
+                bindPager('kas', renderKas);
                 setSync('Data ' + f.rt, 'ok');
             });
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
@@ -597,15 +699,15 @@
             if (f.status) payload.status = f.status;
             return api('rwList', payload).then(function (res) {
                 var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
-                var body = rows.map(function (r) {
+                var sliced = pageSlice(rows, 'surat');
+                var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-surat="' + esc(r['ID']) + '">' +
-                        '<td class="nowrap"><span class="cell-main">' + fmtDate(r['Timestamp']) + '</span></td>' +
-                        '<td><span class="cell-main">' + esc(r['Nama Lengkap Pemohon'] || '-') + '</span><span class="cell-sub">NIK ' + esc(r['NIK'] || '-') + '</span></td>' +
-                        '<td>' + esc(r['Jenis Surat'] || '-') + '</td>' +
+                        '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Timestamp']) + '</span></td>' +
+                        '<td><span class="cell-main">' + esc(r['Nama Lengkap Pemohon'] || '-') + '</span><span class="cell-sub">' + esc(r['NIK'] || '-') + '</span></td>' +
+                        '<td><span class="cell-main">' + esc(r['Jenis Surat'] || '-') + '</span><span class="cell-sub">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
                         '<td>' + rtSuratBadge(r['Status Pengurusan']) + '</td>' +
                         '<td>' + rwSuratBadge(r['Rw Status']) + '</td>' +
                         '<td class="nowrap">' + fmtInt(r['Rw Revisi'] || 0) + ' kali</td>' +
-                        '<td class="nowrap">' + esc(r['No. Surat'] || '-') + '</td>' +
                         '</tr>';
                 }).join('');
                 $('page').innerHTML =
@@ -615,10 +717,12 @@
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(res.total) + ' pengajuan · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Tanggal</th><th>Pemohon</th><th>Jenis surat</th><th>Status RT</th><th>Status RW</th><th>Revisi</th><th>No. surat</th></tr></thead>' +
-                    '<tbody>' + (body || '<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div></section>';
-                $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; renderSurat(); });
-                $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; renderSurat(); });
+                    '<thead><tr><th>Tanggal</th><th><span class="th-stack">Pemohon</span><span class="th-sub">NIK</span></th><th><span class="th-stack">Jenis surat</span><span class="th-sub">No. Surat</span></th><th>Status RT</th><th>Status RW</th><th>Revisi</th></tr></thead>' +
+                    '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                    pagerHtml('surat', sliced) + '</section>';
+                $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.surat = 1; renderSurat(); });
+                $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.surat = 1; renderSurat(); });
+                bindPager('surat', renderSurat);
                 document.querySelectorAll('[data-surat]').forEach(function (tr) {
                     tr.addEventListener('click', function () {
                         var id = tr.getAttribute('data-surat');
@@ -644,14 +748,15 @@
             if (f.status) payload.status = f.status;
             return api('rwList', payload).then(function (res) {
                 var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
-                var body = rows.map(function (r) {
+                var sliced = pageSlice(rows, 'lapor');
+                var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-lapor="' + esc(r['ID']) + '">' +
-                        '<td class="nowrap"><span class="cell-main">' + fmtDate(r['Timestamp']) + '</span><span class="cell-sub">' + esc(r['No. Pengaduan'] || '') + '</span></td>' +
+                        '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Timestamp']) + '</span><span class="cell-sub">' + esc(r['No. Pengaduan'] || '') + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Nama Warga'] || '-') + '</span><span class="cell-sub">' + esc(r['Alamat / No. Rumah'] || '') + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Judul Pengaduan'] || '-') + '</span><span class="cell-sub">' + esc(r['Jenis Pengaduan'] || '') + '</span></td>' +
                         '<td>' + rtLaporBadge(r['Status']) + '</td>' +
                         '<td>' + rwLaporBadge(r['Rw Status']) + '</td>' +
-                        '<td class="nowrap">' + fmtDate(r['Rw Diperbarui']) + '</td>' +
+                        '<td class="nowrap">' + fmtDay(r['Rw Diperbarui']) + '</td>' +
                         '</tr>';
                 }).join('');
                 $('page').innerHTML =
@@ -662,9 +767,11 @@
                     '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(res.total) + ' pengaduan · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal / nomor</th><th>Warga</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th><th>Diperbarui</th></tr></thead>' +
-                    '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-comment-dots"></i><p>Tidak ada pengaduan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div></section>';
-                $('lapor-rt').addEventListener('change', function (e) { f.rt = e.target.value; renderLapor(); });
-                $('lapor-status').addEventListener('change', function (e) { f.status = e.target.value; renderLapor(); });
+                    '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-comment-dots"></i><p>Tidak ada pengaduan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                    pagerHtml('lapor', sliced) + '</section>';
+                $('lapor-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.lapor = 1; renderLapor(); });
+                $('lapor-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.lapor = 1; renderLapor(); });
+                bindPager('lapor', renderLapor);
                 document.querySelectorAll('[data-lapor]').forEach(function (tr) {
                     tr.addEventListener('click', function () {
                         var id = tr.getAttribute('data-lapor');
@@ -1058,12 +1165,13 @@
         pageLoading('Memuat pengguna RW...');
         api('rwUsersList').then(function (res) {
             var users = res.users || [];
-            var body = users.map(function (u) {
+            var sliced = pageSlice(users, 'pengguna');
+            var body = sliced.rows.map(function (u) {
                 return '<tr>' +
                     '<td><span class="cell-main">' + esc(u.nama || '-') + '</span><span class="cell-sub">' + esc(u.email) + '</span></td>' +
                     '<td>' + badge(u.peran || '-', u.peran === 'RW Admin' ? 'badge-blue' : 'badge-neutral', u.peran === 'RW Admin' ? 'fa-user-gear' : 'fa-eye') + '</td>' +
                     '<td>' + (u.aktif ? badge('Aktif', 'badge-green', 'fa-circle-check') : badge('Nonaktif', 'badge-neutral', 'fa-user')) + '</td>' +
-                    '<td class="nowrap">' + fmtDate(u.diperbarui) + '</td>' +
+                    '<td class="nowrap">' + fmtStamp(u.diperbarui) + '</td>' +
                     '<td class="nowrap"><button type="button" class="btn btn-ghost" data-user-edit="' + esc(u.email) + '"><i class="fa-solid fa-pen-to-square"></i> Ubah</button></td>' +
                     '</tr>';
             }).join('');
@@ -1075,8 +1183,10 @@
                 '<section class="card"><div class="card-head"><div><h2>Pengguna RW</h2><p>Hanya RW Admin yang dapat mengelola akses portal.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>Nama / email</th><th>Peran</th><th>Status</th><th>Diperbarui</th><th>Aksi</th></tr></thead>' +
-                '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-user-gear"></i><p>Belum ada pengguna.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+                '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-user-gear"></i><p>Belum ada pengguna.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                pagerHtml('pengguna', sliced) + '</section>';
             $('user-add').addEventListener('click', function () { openUserForm(null, users); });
+            bindPager('pengguna', renderers.pengguna);
             document.querySelectorAll('[data-user-edit]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var email = btn.getAttribute('data-user-edit');
@@ -1153,7 +1263,8 @@
         pageLoading('Memuat registry RT...');
         api('rwRegistryList').then(function (res) {
             var rows = res.registry || [];
-            var body = rows.map(function (rt) {
+            var sliced = pageSlice(rows, 'registry');
+            var body = sliced.rows.map(function (rt) {
                 return '<tr>' +
                     '<td><span class="cell-main">' + esc(rt.rtId) + '</span><span class="cell-sub">' + esc(rt.alamat || '-') + '</span></td>' +
                     '<td><span class="cell-main">' + esc(rt.nama || '-') + '</span><span class="cell-sub">' + esc(rt.endpoint || '') + '</span></td>' +
@@ -1169,13 +1280,15 @@
             $('page').innerHTML =
                 '<div class="toolbar">' +
                     '<button type="button" class="btn btn-primary" id="rt-add"><i class="fa-solid fa-plus-circle"></i> Tambah RT</button>' +
-                    '<span class="cell-sub">Maksimal 10 RT · token RT disimpan di Script Properties orkestrator</span>' +
+                    '<span class="cell-sub">Maksimal 10 RT · token RT disimpan di Script Properties sistem</span>' +
                 '</div>' +
                 '<section class="card"><div class="card-head"><div><h2>Registry RT</h2><p>Alamat dan endpoint dipakai dashboard serta fan-out data.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>RT / alamat</th><th>Nama / endpoint</th><th>Aktif</th><th>Backend / sinkron</th><th>Error terakhir</th><th>Aksi</th></tr></thead>' +
-                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-server"></i><p>Belum ada RT terdaftar.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-server"></i><p>Belum ada RT terdaftar.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                pagerHtml('registry', sliced) + '</section>';
             $('rt-add').addEventListener('click', function () { openRegistryForm(null); });
+            bindPager('registry', renderers.registry);
             document.querySelectorAll('[data-rt-edit]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var id = btn.getAttribute('data-rt-edit');
@@ -1260,7 +1373,8 @@
         pageLoading('Memuat pengaturan...');
         api('rwSettingsGet').then(function (res) {
             var items = res.settings || [];
-            var body = items.map(function (s) {
+            var sliced = pageSlice(items, 'pengaturan');
+            var body = sliced.rows.map(function (s) {
                 var bool = s.key === 'RW_MASK_VIEWER' || s.key === 'DIGEST_ENABLED';
                 var input = bool
                     ? '<select class="control" data-setting="' + esc(s.key) + '"><option value="true"' + (fmtBool(s.value) ? ' selected' : '') + '>true</option><option value="false"' + (fmtBool(s.value) ? '' : ' selected') + '>false</option></select>'
@@ -1268,16 +1382,18 @@
                 return '<tr>' +
                     '<td><span class="cell-main">' + esc(s.key) + '</span><span class="cell-sub">' + esc(s.keterangan || '-') + '</span></td>' +
                     '<td style="min-width:180px">' + input + '</td>' +
-                    '<td class="nowrap">' + fmtDate(s.diperbarui) + '</td>' +
+                    '<td class="nowrap">' + fmtStamp(s.diperbarui) + '</td>' +
                     '<td class="nowrap"><button type="button" class="btn btn-ghost" data-setting-save="' + esc(s.key) + '"><i class="fa-solid fa-floppy-disk"></i> Simpan</button></td>' +
                     '</tr>';
             }).join('');
             $('page').innerHTML =
                 '<div class="notice notice-info"><i class="fa-solid fa-circle-info"></i><div>Perubahan berlaku pada permintaan berikutnya. Retensi audit 12 bulan, keputusan/tanggapan dan snapshot 24 bulan.</div></div>' +
-                '<section class="card"><div class="card-head"><div><h2>Pengaturan orkestrator</h2><p>Tanpa deploy ulang portal.</p></div></div>' +
+                '<section class="card"><div class="card-head"><div><h2>Pengaturan sistem</h2><p>Tanpa deploy ulang portal.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>Parameter</th><th>Nilai</th><th>Diperbarui</th><th>Aksi</th></tr></thead>' +
-                '<tbody>' + (body || '<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-sliders"></i><p>Belum ada pengaturan.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+                '<tbody>' + (body || '<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-sliders"></i><p>Belum ada pengaturan.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                pagerHtml('pengaturan', sliced) + '</section>';
+            bindPager('pengaturan', renderers.pengaturan);
             document.querySelectorAll('[data-setting-save]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var key = btn.getAttribute('data-setting-save');
@@ -1303,7 +1419,8 @@
         pageLoading('Memuat outbox...');
         api('rwOutboxList').then(function (res) {
             var rows = (res.outbox || []).slice().reverse();
-            var body = rows.map(function (o) {
+            var sliced = pageSlice(rows, 'outbox');
+            var body = sliced.rows.map(function (o) {
                 return '<tr>' +
                     '<td><span class="cell-main">' + esc(o.Aksi || '-') + '</span><span class="cell-sub">' + esc(o.ID || '') + '</span></td>' +
                     '<td>' + esc(o['RT ID'] || '-') + '</td>' +
@@ -1322,7 +1439,9 @@
                 '<section class="card"><div class="card-head"><div><h2>Outbox</h2><p>Keputusan/tanggapan yang menunggu pengiriman ulang ke RT.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>Aksi / ID</th><th>RT</th><th>Target</th><th>Status</th><th>Jadwal / error</th><th>Aksi</th></tr></thead>' +
-                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-inbox"></i><p>Outbox kosong.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-inbox"></i><p>Outbox kosong.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                pagerHtml('outbox', sliced) + '</section>';
+            bindPager('outbox', renderers.outbox);
             $('outbox-process').addEventListener('click', function () {
                 openWarning({
                     eyebrow: 'Konfirmasi pengiriman',
@@ -1367,9 +1486,10 @@
         pageLoading('Memuat audit...');
         api('rwAuditList', { limit: 200 }).then(function (res) {
             var rows = res.audit || [];
-            var body = rows.map(function (a) {
+            var sliced = pageSlice(rows, 'audit');
+            var body = sliced.rows.map(function (a) {
                 return '<tr>' +
-                    '<td class="nowrap">' + fmtDate(a.Waktu) + '</td>' +
+                    '<td class="nowrap">' + fmtStamp(a.Waktu) + '</td>' +
                     '<td><span class="cell-main">' + esc(a.Aktor || '-') + '</span><span class="cell-sub">' + esc(a.Email || '') + '</span></td>' +
                     '<td>' + badge(a.Aksi || '-', 'badge-neutral', 'fa-list-check') + '</td>' +
                     '<td><span class="cell-main">' + esc(a['RT ID'] || '-') + '</span><span class="cell-sub">' + esc(a.Target || '') + '</span></td>' +
@@ -1382,7 +1502,9 @@
                 '<section class="card"><div class="card-head"><div><h2>Audit log</h2><p>Login, keputusan, tanggapan, registry, dan pengaturan.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>RT / target</th><th>Hasil</th><th>Detail</th></tr></thead>' +
-                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-list-check"></i><p>Belum ada entri audit.</p></div></td></tr>') + '</tbody></table></div></div></section>';
+                '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-list-check"></i><p>Belum ada entri audit.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                pagerHtml('audit', sliced) + '</section>';
+            bindPager('audit', renderers.audit);
             setSync('Audit', 'ok');
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
     }

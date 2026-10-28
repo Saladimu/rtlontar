@@ -212,7 +212,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 #### Orkestrator RW 06 (Phase 3)
 
-- Lokasi: `RW Apps Script/code.gs`, versi `rw-orchestrator-v1-2026-10-27`; Spreadsheet dan Apps Script terpisah dari RT.
+- Lokasi: `RW Apps Script/code.gs`, versi `rw-orchestrator-v1-2026-10-28`; Spreadsheet dan Apps Script terpisah dari RT.
 - Identitas pengguna **hanya** dari `email` yang dikirim gateway setelah verifikasi Cloudflare Access; peran dibaca dari tab `Users`, tidak pernah dari browser.
 - `GATEWAY_SECRET` melindungi semua POST. Token RT disimpan sebagai Script Property `RT_TOKEN_<RTID>` dan harus sama dengan `RW_TOKEN` RT.
 - Aksi: `rwSession`, `rwDashboard`, `rwRegistryList/Save`, `rwUsersList/Save`, `rwSettingsGet/Save`, `rwList`, `rwSuratDecision`, `rwLaporNote`, `rwOutboxList/Retry`, `rwRefresh`, `rwAuditList`, `rwRtHealth`.

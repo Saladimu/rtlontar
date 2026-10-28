@@ -58,6 +58,10 @@ const sw = read('sw.js');
 const code = read('Apps Script/code.gs');
 const mock = read('tools/mock-server.js');
 const proxy = read('functions/api/[[path]].js');
+const rwApp = read('rw/app.js');
+const rwVersion = JSON.parse(read('rw/version.json'));
+const rwOrch = read('RW Apps Script/code.gs');
+const rwMock = read('rw/tools/mock-server.js');
 
 const rt = match(config, /^\s*rt:\s*'([^']+)'/m, 'RT_CONFIG.rt');
 const rw = match(config, /^\s*rw:\s*'([^']+)'/m, 'RT_CONFIG.rw');
@@ -73,6 +77,9 @@ const codeVersion = match(code, /CODE_VERSION\s*=\s*"([^"]+)"/, 'CODE_VERSION co
 const mockVersion = match(mock, /CODE_VERSION\s*=\s*'([^']+)'/, 'CODE_VERSION mock');
 const swCache = match(sw, /const CACHE\s*=\s*'([^']+)'/, 'CACHE sw.js');
 const proxyUrl = match(proxy, /DEFAULT_APPS_SCRIPT_URL\s*=\s*'([^']+)'/, 'DEFAULT_APPS_SCRIPT_URL');
+const rwBuild = match(rwApp, /var BUILD\s*=\s*'([^']+)'/, 'BUILD rw/app.js');
+const rwOrchVersion = match(rwOrch, /CODE_VERSION\s*=\s*'([^']+)'/, 'CODE_VERSION orkestrator');
+const rwMockVersion = match(rwMock, /const VERSION\s*=\s*'([^']+)'/, 'VERSION mock portal');
 
 console.log('Branch : ' + (branch || '(tidak diketahui)'));
 console.log('RT/RW  : ' + rt + '/' + rw);
@@ -82,6 +89,9 @@ console.log('');
 
 if (branchRt) check(rt === branchRt, 'RT config cocok dengan branch ' + branch, rt + ' vs ' + branchRt);
 else console.log('SKIP branch bukan pola rtNNN; kecocokan RT dari branch tidak diperiksa');
+
+check(rwVersion.build === rwBuild, 'rw/version.json build = BUILD rw/app.js', rwVersion.build + ' vs ' + rwBuild);
+check(rwMockVersion === rwOrchVersion, 'VERSION mock portal = CODE_VERSION orkestrator', rwMockVersion + ' vs ' + rwOrchVersion);
 
 check(indexConfig === configVersion, 'EXPECTED_CONFIG_VERSION index = config.version', indexConfig + ' vs ' + configVersion);
 check(pubConfig === configVersion, 'EXPECTED_CONFIG_VERSION public = config.version', pubConfig + ' vs ' + configVersion);
