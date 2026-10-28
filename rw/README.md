@@ -6,6 +6,13 @@ Portal pengurus RW 06. Aplikasi statis + Cloudflare Pages Function sebagai gatew
 
 Milestone 3 (Phase 4 selesai): portal, gateway Access JWT, sesi/peran, ringkasan, data warga, kas, pengajuan surat, pengaduan, dan lima halaman **Administrasi** (`Pengguna RW`, `Registry RT`, `Pengaturan`, `Outbox`, `Audit`). Tabel ringkasan menampilkan kolom **Status** (kesehatan RT) dan **alamat RT** pada baris kedua kolom RT; daftar surat dan pengaduan diurutkan **terbaru di atas**. RW Admin dapat menyetujui/mengembalikan/menolak surat, mengirim tanggapan pengaduan (Publik/Internal), mengelola pengguna dan registry RT, mengubah pengaturan orkestrator, mengirim ulang outbox, serta membaca audit log. RW Viewer tetap baca-saja: menu Administrasi dinonaktifkan, halaman tidak dapat dibuka, dan data sensitif dimasking.
 
+## Performa navigasi
+
+- **Cache baca di browser (stale-while-revalidate)** — setiap daftar disimpan di memori dengan TTL 20-60 detik. Saat menu dibuka, data cache langsung tampil (tanpa spinner), lalu `revalidate()` mengambil data baru di latar belakang dan hanya menggambar ulang bila isinya berubah. Indikator memuat hanya muncul bila halaman belum punya data sama sekali.
+- **Prefetch setelah sesi siap** — setelah `rwSession`/segarkan berhasil, portal mengambil sekali daftar utama (Data Warga, Pengajuan Surat, Lapor Aspirasi, Iuran Kas) secara bertahap, sehingga klik menu pertama langsung memakai cache.
+- **Bust cache saat menulis** — semua aksi tulis (keputusan surat, tanggapan pengaduan, pengguna, registry, pengaturan, outbox) memanggil `clearReadCache()` agar tampilan berikutnya tidak menyajikan data lama. Dashboard yang diminta eksplisit segar memakai `{fresh:true}` untuk menembus cache.
+- **Sisi orkestrator** — `rwList` memakai cache `CacheService` 25 detik dengan *epoch* yang dinaikkan pada setiap penulisan, `ensureSchema()` diperiksa sekali per versi, dan `Users` dibaca sekali per permintaan.
+
 ## Aksi tulis
 
 - **Keputusan surat** hanya untuk `RW Admin` dan hanya saat `Rw Status=Menunggu`.

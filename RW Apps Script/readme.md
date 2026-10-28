@@ -155,6 +155,8 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 ## 5. Cache, outbox, dan retry
 
 - `rwDashboard` membaca snapshot terakhir dari `KPI_Snapshot`. Snapshot lebih tua dari `CACHE_TTL_SECONDS` atau berstatus bukan `OK` akan di-refresh.
+- Daftar (`rwList`) memakai cache baca 25 detik di `CacheService`. Setiap penulisan (registry, pengguna, keputusan surat, tanggapan pengaduan, pengaturan, retry outbox) menaikkan *epoch* cache — global dan per RT — sehingga pembacaan setelah penulisan tidak pernah menyajikan data lama.
+- `ensureSchema()` hanya memeriksa header sheet sekali per kombinasi `CODE_VERSION` + `SCHEMA` (Script Property `SCHEMA_READY`), dan `resolveUser` membaca `Users` sekali per permintaan. Penulisan juga membuang cache tabel per eksekusi agar hasil baca konsisten.
 - Bila refresh gagal tetapi snapshot `OK` sebelumnya tersedia, dashboard menampilkan status `Stale` beserta nilai terakhir dan pesan error.
 - Setiap penulisan membuat baris `Outbox` berstatus `Pending`, lalu langsung dicoba.
 - Bila RT sedang tidak bisa dihubungi, status menjadi `Retry` dan `Next Retry` dihitung eksponensial dari `OUTBOX_BASE_DELAY_SECONDS`, maksimal 1 jam.

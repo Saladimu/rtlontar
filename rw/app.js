@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-28-01';
+    var BUILD = '2026-10-29-01';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -249,7 +249,53 @@
         rwSession: true, rwDashboard: true, rwList: true, rwAuditList: true, rwOutboxList: true,
         rwUsersList: true, rwRegistryList: true, rwSettingsGet: true, rwRtHealth: true
     };
+    // Baca data disimpan sebentar di memori agar berpindah menu tidak selalu
+    // menunggu orkestrator + Web App RT. Tombol Segarkan (rwRefresh) dan aksi
+    // tulis membersihkan cache ini, jadi data tetap bisa dipaksa terbaru.
+    var READ_TTL_MS = {
+        rwList: 30000,
+        rwUsersList: 60000,
+        rwRegistryList: 60000,
+        rwSettingsGet: 60000,
+        rwAuditList: 20000,
+        rwOutboxList: 20000,
+        rwRtHealth: 0
+    };
+    var readCache = {};
     var inflight = {};
+
+    function apiKey(action, payload) {
+        return action + '|' + JSON.stringify(payload || {});
+    }
+
+    function cacheLookup(action, payload) {
+        var entry = readCache[apiKey(action, payload)];
+        if (!entry) return null;
+        var ttl = READ_TTL_MS[action];
+        if (ttl === undefined) ttl = 30000;
+        if (ttl <= 0 || Date.now() - entry.at > ttl) return null;
+        return entry.data;
+    }
+
+    // Apakah data masih tersedia di cache (termasuk yang sudah lewat TTL)?
+    // Dipakai hanya untuk memutuskan perlu menampilkan indikator memuat.
+    function apiPeek(action, payload) {
+        if (cacheLookup(action, payload)) return true;
+        var entry = readCache[apiKey(action, payload)];
+        if (!entry || READ_TTL_MS[action] === 0) return false;
+        return Date.now() - entry.at < READ_CACHE_MAX_MS;
+    }
+
+    function clearReadCache() {
+        readCache = {};
+        state.dashboard = null;
+        state.dashboardLoadedAt = 0;
+        dashboardPromise = null;
+    }
+
+    // Umur maksimum entri cache. Setelah TTL, data lama tetap ditampilkan
+    // seketika (stale-while-revalidate) lalu diperbarui di latar belakang.
+    var READ_CACHE_MAX_MS = 10 * 60 * 1000;
 
     function delay(ms) {
         return new Promise(function (resolve) { setTimeout(resolve, ms); });
@@ -263,11 +309,57 @@
 
     // Gabungkan permintaan baca identik yang berjalan bersamaan agar satu klik
     // tidak memicu dashboard/list berkali-kali saat pengguna berpindah cepat.
-    function api(action, payload) {
+    // Opsi { fresh: true } melewati cache memori (dipakai saat data wajib baru).
+    function api(action, payload, options) {
         if (!READ_ACTIONS[action]) return apiOnce(action, payload, 0);
-        var key = action + '|' + JSON.stringify(payload || {});
+        var opts = options || {};
+        var key = apiKey(action, payload);
+        if (!opts.fresh) {
+            var cached = cacheLookup(action, payload);
+            if (cached) return Promise.resolve(cached);
+            // Data lama (masih dalam batas maksimum) langsung dipakai agar
+            // perpindahan menu tidak menunggu jaringan; pembaruan berjalan
+            // di latar belakang dan halaman aktif digambar ulang bila berubah.
+            var stale = readCache[key];
+            var reusable = stale && READ_TTL_MS[action] !== 0 &&
+                Date.now() - stale.at < READ_CACHE_MAX_MS;
+            if (reusable) {
+                revalidate(action, payload);
+                return Promise.resolve(stale.data);
+            }
+        }
         if (inflight[key]) return inflight[key];
-        var promise = apiOnce(action, payload, 1);
+        var promise = apiOnce(action, payload, 1).then(function (data) {
+            if (READ_TTL_MS[action] !== 0) readCache[key] = { at: Date.now(), data: data };
+            return data;
+        });
+        inflight[key] = promise;
+        var clear = function () { if (inflight[key] === promise) delete inflight[key]; };
+        promise.then(clear, clear);
+        return promise;
+    }
+
+    // Ambil ulang satu permintaan baca di latar belakang. Bila hasilnya
+    // berbeda, halaman yang sedang tampil digambar ulang memakai cache baru
+    // (render berikutnya membaca cache sehingga tidak memicu permintaan lain).
+    function revalidate(action, payload) {
+        var key = apiKey(action, payload);
+        if (inflight[key]) return inflight[key];
+        var promise = apiOnce(action, payload, 0).then(function (data) {
+            var before = readCache[key] ? JSON.stringify(readCache[key].data) : '';
+            readCache[key] = { at: Date.now(), data: data };
+            if (action === 'rwDashboard') {
+                state.dashboard = data;
+                state.dashboardLoadedAt = Date.now();
+            }
+            if (JSON.stringify(data) !== before) {
+                var renderer = renderers[state.page];
+                if (renderer) renderer();
+            }
+            return data;
+        }, function () {
+            // Gagal memperbarui di latar belakang: data lama tetap dipakai.
+        });
         inflight[key] = promise;
         var clear = function () { if (inflight[key] === promise) delete inflight[key]; };
         promise.then(clear, clear);
@@ -394,11 +486,19 @@
 
     var dashboardPromise = null;
 
+    // Untuk halaman daftar, dashboard yang sudah ada cukup dipakai agar
+    // perpindahan menu tidak menunggu pembaruan ringkasan. Hanya bila belum
+    // pernah ada data sama sekali kita menunggu permintaan dashboard.
+    function readyDashboard() {
+        if (state.dashboard) return Promise.resolve(state.dashboard);
+        return ensureDashboard();
+    }
+
     function ensureDashboard(force) {
         var fresh = state.dashboard && (Date.now() - state.dashboardLoadedAt < 60000);
         if (state.dashboard && fresh && !force) return Promise.resolve(state.dashboard);
         if (dashboardPromise) return dashboardPromise;
-        dashboardPromise = api('rwDashboard').then(function (res) {
+        dashboardPromise = api('rwDashboard', null, { fresh: !!force }).then(function (res) {
             dashboardPromise = null;
             state.dashboard = res;
             state.dashboardLoadedAt = Date.now();
@@ -460,6 +560,26 @@
         };
     }
 
+    // Muat data halaman utama di latar belakang sekali setelah portal siap,
+    // sehingga klik menu pertama langsung tampil dari cache memori.
+    function prefetchPages() {
+        if (!state.session) return;
+        var rtId = defaultRt();
+        if (!rtId) return;
+        var jobs = [
+            { rtId: rtId, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false },
+            { rtId: rtId, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false },
+            { rtId: rtId, sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0, includeArchived: false },
+            { rtId: rtId, sheet: 'Iuran_Kas', limit: 2000, offset: 0, includeArchived: true }
+        ];
+        jobs.forEach(function (payload, i) {
+            setTimeout(function () {
+                if (apiPeek('rwList', payload)) return;
+                api('rwList', payload).catch(function () {});
+            }, 150 + i * 250);
+        });
+    }
+
     function pagerHtml(key, sliced) {
         if (!sliced || sliced.total <= PAGE_SIZE) {
             return sliced && sliced.total
@@ -507,7 +627,7 @@
     }
 
     function renderDashboard() {
-        pageLoading('Memuat ringkasan...');
+        if (!state.dashboard) pageLoading('Memuat ringkasan...');
         ensureDashboard().then(function (d) {
             var t = d.totals || {};
             var cards = [
@@ -564,14 +684,15 @@
 
     function renderWarga() {
         var f = state.filters.warga;
-        pageLoading('Memuat data warga...');
-        ensureDashboard().then(function () {
+        readyDashboard().then(function () {
             if (!f.rt) f.rt = defaultRt();
             if (!f.rt) {
                 $('page').innerHTML = '<div class="card"><div class="empty"><i class="fa-solid fa-users"></i><p>Belum ada RT aktif.</p></div></div>';
                 return;
             }
-            return api('rwList', { rtId: f.rt, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false }).then(function (res) {
+            var payload = { rtId: f.rt, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false };
+            if (!apiPeek('rwList', payload)) pageLoading('Memuat data warga...');
+            return api('rwList', payload).then(function (res) {
                 state.warga = { rows: rowsToObjects(res.headers, res.rows), res: res };
                 $('page').innerHTML =
                     '<div class="toolbar">' +
@@ -628,14 +749,15 @@
 
     function renderKas() {
         var f = state.filters.kas;
-        pageLoading('Memuat data kas...');
-        ensureDashboard().then(function () {
+        readyDashboard().then(function () {
             if (!f.rt) f.rt = defaultRt();
             if (!f.rt) {
                 $('page').innerHTML = '<div class="card"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada RT aktif.</p></div></div>';
                 return;
             }
-            return api('rwList', { rtId: f.rt, sheet: 'Iuran_Kas', limit: 2000, offset: 0, includeArchived: true }).then(function (res) {
+            var payload = { rtId: f.rt, sheet: 'Iuran_Kas', limit: 2000, offset: 0, includeArchived: true };
+            if (!apiPeek('rwList', payload)) pageLoading('Memuat data kas...');
+            return api('rwList', payload).then(function (res) {
                 var rows = rowsToObjects(res.headers, res.rows);
                 var masuk = 0, keluar = 0, aktif = 0;
                 rows.forEach(function (r) {
@@ -688,8 +810,7 @@
 
     function renderSurat() {
         var f = state.filters.surat;
-        pageLoading('Memuat pengajuan surat...');
-        ensureDashboard().then(function () {
+        readyDashboard().then(function () {
             if (!f.rt) f.rt = defaultRt();
             if (!f.rt) {
                 $('page').innerHTML = '<div class="card"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Belum ada RT aktif.</p></div></div>';
@@ -697,6 +818,7 @@
             }
             var payload = { rtId: f.rt, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false };
             if (f.status) payload.status = f.status;
+            if (!apiPeek('rwList', payload)) pageLoading('Memuat pengajuan surat...');
             return api('rwList', payload).then(function (res) {
                 var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var sliced = pageSlice(rows, 'surat');
@@ -737,8 +859,7 @@
 
     function renderLapor() {
         var f = state.filters.lapor;
-        pageLoading('Memuat pengaduan...');
-        ensureDashboard().then(function () {
+        readyDashboard().then(function () {
             if (!f.rt) f.rt = defaultRt();
             if (!f.rt) {
                 $('page').innerHTML = '<div class="card"><div class="empty"><i class="fa-solid fa-comment-dots"></i><p>Belum ada RT aktif.</p></div></div>';
@@ -746,6 +867,7 @@
             }
             var payload = { rtId: f.rt, sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0, includeArchived: false };
             if (f.status) payload.status = f.status;
+            if (!apiPeek('rwList', payload)) pageLoading('Memuat pengaduan...');
             return api('rwList', payload).then(function (res) {
                 var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var sliced = pageSlice(rows, 'lapor');
@@ -931,8 +1053,7 @@
         }).then(function (res) {
             state.actionBusy = false;
             closeDrawer();
-            state.dashboard = null;
-            state.dashboardLoadedAt = 0;
+            clearReadCache();
             renderers[state.page]();
             toast(res && res.queued
                 ? 'Keputusan tersimpan. Pengiriman ke RT akan dicoba ulang otomatis.'
@@ -942,16 +1063,14 @@
             setSuratActionBusy(r, false);
             if (err.code === 'stale' || err.code === 'not_pending' || err.code === 'max_negative') {
                 closeDrawer();
-                state.dashboard = null;
-                state.dashboardLoadedAt = 0;
+                clearReadCache();
                 renderers[state.page]();
                 toast(err.message || 'Data sudah berubah. Daftar dimuat ulang.', 'error');
                 return;
             }
             if (isAmbiguousWriteError(err)) {
                 closeDrawer();
-                state.dashboard = null;
-                state.dashboardLoadedAt = 0;
+                clearReadCache();
                 renderers[state.page]();
                 toast('Koneksi ke gateway terputus. Data dimuat ulang; periksa status sebelum mencoba lagi.', 'error');
                 return;
@@ -1050,8 +1169,7 @@
         api('rwLaporNote', payload).then(function (res) {
             state.actionBusy = false;
             closeDrawer();
-            state.dashboard = null;
-            state.dashboardLoadedAt = 0;
+            clearReadCache();
             renderers[state.page]();
             toast(res && res.queued
                 ? 'Tanggapan tersimpan. Pengiriman ke RT akan dicoba ulang otomatis.'
@@ -1061,16 +1179,14 @@
             if (btn) btn.disabled = false;
             if (err.code === 'stale') {
                 closeDrawer();
-                state.dashboard = null;
-                state.dashboardLoadedAt = 0;
+                clearReadCache();
                 renderers[state.page]();
                 toast(err.message || 'Pengaduan sudah berubah. Daftar dimuat ulang.', 'error');
                 return;
             }
             if (isAmbiguousWriteError(err)) {
                 closeDrawer();
-                state.dashboard = null;
-                state.dashboardLoadedAt = 0;
+                clearReadCache();
                 renderers[state.page]();
                 toast('Koneksi ke gateway terputus. Data dimuat ulang; periksa riwayat sebelum mengirim ulang.', 'error');
                 return;
@@ -1162,7 +1278,7 @@
 
     function renderPengguna() {
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Pengguna RW'); return; }
-        pageLoading('Memuat pengguna RW...');
+        if (!apiPeek('rwUsersList')) pageLoading('Memuat pengguna RW...');
         api('rwUsersList').then(function (res) {
             var users = res.users || [];
             var sliced = pageSlice(users, 'pengguna');
@@ -1253,6 +1369,7 @@
     function saveUser(data) {
         api('rwUsersSave', data).then(function () {
             closeDrawer();
+            clearReadCache();
             renderers.pengguna();
             toast('Pengguna ' + data.userEmail + ' disimpan.', 'success');
         }).catch(function (err) { toast(err.message || 'Gagal menyimpan pengguna.', 'error'); });
@@ -1260,7 +1377,7 @@
 
     function renderRegistry() {
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Registry RT'); return; }
-        pageLoading('Memuat registry RT...');
+        if (!apiPeek('rwRegistryList')) pageLoading('Memuat registry RT...');
         api('rwRegistryList').then(function (res) {
             var rows = res.registry || [];
             var sliced = pageSlice(rows, 'registry');
@@ -1361,8 +1478,7 @@
     function saveRegistry(data) {
         api('rwRegistrySave', data).then(function () {
             closeDrawer();
-            state.dashboard = null;
-            state.dashboardLoadedAt = 0;
+            clearReadCache();
             renderers.registry();
             toast('RT ' + data.rtId + ' disimpan.', 'success');
         }).catch(function (err) { toast(err.message || 'Gagal menyimpan RT.', 'error'); });
@@ -1370,7 +1486,7 @@
 
     function renderPengaturan() {
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Pengaturan'); return; }
-        pageLoading('Memuat pengaturan...');
+        if (!apiPeek('rwSettingsGet')) pageLoading('Memuat pengaturan...');
         api('rwSettingsGet').then(function (res) {
             var items = res.settings || [];
             var sliced = pageSlice(items, 'pengaturan');
@@ -1402,6 +1518,7 @@
                     var value = String(input.value).trim();
                     btn.disabled = true;
                     api('rwSettingsSave', { key: key, value: value }).then(function () {
+                        clearReadCache();
                         toast(key + ' disimpan.', 'success');
                         renderers.pengaturan();
                     }).catch(function (err) {
@@ -1416,7 +1533,7 @@
 
     function renderOutbox() {
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Outbox'); return; }
-        pageLoading('Memuat outbox...');
+        if (!apiPeek('rwOutboxList')) pageLoading('Memuat outbox...');
         api('rwOutboxList').then(function (res) {
             var rows = (res.outbox || []).slice().reverse();
             var sliced = pageSlice(rows, 'outbox');
@@ -1452,6 +1569,7 @@
                     confirmLabel: 'Ya, proses',
                     onConfirm: function () {
                         api('rwOutboxRetry', { limit: 50 }).then(function (r) {
+                            clearReadCache();
                             toast('Antrean diproses: ' + fmtInt(r.processed || 0) + ' entri.', 'success');
                             renderers.outbox();
                         }).catch(function (err) { toast(err.message || 'Gagal memproses outbox.', 'error'); });
@@ -1470,6 +1588,7 @@
                         confirmLabel: 'Ya, kirim',
                         onConfirm: function () {
                             api('rwOutboxRetry', { id: id }).then(function (r) {
+                                clearReadCache();
                                 toast(r && r.retry && r.retry.duplicate ? 'Entri sudah terkirim sebelumnya.' : 'Entri berhasil dikirim.', 'success');
                                 renderers.outbox();
                             }).catch(function (err) { toast(err.message || 'Gagal mengirim entri.', 'error'); });
@@ -1483,7 +1602,7 @@
 
     function renderAudit() {
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Audit'); return; }
-        pageLoading('Memuat audit...');
+        if (!apiPeek('rwAuditList', { limit: 200 })) pageLoading('Memuat audit...');
         api('rwAuditList', { limit: 200 }).then(function (res) {
             var rows = res.audit || [];
             var sliced = pageSlice(rows, 'audit');
@@ -1533,12 +1652,12 @@
                 state.dashboard = res;
                 state.dashboardLoadedAt = Date.now();
             } else {
-                state.dashboard = null;
-                state.dashboardLoadedAt = 0;
+                clearReadCache();
                 return ensureDashboard(true);
             }
         }).then(function () {
             renderers[state.page]();
+            prefetchPages();
             toast('Data RW berhasil disegarkan.', 'success');
         }).catch(function (err) {
             toast(err.message || 'Gagal menyegarkan data.', 'error');
@@ -1602,6 +1721,7 @@
             showApp();
             renderChrome();
             navigate('dashboard');
+            prefetchPages();
         }).catch(function (err) {
             if (err.code === 'unauthorized') {
                 showAccess('Verifikasi Cloudflare Access gagal (' + (err.message || 'JWT tidak valid') + '). Periksa CF_ACCESS_TEAM_DOMAIN dan CF_ACCESS_AUD pada environment gateway, lalu deploy ulang.');
