@@ -896,7 +896,8 @@ Server ini menyajikan halaman admin & portal publik sekaligus meniru seluruh end
 | `functions/api/[[path]].js` | Proxy same-origin `/api` (Cloudflare Pages Function). |
 | `readme.md` | Gambaran fitur, struktur database, publikasi, dan kontrol akses. |
 | `agents.md` | Arsitektur dan kontrak data untuk pengembang. |
-| `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT. |
+| `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, dan rollback. |
+| `ROLLOUT-RT.md` | Panduan langkah demi langkah menambah RT baru (konfigurasi, deploy, smoke test, troubleshooting). |
 | `tools/check-deployment.js` | Pemeriksa konsistensi versi/identitas deployment (opsional `--live`). |
 | `tools/mock-server.js` | Server pratinjau lokal untuk pelatihan tanpa menyentuh data asli. |
 | `panduan.md` | **Dokumen ini.** |

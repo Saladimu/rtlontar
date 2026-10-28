@@ -398,6 +398,7 @@ Tombol refresh di:
 | `readme.md` | Dokumentasi proyek utama |
 | `agents.md` | Dokumen ini (pedoman untuk AI Agent) |
 | `MAINTENANCE.md` | Prosedur pemeliharaan, rilis, backup, rollback, dan onboarding RT |
+| `ROLLOUT-RT.md` | Runbook langkah demi langkah menambah RT baru (Fase A-H, perintah, troubleshooting) |
 | `RW Apps Script/readme.md` | Setup, API, skema, outbox, dan keamanan orkestrator RW 06 |
 | `rw/` | Portal RW 06 (Cloudflare Pages, gateway Access, halaman baca-saja) |
 | `rw/README.md` | Setup portal, environment variables, Access, dan preview lokal |
@@ -410,6 +411,7 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-25 – 2026-10-26)
 
+- ✅ **Runbook rollout RT berikutnya (`ROLLOUT-RT.md`)** — panduan langkah demi langkah untuk mengaktifkan RW 06 pada RT baru: tabel nilai yang harus dikumpulkan, Fase A–H dengan perintah siap tempel, tabel perubahan `config.js` per RT, matriks penanda versi, langkah Cloudflare Pages + Access (termasuk bypass `/public` dan `fonts/*`), registrasi orkestrator (`RT_TOKEN_RTNNN`), smoke test RT/RW, gerbang pilot, rollback, dan tabel troubleshooting. Dirujuk dari `MAINTENANCE.md` §6.4/§10, `readme.md`, `panduan.md`, `BRD-RW06.md` §14, dan `agents.md`. `tools/check-deployment.js` kini juga menolak sisa penanda konflik merge pada berkas deployment yang dilacak (config/version/SW/HTML/proxy/code.gs/portal), agar nilai RT tidak diam-diam tertimpa nilai `main`.
 - ✅ **Navigasi menu portal RW 06 terasa instan** — portal menyimpan cache baca di memori per daftar (TTL 20-60 detik): data cache tampil langsung tanpa spinner, lalu `revalidate()` mengambil data baru di latar belakang dan hanya menggambar ulang bila isinya berubah. Setelah `rwSession` portal melakukan **prefetch** empat daftar utama (Data Warga, Pengajuan Surat, Lapor Aspirasi, Iuran Kas) sehingga klik menu pertama sudah hangat, dan semua aksi tulis memanggil `clearReadCache()`. Di orkestrator, `rwList` memakai cache `CacheService` 25 detik dengan **epoch** global+per-RT yang dinaikkan pada setiap penulisan, `ensureSchema()` diperiksa sekali per `SCHEMA_READY`, `resolveUser` membaca `Users` sekali, dan cache tabel per eksekusi menjaga konsistensi baca. Audit per daftar dihapus karena BRD FR-ADM-04 tidak mewajibkannya. Orkestrator → **`rw-orchestrator-v1-2026-10-29`**, portal → **`2026-10-29-01`**.
 - ✅ **Status + durasi satu baris pada tabel RT** — kolom **Status** di daftar **Pengajuan Surat** dan **Pengaduan** (SAPA RT saja) kini menampilkan badge status **dan** durasi **`N hari`** dalam **satu baris** (badge RW tetap di bawahnya), sehingga tumpukan baris per record berkurang dan tabel lebih ringkas. `APP_BUILD` index → **`2026-10-28-03`**, `version.json` index → **`2026-10-28-03`**, cache SW → **`sapa-rt-static-v113`**; `public.html` tidak berubah.
 
