@@ -13,11 +13,12 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-28';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-29';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
 var RT_TOKEN_PREFIX = 'RT_TOKEN_';
+var SCHEMA_READY_PROP = 'SCHEMA_READY';
 
 var SCHEMA = {
   'RT_Registry': ['RT ID', 'Nama', 'Alamat', 'Endpoint', 'Aktif', 'Backend Version', 'Last Sync', 'Last Error', 'Diperbarui'],
@@ -115,6 +116,58 @@ function randomCode(len) {
   return out;
 }
 
+// ================= CACHE BACA (CacheService) =================
+// Orkestrator memanggil Web App RT (beberapa detik). Cache singkat membuat
+// perpindahan menu dan pengguna kedua tidak menunggu fan-out yang sama,
+// sementara setiap aksi tulis menaikkan epoch RT sehingga data tidak basi.
+
+var READ_CACHE_SECONDS = 25;
+
+function readCacheGet(key) {
+  try {
+    if (typeof CacheService === 'undefined') return null;
+    var raw = CacheService.getScriptCache().get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function readCachePut(key, value, seconds) {
+  try {
+    if (typeof CacheService === 'undefined') return;
+    CacheService.getScriptCache().put(key, JSON.stringify(value), seconds || READ_CACHE_SECONDS);
+  } catch (e) {}
+}
+
+var READ_EPOCH_ALL_KEY = 'rw_epoch_all';
+
+function readEpoch(rtId) {
+  try {
+    if (typeof CacheService === 'undefined') return '0';
+    var cache = CacheService.getScriptCache();
+    var all = cache.get(READ_EPOCH_ALL_KEY) || '0';
+    var own = cache.get('rw_epoch_' + String(rtId).toUpperCase()) || '0';
+    return all + '-' + own;
+  } catch (e) {
+    return '0';
+  }
+}
+
+// Setiap aksi tulis menaikkan epoch global (dan epoch RT terkait bila ada),
+// sehingga cache baca lama tidak pernah dipakai setelah data berubah.
+function bumpReadEpoch(rtId) {
+  try {
+    if (typeof CacheService === 'undefined') return;
+    var cache = CacheService.getScriptCache();
+    cache.put(READ_EPOCH_ALL_KEY, String((toInt(cache.get(READ_EPOCH_ALL_KEY), 0) || 0) + 1), 3600);
+    if (rtId) {
+      var key = 'rw_epoch_' + String(rtId).toUpperCase();
+      cache.put(key, String((toInt(cache.get(key), 0) || 0) + 1), 3600);
+    }
+  } catch (e) {}
+}
+
 function headerIndex(headers, names) {
   for (var n = 0; n < names.length; n++) {
     for (var i = 0; i < headers.length; i++) {
@@ -187,13 +240,40 @@ function migrateRegistryAlamat(sheet, current, headers) {
   return true;
 }
 
+// Tanda tangan skema: berubah saat daftar sheet/kolom atau versi kode berubah,
+// sehingga pengecekan header tidak perlu membaca semua sheet pada setiap
+// permintaan portal (sebelumnya ~9 pembacaan sebelum satu aksi dijalankan).
+function schemaSignature() {
+  var parts = [CODE_VERSION];
+  Object.keys(SCHEMA).forEach(function (name) {
+    parts.push(name + ':' + SCHEMA[name].join('|'));
+  });
+  return parts.join(';');
+}
+
+// Cek cepat (metadata saja, tanpa membaca isi sheet) bahwa semua sheet ada.
+// Bila ada sheet yang hilang/terhapus, pemeriksaan lengkap dijalankan ulang.
+function schemaSheetsPresent(ss) {
+  try {
+    var present = {};
+    ss.getSheets().forEach(function (sheet) { present[sheet.getName()] = true; });
+    return Object.keys(SCHEMA).every(function (name) { return present[name]; });
+  } catch (e) {
+    return false;
+  }
+}
+
 function ensureSchema() {
   var ss = getSs();
+  var props = PropertiesService.getScriptProperties();
+  var signature = schemaSignature();
+  if (props.getProperty(SCHEMA_READY_PROP) === signature && schemaSheetsPresent(ss)) return ss;
   Object.keys(SCHEMA).forEach(function (name) {
     var sheet = getSheet(ss, name);
     ensureHeaders(sheet, SCHEMA[name], name);
   });
   seedSettings();
+  try { props.setProperty(SCHEMA_READY_PROP, signature); } catch (e) {}
   return ss;
 }
 
@@ -212,20 +292,37 @@ function seedSettings() {
   });
 }
 
+// Cache per eksekusi: satu permintaan portal sering membaca tabel yang sama
+// beberapa kali (Settings, RT_Registry, KPI_Snapshot, Users). Setelah penulisan
+// tabel terkait, cache dibuang agar hasilnya tetap konsisten.
+var TABLE_CACHE = {};
+
+function invalidateTable(name) {
+  if (name) delete TABLE_CACHE[name];
+  else TABLE_CACHE = {};
+}
+
 function readTable(name) {
+  if (TABLE_CACHE[name]) return TABLE_CACHE[name];
   var sheet = getSheet(getSs(), name);
   var values = sheet.getDataRange().getValues();
-  if (!values.length) return { headers: SCHEMA[name].slice(), rows: [] };
-  var headers = values[0].map(function (h) { return String(h === undefined || h === null ? '' : h).trim(); });
-  var rows = [];
-  for (var i = 1; i < values.length; i++) {
-    var row = values[i];
-    if (!row.some(function (cell) { return cell !== '' && cell !== null && cell !== undefined; })) continue;
-    var obj = {};
-    for (var c = 0; c < headers.length; c++) obj[headers[c]] = row[c];
-    rows.push(obj);
+  var result;
+  if (!values.length) {
+    result = { headers: SCHEMA[name].slice(), rows: [] };
+  } else {
+    var headers = values[0].map(function (h) { return String(h === undefined || h === null ? '' : h).trim(); });
+    var rows = [];
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      if (!row.some(function (cell) { return cell !== '' && cell !== null && cell !== undefined; })) continue;
+      var obj = {};
+      for (var c = 0; c < headers.length; c++) obj[headers[c]] = row[c];
+      rows.push(obj);
+    }
+    result = { headers: headers, rows: rows };
   }
-  return { headers: headers, rows: rows };
+  TABLE_CACHE[name] = result;
+  return result;
 }
 
 function appendObject(name, obj) {
@@ -236,6 +333,7 @@ function appendObject(name, obj) {
     return obj[header] === undefined || obj[header] === null ? '' : obj[header];
   });
   sheet.appendRow(row);
+  invalidateTable(name);
   return row;
 }
 
@@ -243,6 +341,7 @@ function updateObject(name, keyHeader, keyValue, changes) {
   var ss = getSs();
   var sheet = getSheet(ss, name);
   ensureHeaders(sheet, SCHEMA[name], name);
+  invalidateTable(name);
   var values = sheet.getDataRange().getValues();
   if (values.length < 2) return false;
   var headers = values[0].map(function (h) { return String(h === undefined || h === null ? '' : h).trim(); });
@@ -285,28 +384,30 @@ function normalizeEmail(value) {
   return clean(value, 200).toLowerCase();
 }
 
-function ensureBootstrapAdmin(email) {
-  var prop = getBootstrapAdmin();
-  if (!prop) return;
-  var users = readTable('Users').rows;
-  var activeAdmins = users.filter(function (u) {
-    return isActive(u['Aktif']) && String(u['Peran']) === 'RW Admin';
-  });
-  if (activeAdmins.length > 0) return;
-  if (normalizeEmail(email) !== prop) return;
-  appendObject('Users', {
-    'Email': prop,
-    'Nama': 'Bootstrap Admin',
-    'Peran': 'RW Admin',
-    'Aktif': 'Ya',
-    'Dibuat': nowStamp(),
-    'Diperbarui': nowStamp()
-  });
-}
-
 function resolveUser(email) {
-  ensureBootstrapAdmin(email);
-  var user = findObject('Users', 'Email', normalizeEmail(email));
+  var target = normalizeEmail(email);
+  // Baca sheet Users sekali saja (sebelumnya dua kali: bootstrap + findObject).
+  var rows = readTable('Users').rows;
+  var user = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (normalizeEmail(rows[i]['Email']) === target) { user = rows[i]; break; }
+  }
+  if (!user && target && target === getBootstrapAdmin()) {
+    var hasAdmin = rows.some(function (u) {
+      return isActive(u['Aktif']) && String(u['Peran']) === 'RW Admin';
+    });
+    if (!hasAdmin) {
+      appendObject('Users', {
+        'Email': target,
+        'Nama': 'Bootstrap Admin',
+        'Peran': 'RW Admin',
+        'Aktif': 'Ya',
+        'Dibuat': nowStamp(),
+        'Diperbarui': nowStamp()
+      });
+      user = { 'Email': target, 'Nama': 'Bootstrap Admin', 'Peran': 'RW Admin', 'Aktif': 'Ya' };
+    }
+  }
   if (!user) return null;
   if (!isActive(user['Aktif'])) return null;
   var role = clean(user['Peran'], 40);
@@ -473,6 +574,7 @@ function saveRegistry(user, data) {
       'Diperbarui': now
     });
   }
+  bumpReadEpoch(rtId);
   audit(user, 'registry_save', rtId, endpoint, 'ok', aktif ? 'aktif' : 'nonaktif');
   return { result: 'success', version: CODE_VERSION, rt: findRt(rtId) };
 }
@@ -532,6 +634,7 @@ function saveUser(user, data) {
       'Diperbarui': nowStamp()
     });
   }
+  bumpReadEpoch('');
   audit(user, 'user_save', '', email, 'ok', peran + (aktif ? '' : ' (nonaktif)'));
   return { result: 'success', version: CODE_VERSION, users: listUsers() };
 }
@@ -953,12 +1056,27 @@ function handleList(user, data) {
   };
   if (data.status) payload.status = clean(data.status, 40);
   if (data.laporId) payload.laporId = clean(data.laporId, 60);
-  var res = callRt(rt, 'rwRead', payload);
   var masked = user.masked && getSettingBool('RW_MASK_VIEWER', true);
+  // Key memuat peran (masking), epoch RT, dan seluruh filter. Cache hanya
+  // dipakai untuk baca; aksi tulis menaikkan epoch sehingga entri lama tidak
+  // pernah menyajikan status yang sudah berubah.
+  var cacheKey = 'rw_list_' + (masked ? 'v' : 'a') + '_' + rtId + '_' + readEpoch(rtId) + '_' +
+    sheet + '_' + payload.includeArchived + '_' + payload.limit + '_' + payload.offset + '_' +
+    (payload.status || '') + '_' + (payload.laporId || '');
+  var cached = readCacheGet(cacheKey);
+  if (cached) {
+    cached.masked = masked;
+    cached.rtId = rtId;
+    return cached;
+  }
+  var res = callRt(rt, 'rwRead', payload);
   if (masked) res.rows = maskRows(res.headers || [], res.rows || []);
   res.masked = masked;
   res.rtId = rtId;
-  audit(user, 'list', rtId, sheet, 'ok', 'offset=' + payload.offset + ' limit=' + payload.limit + (masked ? ' masked' : ''));
+  readCachePut(cacheKey, res);
+  // Bacaan tidak dicatat per baris: audit tetap mencatat login, keputusan,
+  // tanggapan, registry, dan pengaturan (sesuai BRD FR-ADM-04). Menghindari
+  // satu penulisan sheet pada setiap perpindahan menu membuat portal responsif.
   return res;
 }
 
@@ -1141,6 +1259,7 @@ function handleSuratDecision(user, data) {
     'Status Kirim': 'Pending'
   });
   var outboxId = makeOutbox('rwSuratDecision', rtId, id, payload, kunci);
+  bumpReadEpoch(rtId);
   audit(user, 'surat_decision', rtId, id, decision, kunci);
   var delivered = deliverOutbox(outboxId);
   if (!delivered.ok && !delivered.retryable) {
@@ -1219,6 +1338,7 @@ function handleLaporNote(user, data) {
     'Status Kirim': 'Pending'
   });
   var outboxId = makeOutbox('rwLaporNote', rtId, id, payload, kunci);
+  bumpReadEpoch(rtId);
   audit(user, 'lapor_response', rtId, id, visibilitas, kunci);
   var delivered = deliverOutbox(outboxId);
   if (delivered.ok && delivered.response && delivered.response.timelineId) {
@@ -1345,6 +1465,7 @@ function doPost(e) {
       var found = findObject('Settings', 'Key', key);
       if (found) updateObject('Settings', 'Key', key, { 'Value': value, 'Diperbarui': nowStamp() });
       else appendObject('Settings', { 'Key': key, 'Value': value, 'Keterangan': '', 'Diperbarui': nowStamp() });
+      bumpReadEpoch('');
       audit(user, 'settings_save', '', key, 'ok', value);
       return respond({ result: 'success', version: CODE_VERSION, settings: listSettings() });
     }
@@ -1366,9 +1487,12 @@ function doPost(e) {
         }
         updateOutbox(outboxId, { 'Status': 'Pending', 'Next Retry': nowIso() });
         var retried = deliverOutbox(outboxId);
+        bumpReadEpoch(current['RT ID']);
         return respond({ result: 'success', version: CODE_VERSION, retry: retried });
       }
-      return respond(processOutbox(data.limit));
+      var processedAll = processOutbox(data.limit);
+      bumpReadEpoch('');
+      return respond(processedAll);
     }
     if (action === 'rwRefresh') {
       return respond(handleDashboard(user, { rtId: data.rtId, forceRefresh: true }));

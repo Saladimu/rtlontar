@@ -212,7 +212,7 @@ Kirim JSON ke URL Web App dengan `Content-Type: text/plain;charset=utf-8`.
 
 #### Orkestrator RW 06 (Phase 3)
 
-- Lokasi: `RW Apps Script/code.gs`, versi `rw-orchestrator-v1-2026-10-28`; Spreadsheet dan Apps Script terpisah dari RT.
+- Lokasi: `RW Apps Script/code.gs`, versi `rw-orchestrator-v1-2026-10-29`; Spreadsheet dan Apps Script terpisah dari RT.
 - Identitas pengguna **hanya** dari `email` yang dikirim gateway setelah verifikasi Cloudflare Access; peran dibaca dari tab `Users`, tidak pernah dari browser.
 - `GATEWAY_SECRET` melindungi semua POST. Token RT disimpan sebagai Script Property `RT_TOKEN_<RTID>` dan harus sama dengan `RW_TOKEN` RT.
 - Aksi: `rwSession`, `rwDashboard`, `rwRegistryList/Save`, `rwUsersList/Save`, `rwSettingsGet/Save`, `rwList`, `rwSuratDecision`, `rwLaporNote`, `rwOutboxList/Retry`, `rwRefresh`, `rwAuditList`, `rwRtHealth`.
@@ -410,6 +410,7 @@ Tombol refresh di:
 
 ## 🔧 Recent Changes (2026-10-25 – 2026-10-26)
 
+- ✅ **Navigasi menu portal RW 06 terasa instan** — portal menyimpan cache baca di memori per daftar (TTL 20-60 detik): data cache tampil langsung tanpa spinner, lalu `revalidate()` mengambil data baru di latar belakang dan hanya menggambar ulang bila isinya berubah. Setelah `rwSession` portal melakukan **prefetch** empat daftar utama (Data Warga, Pengajuan Surat, Lapor Aspirasi, Iuran Kas) sehingga klik menu pertama sudah hangat, dan semua aksi tulis memanggil `clearReadCache()`. Di orkestrator, `rwList` memakai cache `CacheService` 25 detik dengan **epoch** global+per-RT yang dinaikkan pada setiap penulisan, `ensureSchema()` diperiksa sekali per `SCHEMA_READY`, `resolveUser` membaca `Users` sekali, dan cache tabel per eksekusi menjaga konsistensi baca. Audit per daftar dihapus karena BRD FR-ADM-04 tidak mewajibkannya. Orkestrator → **`rw-orchestrator-v1-2026-10-29`**, portal → **`2026-10-29-01`**.
 - ✅ **Status + durasi satu baris pada tabel RT** — kolom **Status** di daftar **Pengajuan Surat** dan **Pengaduan** (SAPA RT saja) kini menampilkan badge status **dan** durasi **`N hari`** dalam **satu baris** (badge RW tetap di bawahnya), sehingga tumpukan baris per record berkurang dan tabel lebih ringkas. `APP_BUILD` index → **`2026-10-28-03`**, `version.json` index → **`2026-10-28-03`**, cache SW → **`sapa-rt-static-v113`**; `public.html` tidak berubah.
 
 - ✅ **Timeline riwayat pengaduan di panel RT & checklist rollout RT berikutnya** — panel **Tindak Lanjut RW** pada modal pengaduan RT kini menampilkan **Riwayat tanggapan RW** (waktu, aktor, peran, status, badge **Publik/Internal**) yang dapat digulir; `action=read` (`readAllSheets`) mengirim array baru `Lapor_Tindak_Lanjut` sehingga panel tidak perlu permintaan tambahan, dan pengaduan baru maupun yang belum ditanggapi menyembunyikan bagian ini. Backend RT → **`publik-v39-2026-10-28`**, `APP_BUILD` index → **`2026-10-28-02`**, cache SW → **`sapa-rt-static-v112`**. Rollout RT berikutnya kini terdokumentasi sebagai checklist bertahap **Fase A–H** di `MAINTENANCE.md` §6.4 (prasyarat, backend, frontend/hostname, registrasi orkestrator, smoke test, tinjauan akses, gerbang pilot, rollback) dengan sign-off, dirujuk dari `BRD-RW06.md` §14. Uji baru: `test_lapor_rw_timeline.js` (43). Dokumentasi: `MAINTENANCE.md`, `BRD-RW06.md` v1.4, `agents.md`, `RW Apps Script/readme.md`.
