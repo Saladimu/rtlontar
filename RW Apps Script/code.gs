@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-27';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-28';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -87,6 +87,12 @@ function clamp(value, min, max) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+// Waktu aksi RW disimpan dalam zona Asia/Jakarta (bukan UTC) agar nilai yang
+// tertulis di log keputusan/tanggapan dan audit sama dengan jam pengurus.
+function nowStamp() {
+  return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm');
 }
 
 function safeEqual(a, b) {
@@ -201,7 +207,7 @@ function seedSettings() {
       'Key': key,
       'Value': SETTINGS_DEFAULTS[key].value,
       'Keterangan': SETTINGS_DEFAULTS[key].note,
-      'Diperbarui': nowIso()
+      'Diperbarui': nowStamp()
     });
   });
 }
@@ -293,8 +299,8 @@ function ensureBootstrapAdmin(email) {
     'Nama': 'Bootstrap Admin',
     'Peran': 'RW Admin',
     'Aktif': 'Ya',
-    'Dibuat': nowIso(),
-    'Diperbarui': nowIso()
+    'Dibuat': nowStamp(),
+    'Diperbarui': nowStamp()
   });
 }
 
@@ -379,7 +385,7 @@ function audit(user, action, rtId, target, hasil, detail) {
   try {
     appendObject('Audit_Log', {
       'ID': makeId('AUD'),
-      'Waktu': nowIso(),
+      'Waktu': nowStamp(),
       'Aktor': user ? (user.nama || user.email) : 'system',
       'Email': user ? user.email : 'system',
       'Peran': user ? user.peran : 'system',
@@ -445,7 +451,7 @@ function saveRegistry(user, data) {
   var existing = findRt(rtId);
   var dup = listRegistry().filter(function (rt) { return rt.rtId !== rtId && rt.endpoint === endpoint; });
   if (dup.length) return fail('duplicate_endpoint', 'Endpoint sudah dipakai RT lain.');
-  var now = nowIso();
+  var now = nowStamp();
   if (existing) {
     updateObject('RT_Registry', 'RT ID', rtId, {
       'Nama': nama,
@@ -474,7 +480,7 @@ function saveRegistry(user, data) {
 function updateRegistryRuntime(rtId, changes) {
   var payload = {};
   Object.keys(changes).forEach(function (k) { payload[k] = changes[k]; });
-  payload['Diperbarui'] = nowIso();
+  payload['Diperbarui'] = nowStamp();
   updateObject('RT_Registry', 'RT ID', rtId, payload);
 }
 
@@ -514,7 +520,7 @@ function saveUser(user, data) {
       'Nama': nama,
       'Peran': peran,
       'Aktif': aktif ? 'Ya' : 'Tidak',
-      'Diperbarui': nowIso()
+      'Diperbarui': nowStamp()
     });
   } else {
     appendObject('Users', {
@@ -522,8 +528,8 @@ function saveUser(user, data) {
       'Nama': nama,
       'Peran': peran,
       'Aktif': aktif ? 'Ya' : 'Tidak',
-      'Dibuat': nowIso(),
-      'Diperbarui': nowIso()
+      'Dibuat': nowStamp(),
+      'Diperbarui': nowStamp()
     });
   }
   audit(user, 'user_save', '', email, 'ok', peran + (aktif ? '' : ' (nonaktif)'));
@@ -1130,7 +1136,7 @@ function handleSuratDecision(user, data) {
     'Keputusan': decision,
     'Catatan': catatan,
     'Aktor': user.nama || user.email,
-    'Waktu': nowIso(),
+    'Waktu': nowStamp(),
     'Versi': expectedVersi === undefined || expectedVersi === null ? '' : expectedVersi,
     'Status Kirim': 'Pending'
   });
@@ -1208,7 +1214,7 @@ function handleLaporNote(user, data) {
     'Status RW': status,
     'Visibilitas': visibilitas,
     'Aktor': user.nama || user.email,
-    'Waktu': nowIso(),
+    'Waktu': nowStamp(),
     'Timeline ID': '',
     'Status Kirim': 'Pending'
   });
@@ -1337,8 +1343,8 @@ function doPost(e) {
       var invalid = validateSetting(key, value);
       if (invalid) return respond(fail('invalid_setting', invalid));
       var found = findObject('Settings', 'Key', key);
-      if (found) updateObject('Settings', 'Key', key, { 'Value': value, 'Diperbarui': nowIso() });
-      else appendObject('Settings', { 'Key': key, 'Value': value, 'Keterangan': '', 'Diperbarui': nowIso() });
+      if (found) updateObject('Settings', 'Key', key, { 'Value': value, 'Diperbarui': nowStamp() });
+      else appendObject('Settings', { 'Key': key, 'Value': value, 'Keterangan': '', 'Diperbarui': nowStamp() });
       audit(user, 'settings_save', '', key, 'ok', value);
       return respond({ result: 'success', version: CODE_VERSION, settings: listSettings() });
     }

@@ -7,7 +7,7 @@ const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-27';
+const VERSION = 'rw-orchestrator-v1-2026-10-28';
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -62,9 +62,14 @@ function rtById(id) {
 let mockIdSeq = 0;
 
 function stampNow() {
-    const d = new Date();
-    const p = (n) => String(n).padStart(2, '0');
-    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(new Date());
+    const v = {};
+    parts.forEach((p) => { v[p.type] = p.value; });
+    if (v.hour === '24') v.hour = '00';
+    return v.year + '-' + v.month + '-' + v.day + ' ' + v.hour + ':' + v.minute;
 }
 
 function makeMockId(prefix) {
@@ -564,4 +569,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { handleApi, listAction, dashboardAction, settings, server };
+module.exports = { handleApi, listAction, dashboardAction, settings, server, state: { outbox: outboxState, audit: auditState, rts: RTS } };
