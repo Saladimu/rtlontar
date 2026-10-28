@@ -713,7 +713,7 @@
                                 <th class="p-4"><span class="block">No. HP /</span><span class="block">Alamat</span></th>
                                 <th class="p-4">Jenis Surat</th>
                                 <th class="p-4">Keperluan</th>
-                                <th class="p-4 text-center" style="min-width:12rem"><span class="block">Status</span><span class="block text-xs font-normal text-slate-400">Durasi</span></th>
+                                <th class="p-4 text-center" style="min-width:12rem">Status / Durasi</th>
                                 <th class="p-4 text-center whitespace-nowrap">Aksi</th>
                             </tr>
                         </thead>
@@ -802,7 +802,7 @@
                                 <th class="p-4">Alamat</th>
                                 <th class="p-4">Jenis</th>
                                 <th class="p-4">Judul / Detail</th>
-                                <th class="p-4 text-center"><span class="block">Status</span><span class="block text-xs font-normal text-slate-400">Durasi</span></th>
+                                <th class="p-4 text-center">Status / Durasi</th>
                                 <th class="p-4 text-center">Aksi</th>
                             </tr>
                         </thead>
@@ -2043,7 +2043,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-28-02';
+        const APP_BUILD = '2026-10-28-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -6064,8 +6064,10 @@
                     <td class="p-4 text-slate-500 text-xs" style="max-width:16rem">${escAttr(item.keperluan || '-')}</td>
                     <td class="p-4 text-center" style="min-width:12rem">
                         <div class="flex flex-col items-center gap-1">
-                            ${suratStatusBadge(item.status)}
-                            ${suratDurationHtml(item)}
+                            <div class="flex items-center justify-center gap-1 whitespace-nowrap">
+                                ${suratStatusBadge(item.status)}
+                                ${suratDurationHtml(item)}
+                            </div>
                             ${suratRwBadge(item.rwStatus)}
                             ${(Number(item.rwRevisi) || 0) > 0 ? `<div class="text-[10px] text-slate-500">Revisi: ${Number(item.rwRevisi) || 0} kali</div>` : ''}
                             ${(item.rwStatus === 'Dikembalikan' || item.rwStatus === 'Ditolak') && item.rwCatatan ? `<div class="text-[10px] text-slate-500 max-w-[10rem] truncate" title="${escAttr(item.rwCatatan)}">${escAttr(item.rwCatatan)}</div>` : ''}
@@ -7459,8 +7461,10 @@
                     </td>
                     <td class="p-4 text-center">
                         <div class="flex flex-col items-center gap-1">
-                            ${laporStatusBadge(item.status)}
-                            ${laporDurationHtml(item)}
+                            <div class="flex items-center justify-center gap-1 whitespace-nowrap">
+                                ${laporStatusBadge(item.status)}
+                                ${laporDurationHtml(item)}
+                            </div>
                             ${laporRwBadge(item.rwStatus)}
                             ${item.rwStatus === 'Perlu Tindak Lanjut' ? '<div class="text-[10px] text-amber-700">Menunggu tanggapan RW</div>' : ''}
                         </div>
