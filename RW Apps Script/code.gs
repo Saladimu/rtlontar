@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-29';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-29-02';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -482,6 +482,25 @@ function validateSetting(key, value) {
 
 // ================= AUDIT =================
 
+// Audit login dibatasi sekali per 10 menit per pengguna. Portal memanggil
+// rwSession setiap kali halaman dimuat ulang, dan menulis satu baris Audit_Log
+// pada setiap pemuatan membuat boot terasa lebih lambat daripada SAPA RT.
+var LOGIN_AUDIT_SECONDS = 600;
+
+function auditLogin(user) {
+  var email = user ? normalizeEmail(user.email) : '';
+  if (!email) return;
+  var key = 'rw_login_' + email;
+  try {
+    if (typeof CacheService !== 'undefined') {
+      var cache = CacheService.getScriptCache();
+      if (cache.get(key)) return;
+      cache.put(key, '1', LOGIN_AUDIT_SECONDS);
+    }
+  } catch (e) {}
+  audit(user, 'login', '', '', 'ok', '');
+}
+
 function audit(user, action, rtId, target, hasil, detail) {
   try {
     appendObject('Audit_Log', {
@@ -718,14 +737,28 @@ function snapshotFromRow(row) {
   };
 }
 
-function latestSnapshot(rtId) {
+// Ambil snapshot terbaru untuk banyak RT dalam satu penelusuran sheet.
+// Sebelumnya latestSnapshot() dipanggil per RT; tabel KPI_Snapshot menyimpan
+// riwayat 24 bulan sehingga biayanya tumbuh seiring jumlah RT dan waktu.
+function latestSnapshots(rtIds) {
+  var want = {};
+  var filter = false;
+  (rtIds || []).forEach(function (id) { want[String(id).toUpperCase()] = true; filter = true; });
   var rows = readTable('KPI_Snapshot').rows;
-  var found = null;
+  var found = {};
   for (var i = 0; i < rows.length; i++) {
-    if (String(rows[i]['RT ID']).toUpperCase() !== String(rtId).toUpperCase()) continue;
-    if (!found || String(rows[i]['Waktu']) > String(found['Waktu'])) found = rows[i];
+    var id = String(rows[i]['RT ID']).toUpperCase();
+    if (!id || (filter && !want[id])) continue;
+    if (!found[id] || String(rows[i]['Waktu']) > String(found[id]['Waktu'])) found[id] = rows[i];
   }
-  return found ? snapshotFromRow(found) : null;
+  var out = {};
+  Object.keys(found).forEach(function (key) { out[key] = snapshotFromRow(found[key]); });
+  return out;
+}
+
+function latestSnapshot(rtId) {
+  var all = latestSnapshots([rtId]);
+  return all[String(rtId).toUpperCase()] || null;
 }
 
 function saveSnapshot(snap) {
@@ -802,12 +835,14 @@ function completeRtRows(rt, first, sheet) {
   return out;
 }
 
-var RT_KPI_CALL_COUNT = 5;
+var RT_KPI_CALL_COUNT = 4;
 var RT_ERROR_RETRY_SECONDS = 30;
 
+// Empat panggilan per RT: versi backend sudah ikut pada setiap respons rwRead,
+// sehingga rwCheck tidak perlu dipanggil terpisah (memangkas satu round-trip
+// Apps Script per RT pada setiap pemuatan dashboard yang dingin).
 function rtKpiCalls(rt) {
   return [
-    { rt: rt, action: 'rwCheck', payload: {} },
     { rt: rt, action: 'rwRead', payload: { sheet: 'Data_Warga', limit: 2000, offset: 0 } },
     { rt: rt, action: 'rwRead', payload: { sheet: 'Iuran_Kas', limit: 2000, offset: 0 } },
     { rt: rt, action: 'rwRead', payload: { sheet: 'Pengajuan_Surat', status: 'Menunggu', limit: 1, offset: 0 } },
@@ -865,11 +900,13 @@ function rtErrorSnapshot(rt, err, started) {
 }
 
 function rtSnapshotFromPages(rt, pages, started) {
+  // Versi backend dikirim pada setiap respons rwRead; pakai halaman pertama
+  // sehingga rwCheck tidak lagi dibutuhkan pada jalur dashboard.
   var check = pages[0];
-  var warga = completeRtRows(rt, pages[1], 'Data_Warga');
-  var kas = completeRtRows(rt, pages[2], 'Iuran_Kas');
-  var surat = pages[3];
-  var lapor = completeRtRows(rt, pages[4], 'Lapor_Aspirasi');
+  var warga = completeRtRows(rt, pages[0], 'Data_Warga');
+  var kas = completeRtRows(rt, pages[1], 'Iuran_Kas');
+  var surat = pages[2];
+  var lapor = completeRtRows(rt, pages[3], 'Lapor_Aspirasi');
   var complaintCounts = countComplaints(lapor.headers, lapor.rows);
   var snap = {
     waktu: nowIso(),
@@ -939,11 +976,10 @@ function handleDashboard(user, data) {
   // paralel agar total latensi mengikuti RT paling lambat (bukan jumlah RT).
   // RT yang baru saja gagal diberi jeda singkat sebelum dicoba lagi agar satu
   // RT bermasalah tidak memperlambat setiap pemuatan dashboard berikutnya.
-  var prevs = {};
+  var prevs = latestSnapshots(list.map(function (rt) { return rt.rtId; }));
   var pending = [];
   list.forEach(function (rt) {
-    var prev = latestSnapshot(rt.rtId);
-    prevs[rt.rtId] = prev;
+    var prev = prevs[rt.rtId] || null;
     var age = prev ? secondsSince(prev.waktu) : Number.MAX_VALUE;
     var need = !prev || (prev.status === 'OK' ? age > ttl : age > RT_ERROR_RETRY_SECONDS);
     if (force || need) pending.push(rt);
@@ -951,7 +987,8 @@ function handleDashboard(user, data) {
   var refreshed = {};
   if (pending.length) {
     refreshRts(pending).forEach(function (snap) { refreshed[snap.rtId] = snap; });
-    // Ambil ulang registry agar backendVersion/Last Sync yang baru tersaji.
+    // Ambil ulang registry agar backendVersion/Last Sync yang baru tersaji
+    // (updateRegistryRuntime sudah membuang cache tabel RT_Registry).
     var runtime = {};
     listRegistry().forEach(function (r) { runtime[r.rtId] = r; });
     list = list.map(function (rt) { return runtime[rt.rtId] || rt; });
@@ -1444,7 +1481,7 @@ function doPost(e) {
     if (!user) return respond(fail('unauthorized_user', 'Email tidak terdaftar atau nonaktif di Users.'));
 
     if (action === 'rwSession') {
-      audit(user, 'login', '', '', 'ok', '');
+      auditLogin(user);
       return respond({ result: 'success', version: CODE_VERSION, user: user });
     }
     if (action === 'rwDashboard') return respond(handleDashboard(user, data));

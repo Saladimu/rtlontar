@@ -2,7 +2,7 @@
 
 Backend orkestrator untuk portal RW 06. Berkas ini **bukan** backend RT dan tidak boleh dipasang di spreadsheet RT. Setiap RT tetap memakai `Apps Script/code.gs` sendiri; orkestrator hanya membaca dan menulis kolom workflow RW melalui endpoint `rw*` RT.
 
-- Versi kode: `rw-orchestrator-v1-2026-10-28`
+- Versi kode: `rw-orchestrator-v1-2026-10-29-02`
 - RT minimum: `publik-v39-2026-10-28` (v39: `action=read` mengirim `Lapor_Tindak_Lanjut` untuk timeline di panel RT; v38: batas 3 revisi hanya menutup `Kembalikan`; `Tolak` final tetap tersedia; v37 memperbaiki status/timestamp RW; v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
 - Pola: hub-and-spoke. Browser RW tidak pernah memanggil Web App RT secara langsung.
 
@@ -154,7 +154,9 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 
 ## 5. Cache, outbox, dan retry
 
-- `rwDashboard` membaca snapshot terakhir dari `KPI_Snapshot`. Snapshot lebih tua dari `CACHE_TTL_SECONDS` atau berstatus bukan `OK` akan di-refresh.
+- `rwDashboard` membaca snapshot terakhir dari `KPI_Snapshot`. Snapshot lebih tua dari `CACHE_TTL_SECONDS` atau berstatus bukan `OK` akan di-refresh. Snapshot terbaru semua RT diambil dalam satu penelusuran tabel (`latestSnapshots`), bukan satu pembacaan per RT.
+- Refresh KPI memakai **4 panggilan per RT** (`Data_Warga`, `Iuran_Kas`, `Pengajuan_Surat`, `Lapor_Aspirasi`) dalam satu `UrlFetchApp.fetchAll`. Versi backend dibaca dari respons `rwRead`, sehingga `rwCheck` tidak lagi dipanggil pada jalur dashboard.
+- `rwSession` hanya menulis baris `Audit_Log` login maksimal sekali per 10 menit per pengguna (kunci `CacheService`), agar memuat ulang portal tidak menambah satu penulisan sheet pada setiap boot.
 - Daftar (`rwList`) memakai cache baca 25 detik di `CacheService`. Setiap penulisan (registry, pengguna, keputusan surat, tanggapan pengaduan, pengaturan, retry outbox) menaikkan *epoch* cache — global dan per RT — sehingga pembacaan setelah penulisan tidak pernah menyajikan data lama.
 - `ensureSchema()` hanya memeriksa header sheet sekali per kombinasi `CODE_VERSION` + `SCHEMA` (Script Property `SCHEMA_READY`), dan `resolveUser` membaca `Users` sekali per permintaan. Penulisan juga membuang cache tabel per eksekusi agar hasil baca konsisten.
 - Bila refresh gagal tetapi snapshot `OK` sebelumnya tersedia, dashboard menampilkan status `Stale` beserta nilai terakhir dan pesan error.
