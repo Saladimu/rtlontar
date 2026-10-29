@@ -79,18 +79,17 @@ a { color: inherit; }
 .access-actions { display: flex; gap: 10px; justify-content: center; margin: 22px 0 10px; flex-wrap: wrap; }
 .access-hint { font-size: 12px; }
 
-.brand-mark {
+.brand-logo {
     width: 42px;
     height: 42px;
-    display: inline-grid;
-    place-items: center;
+    display: block;
     border-radius: 13px;
-    background: var(--brand);
-    color: #fff;
-    font-size: 18px;
+    object-fit: contain;
     flex: none;
+    background: #fff;
+    box-shadow: 0 4px 12px -6px rgba(15, 23, 42, 0.4);
 }
-.boot-card .brand-mark { margin: 0 auto; }
+.boot-card .brand-logo { width: 72px; height: 72px; margin: 0 auto; border-radius: 20px; }
 
 .app { min-height: 100vh; display: flex; }
 .sidebar {
@@ -401,6 +400,21 @@ tbody tr.clickable:hover { background: #f8fafc; }
 .drawer-body { padding: 20px 22px 40px; overflow-y: auto; }
 .drawer-section { margin-bottom: 22px; }
 .drawer-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 0 0 8px; }
+.drawer-section.tint {
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+.drawer-section.tint h3 { margin-bottom: 10px; }
+.tint-brand { background: var(--brand-soft); border-color: #99f6e4; }
+.tint-blue { background: var(--blue-soft); border-color: #bfdbfe; }
+.tint-amber { background: var(--amber-soft); border-color: #fde68a; }
+.tint-green { background: var(--green-soft); border-color: #a7f3d0; }
+.tint-slate { background: #f8fafc; border-color: var(--line); }
+.drawer-photo { margin-top: 4px; }
+.drawer-photo img { display: block; width: 100%; max-width: 320px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.drawer-photo .photo-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--brand-dark); }
 .timeline { display: grid; gap: 0; }
 .timeline-item { position: relative; padding: 0 0 16px 20px; border-left: 2px solid #e2e8f0; }
 .timeline-item:last-child { border-left-color: transparent; padding-bottom: 0; }
@@ -411,7 +425,6 @@ tbody tr.clickable:hover { background: #f8fafc; }
 .action-panel {
     border: 1px solid var(--line);
     border-radius: 13px;
-    background: #f8fafc;
     padding: 14px;
 }
 .action-panel h3 { margin-bottom: 10px; }

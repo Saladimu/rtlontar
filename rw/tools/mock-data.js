@@ -31,7 +31,7 @@ const RT018 = {
             ['2026-10-15 09:00', 'Agus Salim', '3173010101010003', '081377788899', 'Jl. Mawar 3', 'Surat Keterangan Tidak Mampu', 'Bantuan pendidikan', 'Pending', '', '', '', 'Tidak', 'Dikembalikan', 'Lengkapi surat pengantar RT.', 'Bootstrap Admin', '2026-10-16 09:00', 1, 2, 'K-SURAT-018-2', 'SRT-018-3']
         ],
         Lapor_Aspirasi: [
-            ['2026-10-22 09:00', 'ADU/2026-012', 'Budi Santoso', '081234567890', 'Jl. Mawar 1', 'Lingkungan', 'Sampah menumpuk', 'Sampah di depan gang belum diangkut tiga hari.', 'Gang Mawar', '2026-10-21', '', 'Diangkut rutin', 'Diterima', '', '', '', 'Tidak', 'Perlu Tindak Lanjut', '', '2026-10-22 10:00', '', 'ADU-018-1'],
+            ['2026-10-22 09:00', 'ADU/2026-012', 'Budi Santoso', '081234567890', 'Jl. Mawar 1', 'Lingkungan', 'Sampah menumpuk', 'Sampah di depan gang belum diangkut tiga hari.', 'Gang Mawar', '2026-10-21', 'https://drive.google.com/file/d/1MockFotoADU0181000000000000000000/view', 'Diangkut rutin', 'Diterima', '', '', '', 'Tidak', 'Perlu Tindak Lanjut', '', '2026-10-22 10:00', '', 'ADU-018-1'],
             ['2026-10-23 09:00', 'ADU/2026-013', 'Siti Aminah', '081298765432', 'Jl. Mawar 2', 'Keamanan', 'Lampu penerangan mati', 'Lampu di pos ronda mati sejak dua hari.', 'Pos ronda', '2026-10-22', '', 'Diperbaiki', 'Diproses', 'Sudah dilaporkan ke petugas', '', '', 'Tidak', 'Ditangani RW', 'Sekretaris RW', '2026-10-24 08:00', '', 'ADU-018-2'],
             ['2026-10-24 09:00', 'ADU/2026-014', 'Agus Salim', '081377788899', 'Jl. Mawar 3', 'Sosial', 'Bantuan warga sakit', 'Warga lanjut usia membutuhkan bantuan.', 'Jl. Mawar 3', '2026-10-24', '', 'Dana bantuan', 'Diterima', '', '', '', 'Tidak', 'Tidak Perlu', '', '', '', 'ADU-018-3']
         ],
@@ -60,7 +60,7 @@ const RT017 = {
             ['2026-10-21 09:00', 'Andi Wijaya', '3173010202020001', '081300000001', 'Jl. Melati 1', 'Surat Domisili', 'Pendaftaran sekolah', 'Pending', '', '', '', 'Tidak', 'Menunggu', '', '', '', 0, 1, '', 'SRT-017-1']
         ],
         Lapor_Aspirasi: [
-            ['2026-10-20 09:00', 'ADU/2026-010', 'Dewi Lestari', '081300000002', 'Jl. Melati 2', 'Lingkungan', 'Saluran air tersumbat', 'Air menggenang saat hujan.', 'Jl. Melati', '2026-10-19', '', 'Dibersihkan', 'Selesai', 'Sudah dibersihkan', '', '2026-10-21', 'Tidak', 'Selesai RW', 'Sekretaris RW', '2026-10-21 10:00', '', 'ADU-017-1']
+            ['2026-10-20 09:00', 'ADU/2026-010', 'Dewi Lestari', '081300000002', 'Jl. Melati 2', 'Lingkungan', 'Saluran air tersumbat', 'Air menggenang saat hujan.', 'Jl. Melati', '2026-10-19', 'https://drive.google.com/uc?export=view&id=1MockFotoBukti000000000000000000000', 'Dibersihkan', 'Selesai', 'Sudah dibersihkan', '', '2026-10-21', 'Tidak', 'Selesai RW', 'Sekretaris RW', '2026-10-21 10:00', '', 'ADU-017-1']
         ],
         Lapor_Tindak_Lanjut: []
     }
