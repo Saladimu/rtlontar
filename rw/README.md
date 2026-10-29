@@ -40,7 +40,7 @@ Semua halaman di bawah hanya untuk `RW Admin`. Bila `RW Viewer` membuka portal, 
 - **Registry RT** (`rwRegistryList`/`rwRegistrySave`) — RT ID, nama, **alamat**, endpoint Web App, status aktif, backend version, sinkron terakhir, dan error terakhir. Validasi: `RTNNN`, nama wajib, endpoint `https://.../exec`, endpoint tidak boleh dipakai RT lain. Tombol **Cek** memanggil `rwRtHealth`. Menonaktifkan RT meminta konfirmasi karena RT hilang dari dashboard.
 - **Pengaturan** (`rwSettingsGet`/`rwSettingsSave`) — parameter orkestrator tanpa deploy ulang: `CACHE_TTL_SECONDS`, `OUTBOX_MAX_ATTEMPTS`, `OUTBOX_BASE_DELAY_SECONDS`, retensi audit/keputusan/snapshot, `RW_MASK_VIEWER`, `DIGEST_ENABLED`, `DIGEST_HOUR`. Nilai divalidasi di orkestrator (`invalid_setting`) dan disimpan per baris.
 - **Outbox** (`rwOutboxList`/`rwOutboxRetry`) — antrean pengiriman ke RT beserta status `Pending`/`Failed`/`Sent`, jumlah percobaan, jadwal retry, dan error terakhir. **Kirim** mengirim ulang satu entri (entri `Sent` dinonaktifkan), **Proses antrean** memproses hingga 50 entri; keduanya memakai konfirmasi in-app.
-- **Audit** (`rwAuditList`) — 200 entri terakhir: waktu, aktor/email, aksi, RT/target, hasil, dan detail. Retensi audit 12 bulan; keputusan/tanggapan dan snapshot 24 bulan.
+- **Audit** (`rwAuditList`) — 200 entri terakhir: waktu, user/email, aksi, RT/target, hasil, dan detail. Retensi audit 12 bulan; keputusan/tanggapan dan snapshot 24 bulan.
 
 Mock server lokal menyediakan data contoh untuk kelima halaman dan meniru penyimpanan pengguna, registry, pengaturan, serta retry outbox sehingga alur dapat dicoba tanpa orkestrator.
 
@@ -52,6 +52,9 @@ rw/
   app.js                          Router, API client, render halaman
   styles.css                      Gaya portal
   tailwind.css, fonts.css, fonts/ Aset desain SAPA-RT
+  favicon.ico, apple-touch-icon.png,
+  logo-192/512.webp, logo-192/512.png,
+  manifest.webmanifest            Ikon dan manifest web app
   functions/api/[[path]].js       Gateway Cloudflare Pages
   tools/mock-server.js            Preview lokal + API tiruan
   tools/mock-data.js              Data demo

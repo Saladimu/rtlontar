@@ -1,0 +1,20 @@
+{
+  "name": "SAPA RT — Portal RW 06",
+  "short_name": "RW 06",
+  "description": "Portal pengurus RW 06: ringkasan RT, keputusan surat, dan tanggapan pengaduan",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f1f5f9",
+  "theme_color": "#0f766e",
+  "icons": [
+    { "src": "logo-192.webp", "sizes": "192x192", "type": "image/webp", "purpose": "any" },
+    { "src": "logo-512.webp", "sizes": "512x512", "type": "image/webp", "purpose": "any" },
+    { "src": "logo-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

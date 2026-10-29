@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-29-02';
+    var BUILD = '2026-10-29-03';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -970,15 +970,15 @@
         var revisi = Number(r['Rw Revisi'] || 0) || 0;
         var versi = Number(r['Rw Versi'] || 1) || 1;
         if (!isAdmin()) {
-            return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
+            return '<div class="drawer-section tint tint-slate"><h3>Tindakan RW</h3>' +
                 '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-eye"></i><div>Anda masuk sebagai <strong>RW Viewer</strong>. Keputusan surat hanya dapat dilakukan RW Admin.</div></div></div>';
         }
         if (status !== 'Menunggu') {
-            return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
+            return '<div class="drawer-section tint tint-slate"><h3>Tindakan RW</h3>' +
                 '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-circle-info"></i><div>Tidak ada keputusan yang menunggu. Status RW saat ini <strong>' + esc(status) + '</strong>.</div></div></div>';
         }
         var maxed = revisi >= 3;
-        return '<div class="drawer-section action-panel">' +
+        return '<div class="drawer-section action-panel tint tint-amber">' +
             '<h3>Tindakan RW</h3>' +
             '<p class="action-current">' + esc(rtLabel(rtId)) + ' · revisi ' + fmtInt(revisi) + ' kali · versi data ' + fmtInt(versi) + '</p>' +
             '<div class="field"><label for="surat-catatan">Catatan keputusan</label>' +
@@ -1095,11 +1095,11 @@
     function laporActionPanel(r) {
         var status = String(r['Rw Status'] || 'Tidak Perlu');
         if (!isAdmin()) {
-            return '<div class="drawer-section"><h3>Tindakan RW</h3>' +
+            return '<div class="drawer-section tint tint-slate"><h3>Tindakan RW</h3>' +
                 '<div class="notice notice-info" style="margin:0"><i class="fa-solid fa-eye"></i><div>Anda masuk sebagai <strong>RW Viewer</strong>. Tanggapan pengaduan hanya dapat dikirim RW Admin.</div></div></div>';
         }
         var suggested = (status === 'Tidak Perlu' || status === 'Perlu Tindak Lanjut') ? 'Ditangani RW' : '';
-        return '<div class="drawer-section action-panel">' +
+        return '<div class="drawer-section action-panel tint tint-blue">' +
             '<h3>Tindakan RW</h3>' +
             '<p class="action-current">Status saat ini: ' + rwLaporBadge(status) + '</p>' +
             '<div class="form-grid">' +
@@ -1208,15 +1208,67 @@
         });
     }
 
+    function laporFotoDriveId(url) {
+        var u = String(url || '');
+        if (!/drive\.google\.com/i.test(u)) return '';
+        var byPath = u.match(/\/file\/d\/([A-Za-z0-9_-]{10,})/);
+        if (byPath) return byPath[1];
+        var byQuery = u.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+        return byQuery ? byQuery[1] : '';
+    }
+
+    function laporFotoPreviewSources(url) {
+        var u = String(url || '').trim();
+        var sources = [];
+        var id = laporFotoDriveId(u);
+        if (id) {
+            sources.push('https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w1000');
+            sources.push('https://lh3.googleusercontent.com/d/' + encodeURIComponent(id) + '=w1000');
+        }
+        if (/^https?:\/\//i.test(u)) sources.push(u);
+        return sources;
+    }
+
+    function laporFotoBlock(url) {
+        var u = String(url || '').trim();
+        var safe = /^https?:\/\//i.test(u) ? u : '';
+        var sources = safe ? laporFotoPreviewSources(safe) : [];
+        if (!sources.length) return { html: '', sources: [] };
+        var html = '<div class="drawer-photo">' +
+            '<img id="lapor-foto-img" src="' + esc(sources[0]) + '" alt="Foto bukti pengaduan" width="320" height="240" ' +
+            'decoding="async" loading="lazy" referrerpolicy="no-referrer">' +
+            '<a class="photo-link" href="' + esc(safe) + '" target="_blank" rel="noopener noreferrer">' +
+            '<i class="fa-solid fa-arrow-up-right-from-square"></i>Buka foto asli</a>' +
+            '</div>';
+        return { html: html, sources: sources };
+    }
+
+    function bindLaporFoto(sources) {
+        var img = $('lapor-foto-img');
+        if (!img) return;
+        var list = Array.isArray(sources) ? sources : [];
+        img.setAttribute('data-sources', list.join('|'));
+        img.setAttribute('data-attempt', '0');
+        img.addEventListener('error', function () {
+            var attempt = Number(img.getAttribute('data-attempt') || 0) + 1;
+            if (attempt < list.length) {
+                img.setAttribute('data-attempt', String(attempt));
+                img.src = list[attempt];
+                return;
+            }
+            if (img.parentNode && img.parentNode.removeChild) img.parentNode.removeChild(img);
+        });
+    }
+
     function openSurat(r) {
         var rtId = state.filters.surat.rt;
-        var html = '<div class="drawer-section"><h3>Pemohon</h3><dl class="detail-list">' +
+        var html = '<div class="drawer-section tint tint-brand"><h3>Pemohon</h3><dl class="detail-list">' +
             detailRow('Nama', esc(r['Nama Lengkap Pemohon'])) +
             detailRow('NIK', esc(r['NIK'])) +
             detailRow('No. HP', esc(r['No. HP / WhatsApp'])) +
             detailRow('Alamat', esc(r['Alamat / No. Rumah'])) +
             '</dl></div>' +
-            '<div class="drawer-section"><h3>Pengajuan</h3><dl class="detail-list">' +
+            '<div class="drawer-section tint tint-blue"><h3>Pengajuan</h3><dl class="detail-list">' +
             detailRow('Jenis surat', esc(r['Jenis Surat'])) +
             detailRow('Keperluan', esc(r['Keperluan / Alasan Pengajuan'])) +
             detailRow('Status RT', rtSuratBadge(r['Status Pengurusan'])) +
@@ -1224,7 +1276,7 @@
             detailRow('Tanggal selesai', fmtDate(r['Tanggal Selesai'])) +
             detailRow('Catatan RT', esc(r['Catatan Pengurus'] || '-')) +
             '</dl></div>' +
-            '<div class="drawer-section"><h3>Keputusan RW</h3><dl class="detail-list">' +
+            '<div class="drawer-section tint tint-amber"><h3>Keputusan RW</h3><dl class="detail-list">' +
             detailRow('Status RW', rwSuratBadge(r['Rw Status'])) +
             detailRow('Catatan RW', esc(r['Rw Catatan'] || '-')) +
             detailRow('Oleh', esc(r['Rw Oleh'] || '-')) +
@@ -1240,8 +1292,9 @@
     function openLapor(r) {
         var laporId = r['ID'];
         var rtId = state.filters.lapor.rt;
+        var foto = laporFotoBlock(r['Foto / Bukti Pendukung']);
         openDrawer('Pengaduan · ' + (r['No. Pengaduan'] || laporId || ''), r['Judul Pengaduan'] || 'Detail pengaduan',
-            '<div class="drawer-section"><h3>Pengaduan</h3><dl class="detail-list">' +
+            '<div class="drawer-section tint tint-brand"><h3>Pengaduan</h3><dl class="detail-list">' +
             detailRow('No. pengaduan', esc(r['No. Pengaduan'])) +
             detailRow('Warga', esc(r['Nama Warga'])) +
             detailRow('No. HP', esc(r['No. HP / WhatsApp'])) +
@@ -1251,8 +1304,8 @@
             detailRow('Tanggal kejadian', fmtDate(r['Tanggal Kejadian'])) +
             detailRow('Detail', esc(r['Detail Pengaduan'] || '-')) +
             detailRow('Harapan', esc(r['Harapan / Solusi'] || '-')) +
-            '</dl></div>' +
-            '<div class="drawer-section"><h3>Status</h3><dl class="detail-list">' +
+            '</dl>' + foto.html + '</div>' +
+            '<div class="drawer-section tint tint-blue"><h3>Status</h3><dl class="detail-list">' +
             detailRow('Status RT', rtLaporBadge(r['Status'])) +
             detailRow('Catatan RT', esc(r['Catatan Tindak Lanjut'] || '-')) +
             detailRow('Status RW', rwLaporBadge(r['Rw Status'])) +
@@ -1260,7 +1313,8 @@
             detailRow('Diperbarui', fmtDate(r['Rw Diperbarui'])) +
             '</dl></div>' +
             laporActionPanel(r) +
-            '<div class="drawer-section"><h3>Riwayat tindak lanjut RW</h3><div id="lapor-timeline" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i>Memuat riwayat...</div></div>');
+            '<div class="drawer-section tint tint-green"><h3>Riwayat tindak lanjut RW</h3><div id="lapor-timeline" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i>Memuat riwayat...</div></div>');
+        bindLaporFoto(foto.sources);
         bindLaporActions(r, rtId);
         if (!laporId) {
             $('lapor-timeline').innerHTML = '<div class="empty"><i class="fa-solid fa-clock-rotate-left"></i><p>Riwayat tidak tersedia.</p></div>';
@@ -1397,7 +1451,7 @@
             var body = sliced.rows.map(function (rt) {
                 return '<tr>' +
                     '<td><span class="cell-main">' + esc(rt.rtId) + '</span><span class="cell-sub">' + esc(rt.alamat || '-') + '</span></td>' +
-                    '<td><span class="cell-main">' + esc(rt.nama || '-') + '</span><span class="cell-sub">' + esc(rt.endpoint || '') + '</span></td>' +
+                    '<td><span class="cell-main">' + esc(rt.nama || '-') + '</span></td>' +
                     '<td>' + (rt.aktif ? badge('Aktif', 'badge-green', 'fa-circle-check') : badge('Nonaktif', 'badge-neutral', 'fa-plug-circle-check')) + '</td>' +
                     '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span></td>' +
                     '<td>' + (rt.lastError ? '<span class="cell-sub" style="color:#be123c">' + esc(rt.lastError) + '</span>' : '<span class="cell-sub">-</span>') + '</td>' +
@@ -1414,7 +1468,7 @@
                 '</div>' +
                 '<section class="card"><div class="card-head"><div><h2>Registry RT</h2><p>Alamat dan endpoint dipakai dashboard serta fan-out data.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
-                '<thead><tr><th>RT / alamat</th><th>Nama / endpoint</th><th>Aktif</th><th>Backend / sinkron</th><th>Error terakhir</th><th>Aksi</th></tr></thead>' +
+                '<thead><tr><th>RT / alamat</th><th>Nama</th><th>Aktif</th><th>Backend / sinkron</th><th>Error terakhir</th><th>Aksi</th></tr></thead>' +
                 '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-server"></i><p>Belum ada RT terdaftar.</p></div></td></tr>') + '</tbody></table></div></div>' +
                 pagerHtml('registry', sliced) + '</section>';
             $('rt-add').addEventListener('click', function () { openRegistryForm(null); });
@@ -1633,7 +1687,7 @@
                 '<div class="toolbar"><span class="cell-sub">' + fmtInt(rows.length) + ' entri terakhir · retensi audit 12 bulan</span></div>' +
                 '<section class="card"><div class="card-head"><div><h2>Audit log</h2><p>Login, keputusan, tanggapan, registry, dan pengaturan.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
-                '<thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>RT / target</th><th>Hasil</th><th>Detail</th></tr></thead>' +
+                '<thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>RT / target</th><th>Hasil</th><th>Detail</th></tr></thead>' +
                 '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-list-check"></i><p>Belum ada entri audit.</p></div></td></tr>') + '</tbody></table></div></div>' +
                 pagerHtml('audit', sliced) + '</section>';
             bindPager('audit', renderers.audit);
