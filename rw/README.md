@@ -8,10 +8,11 @@ Milestone 3 (Phase 4 selesai): portal, gateway Access JWT, sesi/peran, ringkasan
 
 ## Performa navigasi
 
-- **Cache baca di browser (stale-while-revalidate)** — setiap daftar disimpan di memori dengan TTL 20-60 detik. Saat menu dibuka, data cache langsung tampil (tanpa spinner), lalu `revalidate()` mengambil data baru di latar belakang dan hanya menggambar ulang bila isinya berubah. Indikator memuat hanya muncul bila halaman belum punya data sama sekali.
-- **Prefetch setelah sesi siap** — setelah `rwSession`/segarkan berhasil, portal mengambil sekali daftar utama (Data Warga, Pengajuan Surat, Lapor Aspirasi, Iuran Kas) secara bertahap, sehingga klik menu pertama langsung memakai cache.
+- **Cache baca di browser (stale-while-revalidate)** — setiap daftar disimpan di memori dengan TTL 20-60 detik (`rwList` 60 detik). Saat menu dibuka, data cache langsung tampil (tanpa spinner), lalu `revalidate()` mengambil data baru di latar belakang dan hanya menggambar ulang bila isinya berubah. Indikator memuat hanya muncul bila halaman belum punya data sama sekali.
+- **Ringkasan dimuat paralel dengan sesi** — `boot()` memulai `rwDashboard` bersamaan dengan `rwSession`, jadi dashboard tidak menunggu verifikasi sesi selesai.
+- **Prefetch setelah dashboard** — setelah `rwSession` dan dashboard siap, portal mengambil sekali daftar utama (Data Warga, Pengajuan Surat, Lapor Aspirasi, Iuran Kas) secara bertahap dengan jeda 400 ms, sehingga klik menu pertama memakai cache tanpa berebut kuota RT.
 - **Bust cache saat menulis** — semua aksi tulis (keputusan surat, tanggapan pengaduan, pengguna, registry, pengaturan, outbox) memanggil `clearReadCache()` agar tampilan berikutnya tidak menyajikan data lama. Dashboard yang diminta eksplisit segar memakai `{fresh:true}` untuk menembus cache.
-- **Sisi orkestrator** — `rwList` memakai cache `CacheService` 25 detik dengan *epoch* yang dinaikkan pada setiap penulisan, `ensureSchema()` diperiksa sekali per versi, dan `Users` dibaca sekali per permintaan.
+- **Sisi orkestrator** — `rwList` memakai cache `CacheService` 25 detik dengan *epoch* yang dinaikkan pada setiap penulisan, `ensureSchema()` diperiksa sekali per versi, `Users` dibaca sekali per permintaan, snapshot KPI semua RT dibaca dalam satu penelusuran, refresh KPI memakai 4 panggilan per RT, dan audit login dibatasi sekali per 10 menit.
 
 ## Aksi tulis
 

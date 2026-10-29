@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-29-01';
+    var BUILD = '2026-10-29-02';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -31,6 +31,7 @@
         },
         busy: false,
         actionBusy: false,
+        prefetched: false,
         dashboardLoadedAt: 0,
         pages: { warga: 1, kas: 1, surat: 1, lapor: 1, pengguna: 1, registry: 1, pengaturan: 1, outbox: 1, audit: 1 }
     };
@@ -253,7 +254,7 @@
     // menunggu orkestrator + Web App RT. Tombol Segarkan (rwRefresh) dan aksi
     // tulis membersihkan cache ini, jadi data tetap bisa dipaksa terbaru.
     var READ_TTL_MS = {
-        rwList: 30000,
+        rwList: 60000,
         rwUsersList: 60000,
         rwRegistryList: 60000,
         rwSettingsGet: 60000,
@@ -560,12 +561,24 @@
         };
     }
 
-    // Muat data halaman utama di latar belakang sekali setelah portal siap,
-    // sehingga klik menu pertama langsung tampil dari cache memori.
+    // Muat data halaman utama di latar belakang sekali setelah dashboard siap,
+    // sehingga klik menu pertama langsung tampil dari cache memori. Prefetch
+    // sengaja menunggu dashboard agar tidak berebut kuota Apps Script RT:
+    // dashboard lebih dulu selesai, baru daftar diambil satu per satu.
     function prefetchPages() {
         if (!state.session) return;
         var rtId = defaultRt();
-        if (!rtId) return;
+        if (!rtId) {
+            // dashboard belum ada: tunggu sekali, lalu pakai RT pertama.
+            readyDashboard().then(function () {
+                if (state.session && !state.prefetched) {
+                    state.prefetched = true;
+                    prefetchPages();
+                }
+            }, function () {});
+            return;
+        }
+        state.prefetched = true;
         var jobs = [
             { rtId: rtId, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false },
             { rtId: rtId, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false },
@@ -576,7 +589,7 @@
             setTimeout(function () {
                 if (apiPeek('rwList', payload)) return;
                 api('rwList', payload).catch(function () {});
-            }, 150 + i * 250);
+            }, 300 + i * 400);
         });
     }
 
@@ -1716,6 +1729,11 @@
     function boot() {
         bindGlobal();
         $('build-info').textContent = 'Portal build ' + BUILD;
+        // Ringkasan RT tidak bergantung pada data sesi (identitas sudah diverifikasi
+        // gateway), jadi permintaannya dimulai bersamaan dengan rwSession. Satu
+        // round-trip lebih cepat dan hasilnya masuk ke cache/dedupe `api()`,
+        // sehingga renderDashboard tinggal memakainya.
+        api('rwDashboard').catch(function () {});
         api('rwSession').then(function (res) {
             state.session = res;
             showApp();
