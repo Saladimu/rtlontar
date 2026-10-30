@@ -4,9 +4,9 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 1.4 |
+| Version | 1.8 |
 | Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions and administration); Phase 5 rollout in progress |
-| Date | 28 October 2026 |
+| Date | 30 October 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
 | Related documents | `readme.md`, `panduan.md`, `agents.md`, `MAINTENANCE.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Owner | RW 06 |
@@ -133,7 +133,7 @@ Permission model:
 
 | ID | Requirement | Priority |
 |---|---|---|
-| BR-01 | RW 06 supports a maximum of 10 RTs. | Must |
+| BR-01 | RW 06 supports a maximum of 10 RTs; the orchestrator registry rejects an 11th RT with `max_rts`. | Must |
 | BR-02 | Each RT continues to use the current SAPA-RT application. | Must |
 | BR-03 | Each RT identity is configurable through `config.js`, including RT number and RW number. | Must |
 | BR-04 | RW can read `Data_Warga` from every RT, read-only. | Must |
@@ -403,7 +403,7 @@ Credentials must not be stored in a sheet that ordinary spreadsheet viewers can 
 | NFR-07 | All RW actions are auditable. |
 | NFR-08 | Backups exist for every RT sheet and the RW spreadsheet. |
 | NFR-09 | The system supports up to 10 RTs without changing the application architecture. |
-| NFR-10 | Version mismatches between RT and RW are visible to administrators. |
+| NFR-10 | Version mismatches between RT and RW are visible to administrators: each RT's `Backend Version` is compared with the `EXPECTED_BACKEND_VERSION` setting and flagged in the registry and dashboard. |
 | NFR-11 | UI text follows the existing Indonesian language and design conventions. |
 | NFR-12 | No sensitive token is exposed to the browser. |
 
@@ -501,7 +501,7 @@ RT018 pilot prerequisites are confirmed: spreadsheet backup completed, all exist
 | 0 | Confirm decisions (done 25 Oct 2026), inventory 10 RTs, finalize rules | 2-4 days |
 | 1 | RT schema, `RW_TOKEN`, read/decision/response endpoints | 1.5-2 weeks — **implemented** (backend v35, v36 adds `saldoAwal`, v37 repairs RW status) |
 | 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **implemented** (status/filter/panel + complaint response timeline in the RT modal) |
-| 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-29-02`) |
+| 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-29-03`) |
 | 4 | RW portal: dashboard, residents, kas, surat, complaints, administration | 2-3 weeks — **implemented** (`rw/`): read pages, decisions/responses, and admin pages |
 | 5 | Access control, pilot, rollout, documentation | 1-2 weeks |
 
@@ -512,7 +512,7 @@ Indicative totals:
 
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
-The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 portal are implemented. RT code is at `publik-v39-2026-10-28`; the orchestrator is `rw-orchestrator-v1-2026-10-29-02`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, complaint responses with public/internal visibility, and five RW Admin administration pages: users, RT registry, operational settings, outbox retry, and audit log. RW Viewer sees the administration group disabled, cannot open those pages, and receives masked sensitive data. Only 2 of the maximum 10 RTs are currently deployed.
+The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 portal are implemented. RT code is at `publik-v39-2026-10-28`; the orchestrator is `rw-orchestrator-v1-2026-10-29-03`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, complaint responses with public/internal visibility, and five RW Admin administration pages: users, RT registry, operational settings, outbox retry, and audit log. RW Viewer sees the administration group disabled, cannot open those pages, and receives masked sensitive data. Only 2 of the maximum 10 RTs are currently deployed.
 
 ---
 
@@ -572,18 +572,22 @@ Resolved on 25 October 2026. These decisions are binding for Phase 1.
 
 Store non-secret values in the RW `Settings` sheet. Store credentials only in Script Properties.
 
+The names below match the keys stored in the RW `Settings` sheet and implemented by `RW Apps Script/code.gs`.
+
 | Parameter | Default | Notes |
 |---|---|---|
-| `RW_CACHE_TTL_MINUTES` | 10 | 1-60 minutes; per-RT override allowed; detail views bypass the cache |
-| `RW_SURAT_MAX_ROUNDS` | 3 | Maximum returns before `Kembalikan` is disabled; RW must then approve or issue a final reject |
-| `RW_LAPOR_DEFAULT_VISIBILITY` | `Publik` | Per-response toggle; `Internal` is never public |
+| `CACHE_TTL_SECONDS` | `300` | Dashboard snapshot age in seconds before a refetch. Applies to all RTs; detail views bypass the cache |
+| `OUTBOX_MAX_ATTEMPTS` | `8` | Write attempts before an outbox entry is left `Failed` |
+| `OUTBOX_BASE_DELAY_SECONDS` | `60` | Base for the exponential outbox retry delay |
+| `AUDIT_RETENTION_MONTHS` | `12` | Login and audit records; allowed range 12-36 |
+| `DECISION_RETENTION_MONTHS` | `24` | RW decisions and responses; allowed range 12-36 |
+| `SNAPSHOT_RETENTION_MONTHS` | `24` | `KPI_Snapshot` rows; allowed range 12-36 |
 | `RW_MASK_VIEWER` | `true` | RW Viewer sees NIK/phone last 4 digits; address is hidden |
-| `RW_DIGEST_ENABLED` | `false` | Enable during pilot when needed |
-| `RW_DIGEST_HOUR` | `8` | 0-23 in the configured timezone |
-| `RW_DIGEST_RECIPIENTS` | empty | Comma-separated RW emails; empty means all active RW Admins |
-| `RW_TIMEZONE` | `Asia/Jakarta` | Used by digest and audit timestamps |
-| `RW_AUDIT_RETENTION_MONTHS` | `12` | Login and audit records; allowed range 12-36 |
-| `RW_RETENTION_MONTHS` | `24` | RW decisions/responses and snapshots; allowed range 12-36 |
+| `EXPECTED_BACKEND_VERSION` | `publik-v39-2026-10-28` | RT backend version every RT should run; a different `Backend Version` is flagged as a mismatch |
+| `DIGEST_ENABLED` | `false` | Enable during pilot when needed |
+| `DIGEST_HOUR` | `7` | 0-23 in `Asia/Jakarta` |
+
+Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_RW_MAX_REVISI` in the RT backend and the portal drawer), the default response visibility of `Publik` per response, the `Asia/Jakarta` timezone, and the maximum of **10 registered RTs** (`MAX_RTS` in the orchestrator registry). Changing any of these requires a code change and a release.
 
 ---
 
@@ -669,3 +673,4 @@ Store non-secret values in the RW `Settings` sheet. Store credentials only in Sc
 | 1.6 | 29 October 2026 | Implementation | RW portal boot latency reduced further without touching RT backends: `boot()` starts `rwDashboard` in parallel with `rwSession`, prefetch now waits for the dashboard and spaces list requests 400 ms apart so they no longer compete with the KPI fan-out, and the portal list TTL grows to 60 s. On the orchestrator side the latest `KPI_Snapshot` row for every RT is resolved in a single sheet pass (`latestSnapshots`), each RT costs 4 KPI calls instead of 5 because `rwCheck` was folded into the `rwRead` responses, and login audit writes are capped at one row per user per 10 minutes. Orchestrator `rw-orchestrator-v1-2026-10-29-02`; portal build `2026-10-29-02` |
 | 1.4 | 28 October 2026 | Implementation | RT complaint panel now shows **Riwayat tanggapan RW**: `action=read` returns `Lapor_Tindak_Lanjut`, and the RT complaint modal renders each RW response with time, actor, role, status, and a Publik/Internal badge (new complaints and complaints without responses hide the section). Backend `publik-v39-2026-10-28`; index `APP_BUILD` `2026-10-28-02`; SW cache `sapa-rt-static-v112`. Rollout is now codified as a per-RT checklist in `MAINTENANCE.md` section 6.4 (phases A-H: preconditions, backend, frontend/hostname, orchestrator registration, smoke test, access review, pilot gate, rollback) with sign-off, replacing the scattered Phase 5 notes |
 | 1.7 | 29 October 2026 | Implementation | RW 06 portal branding and detail polish, portal-only (no RT backend or orchestrator redeploy): the audit log names its people column **User**, the RT registry list shows the address under the RT id and keeps the endpoint only inside the Ubah dialog, detail drawers group each block in a tinted panel (letters: Pemohon, Pengajuan, Keputusan RW; complaints: Pengaduan, Status, Riwayat tindak lanjut RW), and the complaint drawer now previews `Foto / Bukti Pendukung` with a Drive thumbnail fallback chain plus a `Buka foto asli` link (portal CSP `img-src` widened to `https:`). The portal gains a favicon, an apple-touch-icon, a web app manifest, and the SAPA logo replaces the icon square on the boot screen and sidebar. Portal build `2026-10-29-03` |
+| 1.8 | 30 October 2026 | Implementation | Guardrails and documentation sync. The orchestrator now enforces the 10-RT ceiling in `saveRegistry` (an 11th RT is rejected with `max_rts`), adds an `EXPECTED_BACKEND_VERSION` setting, and returns `expectedVersion` plus a `versionMismatch` flag per RT so the portal registry marks RTs running a different backend version with **Versi beda**. Section 18.1 now lists the real `Settings` keys and defaults (`CACHE_TTL_SECONDS` 300, `DIGEST_HOUR` 7, `AUDIT_`/`DECISION_`/`SNAPSHOT_RETENTION_MONTHS`) and records the hardcoded 3-return limit and 10-RT cap. Orchestrator `rw-orchestrator-v1-2026-10-29-03`; portal build `2026-10-30-01` |

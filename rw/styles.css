@@ -313,6 +313,7 @@ tbody tr.clickable { cursor: pointer; }
 tbody tr.clickable:hover { background: #f8fafc; }
 .cell-main { font-weight: 700; color: var(--ink); }
 .cell-sub { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.cell-sub.cell-warn { color: var(--amber); font-weight: 600; }
 .th-stack { display: block; }
 .th-sub { display: block; margin-top: 2px; color: #94a3b8; font-size: 9.5px; letter-spacing: 0.04em; text-transform: none; font-weight: 600; }
 
