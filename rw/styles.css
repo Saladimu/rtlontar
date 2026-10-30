@@ -314,6 +314,10 @@ tbody tr.clickable:hover { background: #f8fafc; }
 .cell-main { font-weight: 700; color: var(--ink); }
 .cell-sub { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
 .cell-sub.cell-warn { color: var(--amber); font-weight: 600; }
+.digest-actions {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin-top: 14px;
+}
 .digest-preview {
     margin: 14px 0 0;
     padding: 14px 16px;

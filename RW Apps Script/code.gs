@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-30-04';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-30-05';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -1503,6 +1503,24 @@ function digestRecipients() {
   });
 }
 
+// Angka digest memakai pemisah ribuan gaya Indonesia (titik), sama dengan
+// portal (Intl id-ID), agar nominal besar mudah dibaca di email dan WhatsApp.
+function digestGroup(value) {
+  var n = Math.round(Number(value) || 0);
+  var neg = n < 0;
+  var s = String(Math.abs(n));
+  var out = '';
+  while (s.length > 3) {
+    out = '.' + s.slice(-3) + out;
+    s = s.slice(0, -3);
+  }
+  return (neg ? '-' : '') + s + out;
+}
+
+function digestMoney(value) {
+  return 'Rp ' + digestGroup(value);
+}
+
 function digestEsc(value) {
   return String(value === undefined || value === null ? '' : value)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -1544,13 +1562,13 @@ function buildDigest() {
   lines.push('Ringkasan Harian RW 06');
   lines.push('Waktu: ' + stamp + ' (Asia/Jakarta)');
   lines.push('');
-  lines.push('Total ' + rows.length + ' RT: ' + totals.warga + ' warga, saldo kas Rp ' + totals.kasSaldo +
-    ', ' + totals.suratMenunggu + ' surat menunggu, ' + totals.laporTerbuka + ' pengaduan terbuka, ' +
-    totals.laporEskalasi + ' eskalasi.');
+  lines.push('Total ' + rows.length + ' RT: ' + digestGroup(totals.warga) + ' warga, saldo kas ' + digestMoney(totals.kasSaldo) +
+    ', ' + digestGroup(totals.suratMenunggu) + ' surat menunggu, ' + digestGroup(totals.laporTerbuka) + ' pengaduan terbuka, ' +
+    digestGroup(totals.laporEskalasi) + ' eskalasi.');
   lines.push('');
   rows.forEach(function (r) {
-    lines.push(r.rtId + ' (' + (r.nama || '-') + '): ' + r.warga + ' warga, kas Rp ' + r.kasSaldo +
-      ', surat ' + r.suratMenunggu + ', pengaduan ' + r.laporTerbuka + ', eskalasi ' + r.laporEskalasi +
+    lines.push(r.rtId + ' (' + (r.nama || '-') + '): ' + digestGroup(r.warga) + ' warga, kas ' + digestMoney(r.kasSaldo) +
+      ', surat ' + digestGroup(r.suratMenunggu) + ', pengaduan ' + digestGroup(r.laporTerbuka) + ', eskalasi ' + digestGroup(r.laporEskalasi) +
       ', status ' + r.status);
   });
   if (attention.length) {
@@ -1558,8 +1576,8 @@ function buildDigest() {
     lines.push('Perlu perhatian:');
     attention.forEach(function (r) {
       var parts = [];
-      if (r.suratMenunggu > 0) parts.push(r.suratMenunggu + ' surat menunggu');
-      if (r.laporEskalasi > 0) parts.push(r.laporEskalasi + ' eskalasi');
+      if (r.suratMenunggu > 0) parts.push(digestGroup(r.suratMenunggu) + ' surat menunggu');
+      if (r.laporEskalasi > 0) parts.push(digestGroup(r.laporEskalasi) + ' eskalasi');
       if (r.status !== 'OK') parts.push('status ' + r.status);
       lines.push('- ' + r.rtId + ': ' + parts.join(', '));
     });
@@ -1570,12 +1588,12 @@ function buildDigest() {
   var tableRows = rows.map(function (r) {
     return '<tr>' +
       '<td>' + digestEsc(r.rtId) + '<br><span style="color:#64748b;font-size:11px">' + digestEsc(r.nama || '') + '</span></td>' +
-      '<td style="text-align:right">' + digestEsc(r.warga) + '</td>' +
-      '<td style="text-align:right">' + digestEsc('Rp ' + r.kasSaldo) + '</td>' +
-      '<td style="text-align:right">' + digestEsc(r.suratMenunggu) + '</td>' +
-      '<td style="text-align:right">' + digestEsc(r.laporTerbuka) + '</td>' +
-      '<td style="text-align:right">' + digestEsc(r.laporEskalasi) + '</td>' +
-      '<td>' + digestEsc(r.status) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(digestGroup(r.warga)) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(digestMoney(r.kasSaldo)) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(digestGroup(r.suratMenunggu)) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(digestGroup(r.laporTerbuka)) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(digestGroup(r.laporEskalasi)) + '</td>' +
+      '<td style="text-align:center">' + digestEsc(r.status) + '</td>' +
       '</tr>';
   }).join('');
 
@@ -1583,20 +1601,20 @@ function buildDigest() {
     ? '<h3 style="margin:18px 0 6px;font-size:14px">Perlu perhatian</h3><ul style="margin:0;padding-left:20px">' +
       attention.map(function (r) {
         var parts = [];
-        if (r.suratMenunggu > 0) parts.push(r.suratMenunggu + ' surat menunggu');
-        if (r.laporEskalasi > 0) parts.push(r.laporEskalasi + ' eskalasi');
+        if (r.suratMenunggu > 0) parts.push(digestGroup(r.suratMenunggu) + ' surat menunggu');
+        if (r.laporEskalasi > 0) parts.push(digestGroup(r.laporEskalasi) + ' eskalasi');
         if (r.status !== 'OK') parts.push('status ' + r.status);
         return '<li><strong>' + digestEsc(r.rtId) + '</strong>: ' + digestEsc(parts.join(', ')) + '</li>';
       }).join('') + '</ul>'
     : '<p style="margin:18px 0 0;color:#047857">Tidak ada antrean yang perlu perhatian.</p>';
 
   var html = '<div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:720px">' +
-    '<h2 style="margin:0 0 4px;font-size:18px">Ringkasan Harian RW 06</h2>' +
-    '<p style="margin:0 0 14px;color:#475569;font-size:12px">' + digestEsc(stamp) + ' (Asia/Jakarta)</p>' +
+    '<h2 style="margin:0 0 4px;font-size:18px;text-align:center">Ringkasan Harian RW 06</h2>' +
+    '<p style="margin:0 0 14px;color:#475569;font-size:12px;text-align:center">' + digestEsc(stamp) + ' (Asia/Jakarta)</p>' +
     '<p style="margin:0 0 6px">Total <strong>' + digestEsc(rows.length) + ' RT</strong>: ' +
-      digestEsc(totals.warga) + ' warga, saldo kas <strong>Rp ' + digestEsc(totals.kasSaldo) + '</strong>, ' +
-      digestEsc(totals.suratMenunggu) + ' surat menunggu, ' + digestEsc(totals.laporTerbuka) + ' pengaduan terbuka, ' +
-      digestEsc(totals.laporEskalasi) + ' eskalasi.</p>' +
+      digestEsc(digestGroup(totals.warga)) + ' warga, saldo kas <strong>' + digestEsc(digestMoney(totals.kasSaldo)) + '</strong>, ' +
+      digestEsc(digestGroup(totals.suratMenunggu)) + ' surat menunggu, ' + digestEsc(digestGroup(totals.laporTerbuka)) + ' pengaduan terbuka, ' +
+      digestEsc(digestGroup(totals.laporEskalasi)) + ' eskalasi.</p>' +
     '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px">' +
     '<thead><tr style="background:#f1f5f9;text-align:left">' +
       '<th style="border:1px solid #cbd5e1;padding:6px">RT</th>' +
@@ -1605,7 +1623,7 @@ function buildDigest() {
       '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Surat</th>' +
       '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Pengaduan</th>' +
       '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Eskalasi</th>' +
-      '<th style="border:1px solid #cbd5e1;padding:6px">Status</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px;text-align:center">Status</th>' +
     '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="7" style="border:1px solid #cbd5e1;padding:6px">Belum ada RT aktif.</td></tr>') + '</tbody></table>' +
     attentionHtml +
     '<p style="margin:18px 0 0;color:#64748b;font-size:11px">Buka portal RW 06 untuk detail dan tindakan.</p>' +
@@ -1674,10 +1692,13 @@ function sendDailyDigest(force) {
   }
   saveDigestLastRun(digest.generatedAt.slice(0, 10));
   audit(null, 'digest_send', '', recipients.join(','), 'ok', digest.subject);
+  // text ikut dikirim agar portal bisa menawarkan "Salin teks" untuk
+  // ditempel ke WhatsApp setelah pengiriman manual.
   return {
     result: 'success',
     version: CODE_VERSION,
     subject: digest.subject,
+    text: digest.text,
     recipients: recipients,
     totals: digest.totals,
     stale: digest.stale,
