@@ -57,6 +57,8 @@ Jangan menyimpan `RW_TOKEN`, `GATEWAY_SECRET`, atau token RT lain di spreadsheet
 
 Header dibuat oleh `ensureSchema()`. Jangan mengubah urutan header setelah data terisi.
 
+`Settings` adalah tabel key/value, jadi satu `Key` hanya boleh punya satu baris. `seedSettings()` berjalan di dalam `LockService.getScriptLock()` dan memanggil `dedupeSettings()` lebih dulu, sehingga penyemaian bersamaan tidak lagi membuat baris ganda. Baris duplikat lama dibersihkan otomatis saat `ensureSchema()` berikutnya dijalankan (mis. setelah deploy versi baru, atau buka portal lalu muat ulang sekali). Untuk membersihkan segera dari editor Apps Script, jalankan fungsi `seedSettings()` satu kali.
+
 ## 4. Kontrak API
 
 Semua aksi data memakai `POST` dengan body JSON:

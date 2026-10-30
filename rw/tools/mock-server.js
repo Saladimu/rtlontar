@@ -7,7 +7,7 @@ const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-30-05';
+const VERSION = 'rw-orchestrator-v1-2026-10-30-06';
 const MAX_RTS = 10;
 
 const MIME = {

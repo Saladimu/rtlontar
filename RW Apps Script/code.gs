@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-30-05';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-30-06';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -272,16 +272,52 @@ function ensureSchema() {
   var props = PropertiesService.getScriptProperties();
   var signature = schemaSignature();
   if (props.getProperty(SCHEMA_READY_PROP) === signature && schemaSheetsPresent(ss)) return ss;
-  Object.keys(SCHEMA).forEach(function (name) {
-    var sheet = getSheet(ss, name);
-    ensureHeaders(sheet, SCHEMA[name], name);
-  });
-  seedSettings();
-  try { props.setProperty(SCHEMA_READY_PROP, signature); } catch (e) {}
-  return ss;
+  // Dua eksekusi bersamaan (mis. dua permintaan portal saat deploy baru) bisa
+  // sama-sama lolos cek signature lalu menyemai Settings dua kali. Kunci skrip
+  // membuat penyemaian berjalan sekali; setelah kunci didapat signature dicek
+  // ulang agar eksekusi kedua tidak mengulang pekerjaan.
+  var lock = LockService.getScriptLock();
+  var locked = false;
+  try { locked = lock.tryLock(30000); } catch (e) { locked = false; }
+  try {
+    if (props.getProperty(SCHEMA_READY_PROP) === signature && schemaSheetsPresent(ss)) return ss;
+    Object.keys(SCHEMA).forEach(function (name) {
+      var sheet = getSheet(ss, name);
+      ensureHeaders(sheet, SCHEMA[name], name);
+    });
+    seedSettings();
+    try { props.setProperty(SCHEMA_READY_PROP, signature); } catch (e) {}
+    return ss;
+  } finally {
+    if (locked) { try { lock.releaseLock(); } catch (e) {} }
+  }
+}
+
+// Settings adalah tabel key/value: satu Key hanya boleh punya satu baris.
+// Baris duplikat lama (akibat penyemaian bersamaan sebelum ada kunci) dibuang
+// dengan mempertahankan kemunculan pertama, sama seperti updateObject.
+function dedupeSettings() {
+  var sheet = getSheet(getSs(), 'Settings');
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return 0;
+  var headers = values[0].map(function (h) { return String(h === undefined || h === null ? '' : h).trim(); });
+  var keyIndex = headers.indexOf('Key');
+  if (keyIndex === -1) return 0;
+  var seen = {};
+  var remove = [];
+  for (var i = 1; i < values.length; i++) {
+    var key = String(values[i][keyIndex] === undefined || values[i][keyIndex] === null ? '' : values[i][keyIndex]).trim();
+    if (!key) continue;
+    if (seen[key]) remove.push(i + 1);
+    else seen[key] = true;
+  }
+  for (var r = remove.length - 1; r >= 0; r--) sheet.deleteRow(remove[r]);
+  if (remove.length) invalidateTable('Settings');
+  return remove.length;
 }
 
 function seedSettings() {
+  dedupeSettings();
   var existing = readTable('Settings').rows;
   var keys = {};
   existing.forEach(function (r) { keys[String(r['Key'])] = true; });
