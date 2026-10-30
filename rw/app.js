@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-30-03';
+    var BUILD = '2026-10-30-04';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -33,7 +33,8 @@
         actionBusy: false,
         prefetched: false,
         dashboardLoadedAt: 0,
-        pages: { warga: 1, kas: 1, surat: 1, lapor: 1, pengguna: 1, registry: 1, pengaturan: 1, outbox: 1, audit: 1 }
+        pages: { warga: 1, kas: 1, surat: 1, lapor: 1, pengguna: 1, registry: 1, pengaturan: 1, outbox: 1, audit: 1 },
+        digestText: ''
     };
     var warningState = { onConfirm: null };
 
@@ -215,6 +216,11 @@
         $('warning-confirm').innerHTML = '<i class="fa-solid ' + (options.confirmIcon || 'fa-circle-check') + '"></i> ' +
             esc(options.confirmLabel || 'Ya, Lanjutkan');
         $('warning-confirm').disabled = false;
+        var cancel2 = $('warning-cancel');
+        if (cancel2) {
+            cancel2.innerHTML = '<i class="fa-solid ' + (options.cancelIcon || 'fa-xmark') + '"></i> ' +
+                esc(options.cancelLabel || 'Batal');
+        }
         warningState.onConfirm = typeof options.onConfirm === 'function' ? options.onConfirm : null;
         $('modal-warning').classList.remove('hidden');
         document.body.classList.add('modal-open');
@@ -1828,17 +1834,68 @@
             '</div><div class="card-body" id="digest-body"><p class="form-hint">Aktifkan <strong>DIGEST_ENABLED</strong>, atur <strong>DIGEST_HOUR</strong>, dan isi <strong>DIGEST_RECIPIENTS</strong> (kosong berarti semua RW Admin aktif). Pratinjau tidak mengirim email.</p></div></section>';
     }
 
+    // Salin teks digest agar pengguna bisa menempelkannya ke WhatsApp setelah
+    // pengiriman manual. Clipboard API dipakai bila tersedia; bila tidak (mis.
+    // konteks non-secure), dipakai textarea sementara + execCommand.
+    function copyDigestText(text, button) {
+        var value = String(text || '');
+        if (!value) { toast('Tidak ada teks digest untuk disalin.', 'error'); return; }
+        function done(ok) {
+            if (button) button.disabled = false;
+            toast(ok ? 'Teks digest disalin. Tempel ke WhatsApp bila perlu.' : 'Gagal menyalin. Pilih teks lalu salin manual.',
+                ok ? 'success' : 'error');
+        }
+        function legacyCopy() {
+            try {
+                var area = document.createElement('textarea');
+                area.value = value;
+                area.setAttribute('readonly', '');
+                area.style.position = 'fixed';
+                area.style.top = '-1000px';
+                document.body.appendChild(area);
+                area.select();
+                var ok = document.execCommand && document.execCommand('copy');
+                document.body.removeChild(area);
+                done(!!ok);
+            } catch (err) {
+                done(false);
+            }
+        }
+        var clip = (typeof navigator !== 'undefined' && navigator && navigator.clipboard) ? navigator.clipboard : null;
+        if (clip && typeof clip.writeText === 'function') {
+            clip.writeText(value).then(function () { done(true); },
+                function () { if (typeof document.createElement === 'function') legacyCopy(); else done(false); });
+            return;
+        }
+        if (typeof document.createElement === 'function') legacyCopy();
+        else done(false);
+    }
+
+    function bindDigestCopy() {
+        var btn = $('digest-copy');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            btn.disabled = true;
+            copyDigestText(state.digestText, btn);
+        });
+    }
+
     function renderDigestResult(res) {
         var body = $('digest-body');
         if (!body) return;
         var recipients = res.recipients || [];
         var totals = res.totals || {};
+        state.digestText = res.text || '';
         body.innerHTML =
             '<div class="notice notice-info" style="margin-top:0"><i class="fa-solid fa-envelope-circle-check"></i><div>' +
                 '<strong>' + esc(res.subject || 'Ringkasan Harian RW 06') + '</strong><br>' +
                 'Penerima: ' + (recipients.length ? esc(recipients.join(', ')) : '<em>belum ada</em>') +
                 (res.lastRun ? ' · terakhir terkirim ' + esc(res.lastRun) : '') +
             '</div></div>' +
+            (state.digestText
+                ? '<div class="digest-actions"><button type="button" class="btn btn-ghost" id="digest-copy"><i class="fa-solid fa-copy"></i> Salin teks untuk WhatsApp</button>' +
+                  '<span class="cell-sub">Menyalin teks yang sama dengan isi email.</span></div>'
+                : '') +
             '<div class="grid kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">' +
                 '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Warga</span></div><p class="kpi-value">' + fmtInt(totals.warga) + '</p></article>' +
                 '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo kas</span></div><p class="kpi-value money">' + fmtMoney(totals.kasSaldo) + '</p></article>' +
@@ -1846,6 +1903,7 @@
                 '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Eskalasi</span></div><p class="kpi-value">' + fmtInt(totals.laporEskalasi) + '</p></article>' +
             '</div>' +
             '<pre class="digest-preview">' + esc(res.text || '') + '</pre>';
+        bindDigestCopy();
     }
 
     function bindDigest() {
@@ -1878,6 +1936,21 @@
                             clearReadCache();
                             renderDigestResult(res);
                             toast('Digest terkirim ke ' + (res.recipients || []).length + ' penerima.', 'success');
+                            // Setelah kirim manual, tawarkan salinan teks agar bisa
+                            // ditempel ke WhatsApp tanpa membuka email.
+                            openWarning({
+                                eyebrow: 'Digest terkirim',
+                                title: 'Salin teks untuk WhatsApp?',
+                                message: 'Email sudah dikirim ke ' + esc((res.recipients || []).join(', ') || '-') +
+                                    '.<br>Anda juga bisa menyalin teks yang sama untuk ditempel ke grup WhatsApp.',
+                                tone: 'primary',
+                                icon: 'fa-envelope-circle-check',
+                                confirmIcon: 'fa-copy',
+                                confirmLabel: 'Salin teks',
+                                cancelIcon: 'fa-xmark',
+                                cancelLabel: 'Tutup',
+                                onConfirm: function () { copyDigestText(state.digestText, null); }
+                            });
                         }).catch(function (err) {
                             toast(err.message || 'Gagal mengirim digest.', 'error');
                         }).then(function () { send.disabled = false; });

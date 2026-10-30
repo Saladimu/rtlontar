@@ -179,6 +179,8 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 - `digestTrigger` dipasang `installTriggers()` dengan jadwal per jam. Trigger mengirim hanya bila `DIGEST_ENABLED=true` dan jam lokal `Asia/Jakarta` sama dengan `DIGEST_HOUR`.
 - Penanda `LAST_DIGEST_STAMP` disimpan di Script Properties agar tidak ada kiriman ganda pada hari yang sama walau trigger berjalan berkali-kali.
 - `rwDigestPreview` dan `rwDigestSend` tersedia di halaman **Pengaturan** portal. Pengiriman manual meminta konfirmasi dan mencatat audit.
+- Format email: judul dan waktu rata tengah, nominal memakai pemisah ribuan gaya Indonesia (`Rp 958.000`), kolom Status rata tengah.
+- `rwDigestSend` mengembalikan `text` yang sama dengan isi email sehingga portal dapat menawarkan **Salin teks untuk WhatsApp** setelah pengiriman manual.
 
 ## 6. Pengaturan awal
 

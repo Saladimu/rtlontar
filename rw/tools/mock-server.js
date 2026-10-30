@@ -7,7 +7,7 @@ const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-30-04';
+const VERSION = 'rw-orchestrator-v1-2026-10-30-05';
 const MAX_RTS = 10;
 
 const MIME = {
@@ -349,17 +349,27 @@ function digestRecipients() {
     return USERS.filter((u) => u.aktif !== false && u.peran === 'RW Admin').map((u) => u.email);
 }
 
+function digestGroup(value) {
+    const n = Math.round(Number(value) || 0);
+    return new Intl.NumberFormat('id-ID').format(n);
+}
+
 function digestPreview() {
     const dash = dashboardAction();
     const stamp = new Date().toISOString();
-    const lines = ['Ringkasan Harian RW 06', 'Waktu: ' + stamp, ''];
-    lines.push('Total ' + dash.rts.length + ' RT: ' + dash.totals.warga + ' warga, saldo kas Rp ' + dash.totals.kasSaldo + '.');
+    const lines = ['Ringkasan Harian RW 06', 'Waktu: ' + stamp + ' (Asia/Jakarta)', ''];
+    lines.push('Total ' + dash.rts.length + ' RT: ' + digestGroup(dash.totals.warga) + ' warga, saldo kas Rp ' + digestGroup(dash.totals.kasSaldo) +
+        ', ' + digestGroup(dash.totals.suratMenunggu) + ' surat menunggu, ' + digestGroup(dash.totals.laporTerbuka) +
+        ' pengaduan terbuka, ' + digestGroup(dash.totals.laporEskalasi) + ' eskalasi.');
     return {
         result: 'success',
         version: VERSION,
         subject: 'Ringkasan Harian RW 06 - ' + stamp.slice(0, 10),
         text: lines.join('\n'),
-        html: '<div><h2>Ringkasan Harian RW 06</h2><p>' + dash.rts.length + ' RT</p></div>',
+        html: '<div style="font-family:Arial,Helvetica,sans-serif;max-width:720px">' +
+            '<h2 style="margin:0 0 4px;font-size:18px;text-align:center">Ringkasan Harian RW 06</h2>' +
+            '<p style="margin:0 0 14px;color:#475569;font-size:12px;text-align:center">' + stamp + ' (Asia/Jakarta)</p>' +
+            '<p>' + dash.rts.length + ' RT</p></div>',
         totals: dash.totals,
         stale: dash.rts.filter((r) => r.stale).length,
         generatedAt: stamp,
@@ -509,7 +519,7 @@ function handleApi(body, headers) {
         if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
         const preview = digestPreview();
         pushAudit(user, 'digest_send_manual', '', preview.recipients.join(','), 'ok', preview.subject);
-        return { status: 200, data: { result: 'success', version: VERSION, subject: preview.subject, recipients: preview.recipients, totals: preview.totals, stale: preview.stale, generatedAt: preview.generatedAt } };
+        return { status: 200, data: { result: 'success', version: VERSION, subject: preview.subject, text: preview.text, recipients: preview.recipients, totals: preview.totals, stale: preview.stale, generatedAt: preview.generatedAt } };
     }
     if (action === 'rwUsersList') {
         if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
