@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-29-03';
+    var BUILD = '2026-10-30-01';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -666,7 +666,8 @@
                     '<td class="num">' + fmtInt(rt.laporTerbuka) + '</td>' +
                     '<td class="num">' + fmtInt(rt.laporEskalasi) + '</td>' +
                     '<td>' + healthBadge(rt) + '</td>' +
-                    '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span></td>' +
+                    '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span>' +
+                        (rt.versionMismatch ? '<span class="cell-sub cell-warn"><i class="fa-solid fa-code-branch"></i> Versi beda</span>' : '') + '</td>' +
                     '</tr>';
             }).join('');
 
@@ -1447,13 +1448,16 @@
         if (!apiPeek('rwRegistryList')) pageLoading('Memuat registry RT...');
         api('rwRegistryList').then(function (res) {
             var rows = res.registry || [];
+            var expected = String(res.expectedVersion || '').trim();
             var sliced = pageSlice(rows, 'registry');
             var body = sliced.rows.map(function (rt) {
+                var mismatch = !!(expected && rt.backendVersion && rt.backendVersion !== expected);
                 return '<tr>' +
                     '<td><span class="cell-main">' + esc(rt.rtId) + '</span><span class="cell-sub">' + esc(rt.alamat || '-') + '</span></td>' +
                     '<td><span class="cell-main">' + esc(rt.nama || '-') + '</span></td>' +
                     '<td>' + (rt.aktif ? badge('Aktif', 'badge-green', 'fa-circle-check') : badge('Nonaktif', 'badge-neutral', 'fa-plug-circle-check')) + '</td>' +
-                    '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span></td>' +
+                    '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span>' +
+                        (mismatch ? '<span class="cell-sub cell-warn"><i class="fa-solid fa-code-branch"></i> diharapkan ' + esc(expected) + '</span>' : '') + '</td>' +
                     '<td>' + (rt.lastError ? '<span class="cell-sub" style="color:#be123c">' + esc(rt.lastError) + '</span>' : '<span class="cell-sub">-</span>') + '</td>' +
                     '<td class="nowrap">' +
                         '<button type="button" class="btn btn-ghost" data-rt-edit="' + esc(rt.rtId) + '"><i class="fa-solid fa-pen-to-square"></i> Ubah</button> ' +

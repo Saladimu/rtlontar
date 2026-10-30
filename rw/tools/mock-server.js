@@ -7,7 +7,8 @@ const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-29-02';
+const VERSION = 'rw-orchestrator-v1-2026-10-29-03';
+const MAX_RTS = 10;
 
 const MIME = {
     '.html': 'text/html; charset=utf-8',
@@ -229,6 +230,7 @@ function listAction(body, user) {
 
 function dashboardAction() {
     const now = new Date().toISOString();
+    const expected = expectedBackendVersion();
     const rts = RTS.map((rt) => {
         const wargaRows = rt.rows.Data_Warga || [];
         const kasRows = rt.rows.Iuran_Kas || [];
@@ -253,6 +255,7 @@ function dashboardAction() {
             nama: rt.nama,
             alamat: rt.alamat,
             backendVersion: rt.backendVersion,
+            versionMismatch: !!(expected && rt.backendVersion && rt.backendVersion !== expected),
             lastSync: now,
             lastError: '',
             warga: warga,
@@ -280,6 +283,7 @@ function dashboardAction() {
         generatedAt: now,
         cacheTtlSeconds: 300,
         lastSync: now,
+        expectedVersion: expected,
         totals: totals,
         rts: rts
     };
@@ -303,6 +307,11 @@ function settings() {
     return settingState.map((s) => Object.assign({}, s));
 }
 
+function expectedBackendVersion() {
+    const row = settingState.find((s) => s.key === 'EXPECTED_BACKEND_VERSION');
+    return row ? String(row.value || '').trim() : '';
+}
+
 function validateSetting(key, value) {
     const def = settingState.find((s) => s.key === key);
     if (!def) return 'Key pengaturan tidak dikenal: ' + key;
@@ -318,6 +327,11 @@ function validateSetting(key, value) {
         }
     }
     if (key === 'DIGEST_HOUR' && (Number(value) < 0 || Number(value) > 23)) return 'DIGEST_HOUR harus 0-23.';
+    if (key === 'EXPECTED_BACKEND_VERSION') {
+        const v = String(value === undefined || value === null ? '' : value).trim();
+        if (!v) return 'EXPECTED_BACKEND_VERSION wajib diisi (mis. publik-v39-2026-10-28).';
+        if (v.length > 80) return 'EXPECTED_BACKEND_VERSION maksimal 80 karakter.';
+    }
     return '';
 }
 
@@ -375,6 +389,7 @@ function saveRegistry(body, user) {
     if (!/^https:\/\//i.test(endpoint) || !/\/exec(\?|$)/i.test(endpoint)) return { result: 'error', code: 'invalid_endpoint', message: 'Endpoint harus https://.../exec.' };
     if (registryState.some((rt) => rt.rtId !== rtId && rt.endpoint === endpoint)) return { result: 'error', code: 'duplicate_endpoint', message: 'Endpoint sudah dipakai RT lain.' };
     const existing = registryState.find((rt) => rt.rtId === rtId);
+    if (!existing && registryState.length >= MAX_RTS) return { result: 'error', code: 'max_rts', message: 'Maksimal ' + MAX_RTS + ' RT dapat terdaftar.' };
     if (existing) {
         existing.nama = nama;
         existing.alamat = alamat;
@@ -445,7 +460,7 @@ function handleApi(body, headers) {
     }
     if (action === 'rwRegistryList') {
         if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
-        return { status: 200, data: { result: 'success', version: VERSION, registry: registryState.map((rt) => Object.assign({}, rt)) } };
+        return { status: 200, data: { result: 'success', version: VERSION, expectedVersion: expectedBackendVersion(), registry: registryState.map((rt) => Object.assign({}, rt)) } };
     }
     if (action === 'rwRegistrySave') {
         return { status: 200, data: saveRegistry(body, user) };
@@ -571,4 +586,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { handleApi, listAction, dashboardAction, settings, server, state: { outbox: outboxState, audit: auditState, rts: RTS } };
+module.exports = { handleApi, listAction, dashboardAction, settings, server, state: { outbox: outboxState, audit: auditState, rts: RTS, registry: registryState } };

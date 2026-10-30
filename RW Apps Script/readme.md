@@ -2,7 +2,7 @@
 
 Backend orkestrator untuk portal RW 06. Berkas ini **bukan** backend RT dan tidak boleh dipasang di spreadsheet RT. Setiap RT tetap memakai `Apps Script/code.gs` sendiri; orkestrator hanya membaca dan menulis kolom workflow RW melalui endpoint `rw*` RT.
 
-- Versi kode: `rw-orchestrator-v1-2026-10-29-02`
+- Versi kode: `rw-orchestrator-v1-2026-10-29-03`
 - RT minimum: `publik-v39-2026-10-28` (v39: `action=read` mengirim `Lapor_Tindak_Lanjut` untuk timeline di panel RT; v38: batas 3 revisi hanya menutup `Kembalikan`; `Tolak` final tetap tersedia; v37 memperbaiki status/timestamp RW; v36 menambahkan `saldoAwal` pada `rwRead` untuk `Iuran_Kas`)
 - Pola: hub-and-spoke. Browser RW tidak pernah memanggil Web App RT secara langsung.
 
@@ -180,12 +180,14 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 | `DECISION_RETENTION_MONTHS` | `24` | Retensi log keputusan/tanggapan. |
 | `SNAPSHOT_RETENTION_MONTHS` | `24` | Retensi `KPI_Snapshot`. |
 | `RW_MASK_VIEWER` | `true` | Masking untuk RW Viewer. |
+| `EXPECTED_BACKEND_VERSION` | `publik-v39-2026-10-28` | Versi backend RT yang diharapkan. RT dengan `Backend Version` berbeda ditandai **Versi beda** di portal. |
 | `DIGEST_ENABLED` | `false` | Dicadangkan untuk digest harian. |
 | `DIGEST_HOUR` | `7` | Jam digest, 0-23. |
 
 ## 7. Operasional
 
-- **Tambah RT:** isi `RT_TOKEN_<RTID>` di Script Properties, lalu `rwRegistrySave` dengan endpoint `/exec`. Pastikan `RW_TOKEN` RT sama persis.
+- **Tambah RT:** isi `RT_TOKEN_<RTID>` di Script Properties, lalu `rwRegistrySave` dengan endpoint `/exec`. Pastikan `RW_TOKEN` RT sama persis. Registry dibatasi maksimal **10 RT**; `rwRegistrySave` menolak RT ke-11 dengan kode `max_rts`.
+- **Versi RT tertinggal:** bandingkan `Backend Version` terhadap `EXPECTED_BACKEND_VERSION`; portal menandai `Versi beda` bila tidak sama. Ubah pengaturan itu setelah semua RT naik versi.
 - **Rotasi token RT:** ubah `RW_TOKEN` di RT, lalu `RT_TOKEN_<RTID>` di orkestrator pada waktu yang sama. Tidak perlu mengubah kode.
 - **RT offline:** dashboard menampilkan `Error` atau `Stale`; RT lain tetap diproses. Periksa `Last Error` di registry atau jalankan `rwRtHealth`.
 - **Outbox macet:** periksa `Last Error`, perbaiki RT/token, lalu `rwOutboxRetry`.

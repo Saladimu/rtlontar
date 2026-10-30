@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-29-02';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-29-03';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -39,9 +39,12 @@ var SETTINGS_DEFAULTS = {
   'DECISION_RETENTION_MONTHS': { value: '24', note: 'Retensi keputusan/tanggapan (bulan, 12-36).' },
   'SNAPSHOT_RETENTION_MONTHS': { value: '24', note: 'Retensi snapshot KPI (bulan, 12-36).' },
   'RW_MASK_VIEWER': { value: 'true', note: 'Masking NIK/HP/alamat untuk RW Viewer.' },
+  'EXPECTED_BACKEND_VERSION': { value: 'publik-v39-2026-10-28', note: 'Versi backend RT yang diharapkan; RT dengan versi lain ditandai mismatch.' },
   'DIGEST_ENABLED': { value: 'false', note: 'Aktifkan digest harian (Phase 4).' },
   'DIGEST_HOUR': { value: '7', note: 'Jam kirim digest (0-23, Asia/Jakarta).' }
 };
+
+var MAX_RTS = 10;
 
 var READ_SHEETS = ['Data_Warga', 'Iuran_Kas', 'Pengumuman', 'Kegiatan_Warga', 'Pengajuan_Surat', 'Lapor_Aspirasi', 'Lapor_Tindak_Lanjut'];
 var SURAT_DECISIONS = ['Disetujui', 'Dikembalikan', 'Ditolak'];
@@ -477,6 +480,11 @@ function validateSetting(key, value) {
     if (['true', 'false', '1', '0', 'ya', 'tidak'].indexOf(s) === -1) return 'Nilai ' + key + ' harus true/false.';
   }
   if (key === 'DIGEST_HOUR' && (Number(value) < 0 || Number(value) > 23)) return 'DIGEST_HOUR harus 0-23.';
+  if (key === 'EXPECTED_BACKEND_VERSION') {
+    var v = String(value === undefined || value === null ? '' : value).trim();
+    if (!v) return 'EXPECTED_BACKEND_VERSION wajib diisi (mis. publik-v39-2026-10-28).';
+    if (v.length > 80) return 'EXPECTED_BACKEND_VERSION maksimal 80 karakter.';
+  }
   return '';
 }
 
@@ -569,6 +577,9 @@ function saveRegistry(user, data) {
   if (!nama) return fail('invalid', 'Nama RT wajib diisi.');
   if (!isValidEndpoint(endpoint)) return fail('invalid_endpoint', 'Endpoint harus https://.../exec.');
   var existing = findRt(rtId);
+  if (!existing && listRegistry().length >= MAX_RTS) {
+    return fail('max_rts', 'Maksimal ' + MAX_RTS + ' RT dapat terdaftar.');
+  }
   var dup = listRegistry().filter(function (rt) { return rt.rtId !== rtId && rt.endpoint === endpoint; });
   if (dup.length) return fail('duplicate_endpoint', 'Endpoint sudah dipakai RT lain.');
   var now = nowStamp();
@@ -960,9 +971,14 @@ function secondsSince(iso) {
   return Math.max(0, Math.floor((Date.now() - t) / 1000));
 }
 
+function expectedBackendVersion() {
+  return clean(getSetting('EXPECTED_BACKEND_VERSION'), 80);
+}
+
 function handleDashboard(user, data) {
   ensureSchema();
   var ttl = getSettingInt('CACHE_TTL_SECONDS', 300);
+  var expectedVersion = expectedBackendVersion();
   var force = data.forceRefresh === true || String(data.forceRefresh) === 'true';
   if (force && !requireAdmin(user)) force = false;
   var target = clean(data.rtId, 20).toUpperCase();
@@ -1018,6 +1034,8 @@ function handleDashboard(user, data) {
       alamat: rt.alamat,
       endpoint: rt.endpoint,
       backendVersion: rt.backendVersion,
+      expectedVersion: expectedVersion,
+      versionMismatch: !!(expectedVersion && rt.backendVersion && rt.backendVersion !== expectedVersion),
       lastSync: rt.lastSync,
       lastError: rt.lastError,
       warga: snap.warga,
@@ -1047,6 +1065,7 @@ function handleDashboard(user, data) {
     version: CODE_VERSION,
     generatedAt: nowIso(),
     cacheTtlSeconds: ttl,
+    expectedVersion: expectedVersion,
     lastSync: lastSync,
     totals: totals,
     rts: result
@@ -1485,7 +1504,7 @@ function doPost(e) {
       return respond({ result: 'success', version: CODE_VERSION, user: user });
     }
     if (action === 'rwDashboard') return respond(handleDashboard(user, data));
-    if (action === 'rwRegistryList') return respond({ result: 'success', version: CODE_VERSION, registry: listRegistry() });
+    if (action === 'rwRegistryList') return respond({ result: 'success', version: CODE_VERSION, expectedVersion: expectedBackendVersion(), registry: listRegistry() });
     if (action === 'rwRegistrySave') return respond(saveRegistry(user, data));
     if (action === 'rwUsersList') {
       if (!requireAdmin(user)) return respond(fail('forbidden', 'Hanya RW Admin.'));
