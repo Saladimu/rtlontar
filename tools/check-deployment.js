@@ -111,6 +111,18 @@ if (publicPortalUrl) {
   console.log('SKIP publicPortalUrl kosong');
 }
 
+// Gateway hanya meneruskan aksi yang ada di ACTIONS; aksi baru di orkestrator
+// (mis. digest) akan gagal "Aksi portal RW tidak dikenal" bila allowlist ini
+// lupa diperbarui. Bandingkan keduanya agar tidak terulang.
+const rwGateway = read('rw/functions/api/[[path]].js');
+const gatewayActions = new Set(
+  (rwGateway.split('const ACTIONS = new Set([')[1] || '').split(']);')[0].match(/'rw[A-Za-z]+'/g) || []
+);
+const orchestratorActions = new Set(rwOrch.match(/action === 'rw[A-Za-z]+'/g) || []);
+const orchNames = new Set(Array.from(orchestratorActions, (entry) => entry.split("'")[1]));
+const missingInGateway = Array.from(orchNames).filter((name) => !gatewayActions.has("'" + name + "'"));
+check(missingInGateway.length === 0, 'allowlist gateway mencakup semua aksi orkestrator', missingInGateway.join(', '));
+
 // Sisa penanda konflik merge berarti nilai RT bisa tertimpa nilai main tanpa
 // terlihat: tolak lebih awal daripada membiarkan deployment memakai URL salah.
 const trackedFiles = [
