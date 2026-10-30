@@ -13,7 +13,7 @@
  * - Per-RT RW_TOKEN values live in Script Properties as RT_TOKEN_<RTID>.
  */
 
-var CODE_VERSION = 'rw-orchestrator-v1-2026-10-29-03';
+var CODE_VERSION = 'rw-orchestrator-v1-2026-10-30-04';
 var TZ = 'Asia/Jakarta';
 var GATEWAY_SECRET_PROP = 'GATEWAY_SECRET';
 var BOOTSTRAP_ADMIN_PROP = 'RW_BOOTSTRAP_ADMIN';
@@ -41,7 +41,8 @@ var SETTINGS_DEFAULTS = {
   'RW_MASK_VIEWER': { value: 'true', note: 'Masking NIK/HP/alamat untuk RW Viewer.' },
   'EXPECTED_BACKEND_VERSION': { value: 'publik-v39-2026-10-28', note: 'Versi backend RT yang diharapkan; RT dengan versi lain ditandai mismatch.' },
   'DIGEST_ENABLED': { value: 'false', note: 'Aktifkan digest harian (Phase 4).' },
-  'DIGEST_HOUR': { value: '7', note: 'Jam kirim digest (0-23, Asia/Jakarta).' }
+  'DIGEST_HOUR': { value: '7', note: 'Jam kirim digest (0-23, Asia/Jakarta).' },
+  'DIGEST_RECIPIENTS': { value: '', note: 'Penerima digest dipisah koma; kosong berarti semua RW Admin aktif.' }
 };
 
 var MAX_RTS = 10;
@@ -484,6 +485,18 @@ function validateSetting(key, value) {
     var v = String(value === undefined || value === null ? '' : value).trim();
     if (!v) return 'EXPECTED_BACKEND_VERSION wajib diisi (mis. publik-v39-2026-10-28).';
     if (v.length > 80) return 'EXPECTED_BACKEND_VERSION maksimal 80 karakter.';
+  }
+  if (key === 'DIGEST_RECIPIENTS') {
+    var raw = String(value === undefined || value === null ? '' : value).trim();
+    if (raw) {
+      var parts = raw.split(',');
+      for (var ri = 0; ri < parts.length; ri++) {
+        var addr = String(parts[ri]).trim();
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) {
+          return 'DIGEST_RECIPIENTS harus daftar email dipisah koma: ' + addr;
+        }
+      }
+    }
   }
   return '';
 }
@@ -1462,6 +1475,220 @@ function cleanupRetention() {
   };
 }
 
+// ================= DIGEST HARIAN =================
+// Digest dibangun dari snapshot KPI terakhir (tanpa fan-out ke RT) agar
+// tidak menambah beban Apps Script RT. Pengaturan DIGEST_ENABLED,
+// DIGEST_HOUR, dan DIGEST_RECIPIENTS dibaca setiap kali, sehingga perubahan
+// berlaku tanpa redeploy portal. Trigger hanya berjalan sekali sehari pada
+// jam yang dikonfigurasi.
+
+function digestRecipients() {
+  var raw = clean(getSetting('DIGEST_RECIPIENTS'), 500);
+  var list = [];
+  if (raw) {
+    raw.split(',').forEach(function (part) {
+      var addr = normalizeEmail(part);
+      if (addr) list.push(addr);
+    });
+  } else {
+    listUsers().forEach(function (u) {
+      if (u.aktif && u.peran === 'RW Admin') list.push(u.email);
+    });
+  }
+  var seen = {};
+  return list.filter(function (email) {
+    if (!email || seen[email]) return false;
+    seen[email] = true;
+    return true;
+  });
+}
+
+function digestEsc(value) {
+  return String(value === undefined || value === null ? '' : value)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function buildDigest() {
+  ensureSchema();
+  var rts = activeRegistry();
+  var snaps = latestSnapshots(rts.map(function (rt) { return rt.rtId; }));
+  var totals = { warga: 0, kasSaldo: 0, suratMenunggu: 0, laporTerbuka: 0, laporEskalasi: 0 };
+  var attention = [];
+  var stale = 0;
+  var rows = rts.map(function (rt) {
+    var snap = snaps[rt.rtId] || null;
+    var row = {
+      rtId: rt.rtId,
+      nama: rt.nama,
+      warga: snap ? snap.warga : 0,
+      kasSaldo: snap ? snap.kasSaldo : 0,
+      suratMenunggu: snap ? snap.suratMenunggu : 0,
+      laporTerbuka: snap ? snap.laporTerbuka : 0,
+      laporEskalasi: snap ? snap.laporEskalasi : 0,
+      status: snap ? snap.status : 'Belum ada snapshot',
+      waktu: snap ? snap.waktu : ''
+    };
+    totals.warga += row.warga;
+    totals.kasSaldo += row.kasSaldo;
+    totals.suratMenunggu += row.suratMenunggu;
+    totals.laporTerbuka += row.laporTerbuka;
+    totals.laporEskalasi += row.laporEskalasi;
+    if (row.status !== 'OK') stale++;
+    if (row.suratMenunggu > 0 || row.laporEskalasi > 0 || row.status !== 'OK') attention.push(row);
+    return row;
+  });
+  var stamp = nowStamp();
+  var subject = 'Ringkasan Harian RW 06 - ' + stamp.slice(0, 10);
+  var lines = [];
+  lines.push('Ringkasan Harian RW 06');
+  lines.push('Waktu: ' + stamp + ' (Asia/Jakarta)');
+  lines.push('');
+  lines.push('Total ' + rows.length + ' RT: ' + totals.warga + ' warga, saldo kas Rp ' + totals.kasSaldo +
+    ', ' + totals.suratMenunggu + ' surat menunggu, ' + totals.laporTerbuka + ' pengaduan terbuka, ' +
+    totals.laporEskalasi + ' eskalasi.');
+  lines.push('');
+  rows.forEach(function (r) {
+    lines.push(r.rtId + ' (' + (r.nama || '-') + '): ' + r.warga + ' warga, kas Rp ' + r.kasSaldo +
+      ', surat ' + r.suratMenunggu + ', pengaduan ' + r.laporTerbuka + ', eskalasi ' + r.laporEskalasi +
+      ', status ' + r.status);
+  });
+  if (attention.length) {
+    lines.push('');
+    lines.push('Perlu perhatian:');
+    attention.forEach(function (r) {
+      var parts = [];
+      if (r.suratMenunggu > 0) parts.push(r.suratMenunggu + ' surat menunggu');
+      if (r.laporEskalasi > 0) parts.push(r.laporEskalasi + ' eskalasi');
+      if (r.status !== 'OK') parts.push('status ' + r.status);
+      lines.push('- ' + r.rtId + ': ' + parts.join(', '));
+    });
+  }
+  lines.push('');
+  lines.push('Buka portal RW 06 untuk detail dan tindakan.');
+
+  var tableRows = rows.map(function (r) {
+    return '<tr>' +
+      '<td>' + digestEsc(r.rtId) + '<br><span style="color:#64748b;font-size:11px">' + digestEsc(r.nama || '') + '</span></td>' +
+      '<td style="text-align:right">' + digestEsc(r.warga) + '</td>' +
+      '<td style="text-align:right">' + digestEsc('Rp ' + r.kasSaldo) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(r.suratMenunggu) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(r.laporTerbuka) + '</td>' +
+      '<td style="text-align:right">' + digestEsc(r.laporEskalasi) + '</td>' +
+      '<td>' + digestEsc(r.status) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var attentionHtml = attention.length
+    ? '<h3 style="margin:18px 0 6px;font-size:14px">Perlu perhatian</h3><ul style="margin:0;padding-left:20px">' +
+      attention.map(function (r) {
+        var parts = [];
+        if (r.suratMenunggu > 0) parts.push(r.suratMenunggu + ' surat menunggu');
+        if (r.laporEskalasi > 0) parts.push(r.laporEskalasi + ' eskalasi');
+        if (r.status !== 'OK') parts.push('status ' + r.status);
+        return '<li><strong>' + digestEsc(r.rtId) + '</strong>: ' + digestEsc(parts.join(', ')) + '</li>';
+      }).join('') + '</ul>'
+    : '<p style="margin:18px 0 0;color:#047857">Tidak ada antrean yang perlu perhatian.</p>';
+
+  var html = '<div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:720px">' +
+    '<h2 style="margin:0 0 4px;font-size:18px">Ringkasan Harian RW 06</h2>' +
+    '<p style="margin:0 0 14px;color:#475569;font-size:12px">' + digestEsc(stamp) + ' (Asia/Jakarta)</p>' +
+    '<p style="margin:0 0 6px">Total <strong>' + digestEsc(rows.length) + ' RT</strong>: ' +
+      digestEsc(totals.warga) + ' warga, saldo kas <strong>Rp ' + digestEsc(totals.kasSaldo) + '</strong>, ' +
+      digestEsc(totals.suratMenunggu) + ' surat menunggu, ' + digestEsc(totals.laporTerbuka) + ' pengaduan terbuka, ' +
+      digestEsc(totals.laporEskalasi) + ' eskalasi.</p>' +
+    '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:10px">' +
+    '<thead><tr style="background:#f1f5f9;text-align:left">' +
+      '<th style="border:1px solid #cbd5e1;padding:6px">RT</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Warga</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Saldo kas</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Surat</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Pengaduan</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px;text-align:right">Eskalasi</th>' +
+      '<th style="border:1px solid #cbd5e1;padding:6px">Status</th>' +
+    '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="7" style="border:1px solid #cbd5e1;padding:6px">Belum ada RT aktif.</td></tr>') + '</tbody></table>' +
+    attentionHtml +
+    '<p style="margin:18px 0 0;color:#64748b;font-size:11px">Buka portal RW 06 untuk detail dan tindakan.</p>' +
+    '</div>';
+
+  return {
+    generatedAt: stamp,
+    subject: subject,
+    text: lines.join('\n'),
+    html: html,
+    totals: totals,
+    stale: stale,
+    rts: rows,
+    attention: attention
+  };
+}
+
+function saveDigestLastRun(stamp) {
+  try {
+    PropertiesService.getScriptProperties().setProperty('LAST_DIGEST_STAMP', String(stamp || ''));
+  } catch (e) {}
+}
+
+function digestLastRun() {
+  try {
+    return String(PropertiesService.getScriptProperties().getProperty('LAST_DIGEST_STAMP') || '');
+  } catch (e) {
+    return '';
+  }
+}
+
+// force=true dipakai aksi manual rwDigestSend; trigger memakai force=false
+// sehingga DIGEST_ENABLED diperiksa. Trigger berjalan tiap jam dan hanya
+// mengirim bila jam lokal sama dengan DIGEST_HOUR dan belum terkirim hari ini.
+function sendDailyDigest(force) {
+  ensureSchema();
+  if (!force && !getSettingBool('DIGEST_ENABLED', false)) {
+    return { result: 'skipped', code: 'digest_disabled', message: 'Digest harian nonaktif.' };
+  }
+  var hour = getSettingInt('DIGEST_HOUR', 7);
+  if (!force) {
+    var nowHour = Number(Utilities.formatDate(new Date(), TZ, 'H'));
+    if (nowHour !== hour) {
+      return { result: 'skipped', code: 'digest_not_due', message: 'Bukan jam digest (' + hour + ':00).' };
+    }
+    var today = nowStamp().slice(0, 10);
+    if (digestLastRun() === today) {
+      return { result: 'skipped', code: 'digest_already_sent', message: 'Digest hari ini sudah dikirim.' };
+    }
+  }
+  var recipients = digestRecipients();
+  if (!recipients.length) {
+    return { result: 'error', code: 'digest_no_recipients', message: 'Tidak ada penerima digest (isi DIGEST_RECIPIENTS atau tambah RW Admin aktif).' };
+  }
+  var digest = buildDigest();
+  try {
+    MailApp.sendEmail({
+      to: recipients.join(','),
+      subject: digest.subject,
+      body: digest.text,
+      htmlBody: digest.html
+    });
+  } catch (err) {
+    audit(null, 'digest_send', '', recipients.join(','), 'Failed', String(err && err.message || err));
+    return fail('digest_send_failed', 'Gagal mengirim digest: ' + String(err && err.message || err));
+  }
+  saveDigestLastRun(digest.generatedAt.slice(0, 10));
+  audit(null, 'digest_send', '', recipients.join(','), 'ok', digest.subject);
+  return {
+    result: 'success',
+    version: CODE_VERSION,
+    subject: digest.subject,
+    recipients: recipients,
+    totals: digest.totals,
+    stale: digest.stale,
+    generatedAt: digest.generatedAt
+  };
+}
+
+function digestTrigger() {
+  return sendDailyDigest(false);
+}
+
 // ================= ENTRY POINTS =================
 
 function doGet(e) {
@@ -1511,6 +1738,19 @@ function doPost(e) {
       return respond({ result: 'success', version: CODE_VERSION, users: listUsers() });
     }
     if (action === 'rwUsersSave') return respond(saveUser(user, data));
+    if (action === 'rwDigestPreview') {
+      if (!requireAdmin(user)) return respond(fail('forbidden', 'Hanya RW Admin.'));
+      var preview = buildDigest();
+      return respond({ result: 'success', version: CODE_VERSION, subject: preview.subject, text: preview.text, html: preview.html, totals: preview.totals, stale: preview.stale, generatedAt: preview.generatedAt, recipients: digestRecipients(), lastRun: digestLastRun() });
+    }
+    if (action === 'rwDigestSend') {
+      if (!requireAdmin(user)) return respond(fail('forbidden', 'Hanya RW Admin.'));
+      var digestResult = sendDailyDigest(true);
+      if (digestResult.result === 'success') {
+        audit(user, 'digest_send_manual', '', (digestResult.recipients || []).join(','), 'ok', digestResult.subject);
+      }
+      return respond(digestResult);
+    }
     if (action === 'rwSettingsGet') return respond({ result: 'success', version: CODE_VERSION, settings: listSettings() });
     if (action === 'rwSettingsSave') {
       if (!requireAdmin(user)) return respond(fail('forbidden', 'Hanya RW Admin.'));
@@ -1597,12 +1837,15 @@ function processOutboxTrigger() {
 
 // Pasang trigger retry dan retensi. Jalankan sekali dari editor.
 function installTriggers() {
-  var handlers = ['processOutboxTrigger', 'cleanupRetention'];
+  var handlers = ['processOutboxTrigger', 'cleanupRetention', 'digestTrigger'];
   var existing = ScriptApp.getProjectTriggers();
   for (var i = 0; i < existing.length; i++) {
     if (handlers.indexOf(existing[i].getHandlerFunction()) !== -1) ScriptApp.deleteTrigger(existing[i]);
   }
   ScriptApp.newTrigger('processOutboxTrigger').timeBased().everyMinutes(5).create();
   ScriptApp.newTrigger('cleanupRetention').timeBased().everyDays(1).atHour(2).create();
+  // Trigger digest tiap jam; sendDailyDigest() hanya mengirim saat jam lokal
+  // sama dengan DIGEST_HOUR dan belum dikirim hari itu.
+  ScriptApp.newTrigger('digestTrigger').timeBased().everyHours(1).create();
   return { result: 'success', version: CODE_VERSION, triggers: handlers };
 }
