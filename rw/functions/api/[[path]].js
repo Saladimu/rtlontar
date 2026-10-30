@@ -28,7 +28,9 @@ const ACTIONS = new Set([
     'rwOutboxList',
     'rwOutboxRetry',
     'rwAuditList',
-    'rwRtHealth'
+    'rwRtHealth',
+    'rwDigestPreview',
+    'rwDigestSend'
 ]);
 
 const MAX_BODY_BYTES = 262144;
@@ -158,7 +160,7 @@ export async function onRequest(context) {
             return json({
                 result: 'success',
                 service: 'rw06-gateway',
-                version: 'rw-gateway-v1-2026-10-26',
+                version: 'rw-gateway-v1-2026-10-30',
                 configured: {
                     orchestrator: !!String(env.ORCHESTRATOR_URL || '').trim(),
                     gatewaySecret: String(env.GATEWAY_SECRET || '').length >= 16,

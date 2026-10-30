@@ -127,7 +127,7 @@ Mock server tidak memakai Cloudflare Access dan tidak boleh dipakai di produksi.
 ## Catatan keamanan
 
 - Jangan menaruh `GATEWAY_SECRET`, `RT_TOKEN_*`, atau `RW_TOKEN` di file statis, `localStorage`, atau repositori.
-- Gateway hanya meneruskan aksi yang ada di whitelist dan selalu menimpa `email`/`gateway` dari browser.
+- Gateway hanya meneruskan aksi yang ada di whitelist `ACTIONS` (`rw/functions/api/[[path]].js`) dan selalu menimpa `email`/`gateway` dari browser. Setiap aksi `rw...` baru di orkestrator **wajib** ditambahkan ke allowlist ini; `node tools/check-deployment.js` akan gagal bila ada aksi orkestrator yang belum terdaftar (gejala di UI: "Aksi portal RW tidak dikenal").
 - Masking RW Viewer dilakukan di orkestrator; UI hanya menampilkan peringatan.
 - Respons gateway dan API memakai `cache-control: no-store`.
 
