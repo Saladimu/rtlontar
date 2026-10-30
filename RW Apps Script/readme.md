@@ -32,6 +32,7 @@ Jangan menyimpan `RW_TOKEN`, `GATEWAY_SECRET`, atau token RT lain di spreadsheet
 5. Jalankan `installTriggers()` sekali. Trigger yang dipasang:
    - `processOutboxTrigger` setiap 5 menit.
    - `cleanupRetention` setiap hari pukul 02.00 zona waktu project.
+   - `digestTrigger` setiap jam; hanya mengirim bila `DIGEST_ENABLED=true`, jam lokal sama dengan `DIGEST_HOUR`, dan belum ada kiriman hari itu.
 6. Deploy sebagai **Web app**:
    - *Execute as*: **Me**
    - *Who has access*: **Anyone**
@@ -93,6 +94,8 @@ Semua aksi data memakai `POST` dengan body JSON:
 | `rwOutboxRetry` | RW Admin | Retry satu `id`, atau proses semua yang jatuh tempo bila `id` kosong. |
 | `rwAuditList` | RW Admin | Audit terbaru, maksimal 500 baris. |
 | `rwRtHealth` | Semua | Panggil `rwCheck` satu RT dan perbarui `Backend Version`/`Last Error`. |
+| `rwDigestPreview` | RW Admin | Susun ringkasan KPI dari snapshot terakhir tanpa mengirim email. Mengembalikan subjek, teks/HTML, total, penerima, dan waktu kirim terakhir. |
+| `rwDigestSend` | RW Admin | Kirim digest sekarang (mengabaikan `DIGEST_ENABLED` dan `DIGEST_HOUR`), lalu catat audit `digest_send_manual`. |
 
 ### 4.2 Parameter penting
 
@@ -169,6 +172,14 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 
 `KPI_Snapshot` menyimpan riwayat; dashboard memakai baris dengan `Waktu` terbaru per RT.
 
+## 5.1 Digest harian
+
+- `buildDigest()` menyusun total dan daftar perhatian dari baris `KPI_Snapshot` terbaru per RT, tanpa memanggil RT lagi.
+- `digestRecipients()` memakai `DIGEST_RECIPIENTS` bila diisi; bila kosong, dipakai semua `RW Admin` aktif. Email dinormalisasi dan dideduplikasi.
+- `digestTrigger` dipasang `installTriggers()` dengan jadwal per jam. Trigger mengirim hanya bila `DIGEST_ENABLED=true` dan jam lokal `Asia/Jakarta` sama dengan `DIGEST_HOUR`.
+- Penanda `LAST_DIGEST_STAMP` disimpan di Script Properties agar tidak ada kiriman ganda pada hari yang sama walau trigger berjalan berkali-kali.
+- `rwDigestPreview` dan `rwDigestSend` tersedia di halaman **Pengaturan** portal. Pengiriman manual meminta konfirmasi dan mencatat audit.
+
 ## 6. Pengaturan awal
 
 | Key | Default | Keterangan |
@@ -181,8 +192,9 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 | `SNAPSHOT_RETENTION_MONTHS` | `24` | Retensi `KPI_Snapshot`. |
 | `RW_MASK_VIEWER` | `true` | Masking untuk RW Viewer. |
 | `EXPECTED_BACKEND_VERSION` | `publik-v39-2026-10-28` | Versi backend RT yang diharapkan. RT dengan `Backend Version` berbeda ditandai **Versi beda** di portal. |
-| `DIGEST_ENABLED` | `false` | Dicadangkan untuk digest harian. |
-| `DIGEST_HOUR` | `7` | Jam digest, 0-23. |
+| `DIGEST_ENABLED` | `false` | Aktifkan digest harian saat pilot. |
+| `DIGEST_HOUR` | `7` | Jam kirim digest, 0-23 pada zona waktu project (`Asia/Jakarta`). |
+| `DIGEST_RECIPIENTS` | kosong | Daftar email dipisah koma. Bila kosong, digest dikirim ke semua RW Admin aktif. |
 
 ## 7. Operasional
 
@@ -192,6 +204,7 @@ Filter tambahan: `status` untuk `Pengajuan_Surat`, `laporId` untuk `Lapor_Tindak
 - **RT offline:** dashboard menampilkan `Error` atau `Stale`; RT lain tetap diproses. Periksa `Last Error` di registry atau jalankan `rwRtHealth`.
 - **Outbox macet:** periksa `Last Error`, perbaiki RT/token, lalu `rwOutboxRetry`.
 - **Retensi:** `cleanupRetention` menghapus baris lebih lama dari batas. Jalankan manual dari editor bila perlu.
+- **Digest harian:** isi `DIGEST_RECIPIENTS`, set `DIGEST_HOUR`, lalu ubah `DIGEST_ENABLED` menjadi `true`. Uji lewat **Pratinjau** dan **Kirim sekarang** di portal sebelum mengandalkan trigger. Jalankan `installTriggers()` lagi setelah upgrade agar `digestTrigger` terpasang.
 - **Backup:** cadangkan spreadsheet orkestrator sebelum perubahan skema atau pembersihan besar.
 
 ## 8. Keamanan
@@ -212,7 +225,7 @@ cd /tmp/opencode
 node test_rw_orchestrator.js
 ```
 
-Cakupan: bootstrap admin, peran dan masking, registry, fan-out dashboard, cache, perhitungan kas dengan `saldoAwal`, keputusan surat, idempotensi, batas keputusan negatif, tanggapan pengaduan, outbox retry, stale fallback, RT tanpa token, validasi pengaturan, dan audit.
+Cakupan (139 skenario): bootstrap admin, peran dan masking, registry (termasuk batas 10 RT dan validasi `EXPECTED_BACKEND_VERSION`), fan-out dashboard, cache, perhitungan kas dengan `saldoAwal`, keputusan surat, idempotensi, batas keputusan negatif, tanggapan pengaduan, outbox retry, stale fallback, RT tanpa token, validasi pengaturan, digest harian (penerima, pratinjau, kirim manual, trigger), dan audit.
 
 Uji regresi RT terkait:
 
@@ -225,7 +238,7 @@ node test_kas_feature.js
 ## 10. Rollback
 
 1. Nonaktifkan RT bermasalah dengan `rwRegistrySave` (`aktif:false`).
-2. Untuk menghentikan pengiriman otomatis, hapus trigger `processOutboxTrigger` dari editor.
+2. Untuk menghentikan pengiriman otomatis, hapus trigger `processOutboxTrigger` dan `digestTrigger` dari editor, atau set `DIGEST_ENABLED=false`.
 3. Kembalikan deployment orkestrator ke versi sebelumnya lewat **Manage deployments**.
 4. Data RT tidak terpengaruh karena orkestrator hanya menulis kolom `Rw *` dan `Lapor_Tindak_Lanjut`.
 5. Periksa `Outbox` yang masih `Pending`/`Retry` sebelum mengaktifkan kembali trigger.

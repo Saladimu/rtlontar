@@ -4,8 +4,8 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 1.8 |
-| Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions and administration); Phase 5 rollout in progress |
+| Version | 1.9 |
+| Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions, administration, daily digest, period filters and printable reports); Phase 5 rollout in progress |
 | Date | 30 October 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
 | Related documents | `readme.md`, `panduan.md`, `agents.md`, `MAINTENANCE.md`, `RW Apps Script/readme.md`, `rw/README.md` |
@@ -563,7 +563,7 @@ Resolved on 25 October 2026. These decisions are binding for Phase 1.
 | OD-06 | RW Admin sees full NIK, phone, and address. RW Viewer sees only the last 4 digits of NIK and phone, and the address is hidden. | Resolved |
 | OD-07 | Dashboard cache is configurable, default 10 minutes. Any detail view always fetches live data. | Resolved |
 | OD-08 | Historical letters are marked `Tidak Perlu` during migration and excluded from the approval queue. | Resolved |
-| OD-09 | Daily digest is optional and parameterized by enablement, send hour, recipients, and timezone. Default is disabled. | Resolved |
+| OD-09 | Daily digest is optional and parameterized by enablement, send hour, recipients, and timezone. Default is disabled. Implemented as `DIGEST_ENABLED`/`DIGEST_HOUR`/`DIGEST_RECIPIENTS` (timezone fixed to `Asia/Jakarta`), an hourly `digestTrigger` that sends at most once per day, and RW Admin `rwDigestPreview`/`rwDigestSend` actions. The digest is built from the latest `KPI_Snapshot` rows so it never fans out to RTs. | Resolved |
 | OD-10 | Retain login and audit records for 12 months. Retain RW decision/response logs and KPI snapshots for 24 months. Both values are configurable from 12 to 36 months. RT operational data remains RT-owned. | Resolved |
 | OD-11 | RW-level kas ledger is out of scope for this phase. | Resolved |
 | OD-12 | New complaints start as `Tidak Perlu`; RT admin routes to RW by setting `Perlu Tindak Lanjut`. | Resolved |
@@ -585,7 +585,8 @@ The names below match the keys stored in the RW `Settings` sheet and implemented
 | `RW_MASK_VIEWER` | `true` | RW Viewer sees NIK/phone last 4 digits; address is hidden |
 | `EXPECTED_BACKEND_VERSION` | `publik-v39-2026-10-28` | RT backend version every RT should run; a different `Backend Version` is flagged as a mismatch |
 | `DIGEST_ENABLED` | `false` | Enable during pilot when needed |
-| `DIGEST_HOUR` | `7` | 0-23 in `Asia/Jakarta` |
+| `DIGEST_HOUR` | `7` | 0-23 in `Asia/Jakarta`; the hourly trigger only sends once per day |
+| `DIGEST_RECIPIENTS` | empty | Comma-separated email list; when empty the digest goes to every active RW Admin |
 
 Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_RW_MAX_REVISI` in the RT backend and the portal drawer), the default response visibility of `Publik` per response, the `Asia/Jakarta` timezone, and the maximum of **10 registered RTs** (`MAX_RTS` in the orchestrator registry). Changing any of these requires a code change and a release.
 
@@ -674,3 +675,4 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 | 1.4 | 28 October 2026 | Implementation | RT complaint panel now shows **Riwayat tanggapan RW**: `action=read` returns `Lapor_Tindak_Lanjut`, and the RT complaint modal renders each RW response with time, actor, role, status, and a Publik/Internal badge (new complaints and complaints without responses hide the section). Backend `publik-v39-2026-10-28`; index `APP_BUILD` `2026-10-28-02`; SW cache `sapa-rt-static-v112`. Rollout is now codified as a per-RT checklist in `MAINTENANCE.md` section 6.4 (phases A-H: preconditions, backend, frontend/hostname, orchestrator registration, smoke test, access review, pilot gate, rollback) with sign-off, replacing the scattered Phase 5 notes |
 | 1.7 | 29 October 2026 | Implementation | RW 06 portal branding and detail polish, portal-only (no RT backend or orchestrator redeploy): the audit log names its people column **User**, the RT registry list shows the address under the RT id and keeps the endpoint only inside the Ubah dialog, detail drawers group each block in a tinted panel (letters: Pemohon, Pengajuan, Keputusan RW; complaints: Pengaduan, Status, Riwayat tindak lanjut RW), and the complaint drawer now previews `Foto / Bukti Pendukung` with a Drive thumbnail fallback chain plus a `Buka foto asli` link (portal CSP `img-src` widened to `https:`). The portal gains a favicon, an apple-touch-icon, a web app manifest, and the SAPA logo replaces the icon square on the boot screen and sidebar. Portal build `2026-10-29-03` |
 | 1.8 | 30 October 2026 | Implementation | Guardrails and documentation sync. The orchestrator now enforces the 10-RT ceiling in `saveRegistry` (an 11th RT is rejected with `max_rts`), adds an `EXPECTED_BACKEND_VERSION` setting, and returns `expectedVersion` plus a `versionMismatch` flag per RT so the portal registry marks RTs running a different backend version with **Versi beda**. Section 18.1 now lists the real `Settings` keys and defaults (`CACHE_TTL_SECONDS` 300, `DIGEST_HOUR` 7, `AUDIT_`/`DECISION_`/`SNAPSHOT_RETENTION_MONTHS`) and records the hardcoded 3-return limit and 10-RT cap. Orchestrator `rw-orchestrator-v1-2026-10-29-03`; portal build `2026-10-30-01` |
+| 1.9 | 30 October 2026 | Implementation | Daily digest and printable reports. `rwDigestPreview`/`rwDigestSend` (RW Admin) plus an hourly `digestTrigger` send a KPI summary built from the latest `KPI_Snapshot` rows, gated by `DIGEST_ENABLED`, `DIGEST_HOUR`, `DIGEST_RECIPIENTS`, and a once-per-day `LAST_DIGEST_STAMP`; manual sends are audited. The portal **Pengaturan** page gains a digest panel (preview + send with in-app confirmation). Kas, letters, and complaints pages gain a period filter (`Dari`/`Sampai`, reset, `yyyy-mm-dd` comparison in `Asia/Jakarta`) and A4 print reports with header, period, totals, and — for kas — opening/closing balances. Orchestrator `rw-orchestrator-v1-2026-10-30-04`; portal build `2026-10-30-02` |

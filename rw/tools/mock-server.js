@@ -7,7 +7,7 @@ const { HEADERS, RTS, USERS, SETTINGS, OUTBOX, AUDIT } = require('./mock-data');
 
 const ROOT = path.resolve(__dirname, '..');
 const PORT = Number(process.env.PORT || 8001);
-const VERSION = 'rw-orchestrator-v1-2026-10-29-03';
+const VERSION = 'rw-orchestrator-v1-2026-10-30-04';
 const MAX_RTS = 10;
 
 const MIME = {
@@ -332,7 +332,40 @@ function validateSetting(key, value) {
         if (!v) return 'EXPECTED_BACKEND_VERSION wajib diisi (mis. publik-v39-2026-10-28).';
         if (v.length > 80) return 'EXPECTED_BACKEND_VERSION maksimal 80 karakter.';
     }
+    if (key === 'DIGEST_RECIPIENTS') {
+        const raw = String(value === undefined || value === null ? '' : value).trim();
+        if (raw) {
+            const bad = raw.split(',').map((x) => x.trim()).find((x) => !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(x));
+            if (bad) return 'DIGEST_RECIPIENTS harus daftar email dipisah koma: ' + bad;
+        }
+    }
     return '';
+}
+
+function digestRecipients() {
+    const row = settingState.find((s) => s.key === 'DIGEST_RECIPIENTS');
+    const raw = row ? String(row.value || '').trim() : '';
+    if (raw) return raw.split(',').map((x) => x.trim()).filter(Boolean);
+    return USERS.filter((u) => u.aktif !== false && u.peran === 'RW Admin').map((u) => u.email);
+}
+
+function digestPreview() {
+    const dash = dashboardAction();
+    const stamp = new Date().toISOString();
+    const lines = ['Ringkasan Harian RW 06', 'Waktu: ' + stamp, ''];
+    lines.push('Total ' + dash.rts.length + ' RT: ' + dash.totals.warga + ' warga, saldo kas Rp ' + dash.totals.kasSaldo + '.');
+    return {
+        result: 'success',
+        version: VERSION,
+        subject: 'Ringkasan Harian RW 06 - ' + stamp.slice(0, 10),
+        text: lines.join('\n'),
+        html: '<div><h2>Ringkasan Harian RW 06</h2><p>' + dash.rts.length + ' RT</p></div>',
+        totals: dash.totals,
+        stale: dash.rts.filter((r) => r.stale).length,
+        generatedAt: stamp,
+        recipients: digestRecipients(),
+        lastRun: ''
+    };
 }
 
 function pushAudit(user, aksi, rtId, target, hasil, detail) {
@@ -467,6 +500,16 @@ function handleApi(body, headers) {
     }
     if (action === 'rwSettingsGet') {
         return { status: 200, data: { result: 'success', version: VERSION, settings: settings() } };
+    }
+    if (action === 'rwDigestPreview') {
+        if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
+        return { status: 200, data: digestPreview() };
+    }
+    if (action === 'rwDigestSend') {
+        if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };
+        const preview = digestPreview();
+        pushAudit(user, 'digest_send_manual', '', preview.recipients.join(','), 'ok', preview.subject);
+        return { status: 200, data: { result: 'success', version: VERSION, subject: preview.subject, recipients: preview.recipients, totals: preview.totals, stale: preview.stale, generatedAt: preview.generatedAt } };
     }
     if (action === 'rwUsersList') {
         if (user.peran !== 'RW Admin') return { status: 200, data: { result: 'error', code: 'forbidden', message: 'Hanya RW Admin.' } };

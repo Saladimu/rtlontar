@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-30-01';
+    var BUILD = '2026-10-30-02';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -25,9 +25,9 @@
         dashboard: null,
         filters: {
             warga: { rt: '', q: '' },
-            kas: { rt: '' },
-            surat: { rt: '', status: '' },
-            lapor: { rt: '', status: '' }
+            kas: { rt: '', from: '', to: '' },
+            surat: { rt: '', status: '', from: '', to: '' },
+            lapor: { rt: '', status: '', from: '', to: '' }
         },
         busy: false,
         actionBusy: false,
@@ -542,6 +542,125 @@
         });
     }
 
+    // ================= FILTER PERIODE & CETAK =================
+    // Tanggal RT tersimpan ISO (yyyy-mm-dd) atau waktu lokal/UTC. Semua
+    // perbandingan periode memakai komponen yyyy-mm-dd agar batas hari tidak
+    // bergeser karena zona waktu.
+    function toIsoDay(value) {
+        if (isBlank(value)) return '';
+        var s = String(value);
+        var j = jakartaParts(s);
+        if (j) return j.year + '-' + j.month + '-' + j.day;
+        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) return m[1] + '-' + m[2] + '-' + m[3];
+        var dmy = s.match(/^(\d{2})-(\d{2})-(\d{4})/);
+        if (dmy) return dmy[3] + '-' + dmy[2] + '-' + dmy[1];
+        var d = new Date(s);
+        if (!isNaN(d.getTime())) {
+            var p = jakartaParts(d.toISOString());
+            if (p) return p.year + '-' + p.month + '-' + p.day;
+        }
+        return '';
+    }
+
+    function periodMatch(value, from, to) {
+        var day = toIsoDay(value);
+        if (!day) return !from && !to;
+        if (from && day < from) return false;
+        if (to && day > to) return false;
+        return true;
+    }
+
+    function periodActive(f) {
+        return !!(f && (f.from || f.to));
+    }
+
+    function periodLabel(f) {
+        if (!periodActive(f)) return 'Semua periode';
+        var from = f.from ? fmtDay(f.from) : 'awal';
+        var to = f.to ? fmtDay(f.to) : 'sekarang';
+        return 'Periode ' + from + ' s.d. ' + to;
+    }
+
+    function periodControls(prefix, f) {
+        return '<div class="field"><label for="' + esc(prefix) + '-from">Dari tanggal</label>' +
+                '<input type="date" class="control" id="' + esc(prefix) + '-from" value="' + esc(f.from || '') + '"></div>' +
+            '<div class="field"><label for="' + esc(prefix) + '-to">Sampai tanggal</label>' +
+                '<input type="date" class="control" id="' + esc(prefix) + '-to" value="' + esc(f.to || '') + '"></div>' +
+            (periodActive(f)
+                ? '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="' + esc(prefix) + '-clear"><i class="fa-solid fa-filter-circle-xmark"></i> Reset periode</button></div>'
+                : '');
+    }
+
+    function bindPeriodControls(prefix, f, rerender) {
+        var from = $(prefix + '-from');
+        var to = $(prefix + '-to');
+        function apply() {
+            f.from = from ? from.value : '';
+            f.to = to ? to.value : '';
+            state.pages[state.page] = 1;
+            rerender();
+        }
+        if (from) from.addEventListener('change', apply);
+        if (to) to.addEventListener('change', apply);
+        var clear = $(prefix + '-clear');
+        if (clear) clear.addEventListener('click', function () { f.from = ''; f.to = ''; state.pages[state.page] = 1; rerender(); });
+    }
+
+    function printHeader(title, subtitle, meta) {
+        return '<div class="head"><h1>' + esc(title) + '</h1>' +
+            (subtitle ? '<p class="sub">' + esc(subtitle) + '</p>' : '') +
+            '<p class="sub">RW 06 · Portal Pengurus</p></div>' +
+            '<div class="meta"><span>' + esc(meta || '') + '</span><span>Dicetak: ' + esc(fmtStamp(new Date().toISOString())) + '</span></div>';
+    }
+
+    function printStyles() {
+        return '<style>' +
+            '*{box-sizing:border-box}' +
+            'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:12mm;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+            '.head{text-align:center;border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:14px}' +
+            '.head h1{margin:0;font-size:18px}.head .sub{margin:2px 0;font-size:12px;color:#334155}' +
+            '.meta{display:flex;justify-content:space-between;margin:8px 0 12px;font-size:12px;color:#334155}' +
+            '.cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}' +
+            '.card{flex:1 1 22%;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px}' +
+            '.card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}' +
+            '.card .val{font-size:14px;font-weight:700;margin-top:2px}' +
+            'table{width:100%;border-collapse:collapse}' +
+            'th,td{border:1px solid #cbd5e1;padding:5px 7px;vertical-align:top}' +
+            'th{background:#f1f5f9;text-align:left;font-size:11px}' +
+            'td.r,th.r{text-align:right}td.c,th.c{text-align:center}td.nw,th.nw{white-space:nowrap}' +
+            'tfoot td{font-weight:700;background:#f8fafc}' +
+            '.foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}' +
+            '@page{size:A4 portrait;margin:0}' +
+            '</style>';
+    }
+
+    // Jendela cetak dibuka dari klik pengguna dan langsung memanggil print()
+    // setelah dokumen siap sehingga tidak perlu izin script tambahan.
+    function openPrintWindow(title, bodyHtml) {
+        var html = '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
+            printStyles() + '</head><body>' + bodyHtml + '</body></html>';
+        var w = window.open('', '_blank');
+        if (!w) { toast('Izinkan pop-up untuk mencetak laporan.', 'error'); return false; }
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        var doPrint = function () { try { w.print(); } catch (e) { /* diabaikan */ } };
+        if (w.document.readyState === 'complete') setTimeout(doPrint, 200);
+        else w.onload = function () { setTimeout(doPrint, 200); };
+        return true;
+    }
+
+    function reportFooter(count, extra) {
+        return '<div class="foot"><span>Jumlah baris: ' + fmtInt(count) + (extra ? ' · ' + esc(extra) : '') + '</span><span>RW 06 Portal Pengurus</span></div>';
+    }
+
+    function isKasOut(jenis) {
+        var s = String(jenis || '').toLowerCase();
+        return s === 'pengeluaran' || s === 'reversal keluar';
+    }
+
     // Potong daftar panjang menjadi 10 baris per layar dan sediakan navigasi
     // halaman. Data tetap diambil sekali agar filter/pencarian tidak memicu
     // permintaan baru ke orkestrator.
@@ -772,28 +891,48 @@
             var payload = { rtId: f.rt, sheet: 'Iuran_Kas', limit: 2000, offset: 0, includeArchived: true };
             if (!apiPeek('rwList', payload)) pageLoading('Memuat data kas...');
             return api('rwList', payload).then(function (res) {
-                var rows = rowsToObjects(res.headers, res.rows);
-                var masuk = 0, keluar = 0, aktif = 0;
-                rows.forEach(function (r) {
-                    if (isArchived(r['Diarsipkan'])) return;
-                    aktif++;
-                    var jenis = String(r['Jenis Transaksi'] || '').toLowerCase();
-                    var nominal = Number(r['Jumlah (Rp)']) || 0;
-                    if (jenis === 'pengeluaran' || jenis === 'reversal keluar') keluar += nominal;
-                    else masuk += nominal;
-                });
-                var saldo = (Number(res.saldoAwal) || 0) + masuk - keluar;
-                rows.sort(function (a, b) {
+                var allRows = rowsToObjects(res.headers, res.rows);
+                var saldoAwal = Number(res.saldoAwal) || 0;
+                allRows.sort(function (a, b) {
                     var da = String(a['Tanggal'] || a['Timestamp'] || '');
                     var db = String(b['Tanggal'] || b['Timestamp'] || '');
                     return db.localeCompare(da);
                 });
+                var hasPeriod = periodActive(f);
+                var rows = allRows.filter(function (r) {
+                    return !hasPeriod || periodMatch(r['Tanggal'] || r['Timestamp'], f.from, f.to);
+                });
+                // Saldo saat ini selalu dari seluruh transaksi aktif; kartu
+                // periode menghitung arus pada rentang yang dipilih saja.
+                var totalMasuk = 0, totalKeluar = 0, aktif = 0;
+                var periodMasuk = 0, periodKeluar = 0, opening = saldoAwal, periodCount = 0;
+                allRows.forEach(function (r) {
+                    if (isArchived(r['Diarsipkan'])) return;
+                    aktif++;
+                    var nominal = Number(r['Jumlah (Rp)']) || 0;
+                    var out = isKasOut(r['Jenis Transaksi']);
+                    if (out) totalKeluar += nominal; else totalMasuk += nominal;
+                    var day = toIsoDay(r['Tanggal'] || r['Timestamp']);
+                    if (hasPeriod) {
+                        if (f.from && day && day < f.from) {
+                            opening += out ? -nominal : nominal;
+                        } else if (periodMatch(r['Tanggal'] || r['Timestamp'], f.from, f.to)) {
+                            periodCount++;
+                            if (out) periodKeluar += nominal; else periodMasuk += nominal;
+                        }
+                    } else {
+                        periodCount++;
+                        if (out) periodKeluar += nominal; else periodMasuk += nominal;
+                    }
+                });
+                var saldo = saldoAwal + totalMasuk - totalKeluar;
+                var closing = opening + periodMasuk - periodKeluar;
                 var sliced = pageSlice(rows, 'kas');
                 var body = sliced.rows.map(function (r) {
                     var archived = isArchived(r['Diarsipkan']);
                     var reversal = !isBlank(r['Reversal Dari']);
                     var jenis = String(r['Jenis Transaksi'] || '');
-                    var isOut = jenis.toLowerCase() === 'pengeluaran' || jenis.toLowerCase() === 'reversal keluar';
+                    var isOut = isKasOut(jenis);
                     return '<tr' + (archived ? ' style="opacity:.55"' : '') + '>' +
                         '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Tanggal'] || r['Timestamp']) + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Nama Warga'] || '-') + '</span><span class="cell-sub">Rumah ' + esc(r['No Rumah'] || '-') + '</span></td>' +
@@ -802,24 +941,135 @@
                         '<td>' + esc(r['Keterangan'] || '-') + '</td>' +
                         '</tr>';
                 }).join('');
+                var periodNote = hasPeriod ? periodLabel(f) : 'seluruh transaksi aktif';
                 $('page').innerHTML =
-                    '<div class="toolbar"><div class="field"><label>RT</label><select class="control" id="kas-rt">' + rtOptions(f.rt) + '</select></div></div>' +
+                    '<div class="toolbar">' +
+                        '<div class="field"><label>RT</label><select class="control" id="kas-rt">' + rtOptions(f.rt) + '</select></div>' +
+                        periodControls('kas', f) +
+                        '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="kas-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
+                    '</div>' +
                     '<div class="grid kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">' +
                         '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo saat ini</span><span class="kpi-icon"><i class="fa-solid fa-wallet"></i></span></div><p class="kpi-value money">' + fmtMoney(saldo) + '</p><p class="kpi-note">' + fmtInt(aktif) + ' transaksi aktif</p></article>' +
-                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo awal</span></div><p class="kpi-value money">' + fmtMoney(res.saldoAwal) + '</p><p class="kpi-note">dasar perhitungan</p></article>' +
-                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pemasukan</span></div><p class="kpi-value money" style="color:#047857">' + fmtMoney(masuk) + '</p><p class="kpi-note">termasuk reversal masuk</p></article>' +
-                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pengeluaran</span></div><p class="kpi-value money" style="color:#be123c">' + fmtMoney(keluar) + '</p><p class="kpi-note">termasuk reversal keluar</p></article>' +
+                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo awal periode</span></div><p class="kpi-value money">' + fmtMoney(opening) + '</p><p class="kpi-note">' + esc(periodNote) + '</p></article>' +
+                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pemasukan</span></div><p class="kpi-value money" style="color:#047857">' + fmtMoney(periodMasuk) + '</p><p class="kpi-note">' + fmtInt(periodCount) + ' transaksi pada periode</p></article>' +
+                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pengeluaran</span></div><p class="kpi-value money" style="color:#be123c">' + fmtMoney(periodKeluar) + '</p><p class="kpi-note">Saldo akhir periode ' + fmtMoney(closing) + '</p></article>' +
                     '</div><div style="height:16px"></div>' + listNotice(res) +
-                    '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · arsip tidak dihitung</p></div></div>' +
+                    '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · ' + esc(periodLabel(f)) + ' · arsip tidak dihitung</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal</th><th>Warga</th><th>Jenis</th><th class="num">Nominal</th><th>Keterangan</th></tr></thead>' +
-                    '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada transaksi.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                    '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada transaksi pada periode ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('kas', sliced) + '</section>';
                 $('kas-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.kas = 1; renderKas(); });
+                bindPeriodControls('kas', f, renderKas);
                 bindPager('kas', renderKas);
+                $('kas-print').addEventListener('click', function () {
+                    printKasReport(rows, { rt: f.rt, period: periodLabel(f), opening: opening, masuk: periodMasuk, keluar: periodKeluar, closing: closing });
+                });
                 setSync('Data ' + f.rt, 'ok');
             });
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    function printKasReport(rows, meta) {
+        var totalMasuk = 0, totalKeluar = 0;
+        rows.forEach(function (r) {
+            if (isArchived(r['Diarsipkan'])) return;
+            var nominal = Number(r['Jumlah (Rp)']) || 0;
+            if (isKasOut(r['Jenis Transaksi'])) totalKeluar += nominal; else totalMasuk += nominal;
+        });
+        var tableRows = rows.map(function (r, idx) {
+            var isOut = isKasOut(r['Jenis Transaksi']);
+            var archived = isArchived(r['Diarsipkan']);
+            return '<tr>' +
+                '<td class="c">' + (idx + 1) + '</td>' +
+                '<td class="nw">' + esc(fmtDay(r['Tanggal'] || r['Timestamp'])) + '</td>' +
+                '<td>' + esc(r['Nama Warga'] || '-') + (archived ? ' <span style="font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px">Arsip</span>' : '') + '</td>' +
+                '<td class="c">' + esc(r['No Rumah'] || '-') + '</td>' +
+                '<td class="c">' + esc(r['Jenis Transaksi'] || '-') + '</td>' +
+                '<td class="r">' + esc(fmtMoney(r['Jumlah (Rp)'])) + '</td>' +
+                '<td>' + esc(r['Keterangan'] || '-') + '</td>' +
+                '</tr>';
+        }).join('');
+        var body = printHeader('Laporan Iuran & Kas', rtLabel(meta.rt), meta.period) +
+            '<div class="cards">' +
+                '<div class="card"><div class="lbl">Saldo awal periode</div><div class="val">' + esc(fmtMoney(meta.opening)) + '</div></div>' +
+                '<div class="card"><div class="lbl">Pemasukan</div><div class="val">' + esc(fmtMoney(meta.masuk)) + '</div></div>' +
+                '<div class="card"><div class="lbl">Pengeluaran</div><div class="val">' + esc(fmtMoney(meta.keluar)) + '</div></div>' +
+                '<div class="card"><div class="lbl">Saldo akhir periode</div><div class="val">' + esc(fmtMoney(meta.closing)) + '</div></div>' +
+            '</div>' +
+            '<table><thead><tr>' +
+                '<th class="c" style="width:32px">No</th><th class="nw" style="width:88px">Tanggal</th><th>Nama warga</th>' +
+                '<th class="c" style="width:60px">Rumah</th><th class="c" style="width:96px">Jenis</th>' +
+                '<th class="r" style="width:100px">Jumlah</th><th>Catatan</th>' +
+            '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="7">Tidak ada transaksi pada periode ini.</td></tr>') + '</tbody>' +
+            '<tfoot>' +
+                '<tr><td colspan="5" class="r">Total pemasukan</td><td class="r">' + esc(fmtMoney(totalMasuk)) + '</td><td></td></tr>' +
+                '<tr><td colspan="5" class="r">Total pengeluaran</td><td class="r">' + esc(fmtMoney(totalKeluar)) + '</td><td></td></tr>' +
+                '<tr><td colspan="5" class="r">Saldo akhir periode</td><td class="r">' + esc(fmtMoney(meta.closing)) + '</td><td></td></tr>' +
+            '</tfoot></table>' +
+            reportFooter(rows.length, meta.period);
+        openPrintWindow('Laporan Iuran & Kas - ' + rtLabel(meta.rt), body);
+    }
+
+    function printSuratReport(rows, meta) {
+        var counts = {};
+        rows.forEach(function (r) {
+            var s = String(r['Rw Status'] || 'Tidak Perlu');
+            counts[s] = (counts[s] || 0) + 1;
+        });
+        var cards = ['Menunggu', 'Disetujui', 'Dikembalikan', 'Ditolak', 'Tidak Perlu'].map(function (k) {
+            return '<div class="card"><div class="lbl">' + esc(k) + '</div><div class="val">' + fmtInt(counts[k] || 0) + '</div></div>';
+        }).join('');
+        var tableRows = rows.map(function (r, idx) {
+            return '<tr>' +
+                '<td class="c">' + (idx + 1) + '</td>' +
+                '<td class="nw">' + esc(fmtDay(r['Timestamp'])) + '</td>' +
+                '<td>' + esc(r['Nama Lengkap Pemohon'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['NIK'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Jenis Surat'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
+                '<td class="c">' + esc(r['Status Pengurusan'] || '-') + '</td>' +
+                '<td class="c">' + esc(r['Rw Status'] || '-') + '</td>' +
+                '<td class="c">' + esc(fmtInt(r['Rw Revisi'] || 0)) + 'x</td>' +
+                '</tr>';
+        }).join('');
+        var body = printHeader('Laporan Pengajuan Surat', rtLabel(meta.rt), meta.period + ' · ' + 'Status RW: ' + meta.status) +
+            '<div class="cards">' + cards + '</div>' +
+            '<table><thead><tr>' +
+                '<th class="c" style="width:30px">No</th><th class="nw" style="width:80px">Tanggal</th>' +
+                '<th>Pemohon</th><th>Jenis surat</th>' +
+                '<th class="c" style="width:78px">Status RT</th><th class="c" style="width:88px">Status RW</th><th class="c" style="width:48px">Revisi</th>' +
+            '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="7">Tidak ada pengajuan pada filter ini.</td></tr>') + '</tbody></table>' +
+            reportFooter(rows.length, meta.period);
+        openPrintWindow('Laporan Pengajuan Surat - ' + rtLabel(meta.rt), body);
+    }
+
+    function printLaporReport(rows, meta) {
+        var counts = {};
+        rows.forEach(function (r) {
+            var s = String(r['Rw Status'] || 'Tidak Perlu');
+            counts[s] = (counts[s] || 0) + 1;
+        });
+        var cards = ['Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW', 'Tidak Perlu'].map(function (k) {
+            return '<div class="card"><div class="lbl">' + esc(k) + '</div><div class="val">' + fmtInt(counts[k] || 0) + '</div></div>';
+        }).join('');
+        var tableRows = rows.map(function (r, idx) {
+            return '<tr>' +
+                '<td class="c">' + (idx + 1) + '</td>' +
+                '<td class="nw">' + esc(fmtDay(r['Timestamp'])) + '<br><span style="color:#64748b;font-size:10px">' + esc(r['No. Pengaduan'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Nama Warga'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Alamat / No. Rumah'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Judul Pengaduan'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Jenis Pengaduan'] || '-') + '</span></td>' +
+                '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
+                '<td class="c">' + esc(r['Rw Status'] || '-') + '</td>' +
+                '</tr>';
+        }).join('');
+        var body = printHeader('Laporan Pengaduan Warga', rtLabel(meta.rt), meta.period + ' · ' + 'Status RW: ' + meta.status) +
+            '<div class="cards">' + cards + '</div>' +
+            '<table><thead><tr>' +
+                '<th class="c" style="width:30px">No</th><th class="nw" style="width:96px">Tanggal / nomor</th>' +
+                '<th>Warga</th><th>Pengaduan</th>' +
+                '<th class="c" style="width:72px">Status RT</th><th class="c" style="width:92px">Status RW</th>' +
+            '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="6">Tidak ada pengaduan pada filter ini.</td></tr>') + '</tbody></table>' +
+            reportFooter(rows.length, meta.period);
+        openPrintWindow('Laporan Pengaduan - ' + rtLabel(meta.rt), body);
     }
 
     function renderSurat() {
@@ -834,7 +1084,8 @@
             if (f.status) payload.status = f.status;
             if (!apiPeek('rwList', payload)) pageLoading('Memuat pengajuan surat...');
             return api('rwList', payload).then(function (res) {
-                var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
+                var allRows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
+                var rows = allRows.filter(function (r) { return periodMatch(r['Timestamp'], f.from, f.to); });
                 var sliced = pageSlice(rows, 'surat');
                 var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-surat="' + esc(r['ID']) + '">' +
@@ -850,15 +1101,21 @@
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="surat-rt">' + rtOptions(f.rt) + '</select></div>' +
                         '<div class="field"><label>Status RW</label><select class="control" id="surat-status">' + statusOptions(f.status, ['', 'Menunggu', 'Disetujui', 'Dikembalikan', 'Ditolak', 'Tidak Perlu'], 'Semua status') + '</select></div>' +
+                        periodControls('surat', f) +
+                        '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="surat-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
                     '</div>' + listNotice(res) +
-                    '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(res.total) + ' pengajuan · klik baris untuk detail</p></div></div>' +
+                    '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(rows.length) + ' pengajuan · ' + esc(periodLabel(f)) + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal</th><th><span class="th-stack">Pemohon</span><span class="th-sub">NIK</span></th><th><span class="th-stack">Jenis surat</span><span class="th-sub">No. Surat</span></th><th>Status RT</th><th>Status RW</th><th>Revisi</th></tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('surat', sliced) + '</section>';
                 $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.surat = 1; renderSurat(); });
                 $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.surat = 1; renderSurat(); });
+                bindPeriodControls('surat', f, renderSurat);
                 bindPager('surat', renderSurat);
+                $('surat-print').addEventListener('click', function () {
+                    printSuratReport(rows, { rt: f.rt, period: periodLabel(f), status: f.status || 'Semua status' });
+                });
                 document.querySelectorAll('[data-surat]').forEach(function (tr) {
                     tr.addEventListener('click', function () {
                         var id = tr.getAttribute('data-surat');
@@ -883,7 +1140,8 @@
             if (f.status) payload.status = f.status;
             if (!apiPeek('rwList', payload)) pageLoading('Memuat pengaduan...');
             return api('rwList', payload).then(function (res) {
-                var rows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
+                var allRows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
+                var rows = allRows.filter(function (r) { return periodMatch(r['Timestamp'], f.from, f.to); });
                 var sliced = pageSlice(rows, 'lapor');
                 var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-lapor="' + esc(r['ID']) + '">' +
@@ -899,15 +1157,21 @@
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="lapor-rt">' + rtOptions(f.rt) + '</select></div>' +
                         '<div class="field"><label>Status RW</label><select class="control" id="lapor-status">' + statusOptions(f.status, ['', 'Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW', 'Tidak Perlu'], 'Semua status') + '</select></div>' +
+                        periodControls('lapor', f) +
+                        '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="lapor-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
                     '</div>' + listNotice(res) +
-                    '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(res.total) + ' pengaduan · klik baris untuk detail</p></div></div>' +
+                    '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(rows.length) + ' pengaduan · ' + esc(periodLabel(f)) + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal / nomor</th><th>Warga</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th><th>Diperbarui</th></tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-comment-dots"></i><p>Tidak ada pengaduan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('lapor', sliced) + '</section>';
                 $('lapor-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.lapor = 1; renderLapor(); });
                 $('lapor-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.lapor = 1; renderLapor(); });
+                bindPeriodControls('lapor', f, renderLapor);
                 bindPager('lapor', renderLapor);
+                $('lapor-print').addEventListener('click', function () {
+                    printLaporReport(rows, { rt: f.rt, period: periodLabel(f), status: f.status || 'Semua status' });
+                });
                 document.querySelectorAll('[data-lapor]').forEach(function (tr) {
                     tr.addEventListener('click', function () {
                         var id = tr.getAttribute('data-lapor');
@@ -1555,6 +1819,74 @@
         }).catch(function (err) { toast(err.message || 'Gagal menyimpan RT.', 'error'); });
     }
 
+    function digestPanel() {
+        return '<section class="card" style="margin-bottom:16px"><div class="card-head"><div><h2>Digest harian</h2>' +
+            '<p>Ringkasan KPI seluruh RT dikirim ke email RW Admin pada jam yang diatur.</p></div>' +
+            '<div class="spacer"></div>' +
+            '<button type="button" class="btn btn-ghost" id="digest-preview"><i class="fa-solid fa-eye"></i> Pratinjau</button> ' +
+            '<button type="button" class="btn btn-primary" id="digest-send"><i class="fa-solid fa-paper-plane"></i> Kirim sekarang</button>' +
+            '</div><div class="card-body" id="digest-body"><p class="form-hint">Aktifkan <strong>DIGEST_ENABLED</strong>, atur <strong>DIGEST_HOUR</strong>, dan isi <strong>DIGEST_RECIPIENTS</strong> (kosong berarti semua RW Admin aktif). Pratinjau tidak mengirim email.</p></div></section>';
+    }
+
+    function renderDigestResult(res) {
+        var body = $('digest-body');
+        if (!body) return;
+        var recipients = res.recipients || [];
+        var totals = res.totals || {};
+        body.innerHTML =
+            '<div class="notice notice-info" style="margin-top:0"><i class="fa-solid fa-envelope-circle-check"></i><div>' +
+                '<strong>' + esc(res.subject || 'Ringkasan Harian RW 06') + '</strong><br>' +
+                'Penerima: ' + (recipients.length ? esc(recipients.join(', ')) : '<em>belum ada</em>') +
+                (res.lastRun ? ' · terakhir terkirim ' + esc(res.lastRun) : '') +
+            '</div></div>' +
+            '<div class="grid kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">' +
+                '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Warga</span></div><p class="kpi-value">' + fmtInt(totals.warga) + '</p></article>' +
+                '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo kas</span></div><p class="kpi-value money">' + fmtMoney(totals.kasSaldo) + '</p></article>' +
+                '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Surat menunggu</span></div><p class="kpi-value">' + fmtInt(totals.suratMenunggu) + '</p></article>' +
+                '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Eskalasi</span></div><p class="kpi-value">' + fmtInt(totals.laporEskalasi) + '</p></article>' +
+            '</div>' +
+            '<pre class="digest-preview">' + esc(res.text || '') + '</pre>';
+    }
+
+    function bindDigest() {
+        var preview = $('digest-preview');
+        if (preview) {
+            preview.addEventListener('click', function () {
+                preview.disabled = true;
+                api('rwDigestPreview', null, { fresh: true }).then(function (res) {
+                    renderDigestResult(res);
+                    setSync('Digest pratinjau', 'ok');
+                }).catch(function (err) {
+                    toast(err.message || 'Gagal membuat pratinjau digest.', 'error');
+                }).then(function () { preview.disabled = false; });
+            });
+        }
+        var send = $('digest-send');
+        if (send) {
+            send.addEventListener('click', function () {
+                openWarning({
+                    eyebrow: 'Konfirmasi kirim',
+                    title: 'Kirim digest harian sekarang?',
+                    message: 'Ringkasan KPI seluruh RT akan dikirim ke email penerima digest. Tindakan ini dicatat di audit.',
+                    tone: 'primary',
+                    icon: 'fa-paper-plane',
+                    confirmIcon: 'fa-paper-plane',
+                    confirmLabel: 'Ya, kirim',
+                    onConfirm: function () {
+                        send.disabled = true;
+                        api('rwDigestSend', null, { fresh: true }).then(function (res) {
+                            clearReadCache();
+                            renderDigestResult(res);
+                            toast('Digest terkirim ke ' + (res.recipients || []).length + ' penerima.', 'success');
+                        }).catch(function (err) {
+                            toast(err.message || 'Gagal mengirim digest.', 'error');
+                        }).then(function () { send.disabled = false; });
+                    }
+                });
+            });
+        }
+    }
+
     function renderPengaturan() {
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Pengaturan'); return; }
         if (!apiPeek('rwSettingsGet')) pageLoading('Memuat pengaturan...');
@@ -1575,12 +1907,14 @@
             }).join('');
             $('page').innerHTML =
                 '<div class="notice notice-info"><i class="fa-solid fa-circle-info"></i><div>Perubahan berlaku pada permintaan berikutnya. Retensi audit 12 bulan, keputusan/tanggapan dan snapshot 24 bulan.</div></div>' +
+                digestPanel() +
                 '<section class="card"><div class="card-head"><div><h2>Pengaturan sistem</h2><p>Tanpa deploy ulang portal.</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>Parameter</th><th>Nilai</th><th>Diperbarui</th><th>Aksi</th></tr></thead>' +
                 '<tbody>' + (body || '<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-sliders"></i><p>Belum ada pengaturan.</p></div></td></tr>') + '</tbody></table></div></div>' +
                 pagerHtml('pengaturan', sliced) + '</section>';
             bindPager('pengaturan', renderers.pengaturan);
+            bindDigest();
             document.querySelectorAll('[data-setting-save]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     var key = btn.getAttribute('data-setting-save');

@@ -82,7 +82,8 @@ const SETTINGS = [
     ['RW_MASK_VIEWER', 'true', 'Masking NIK/HP/alamat untuk RW Viewer.'],
     ['EXPECTED_BACKEND_VERSION', 'publik-v39-2026-10-28', 'Versi backend RT yang diharapkan; RT dengan versi lain ditandai mismatch.'],
     ['DIGEST_ENABLED', 'false', 'Aktifkan digest harian (Phase 4).'],
-    ['DIGEST_HOUR', '7', 'Jam kirim digest (0-23, Asia/Jakarta).']
+    ['DIGEST_HOUR', '7', 'Jam kirim digest (0-23, Asia/Jakarta).'],
+    ['DIGEST_RECIPIENTS', '', 'Penerima digest dipisah koma; kosong berarti semua RW Admin aktif.']
 ];
 
 const OUTBOX = [
