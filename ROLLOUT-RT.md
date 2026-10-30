@@ -4,7 +4,7 @@
 |---|---|
 | Document | Step-by-step rollout runbook for one new RT |
 | Applies to | RT019 and every later RT after RT017 (reference) and RT018 (pilot) |
-| Related documents | `MAINTENANCE.md` (sections 2, 5, 6, 6.4, 9, 10), `BRD-RW06.md`, `readme.md`, `Apps Script/readme.md`, `RW Apps Script/readme.md`, `rw/README.md` |
+| Related documents | `ROLLOUT-TICKET.md` (progress tracker per RT), `MAINTENANCE.md` (sections 2, 5, 6, 6.4, 9, 10), `BRD-RW06.md`, `readme.md`, `Apps Script/readme.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Owner | System owner, together with the RT admin |
 | Expected effort | 2-4 hours hands-on, then a 1-week pilot gate |
 
@@ -14,6 +14,9 @@ copy-pasteable steps. Replace `RTNNN` with the real RT ID (for example `RT019`) 
 
 Never reuse another RT's spreadsheet, Apps Script project, tokens, Drive folder, or
 Cloudflare Pages project. Never merge an RT branch back into `main`.
+
+Copy `ROLLOUT-TICKET.md` to `ROLLOUT-TICKET-RTNNN.md` for each RT and tick it as you go;
+its rollout tracker records which RTs have passed which phase.
 
 ---
 
