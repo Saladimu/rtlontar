@@ -10,6 +10,7 @@ tracks progress and sign-off.
 | Applies to | RT019 and every later RT after RT017 (reference) and RT018 (pilot) |
 | Related documents | `ROLLOUT-RT.md`, `MAINTENANCE.md` (2, 5, 6.4, 9, 10), `BRD-RW06.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Max RTs | 10 total, including RT017 and RT018 |
+| Current status | **Parked** on 31 October 2026 (BRD-RW06 15.1). Do not open a new ticket until rollout is resumed |
 
 Never reuse another RT's spreadsheet, Apps Script project, tokens, Drive folder, or
 Cloudflare Pages project. Never merge an RT branch back into `main`.
