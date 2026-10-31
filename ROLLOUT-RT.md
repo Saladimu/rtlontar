@@ -7,6 +7,7 @@
 | Related documents | `ROLLOUT-TICKET.md` (progress tracker per RT), `MAINTENANCE.md` (sections 2, 5, 6, 6.4, 9, 10), `BRD-RW06.md`, `readme.md`, `Apps Script/readme.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Owner | System owner, together with the RT admin |
 | Expected effort | 2-4 hours hands-on, then a 1-week pilot gate |
+| Current status | **Parked** on 31 October 2026 (BRD-RW06 15.1). RT017 and RT018 are live; RT019-RT026 are deferred. Use this runbook only when rollout is resumed |
 
 This runbook turns the phase checklist in `MAINTENANCE.md` section 6.4 into concrete,
 copy-pasteable steps. Replace `RTNNN` with the real RT ID (for example `RT019`) and

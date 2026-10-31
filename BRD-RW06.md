@@ -4,8 +4,8 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 2.1 |
-| Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions, administration, daily digest, period filters and printable reports); Phase 5 rollout in progress |
+| Version | 2.2 |
+| Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions, administration, daily digest, period filters and printable reports). Phase 5 rollout **parked** by decision on 31 October 2026: RT017 and RT018 only; RT019-RT026 deferred with the runbook ready |
 | Date | 31 October 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
 | Related documents | `readme.md`, `panduan.md`, `agents.md`, `MAINTENANCE.md`, `RW Apps Script/readme.md`, `rw/README.md` |
@@ -503,7 +503,7 @@ RT018 pilot prerequisites are confirmed: spreadsheet backup completed, all exist
 | 2 | RT UI for RW status, pending filter, and complaint timeline | 1-1.5 weeks — **implemented** (status/filter/panel + complaint response timeline in the RT modal) |
 | 3 | RW orchestrator: registry, fan-out, cache, outbox, audit | 2 weeks — **implemented** (`rw-orchestrator-v1-2026-10-29-03`) |
 | 4 | RW portal: dashboard, residents, kas, surat, complaints, administration | 2-3 weeks — **implemented** (`rw/`): read pages, decisions/responses, and admin pages |
-| 5 | Access control, pilot, rollout, documentation | 1-2 weeks |
+| 5 | Access control, pilot, rollout, documentation | 1-2 weeks — **parked** (see 15.1) |
 
 Indicative totals:
 
@@ -513,6 +513,22 @@ Indicative totals:
 Estimates exclude organizational waiting time, Google verification, and content preparation.
 
 The Phase 0 decision gate is closed. Phase 1 (schema migration, `RW_TOKEN`, RW endpoints, approval gate), the RT-side admin UI (RW badges, filters, decision panel, resubmit, complaint escalation), the Phase 3 orchestrator, and the Phase 4 portal are implemented. RT code is at `publik-v39-2026-10-28`; the orchestrator is `rw-orchestrator-v1-2026-10-29-03`. The portal lives in `rw/` with a Cloudflare Access gateway, read pages for dashboard, residents, kas, letters, and complaints, letter approval/return/rejection, complaint responses with public/internal visibility, and five RW Admin administration pages: users, RT registry, operational settings, outbox retry, and audit log. RW Viewer sees the administration group disabled, cannot open those pages, and receives masked sensitive data. Only 2 of the maximum 10 RTs are currently deployed.
+
+### 15.1 Phase 5 status: parked
+
+On 31 October 2026 the project owner parked Phase 5. The remaining rollout steps are not
+scheduled and no RT beyond RT018 is planned for now. This is a scheduling decision, not a
+scope change:
+
+- RT017 (reference) and RT018 (pilot) stay live; RT019-RT026 (8 of 10 slots) are deferred.
+- The rollout procedure is complete and unchanged: `ROLLOUT-RT.md` (step-by-step) and
+  `MAINTENANCE.md` section 6.4 (phases A-H with sign-off and rollback), tracked per RT in
+  `ROLLOUT-TICKET.md`.
+- Access control, the RW portal, the orchestrator, and all documentation for Phases 1-4 are
+  delivered; nothing in Phase 5 blocks daily use of the two live RTs.
+- Resuming Phase 5 means creating `ROLLOUT-TICKET-RTNNN.md` for the next RT and following
+  `ROLLOUT-RT.md`; no code change is required to start.
+- The `Approver` field remains `TBD` until the rollout is resumed.
 
 ---
 
@@ -678,3 +694,4 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 | 1.9 | 30 October 2026 | Implementation | Daily digest and printable reports. `rwDigestPreview`/`rwDigestSend` (RW Admin) plus an hourly `digestTrigger` send a KPI summary built from the latest `KPI_Snapshot` rows, gated by `DIGEST_ENABLED`, `DIGEST_HOUR`, `DIGEST_RECIPIENTS`, and a once-per-day `LAST_DIGEST_STAMP`; manual sends are audited. The portal **Pengaturan** page gains a digest panel (preview + send with in-app confirmation). Kas, letters, and complaints pages gain a period filter (`Dari`/`Sampai`, reset, `yyyy-mm-dd` comparison in `Asia/Jakarta`) and A4 print reports with header, period, totals, and — for kas — opening/closing balances. Orchestrator `rw-orchestrator-v1-2026-10-30-04`; portal build `2026-10-30-02` |
 | 2.0 | 30 October 2026 | Implementation | Digest email presentation and manual sharing. The digest email centers its title, timestamp, and Status column, and formats every amount with Indonesian thousand separators (`Rp 958.000`) in both the plain-text and HTML parts. `rwDigestSend` now returns the digest `text` so the portal can offer **Salin teks** after a manual send (and below the preview), making the same summary easy to paste into a WhatsApp group; clipboard copying uses the Clipboard API with an `execCommand` fallback. A gateway allowlist gap that rejected `rwDigestPreview`/`rwDigestSend` was also fixed, and `tools/check-deployment.js` now compares the gateway `ACTIONS` list against every orchestrator action. Orchestrator `rw-orchestrator-v1-2026-10-30-05`; gateway `rw-gateway-v1-2026-10-30`; portal build `2026-10-30-04` |
 | 2.1 | 31 October 2026 | Implementation | Portal print reports are now paginated per format. Kas (7 columns) prints on A4 landscape while letters and complaints print on A4 portrait. A shared `openPagedReport` measures rows off-screen and rebuilds each page so the report header and table header repeat on every page, while the period metadata and summary cards appear only on the first page. Every page footer carries the row count, period, and a **Hal X/Y** page counter, and the kas total rows stay at the end of the data. All table column headers print centered, including numeric columns. Portal build `2026-10-31-03` |
+| 2.2 | 31 October 2026 | Decision | Phase 5 rollout parked at the owner's request. RT017 and RT018 remain live as reference and pilot; RT019-RT026 are deferred indefinitely and no new RT is scheduled. The rollout runbook (`ROLLOUT-RT.md`), the phase A-H gates (`MAINTENANCE.md` 6.4), and the per-RT ticket (`ROLLOUT-TICKET.md`) stay ready, so resuming only requires a new ticket and no code change. Phases 1-4 are unchanged and remain fully deployed. Portal build `2026-10-31-03` |

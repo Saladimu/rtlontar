@@ -272,6 +272,9 @@ When an RW operator leaves, remove the Access policy entry, deactivate the orche
 
 ### 6.4 Rollout checklist for the next RT (RW 06)
 
+> **Parked on 31 October 2026** (BRD-RW06 15.1). RT017 and RT018 are live; RT019-RT026
+> are deferred. Keep this checklist dormant until rollout is resumed by the owner.
+
 For a step-by-step procedure with exact commands, configuration tables, and
 troubleshooting, follow `ROLLOUT-RT.md`. The checklist below is the condensed gate
 list; the runbook expands each phase into concrete actions.
