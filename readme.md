@@ -498,8 +498,10 @@ Berkas terkait: `fonts.css` (induk `@font-face` + kelas ikon FA yang dipakai) da
 ### Keandalan penyimpanan & koneksi
 
 - **Verifikasi tulis (anti "sukses palsu"):** saat memakai proxy same-origin (`/api`), hasil simpan **dibaca dari respons backend** dan baru dianggap sukses bila `{"result":"success"}`. Bila proxy gagal menjangkau Apps Script (`proxy_fetch_failed`/respons tak terduga), permintaan otomatis dicoba ke URL Apps Script langsung.
-- **Fallback antar sumber:** pembacaan & penulisan mencoba **proxy dulu**, lalu URL langsung bila proxy gagal/timeout (tiap sumber punya batas waktu sendiri, tidak lagi bergantung pada satu sumber).
+- **Fallback antar sumber:** pembacaan & penulisan mencoba **proxy dulu**, lalu URL langsung bila proxy gagal/timeout (tiap sumber punya batas waktu sendiri, tidak lagi bergantung pada satu sumber). Proxy `functions/api/[[path]].js` memberi tenggat 15 detik untuk pembacaan dan 25 detik untuk penulisan ke Apps Script.
+- **Batas waktu tulis:** setiap operasi tulis memakai `AbortController` (30 detik). Tanpa batas ini, koneksi yang menggantung akan mengunci penjagaan anti-klik-ganda dan menghentikan antrean outbox sampai halaman dimuat ulang.
 - **Anti klik ganda:** permintaan tulis identik yang masih diproses diabaikan agar tidak menghasilkan baris dobel.
+- **Retry hanya untuk aksi idempoten:** pengiriman ulang otomatis (dan pindah ke basis cadangan) hanya dilakukan bila aksi memakai `ID` stabil atau `ref` surat, karena backend mengabaikan `add` dengan ID yang sudah ada. Pengecualian: **`submitLapor`** selalu membuat baris baru tanpa kunci, jadi tidak pernah diulang agar pengaduan tidak berganda — pengguna diminta mencoba lagi secara sadar.
 - **Sadar offline:** indikator header berubah menjadi **Offline** saat perangkat tanpa internet; Portal Publik menampilkan banner offline. Begitu kembali online, data disinkronkan ulang otomatis.
 - **Tombol "Cek Koneksi"** melakukan pemeriksaan versi backend nyata (`action=version`), bukan sekadar mengirim uji kosong.
 - Bila token admin salah/kadaluarsa saat menyimpan, aplikasi langsung mengarahkan ke **Pengaturan → Token Admin**.

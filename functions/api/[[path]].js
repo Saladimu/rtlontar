@@ -27,6 +27,10 @@ export async function onRequest(context) {
   const target = base + new URL(request.url).search;
 
   const init = { method, redirect: 'follow' };
+  // Writer (POST) memakai tenggat lebih longgar karena Apps Script dapat menulis
+  // banyak baris; pembacaan cukup singkat. Tanpa tenggat, Apps Script yang
+  // menggantung akan menahan Function sampai batas waktu Workers.
+  init.signal = AbortSignal.timeout(method === 'POST' ? 25000 : 15000);
   if (method === 'POST') {
     // Apps Script membaca raw body via e.postData.contents; text/plain menjaga
     // request tetap "simple" tanpa preflight CORS.
@@ -38,11 +42,14 @@ export async function onRequest(context) {
   try {
     upstream = await fetch(target, init);
   } catch (err) {
+    const timedOut = err && (err.name === 'TimeoutError' || err.name === 'AbortError');
     return new Response(
       JSON.stringify({
         result: 'error',
         code: 'proxy_fetch_failed',
-        message: String((err && err.message) || err)
+        message: timedOut
+          ? 'Batas waktu proxy habis saat menghubungi Apps Script.'
+          : String((err && err.message) || err)
       }),
       {
         status: 502,
