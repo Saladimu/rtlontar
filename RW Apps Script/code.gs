@@ -989,8 +989,8 @@ function rtSnapshotFromPages(rt, pages, started) {
   return snap;
 }
 
-// Ambil KPI untuk beberapa RT sekaligus. Semua permintaan pertama (5 per RT)
-// dikirim dalam satu fetchAll sehingga total waktu mendekati RT paling lambat,
+// Ambil KPI untuk beberapa RT sekaligus. Semua permintaan KPI (RT_KPI_CALL_COUNT
+// per RT) dikirim dalam satu fetchAll sehingga total waktu mendekati RT paling lambat,
 // bukan jumlah seluruh RT. Ini mencegah dashboard melewati batas waktu gateway
 // pada percobaan pertama (gejala "harus refresh 2-3 kali").
 function refreshRts(rtList) {

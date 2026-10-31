@@ -1361,7 +1361,9 @@
 
         // Kirim payload tulis. Pada proxy same-origin respons JSON dibaca sehingga
         // sukses benar-benar terverifikasi; pada URL Apps Script langsung (opaque,
-        // no-cors) diperlakukan optimistis. Tiap base di-retry sekali saat gagal jaringan.
+        // no-cors) diperlakukan optimistis. Tiap base di-retry sekali saat gagal jaringan,
+        // kecuali aksi yang menambah baris tanpa kunci idempotensi (lihat maxAttempts).
+        const WRITE_TIMEOUT_MS = 30000;
         function postToSheets(payload, options) {
             options = options || {};
             const body = JSON.stringify(payload);
@@ -1371,6 +1373,12 @@
                 return;
             }
             const maxRetry = (options.retries == null) ? 1 : options.retries;
+            // submitLapor selalu membuat baris baru tanpa ID/ref, jadi pengiriman ulang
+            // setelah timeout bisa menggandakan pengaduan. Aksi lain di portal publik
+            // (submitSurat) memakai ref yang membuat backend idempoten.
+            const action = payload && payload.action ? String(payload.action) : '';
+            const appendWithoutKey = action === 'submitLapor';
+            const maxAttempts = appendWithoutKey ? 0 : maxRetry;
             let idx = 0;
             let attempt = 0;
 
@@ -1390,12 +1398,22 @@
                     body: body
                 };
                 if (!sameOrigin) init.mode = 'no-cors';
+                let timer = null;
+                let controller = null;
+                if (typeof AbortController === 'function') {
+                    controller = new AbortController();
+                    init.signal = controller.signal;
+                    timer = setTimeout(function () { controller.abort(); }, WRITE_TIMEOUT_MS);
+                }
+                const clearTimer = () => { if (timer) { clearTimeout(timer); timer = null; } };
                 fetch(base, init).then(function (res) {
                     if (!sameOrigin) {
+                        clearTimer();
                         if (options.onSuccess) options.onSuccess(null, base);
                         return;
                     }
                     return res.text().then(function (txt) {
+                        clearTimer();
                         let json = null;
                         try { json = txt ? JSON.parse(txt) : null; } catch (e) { json = null; }
                         if (res.ok && json && json.result === 'success') {
@@ -1407,9 +1425,11 @@
                         } else {
                             nextBase();
                         }
-                    });
+                    }, function (err) { clearTimer(); throw err; });
                 }).catch(function (err) {
-                    if (attempt < maxRetry) { attempt += 1; send(); return; }
+                    clearTimer();
+                    if (appendWithoutKey) { if (options.onError) options.onError('network', err); return; }
+                    if (attempt < maxAttempts) { attempt += 1; send(); return; }
                     if (idx + 1 < bases.length) nextBase();
                     else if (options.onError) options.onError('network', err);
                 });
@@ -1446,7 +1466,7 @@
         // index.html/public.html dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkannya dengan versi di server agar pengguna
         // yang masih membuka halaman lama diberi tanda "versi baru".
-        const APP_BUILD = '2026-10-26-02';
+        const APP_BUILD = '2026-10-31-01';
 
         // Jalankan cb setelah config.js siap dibaca (hindari race async).
         function whenConfigReady(cb) {

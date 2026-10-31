@@ -37,6 +37,10 @@ const MAX_BODY_BYTES = 262144;
 const FETCH_TIMEOUT_MS = 20000;
 
 let jwksCache = { url: '', keys: null, expiresAt: 0 };
+// Waktu (epoch ms) pengambilan ulang paksa terakhir. Token dengan `kid` palsu
+// tidak boleh membuat gateway membanjiri endpoint JWKS Cloudflare.
+let jwksForcedAt = 0;
+const JWKS_FORCE_COOLDOWN_MS = 60000;
 
 function json(body, status) {
     return new Response(JSON.stringify(body), {
@@ -76,15 +80,16 @@ function readCookie(request, name) {
     return '';
 }
 
-async function loadJwks(url) {
+async function loadJwks(url, force) {
     const now = Date.now();
-    if (jwksCache.url === url && jwksCache.keys && jwksCache.expiresAt > now) return jwksCache.keys;
+    if (!force && jwksCache.url === url && jwksCache.keys && jwksCache.expiresAt > now) return jwksCache.keys;
     const res = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(10000) });
     if (!res.ok) throw new Error('JWKS HTTP ' + res.status + ' (' + url + ')');
     const data = await res.json();
     const keys = Array.isArray(data.keys) ? data.keys : [];
     if (!keys.length) throw new Error('JWKS kosong');
     jwksCache = { url: url, keys: keys, expiresAt: now + 5 * 60 * 1000 };
+    if (force) jwksForcedAt = now;
     return keys;
 }
 
@@ -101,8 +106,16 @@ async function verifyAccessJwt(token, env) {
     const audience = String(env.CF_ACCESS_AUD || '').split(',').map(function (v) { return v.trim(); }).filter(Boolean);
     if (!audience.length) throw new Error('CF_ACCESS_AUD belum diatur');
 
-    const keys = await loadJwks('https://' + teamHost + '/cdn-cgi/access/certs');
-    const jwk = keys.find(function (k) { return k.kid === header.kid; });
+    let keys = await loadJwks('https://' + teamHost + '/cdn-cgi/access/certs');
+    let jwk = keys.find(function (k) { return k.kid === header.kid; });
+    if (!jwk && Date.now() - jwksForcedAt > JWKS_FORCE_COOLDOWN_MS) {
+        // Cloudflare dapat merotasi signing key kapan saja. Cache JWKS berumur 5
+        // menit, jadi tanpa pengambilan ulang semua pengguna akan ditolak sampai
+        // cache kedaluwarsa. Ambil ulang sekali (force) sebelum menyerah, dengan
+        // jeda 60 detik agar `kid` palsu tidak membanjiri endpoint JWKS.
+        keys = await loadJwks('https://' + teamHost + '/cdn-cgi/access/certs', true);
+        jwk = keys.find(function (k) { return k.kid === header.kid; });
+    }
     if (!jwk) throw new Error('Kunci JWT tidak ditemukan');
 
     const key = await crypto.subtle.importKey(
@@ -160,7 +173,7 @@ export async function onRequest(context) {
             return json({
                 result: 'success',
                 service: 'rw06-gateway',
-                version: 'rw-gateway-v1-2026-10-30',
+                version: 'rw-gateway-v1-2026-10-31',
                 configured: {
                     orchestrator: !!String(env.ORCHESTRATOR_URL || '').trim(),
                     gatewaySecret: String(env.GATEWAY_SECRET || '').length >= 16,

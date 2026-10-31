@@ -86,6 +86,8 @@ Deploy sebagai Cloudflare Pages project terpisah dengan **root directory `rw`**.
 
 Gateway menerima `Cf-Access-Jwt-Assertion` atau cookie `CF_Authorization`, memverifikasi RS256 terhadap JWKS Access, lalu mengirim `email` terverifikasi + `gateway` ke orkestrator. Identitas/role dari browser diabaikan.
 
+JWKS di-cache 5 menit. Bila `kid` pada token tidak ada di cache (Cloudflare baru merotasi signing key), gateway mengambil ulang JWKS sekali sebelum menolak. Pengambilan ulang paksa dibatasi maksimal sekali per 60 detik agar token dengan `kid` palsu tidak membanjiri endpoint JWKS.
+
 ### Verifikasi Access gagal (`JWKS HTTP 404`)
 
 Pesan ini muncul **sebelum** orkestrator memeriksa tab `Users`, jadi email yang sudah terdaftar tetap bisa gagal.
@@ -120,7 +122,10 @@ Mock server tidak memakai Cloudflare Access dan tidak boleh dipakai di produksi.
 ## Keandalan pemuatan data
 
 - Orkestrator menjalankan KPI semua RT dalam satu `UrlFetchApp.fetchAll` (paralel), bukan berurutan per RT, sehingga latensi mengikuti RT paling lambat dan dashboard tidak melewati batas waktu gateway.
-- Portal memakai timeout 25 detik per permintaan, satu kali percobaan ulang otomatis untuk kegagalan baca yang bersifat sementara (jaringan/timeout/5xx), serta menggabungkan permintaan baca identik yang berjalan bersamaan.
+- Portal memakai timeout 25 detik per permintaan baca, satu kali percobaan ulang otomatis untuk kegagalan baca yang bersifat sementara (jaringan/timeout/5xx), serta menggabungkan permintaan baca identik yang berjalan bersamaan.
+- Gateway memberi batas 20 detik saat memanggil orkestrator dan 10 detik saat mengambil JWKS, jadi Apps Script yang menggantung tidak menahan permintaan tanpa batas.
+- RT juga memberi batas waktu: 15 detik untuk pembacaan JSONP per basis, 30 detik untuk operasi tulis (dengan `AbortController`). Tanpa batas ini, koneksi yang menggantung akan mengunci guard anti-klik-ganda dan antrean outbox sampai halaman dimuat ulang.
+- Operasi tulis hanya diulang otomatis bila idempoten (memakai `ID` stabil atau `ref` surat). `submitLapor` selalu membuat baris baru tanpa kunci, jadi **tidak** pernah diulang dan tidak dipindah ke basis cadangan saat gagal jaringan, agar pengaduan tidak berganda.
 - Tombol **Segarkan** memakai dashboard yang dikembalikan `rwRefresh` sehingga tidak memicu fan-out kedua.
 - Jika tetap gagal, halaman menampilkan tombol **Coba lagi**; data terakhir yang berhasil dimuat tetap dipertahankan orkestrator sebagai snapshot `Stale`.
 
