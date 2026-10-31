@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-30-04';
+    var BUILD = '2026-10-31-02';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -613,53 +613,186 @@
         if (clear) clear.addEventListener('click', function () { f.from = ''; f.to = ''; state.pages[state.page] = 1; rerender(); });
     }
 
-    function printHeader(title, subtitle, meta) {
-        return '<div class="head"><h1>' + esc(title) + '</h1>' +
-            (subtitle ? '<p class="sub">' + esc(subtitle) + '</p>' : '') +
-            '<p class="sub">RW 06 · Portal Pengurus</p></div>' +
-            '<div class="meta"><span>' + esc(meta || '') + '</span><span>Dicetak: ' + esc(fmtStamp(new Date().toISOString())) + '</span></div>';
-    }
-
-    function printStyles() {
-        return '<style>' +
-            '*{box-sizing:border-box}' +
-            'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;padding:12mm;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-            '.head{text-align:center;border-bottom:2px solid #0f172a;padding-bottom:10px;margin-bottom:14px}' +
-            '.head h1{margin:0;font-size:18px}.head .sub{margin:2px 0;font-size:12px;color:#334155}' +
-            '.meta{display:flex;justify-content:space-between;margin:8px 0 12px;font-size:12px;color:#334155}' +
-            '.cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}' +
-            '.card{flex:1 1 22%;border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px}' +
-            '.card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}' +
-            '.card .val{font-size:14px;font-weight:700;margin-top:2px}' +
-            'table{width:100%;border-collapse:collapse}' +
-            'th,td{border:1px solid #cbd5e1;padding:5px 7px;vertical-align:top}' +
-            'th{background:#f1f5f9;text-align:left;font-size:11px}' +
-            'td.r,th.r{text-align:right}td.c,th.c{text-align:center}td.nw,th.nw{white-space:nowrap}' +
-            'tfoot td{font-weight:700;background:#f8fafc}' +
-            '.foot{margin-top:14px;font-size:11px;color:#64748b;display:flex;justify-content:space-between}' +
-            '@page{size:A4 portrait;margin:0}' +
-            '</style>';
-    }
-
     // Jendela cetak dibuka dari klik pengguna dan langsung memanggil print()
     // setelah dokumen siap sehingga tidak perlu izin script tambahan.
-    function openPrintWindow(title, bodyHtml) {
-        var html = '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
-            printStyles() + '</head><body>' + bodyHtml + '</body></html>';
+    // `onReady` dijalankan setelah dokumen ditulis dan sebelum print (dipakai
+    // untuk paginasi laporan).
+    function openPrintHtml(title, html, onReady) {
         var w = window.open('', '_blank');
         if (!w) { toast('Izinkan pop-up untuk mencetak laporan.', 'error'); return false; }
         w.document.open();
         w.document.write(html);
         w.document.close();
         w.focus();
-        var doPrint = function () { try { w.print(); } catch (e) { /* diabaikan */ } };
-        if (w.document.readyState === 'complete') setTimeout(doPrint, 200);
-        else w.onload = function () { setTimeout(doPrint, 200); };
+        var doPrint = function () {
+            if (typeof onReady === 'function') { try { onReady(w); } catch (e) { /* diabaikan */ } }
+            try { w.print(); } catch (e) { /* diabaikan */ }
+        };
+        if (w.document.readyState === 'complete') setTimeout(doPrint, 250);
+        else w.onload = function () { setTimeout(doPrint, 250); };
         return true;
     }
 
-    function reportFooter(count, extra) {
-        return '<div class="foot"><span>Jumlah baris: ' + fmtInt(count) + (extra ? ' · ' + esc(extra) : '') + '</span><span>RW 06 Portal Pengurus</span></div>';
+    // Laporan dipaginasi manual. Skrip inline dilarang CSP portal, jadi
+    // pengukuran baris dilakukan dari jendela pembuka (dokumen `about:blank`
+    // tetap satu origin). Bila DOM asli tidak tersedia, laporan tetap tampil
+    // memakai pembagian statis yang sudah tertulis di HTML.
+    // Kop berulang di setiap halaman, meta/kartu hanya di halaman pertama,
+    // "Hal X/Y" di setiap footer. Orientasi mengikuti format laporan.
+    var PRINT_PAGE_ROWS = { portrait: 18, landscape: 12 };
+    var PRINT_FIRST_PAGE_RESERVE = 3;
+    var PRINT_MAX_ROWS = { portrait: 60, landscape: 40 };
+    function paginatePrintWindow(w, opts) {
+        var staticHtml = null, pagesEl = null, doc = null;
+        try {
+            doc = w && w.document;
+            if (!doc || typeof doc.getElementById !== 'function') return false;
+            var srcBody = doc.getElementById('src-body');
+            var srcHead = doc.getElementById('src-head');
+            pagesEl = doc.getElementById('pages');
+            var headTplEl = doc.getElementById('tpl-head');
+            var metaTplEl = doc.getElementById('tpl-meta');
+            var footTplEl = doc.getElementById('tpl-foot');
+            if (!srcBody || !srcHead || !pagesEl || !headTplEl || !footTplEl) return false;
+            var rows = Array.prototype.slice.call(srcBody.rows);
+            if (!rows.length) return false;
+            var rowH = rows.map(function (r) { return r.getBoundingClientRect().height; });
+            var headH = srcHead.getBoundingClientRect().height;
+            if (!(headH > 0) || !(rowH[0] > 0)) return false;
+            var headTpl = headTplEl.innerHTML;
+            var metaTpl = metaTplEl ? metaTplEl.innerHTML : '';
+            var footTpl = footTplEl.innerHTML;
+            var theadHtml = srcHead.innerHTML;
+            var perPage = opts.maxRows || 0;
+            staticHtml = pagesEl.innerHTML;
+            // Halaman diukur dalam keadaan terpasang (bukan fragment) agar
+            // clientHeight memakai A4 asli. Bila gagal, laporan statis dipulihkan.
+            pagesEl.innerHTML = '';
+            var idx = 0, total = 0;
+            while (idx < rows.length) {
+                var page = doc.createElement('div');
+                page.className = 'page';
+                var inner = doc.createElement('div');
+                inner.className = 'inner';
+                var top = doc.createElement('div');
+                top.innerHTML = headTpl;
+                inner.appendChild(top);
+                if (total === 0 && metaTpl) {
+                    var meta = doc.createElement('div');
+                    meta.innerHTML = metaTpl;
+                    inner.appendChild(meta);
+                }
+                var table = doc.createElement('table');
+                table.innerHTML = '<thead>' + theadHtml + '</thead><tbody></tbody>';
+                inner.appendChild(table);
+                var foot = doc.createElement('div');
+                foot.className = 'pf';
+                foot.innerHTML = footTpl;
+                inner.appendChild(foot);
+                page.appendChild(inner);
+                pagesEl.appendChild(page);
+                var avail = inner.clientHeight
+                    - top.getBoundingClientRect().height
+                    - foot.getBoundingClientRect().height - 14;
+                if (!(avail > headH + 40)) { pagesEl.innerHTML = staticHtml; return false; }
+                var used = headH, added = 0;
+                var tb = table.tBodies[0];
+                while (idx < rows.length && (!perPage || added < perPage)) {
+                    var h = rowH[idx];
+                    if (added > 0 && used + h > avail) break;
+                    tb.appendChild(rows[idx].cloneNode(true));
+                    used += h; idx++; added++;
+                }
+                total++;
+                if (added === 0) { pagesEl.innerHTML = staticHtml; return false; }
+            }
+            if (!total) { pagesEl.innerHTML = staticHtml; return false; }
+            var pages = pagesEl.children;
+            for (var i = 0; i < pages.length; i++) {
+                var pn = pages[i].querySelector('.pn');
+                if (pn) pn.textContent = 'Hal ' + (i + 1) + '/' + pages.length;
+            }
+            var src = doc.getElementById('source');
+            if (src && src.parentNode) src.parentNode.removeChild(src);
+            return true;
+        } catch (e) {
+            if (pagesEl && staticHtml !== null) { try { pagesEl.innerHTML = staticHtml; } catch (err) { /* diabaikan */ } }
+            return false;
+        }
+    }
+
+    function openPagedReport(opts) {
+        var landscape = opts.orientation === 'landscape';
+        var pageSize = landscape ? 'A4 landscape' : 'A4 portrait';
+        var pageW = landscape ? 297 : 210;
+        var pageH = landscape ? 210 : 297;
+        var staticPerPage = opts.rowsPerPage || (landscape ? PRINT_PAGE_ROWS.landscape : PRINT_PAGE_ROWS.portrait);
+        var perPage = opts.maxRows || (landscape ? PRINT_MAX_ROWS.landscape : PRINT_MAX_ROWS.portrait);
+        var headHtml = '<div class="head"><h1>' + esc(opts.title) + '</h1>' +
+            (opts.subtitle ? '<p class="sub">' + esc(opts.subtitle) + '</p>' : '') +
+            '<p class="sub">RW 06 · Portal Pengurus</p></div>';
+        var metaHtml = '<div class="meta"><span>' + esc(opts.meta || '') + '</span>' +
+            '<span>Dicetak: ' + esc(fmtStamp(new Date().toISOString())) + '</span></div>' +
+            (opts.cardsHtml || '');
+        var footLeft = esc(opts.footerLeft || '');
+        var dataRows = (opts.rows && opts.rows.length)
+            ? opts.rows.slice()
+            : ['<tr><td colspan="' + (opts.colCount || 1) + '">' + esc(opts.emptyText || 'Tidak ada data.') + '</td></tr>'];
+
+        // Pembagian statis: dipakai apa adanya bila pengukuran DOM tidak
+        // tersedia, dan tetap menjadi isi awal sebelum paginasi halus.
+        var chunks = [], idx = 0;
+        while (idx < dataRows.length) {
+            var cap = chunks.length === 0
+                ? Math.max(4, staticPerPage - PRINT_FIRST_PAGE_RESERVE)
+                : staticPerPage;
+            chunks.push(dataRows.slice(idx, idx + cap));
+            idx += cap;
+        }
+        if (!chunks.length) chunks.push(dataRows);
+        var total = chunks.length;
+        var pagesHtml = chunks.map(function (chunk, i) {
+            return '<div class="page"><div class="inner">' + headHtml +
+                (i === 0 ? metaHtml : '') +
+                '<table><thead>' + opts.theadHtml + '</thead><tbody>' + chunk.join('') + '</tbody></table>' +
+                '<div class="pf"><span>' + footLeft + '</span><span class="pn">Hal ' + (i + 1) + '/' + total + '</span></div>' +
+                '</div></div>';
+        }).join('');
+        var styles = '<style>' +
+            '*{box-sizing:border-box}' +
+            'body{font-family:Arial,Helvetica,sans-serif;color:#0f172a;margin:0;background:#fff;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+            '.page{width:' + pageW + 'mm;height:' + pageH + 'mm;padding:12mm;overflow:hidden;page-break-after:always}' +
+            '.page:last-child{page-break-after:auto}' +
+            '.inner{display:flex;flex-direction:column;height:100%}' +
+            '.head{border-bottom:2px solid #0f172a;padding-bottom:8px;margin-bottom:10px}' +
+            '.head h1{margin:0;font-size:17px;text-align:center}' +
+            '.head .sub{margin:2px 0;font-size:11px;color:#334155;text-align:center}' +
+            '.meta{display:flex;justify-content:space-between;margin:2px 0 10px;font-size:11px;color:#334155}' +
+            '.cards{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}' +
+            '.card{flex:1 1 22%;border:1px solid #cbd5e1;border-radius:6px;padding:7px 9px}' +
+            '.card .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.04em;color:#64748b}' +
+            '.card .val{font-size:13px;font-weight:700;margin-top:2px}' +
+            'table{width:100%;border-collapse:collapse}' +
+            'th,td{border:1px solid #cbd5e1;padding:5px 7px;vertical-align:top}' +
+            'th{background:#f1f5f9;text-align:left;font-size:10px}' +
+            'td.r,th.r{text-align:right}td.c,th.c{text-align:center}td.nw,th.nw{white-space:nowrap}' +
+            'tr.tr-total td{font-weight:700;background:#f8fafc}' +
+            '.pf{margin-top:auto;padding-top:6px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:9px;color:#64748b}' +
+            '.src{position:absolute;left:-10000px;top:0;width:' + (pageW - 24) + 'mm}' +
+            '@page{size:' + pageSize + ';margin:0}' +
+            '</style>';
+        var html = '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">' +
+            '<title>' + esc(opts.docTitle || opts.title) + '</title>' + styles + '</head><body>' +
+            '<div id="source" class="src"><table><thead id="src-head">' + opts.theadHtml +
+            '</thead><tbody id="src-body">' + dataRows.join('') + '</tbody></table></div>' +
+            '<template id="tpl-head">' + headHtml + '</template>' +
+            '<template id="tpl-meta">' + metaHtml + '</template>' +
+            '<template id="tpl-foot"><span>' + footLeft + '</span><span class="pn"></span></template>' +
+            '<div id="pages">' + pagesHtml + '</div>' +
+            '</body></html>';
+        return openPrintHtml(opts.docTitle || opts.title, html, function (w) {
+            paginatePrintWindow(w, { maxRows: perPage });
+        });
     }
 
     function isKasOut(jenis) {
@@ -995,26 +1128,34 @@
                 '<td class="r">' + esc(fmtMoney(r['Jumlah (Rp)'])) + '</td>' +
                 '<td>' + esc(r['Keterangan'] || '-') + '</td>' +
                 '</tr>';
-        }).join('');
-        var body = printHeader('Laporan Iuran & Kas', rtLabel(meta.rt), meta.period) +
-            '<div class="cards">' +
+        });
+        if (rows.length) {
+            tableRows.push('<tr class="tr-total"><td colspan="5" class="r">Total pemasukan</td><td class="r">' + esc(fmtMoney(totalMasuk)) + '</td><td></td></tr>');
+            tableRows.push('<tr class="tr-total"><td colspan="5" class="r">Total pengeluaran</td><td class="r">' + esc(fmtMoney(totalKeluar)) + '</td><td></td></tr>');
+            tableRows.push('<tr class="tr-total"><td colspan="5" class="r">Saldo akhir periode</td><td class="r">' + esc(fmtMoney(meta.closing)) + '</td><td></td></tr>');
+        }
+        openPagedReport({
+            title: 'Laporan Iuran & Kas',
+            subtitle: rtLabel(meta.rt),
+            meta: meta.period,
+            docTitle: 'Laporan Iuran & Kas - ' + rtLabel(meta.rt),
+            orientation: 'landscape',
+            colCount: 7,
+            emptyText: 'Tidak ada transaksi pada periode ini.',
+            cardsHtml: '<div class="cards">' +
                 '<div class="card"><div class="lbl">Saldo awal periode</div><div class="val">' + esc(fmtMoney(meta.opening)) + '</div></div>' +
                 '<div class="card"><div class="lbl">Pemasukan</div><div class="val">' + esc(fmtMoney(meta.masuk)) + '</div></div>' +
                 '<div class="card"><div class="lbl">Pengeluaran</div><div class="val">' + esc(fmtMoney(meta.keluar)) + '</div></div>' +
                 '<div class="card"><div class="lbl">Saldo akhir periode</div><div class="val">' + esc(fmtMoney(meta.closing)) + '</div></div>' +
-            '</div>' +
-            '<table><thead><tr>' +
+                '</div>',
+            theadHtml: '<tr>' +
                 '<th class="c" style="width:32px">No</th><th class="nw" style="width:88px">Tanggal</th><th>Nama warga</th>' +
                 '<th class="c" style="width:60px">Rumah</th><th class="c" style="width:96px">Jenis</th>' +
                 '<th class="r" style="width:100px">Jumlah</th><th>Catatan</th>' +
-            '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="7">Tidak ada transaksi pada periode ini.</td></tr>') + '</tbody>' +
-            '<tfoot>' +
-                '<tr><td colspan="5" class="r">Total pemasukan</td><td class="r">' + esc(fmtMoney(totalMasuk)) + '</td><td></td></tr>' +
-                '<tr><td colspan="5" class="r">Total pengeluaran</td><td class="r">' + esc(fmtMoney(totalKeluar)) + '</td><td></td></tr>' +
-                '<tr><td colspan="5" class="r">Saldo akhir periode</td><td class="r">' + esc(fmtMoney(meta.closing)) + '</td><td></td></tr>' +
-            '</tfoot></table>' +
-            reportFooter(rows.length, meta.period);
-        openPrintWindow('Laporan Iuran & Kas - ' + rtLabel(meta.rt), body);
+                '</tr>',
+            rows: tableRows,
+            footerLeft: 'RW 06 Portal Pengurus · Jumlah baris: ' + fmtInt(rows.length) + (meta.period ? ' · ' + meta.period : '')
+        });
     }
 
     function printSuratReport(rows, meta) {
@@ -1036,16 +1177,24 @@
                 '<td class="c">' + esc(r['Rw Status'] || '-') + '</td>' +
                 '<td class="c">' + esc(fmtInt(r['Rw Revisi'] || 0)) + 'x</td>' +
                 '</tr>';
-        }).join('');
-        var body = printHeader('Laporan Pengajuan Surat', rtLabel(meta.rt), meta.period + ' · ' + 'Status RW: ' + meta.status) +
-            '<div class="cards">' + cards + '</div>' +
-            '<table><thead><tr>' +
+        });
+        openPagedReport({
+            title: 'Laporan Pengajuan Surat',
+            subtitle: rtLabel(meta.rt),
+            meta: meta.period + ' · ' + 'Status RW: ' + meta.status,
+            docTitle: 'Laporan Pengajuan Surat - ' + rtLabel(meta.rt),
+            orientation: 'portrait',
+            colCount: 7,
+            emptyText: 'Tidak ada pengajuan pada filter ini.',
+            cardsHtml: '<div class="cards">' + cards + '</div>',
+            theadHtml: '<tr>' +
                 '<th class="c" style="width:30px">No</th><th class="nw" style="width:80px">Tanggal</th>' +
                 '<th>Pemohon</th><th>Jenis surat</th>' +
                 '<th class="c" style="width:78px">Status RT</th><th class="c" style="width:88px">Status RW</th><th class="c" style="width:48px">Revisi</th>' +
-            '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="7">Tidak ada pengajuan pada filter ini.</td></tr>') + '</tbody></table>' +
-            reportFooter(rows.length, meta.period);
-        openPrintWindow('Laporan Pengajuan Surat - ' + rtLabel(meta.rt), body);
+                '</tr>',
+            rows: tableRows,
+            footerLeft: 'RW 06 Portal Pengurus · Jumlah baris: ' + fmtInt(rows.length) + (meta.period ? ' · ' + meta.period : '')
+        });
     }
 
     function printLaporReport(rows, meta) {
@@ -1066,16 +1215,24 @@
                 '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
                 '<td class="c">' + esc(r['Rw Status'] || '-') + '</td>' +
                 '</tr>';
-        }).join('');
-        var body = printHeader('Laporan Pengaduan Warga', rtLabel(meta.rt), meta.period + ' · ' + 'Status RW: ' + meta.status) +
-            '<div class="cards">' + cards + '</div>' +
-            '<table><thead><tr>' +
+        });
+        openPagedReport({
+            title: 'Laporan Pengaduan Warga',
+            subtitle: rtLabel(meta.rt),
+            meta: meta.period + ' · ' + 'Status RW: ' + meta.status,
+            docTitle: 'Laporan Pengaduan - ' + rtLabel(meta.rt),
+            orientation: 'portrait',
+            colCount: 6,
+            emptyText: 'Tidak ada pengaduan pada filter ini.',
+            cardsHtml: '<div class="cards">' + cards + '</div>',
+            theadHtml: '<tr>' +
                 '<th class="c" style="width:30px">No</th><th class="nw" style="width:96px">Tanggal / nomor</th>' +
                 '<th>Warga</th><th>Pengaduan</th>' +
                 '<th class="c" style="width:72px">Status RT</th><th class="c" style="width:92px">Status RW</th>' +
-            '</tr></thead><tbody>' + (tableRows || '<tr><td colspan="6">Tidak ada pengaduan pada filter ini.</td></tr>') + '</tbody></table>' +
-            reportFooter(rows.length, meta.period);
-        openPrintWindow('Laporan Pengaduan - ' + rtLabel(meta.rt), body);
+                '</tr>',
+            rows: tableRows,
+            footerLeft: 'RW 06 Portal Pengurus · Jumlah baris: ' + fmtInt(rows.length) + (meta.period ? ' · ' + meta.period : '')
+        });
     }
 
     function renderSurat() {
