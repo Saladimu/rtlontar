@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-31-02';
+    var BUILD = '2026-10-31-03';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -774,8 +774,8 @@
             '.card .val{font-size:13px;font-weight:700;margin-top:2px}' +
             'table{width:100%;border-collapse:collapse}' +
             'th,td{border:1px solid #cbd5e1;padding:5px 7px;vertical-align:top}' +
-            'th{background:#f1f5f9;text-align:left;font-size:10px}' +
-            'td.r,th.r{text-align:right}td.c,th.c{text-align:center}td.nw,th.nw{white-space:nowrap}' +
+            'th{background:#f1f5f9;text-align:center;vertical-align:middle;font-size:10px}' +
+            'td.r{text-align:right}td.c,th.c{text-align:center}td.nw,th.nw{white-space:nowrap}' +
             'tr.tr-total td{font-weight:700;background:#f8fafc}' +
             '.pf{margin-top:auto;padding-top:6px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:9px;color:#64748b}' +
             '.src{position:absolute;left:-10000px;top:0;width:' + (pageW - 24) + 'mm}' +
