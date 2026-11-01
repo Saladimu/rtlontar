@@ -1774,10 +1774,10 @@
 
     <!-- ================= MODAL: RIWAYAT PENGAJUAN SURAT WARGA ================= -->
     <div id="modal-warga-surat" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-start justify-center p-4 backdrop-blur-sm overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-xl space-y-4 my-auto max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar">
             <div class="flex justify-between items-center border-b pb-3">
                 <div>
-                    <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-clock-rotate-left mr-1 text-cyan-600"></i>Riwayat Pengajuan Surat</h3>
+                    <h3 class="font-bold text-lg text-slate-800"><i class="fa-solid fa-clock-rotate-left mr-1 text-cyan-600"></i>Riwayat Warga</h3>
                     <p id="modal-warga-surat-sub" class="text-xs text-slate-500 mt-0.5">-</p>
                 </div>
                 <button onclick="closeModal('modal-warga-surat')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
@@ -2043,7 +2043,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-10-31-01';
+        const APP_BUILD = '2026-11-01-05';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5460,19 +5460,32 @@
             return '<span class="text-xs text-slate-500 whitespace-nowrap" title="' + tip + '"><i class="fa-regular fa-clock mr-1"></i>' + days + ' hari</span>';
         }
 
-        // ===== Riwayat Pengajuan Surat per warga (dari Data Warga) =====
+        // ===== Riwayat Warga: pengajuan surat + pengaduan (dari Data Warga) =====
         // Cocokkan record Pengajuan_Surat ke warga lewat NIK (digit saja).
         // Bila salah satu NIK kosong (mis. data lama), jatuh ke pencocokan nama.
+        // Lapor_Aspirasi tidak menyimpan NIK, jadi pengaduan dicocokkan lewat
+        // No. HP lebih dulu, lalu nama sebagai cadangan.
         function wargaNikKey(v) {
             return String(v == null ? '' : v).replace(/\D/g, '');
+        }
+        function wargaNameKey(v) {
+            return String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
         }
         function suratBelongsToWarga(warga, surat) {
             const wNik = wargaNikKey(warga && warga.nik);
             const sNik = wargaNikKey(surat && surat.nik);
             if (wNik && sNik) return wNik === sNik;
-            const wNama = String((warga && warga.nama) || '').trim().toLowerCase();
-            const sNama = String((surat && surat.nama) || '').trim().toLowerCase();
+            const wNama = wargaNameKey(warga && warga.nama);
+            const sNama = wargaNameKey(surat && surat.nama);
             return !!(wNama && sNama && wNama === sNama);
+        }
+        function laporBelongsToWarga(warga, lapor) {
+            const wHp = wargaNikKey(warga && warga.hp);
+            const lHp = wargaNikKey(lapor && lapor.noHp);
+            if (wHp.length >= 9 && lHp.length >= 9) return wHp === lHp;
+            const wNama = wargaNameKey(warga && warga.nama);
+            const lNama = wargaNameKey(lapor && lapor.nama);
+            return !!(wNama && lNama && wNama === lNama);
         }
 
         function renderWargaSuratHistory(list) {
@@ -5481,11 +5494,18 @@
             }
             const rows = list.map(function (item) {
                 const tanggal = String(fmtTimestamp(item.waktu) || '').split(' ')[0];
-                return '<tr class="border-b border-slate-100 align-top">' +
+                const isArchived = String(item.arsip || '').toLowerCase() === 'ya';
+                return '<tr class="border-b border-slate-100 align-top hover:bg-cyan-50 cursor-pointer transition" ' +
+                        'onclick="openWargaSuratRecord(\'' + escAttr(item._id || '') + '\')" title="Klik untuk membuka pengajuan surat">' +
                     '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(tanggal || '-') + '</td>' +
-                    '<td class="py-2 pr-3 text-slate-700 text-xs font-medium">' + escAttr(item.noSurat || '-') + '</td>' +
+                    '<td class="py-2 pr-3 text-slate-700 text-xs font-medium">' + escAttr(item.noSurat || '-') +
+                        (isArchived ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>' : '') + '</td>' +
                     '<td class="py-2 pr-3 text-slate-700 text-xs">' + escAttr(item.jenisSurat || '-') + '</td>' +
                     '<td class="py-2 text-center">' + suratStatusBadge(item.status) + '</td>' +
+                    '<td class="py-2 text-center whitespace-nowrap">' +
+                        '<button type="button" onclick="event.stopPropagation(); openWargaSuratRecord(\'' + escAttr(item._id || '') + '\')" ' +
+                            'class="text-cyan-600 hover:text-cyan-800 p-1 rounded" title="Buka pengajuan surat">' +
+                            '<i class="fa-solid fa-arrow-up-right-from-square"></i></button></td>' +
                 '</tr>';
             }).join('');
             return '<div class="overflow-x-auto"><table class="w-full">' +
@@ -5494,21 +5514,81 @@
                     '<th class="py-2 pr-3 font-semibold">No. Surat</th>' +
                     '<th class="py-2 pr-3 font-semibold">Jenis Surat</th>' +
                     '<th class="py-2 font-semibold text-center">Status</th>' +
+                    '<th class="py-2 font-semibold text-center">Aksi</th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }
+
+        function renderWargaLaporHistory(list) {
+            if (!list || !list.length) {
+                return '<p class="text-sm text-slate-400 text-center py-8">Belum ada pengaduan dari warga ini.</p>';
+            }
+            const rows = list.map(function (item) {
+                const tanggal = String(fmtTimestamp(item.waktu) || '').split(' ')[0];
+                const isArchived = String(item.arsip || '').toLowerCase() === 'ya';
+                return '<tr class="border-b border-slate-100 align-top hover:bg-teal-50 cursor-pointer transition" ' +
+                        'onclick="openWargaLaporRecord(\'' + escAttr(item._id || '') + '\')" title="Klik untuk membuka pengaduan">' +
+                    '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(tanggal || '-') +
+                        '<div class="text-[10px] text-slate-400">' + escAttr(item.noPengaduan || '-') + '</div></td>' +
+                    '<td class="py-2 pr-3 text-slate-700 text-xs font-medium">' + escAttr(item.judul || '-') +
+                        (isArchived ? ' <span class="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-200 text-amber-800 font-medium align-middle">Arsip</span>' : '') +
+                        '<div class="text-[10px] text-slate-400 font-normal">' + escAttr(item.jenisPengaduan || '-') + '</div></td>' +
+                    '<td class="py-2 text-center">' + laporStatusBadge(item.status) + '</td>' +
+                    '<td class="py-2 text-center whitespace-nowrap">' +
+                        '<button type="button" onclick="event.stopPropagation(); openWargaLaporRecord(\'' + escAttr(item._id || '') + '\')" ' +
+                            'class="text-teal-600 hover:text-teal-800 p-1 rounded" title="Buka pengaduan">' +
+                            '<i class="fa-solid fa-arrow-up-right-from-square"></i></button></td>' +
+                '</tr>';
+            }).join('');
+            return '<div class="overflow-x-auto"><table class="w-full">' +
+                '<thead><tr class="text-left text-xs text-slate-500 border-b">' +
+                    '<th class="py-2 pr-3 font-semibold">Tanggal</th>' +
+                    '<th class="py-2 pr-3 font-semibold">Pengaduan</th>' +
+                    '<th class="py-2 font-semibold text-center">Status</th>' +
+                    '<th class="py-2 font-semibold text-center">Aksi</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        }
+
+        // Membuka record asli dari panel riwayat. Panel riwayat ditutup tanpa
+        // menyentuh entri riwayat navigasi, lalu modal record dibuka seperti
+        // klik dari tabel utama sehingga pengurus dapat melihat/mengubah isinya.
+        function openWargaSuratRecord(id) {
+            const idx = findIndexById(appState.surat || [], id);
+            if (idx === -1) { showToast('Pengajuan surat tidak ditemukan.', 'error'); return; }
+            closeModal('modal-warga-surat', { fromHistory: true });
+            editSurat(idx);
+        }
+        function openWargaLaporRecord(id) {
+            const idx = findIndexById(appState.lapor || [], id);
+            if (idx === -1) { showToast('Pengaduan tidak ditemukan.', 'error'); return; }
+            closeModal('modal-warga-surat', { fromHistory: true });
+            editLapor(idx);
         }
 
         function showWargaSuratHistory(index) {
             const warga = appState.warga[index];
             if (!warga) return;
-            const list = (appState.surat || []).filter(function (s) { return suratBelongsToWarga(warga, s); })
+            const suratList = (appState.surat || []).filter(function (s) { return suratBelongsToWarga(warga, s); })
+                .sort(function (a, b) { return String(b.waktu || '').localeCompare(String(a.waktu || '')); });
+            const laporList = (appState.lapor || []).filter(function (l) { return laporBelongsToWarga(warga, l); })
                 .sort(function (a, b) { return String(b.waktu || '').localeCompare(String(a.waktu || '')); });
             const sub = document.getElementById('modal-warga-surat-sub');
             if (sub) {
                 sub.innerHTML = escAttr(warga.nama || '-') + ' &middot; NIK ' + escAttr(maskNik(warga.nik)) +
-                    ' &middot; ' + list.length + ' pengajuan';
+                    ' &middot; ' + suratList.length + ' pengajuan surat &middot; ' + laporList.length + ' pengaduan';
             }
             const body = document.getElementById('warga-surat-history-body');
-            if (body) body.innerHTML = renderWargaSuratHistory(list);
+            if (body) {
+                body.innerHTML =
+                    '<div class="space-y-2">' +
+                        '<h4 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-file-signature mr-1.5 text-cyan-600"></i>Pengajuan Surat (' + suratList.length + ')</h4>' +
+                        renderWargaSuratHistory(suratList) +
+                    '</div>' +
+                    '<div class="space-y-2 mt-5">' +
+                        '<h4 class="text-sm font-semibold text-slate-700"><i class="fa-solid fa-comment-dots mr-1.5 text-teal-600"></i>Pengaduan (' + laporList.length + ')</h4>' +
+                        renderWargaLaporHistory(laporList) +
+                    '</div>' +
+                    '<p class="text-xs text-slate-400 mt-4"><i class="fa-solid fa-circle-info mr-1"></i>Klik baris atau ikon buka untuk melihat detail record.</p>';
+            }
             openModal('modal-warga-surat');
         }
 
