@@ -15,9 +15,9 @@ const RT018 = {
     saldoAwal: 50000,
     rows: {
         Data_Warga: [
-            ['2026-10-01 10:00', '3173010101010001', 'Budi Santoso', 'Menikah', 'L', '3173010101010001', 'Jakarta', '1990-01-01', 'SMA', 'Karyawan', '081234567890', 'Milik', 'Jl. Mawar 1', 'Tidak', 'DW-018-1'],
-            ['2026-10-01 10:00', '3173010101010002', 'Siti Aminah', 'Menikah', 'P', '3173010101010002', 'Jakarta', '1991-02-02', 'S1', 'Guru', '081298765432', 'Milik', 'Jl. Mawar 2', 'Tidak', 'DW-018-2'],
-            ['2026-10-02 10:00', '3173010101010003', 'Agus Salim', 'Belum Menikah', 'L', '3173010101010003', 'Bekasi', '1996-05-12', 'SMA', 'Teknisi', '081377788899', 'Kontrak', 'Jl. Mawar 3', 'Ya', 'DW-018-3']
+            ['2026-10-01 10:00', '3173010101010001', 'Siti Aminah', 'Istri', 'P', '3173010101010002', 'Jakarta', '1991-02-02', 'S1', 'Guru', '081298765432', 'Milik', 'Jl. Mawar 1', 'Tidak', 'DW-018-2'],
+            ['2026-10-01 10:00', '3173010101010001', 'Budi Santoso', 'Kepala Keluarga', 'L', '3173010101010001', 'Jakarta', '1990-01-01', 'SMA', 'Karyawan', '081234567890', 'Milik', 'Jl. Mawar 1', 'Tidak', 'DW-018-1'],
+            ['2026-10-02 10:00', '3173010101010003', 'Agus Salim', 'Kepala Keluarga', 'L', '3173010101010003', 'Bekasi', '1996-05-12', 'SMA', 'Teknisi', '081377788899', 'Kontrak', 'Jl. Mawar 3', 'Ya', 'DW-018-3']
         ],
         Iuran_Kas: [
             ['2026-10-01 10:00', '2026-10-01', 'Budi Santoso', '1', 'Pemasukan', 100000, 'Iuran Oktober', 'Tidak', '', 'K-018-1'],
@@ -49,8 +49,8 @@ const RT017 = {
     saldoAwal: 0,
     rows: {
         Data_Warga: [
-            ['2026-10-01 10:00', '3173010202020001', 'Andi Wijaya', 'Menikah', 'L', '3173010202020001', 'Jakarta', '1988-03-03', 'S1', 'Wiraswasta', '081300000001', 'Milik', 'Jl. Melati 1', 'Tidak', 'DW-017-1'],
-            ['2026-10-01 10:00', '3173010202020002', 'Dewi Lestari', 'Menikah', 'P', '3173010202020002', 'Jakarta', '1990-04-04', 'SMA', 'Ibu rumah tangga', '081300000002', 'Milik', 'Jl. Melati 2', 'Tidak', 'DW-017-2']
+            ['2026-10-01 10:00', '3173010202020001', 'Dewi Lestari', 'Istri', 'P', '3173010202020002', 'Jakarta', '1990-04-04', 'SMA', 'Ibu rumah tangga', '081300000002', 'Milik', 'Jl. Melati 1', 'Tidak', 'DW-017-2'],
+            ['2026-10-01 10:00', '3173010202020001', 'Andi Wijaya', 'Kepala Keluarga', 'L', '3173010202020001', 'Jakarta', '1988-03-03', 'S1', 'Wiraswasta', '081300000001', 'Milik', 'Jl. Melati 1', 'Tidak', 'DW-017-1']
         ],
         Iuran_Kas: [
             ['2026-10-01 10:00', '2026-10-01', 'Andi Wijaya', '1', 'Pemasukan', 250000, 'Iuran Oktober', 'Tidak', '', 'K-017-1'],

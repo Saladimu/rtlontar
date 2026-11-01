@@ -328,6 +328,8 @@ tbody td { padding: 11px 14px; border-bottom: 1px solid #f1f5f9; vertical-align:
 tbody tr:last-child td { border-bottom: 0; }
 tbody tr.clickable { cursor: pointer; }
 tbody tr.clickable:hover { background: #f8fafc; }
+tbody tr.kk-head td { background: #f8fafc; }
+tbody tr.kk-head .cell-main { font-weight: 700; }
 .cell-main { font-weight: 700; color: var(--ink); }
 .cell-sub { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
 .cell-sub.cell-warn { color: var(--amber); font-weight: 600; }

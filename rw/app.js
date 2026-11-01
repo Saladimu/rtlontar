@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-01-01';
+    var BUILD = '2026-11-01-02';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -777,6 +777,7 @@
             'th{background:#f1f5f9;text-align:center;vertical-align:middle;font-size:10px}' +
             'td.r{text-align:right}td.c,th.c{text-align:center}td.nw,th.nw{white-space:nowrap}' +
             'tr.tr-total td{font-weight:700;background:#f8fafc}' +
+            'tr.tr-kk td{background:#f8fafc}tr.tr-kk td:nth-child(4){font-weight:700}' +
             '.pf{margin-top:auto;padding-top:6px;border-top:1px solid #cbd5e1;display:flex;justify-content:space-between;font-size:9px;color:#64748b}' +
             '.src{position:absolute;left:-10000px;top:0;width:' + (pageW - 24) + 'mm}' +
             '@page{size:' + pageSize + ';margin:0}' +
@@ -1004,10 +1005,51 @@
         if (!data) return [];
         var f = state.filters.warga;
         var q = String(f.q || '').trim().toLowerCase();
-        if (!q) return data.rows;
-        return data.rows.filter(function (r) {
+        var rows = q ? data.rows.filter(function (r) {
             return [r['Nama Lengkap'], r['Nomor KK'], r['NIK'], r['No HP'], r['Alamat/No Rumah'], r['Pekerjaan']]
                 .some(function (v) { return String(v || '').toLowerCase().indexOf(q) !== -1; });
+        }) : data.rows;
+        return sortWargaByKk(rows);
+    }
+
+    function isKepalaKeluarga(r) {
+        return String(r && r['Status'] || '').trim().toLowerCase() === 'kepala keluarga';
+    }
+
+    // Urutan resmi laporan warga: Nomor KK menaik (numerik), lalu
+    // Kepala Keluarga di awal tiap KK, anggota menyusul menurut nama.
+    // KK kosong diletakkan di akhir. Dipakai tabel layar dan laporan cetak
+    // agar yang tercetak sama dengan yang terlihat.
+    function compareNomorKk(a, b) {
+        var digits = /^\d+$/;
+        if (digits.test(a) && digits.test(b)) {
+            if (a.length !== b.length) return a.length - b.length;
+        }
+        return a < b ? -1 : (a > b ? 1 : 0);
+    }
+
+    function kkValue(r) {
+        var v = r ? r['Nomor KK'] : '';
+        return String(v === null || v === undefined ? '' : v).trim();
+    }
+
+    function sortWargaByKk(rows) {
+        return (rows || []).slice().sort(function (a, b) {
+            var ka = kkValue(a);
+            var kb = kkValue(b);
+            if (!ka || !kb) {
+                if (!ka && kb) return 1;
+                if (ka && !kb) return -1;
+            } else {
+                var c = compareNomorKk(ka, kb);
+                if (c !== 0) return c;
+            }
+            var ra = isKepalaKeluarga(a) ? 0 : 1;
+            var rb = isKepalaKeluarga(b) ? 0 : 1;
+            if (ra !== rb) return ra - rb;
+            var na = String(a && a['Nama Lengkap'] || '');
+            var nb = String(b && b['Nama Lengkap'] || '');
+            return na < nb ? -1 : (na > nb ? 1 : 0);
         });
     }
 
@@ -1018,8 +1060,9 @@
         var filtered = filteredWarga();
         var sliced = pageSlice(filtered, 'warga');
         var body = sliced.rows.map(function (r) {
-            return '<tr>' +
-                '<td><span class="cell-main">' + esc(r['Nama Lengkap'] || '-') + '</span><span class="cell-sub">KK ' + esc(r['Nomor KK'] || '-') + '</span></td>' +
+            var kepala = isKepalaKeluarga(r);
+            return '<tr' + (kepala ? ' class="kk-head"' : '') + '>' +
+                '<td><span class="cell-main">' + esc(r['Nama Lengkap'] || '-') + '</span><span class="cell-sub">KK ' + esc(kkValue(r) || '-') + (kepala ? ' · kepala keluarga' : '') + '</span></td>' +
                 '<td class="nowrap">' + esc(r['NIK'] || '-') + '</td>' +
                 '<td class="nowrap">' + esc(r['No HP'] || '-') + '</td>' +
                 '<td>' + esc(r['Alamat/No Rumah'] || '-') + '</td>' +
@@ -1037,14 +1080,22 @@
     }
 
     function printWargaReport(rows, meta) {
-        var tableRows = rows.map(function (r, idx) {
-            return '<tr>' +
+        // Urutan resmi: No. KK menaik, Kepala Keluarga di awal tiap KK.
+        var sorted = sortWargaByKk(rows);
+        var totalKK = {};
+        sorted.forEach(function (r) { var kk = kkValue(r); if (kk) totalKK[kk] = true; });
+        var totalKepala = sorted.filter(isKepalaKeluarga).length;
+        var tableRows = sorted.map(function (r, idx) {
+            var kepala = isKepalaKeluarga(r);
+            var nama = esc(r['Nama Lengkap'] || '-');
+            return '<tr' + (kepala ? ' class="tr-kk"' : '') + '>' +
                 '<td class="c">' + (idx + 1) + '</td>' +
-                '<td>' + esc(r['Nama Lengkap'] || '-') + '<br><span style="color:#64748b;font-size:10px">KK ' + esc(r['Nomor KK'] || '-') + '</span></td>' +
+                '<td class="nw">' + esc(kkValue(r) || '-') + '</td>' +
                 '<td class="nw">' + esc(r['NIK'] || '-') + '</td>' +
+                '<td>' + (kepala ? '<strong>' + nama + '</strong>' : nama) + '</td>' +
+                '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
                 '<td class="nw">' + esc(r['No HP'] || '-') + '</td>' +
                 '<td>' + esc(r['Alamat/No Rumah'] || '-') + '</td>' +
-                '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
                 '<td>' + esc(r['Pekerjaan'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Pendidikan'] || '-') + '</span></td>' +
                 '</tr>';
         });
@@ -1054,16 +1105,24 @@
             subtitle: rtLabel(meta.rt),
             meta: headerLabel,
             docTitle: 'Laporan Data Warga - ' + rtLabel(meta.rt),
-            orientation: 'portrait',
-            colCount: 7,
+            orientation: 'landscape',
+            colCount: 8,
             emptyText: 'Tidak ada warga pada filter ini.',
+            cardsHtml: '<div class="cards">' +
+                '<div class="card"><div class="lbl">Total KK</div><div class="val">' + fmtInt(Object.keys(totalKK).length) + '</div></div>' +
+                '<div class="card"><div class="lbl">Total warga</div><div class="val">' + fmtInt(sorted.length) + '</div></div>' +
+                '<div class="card"><div class="lbl">Kepala keluarga</div><div class="val">' + fmtInt(totalKepala) + '</div></div>' +
+                '<div class="card"><div class="lbl">Anggota</div><div class="val">' + fmtInt(sorted.length - totalKepala) + '</div></div>' +
+                '</div>',
             theadHtml: '<tr>' +
-                '<th class="c" style="width:30px">No</th><th>Warga / KK</th>' +
-                '<th class="nw" style="width:96px">NIK</th><th class="nw" style="width:80px">No HP</th>' +
-                '<th>Alamat</th><th class="c" style="width:70px">Status</th><th>Pekerjaan / pendidikan</th>' +
+                '<th class="c" style="width:26px">No</th><th class="nw" style="width:92px">No. KK</th>' +
+                '<th class="nw" style="width:92px">NIK</th><th>Nama lengkap</th>' +
+                '<th class="c" style="width:74px">Status</th><th class="nw" style="width:74px">No HP</th>' +
+                '<th>Alamat</th><th>Pekerjaan / pendidikan</th>' +
                 '</tr>',
             rows: tableRows,
-            footerLeft: 'RW 06 Portal Pengurus · Jumlah baris: ' + fmtInt(rows.length) + (meta.query ? ' · cari: ' + meta.query : '')
+            footerLeft: 'RW 06 Portal Pengurus · Jumlah: ' + fmtInt(sorted.length) + ' jiwa · ' +
+                fmtInt(Object.keys(totalKK).length) + ' KK' + (meta.query ? ' · cari: ' + meta.query : '')
         });
     }
 
