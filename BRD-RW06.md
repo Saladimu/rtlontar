@@ -4,7 +4,7 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 2.4 |
+| Version | 2.5 |
 | Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions, administration, daily digest, period filters, printable reports for all four lists, clickable summary cards, cross-RT duplicate-NIK reporting, and RW 06 backup coverage). Phase 5 rollout **parked** by decision on 31 October 2026: RT017 and RT018 only; RT019-RT026 deferred with the runbook ready |
 | Date | 1 November 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
@@ -166,7 +166,7 @@ Permission model:
 | ID | Requirement | Priority |
 |---|---|---|
 | FR-WRG-01 | List residents per RT with search and archive filtering. | Must |
-| FR-WRG-02 | Show resident detail fields needed by RW. | Must |
+| FR-WRG-02 | Show resident detail fields needed by RW, including that resident's letter-submission and complaint history. | Must |
 | FR-WRG-03 | Do not provide create, edit, delete, or archive actions for RW. | Must |
 | FR-WRG-04 | Show full NIK, phone, and address to RW admin; mask them for RW viewer. | Must |
 | FR-WRG-05 | Handle duplicate NIKs across RTs without merging records automatically. | Must |
@@ -618,6 +618,7 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 - An RT admin cannot use RW endpoints or view another RT's data.
 - The dashboard shows aggregate totals with a "sum of all RTs" label, and each summary card links to its detail page (FR-RW-02, FR-RW-06).
 - Residents, kas, letters, and complaints can be printed as A4 reports, with the active RT, period, and search filter reflected in the report (FR-RW-05). The resident report orders by **Nomor KK** ascending with the **Kepala Keluarga** first in each family card, matching the RT admin report, and prints on A4 landscape.
+- Selecting a resident shows only that resident's letter submissions and complaints, matched by NIK with a name fallback, with no write action offered (FR-WRG-02, FR-WRG-03).
 - A resident NIK that appears more than once, including across RTs, is reported for manual review and never merged automatically (FR-WRG-05).
 
 ### 19.2 Letter approval
@@ -700,3 +701,4 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 | 2.2 | 31 October 2026 | Decision | Phase 5 rollout parked at the owner's request. RT017 and RT018 remain live as reference and pilot; RT019-RT026 are deferred indefinitely and no new RT is scheduled. The rollout runbook (`ROLLOUT-RT.md`), the phase A-H gates (`MAINTENANCE.md` 6.4), and the per-RT ticket (`ROLLOUT-TICKET.md`) stay ready, so resuming only requires a new ticket and no code change. Phases 1-4 are unchanged and remain fully deployed. Portal build `2026-10-31-03` |
 | 2.3 | 1 November 2026 | Implementation | Closed the four remaining BRD gaps in the RW portal, portal-only (no RT backend or orchestrator redeploy). **FR-RW-06**: every summary card is now a button that navigates to its detail page, and the Has escalation card also presets `Perlu Tindak Lanjut` on the complaints page. **FR-RW-05**: the resident page gains a print report (A4 portrait, follows the active search) built on the shared `openPagedReport`, so all four lists now print. **FR-WRG-05**: RW Admin gains a cross-RT duplicate-NIK scan that groups repeated NIKs, flags cross-RT groups, shows the row IDs for manual review in each RT, and prints the list; the scan is read-only and never merges records, and RTs that failed to scan are listed explicitly. **NFR-08**: `MAINTENANCE.md` backup coverage now includes the RW 06 orchestrator spreadsheet, with a per-asset table, an orchestrator backup section (audit and decision logs are not recoverable from anything but the copy; triggers and Script Properties are not part of a spreadsheet copy), an RW 06 deployment-registry block, and a weekly orchestrator backup task. Portal build `2026-11-01-01`; portal harness 51 scenarios |
 | 2.4 | 1 November 2026 | Implementation | The resident report now mirrors the RT admin report ordering and layout. **FR-RW-05**: both the on-screen Data Warga table and the printed report sort by **Nomor KK** ascending (length-aware numeric compare, blank last), then place the **Kepala Keluarga** row first within each family card before other members by name, so what is printed equals what is displayed. The report gains a **No. KK** column (8 columns total) with summary cards for total KK, total residents, heads of family, and members, and moves from A4 portrait to **A4 landscape** to fit the extra column; head-of-family rows are emphasised on screen and in print. Demo data now models proper family cards and roles. Portal build `2026-11-01-02`; portal harness 52 scenarios |
+| 2.5 | 1 November 2026 | Implementation | Resident-level activity history in the RW portal. **FR-WRG-02**: every Data Warga row gains a **Riwayat** action that opens a read-only drawer with the resident's identity (NIK, No. KK, status, address) plus their **letter submissions** and **complaints**, each with RT and RW status. Records are matched by normalized NIK digits (minimum 8 digits) and fall back to a normalized name match when the NIK is blank or masked for RW Viewer, so viewers still see their own history. The view is strictly read-only and adds no write path (FR-WRG-03). Portal build `2026-11-01-03`; portal harness 55 scenarios |
