@@ -4,9 +4,9 @@
 |---|---|
 | Document ID | BRD-RW06 |
 | Title | RW 06 Oversight and Approval System |
-| Version | 2.2 |
-| Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions, administration, daily digest, period filters and printable reports). Phase 5 rollout **parked** by decision on 31 October 2026: RT017 and RT018 only; RT019-RT026 deferred with the runbook ready |
-| Date | 31 October 2026 |
+| Version | 2.3 |
+| Status | Phase 1-4 implemented (RT schema/API, RT admin panel, orchestrator, RW portal incl. write actions, administration, daily digest, period filters, printable reports for all four lists, clickable summary cards, cross-RT duplicate-NIK reporting, and RW 06 backup coverage). Phase 5 rollout **parked** by decision on 31 October 2026: RT017 and RT018 only; RT019-RT026 deferred with the runbook ready |
+| Date | 1 November 2026 |
 | Related system | SAPA-RT (RT administration and public service portal) |
 | Related documents | `readme.md`, `panduan.md`, `agents.md`, `MAINTENANCE.md`, `RW Apps Script/readme.md`, `rw/README.md` |
 | Owner | RW 06 |
@@ -616,6 +616,9 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 - RW admin can view kas transactions and a balance that matches the RT app.
 - RW cannot edit, delete, or archive resident or kas records.
 - An RT admin cannot use RW endpoints or view another RT's data.
+- The dashboard shows aggregate totals with a "sum of all RTs" label, and each summary card links to its detail page (FR-RW-02, FR-RW-06).
+- Residents, kas, letters, and complaints can be printed as A4 reports, with the active RT, period, and search filter reflected in the report (FR-RW-05).
+- A resident NIK that appears more than once, including across RTs, is reported for manual review and never merged automatically (FR-WRG-05).
 
 ### 19.2 Letter approval
 
@@ -650,7 +653,7 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 - New complaints start as `Tidak Perlu`; RT sets `Perlu Tindak Lanjut` to route to RW.
 - Cache TTL, digest, and retention can be changed without redeploying the portal.
 - Login/audit records are retained for 12 months; decision/response logs and snapshots for 24 months.
-- Backups and restore steps are documented.
+- Backups and restore steps are documented, and they cover every RT spreadsheet as well as the RW 06 orchestrator spreadsheet.
 
 ---
 
@@ -695,3 +698,4 @@ Fixed rather than configurable: the maximum of **3 returns** per letter (`SURAT_
 | 2.0 | 30 October 2026 | Implementation | Digest email presentation and manual sharing. The digest email centers its title, timestamp, and Status column, and formats every amount with Indonesian thousand separators (`Rp 958.000`) in both the plain-text and HTML parts. `rwDigestSend` now returns the digest `text` so the portal can offer **Salin teks** after a manual send (and below the preview), making the same summary easy to paste into a WhatsApp group; clipboard copying uses the Clipboard API with an `execCommand` fallback. A gateway allowlist gap that rejected `rwDigestPreview`/`rwDigestSend` was also fixed, and `tools/check-deployment.js` now compares the gateway `ACTIONS` list against every orchestrator action. Orchestrator `rw-orchestrator-v1-2026-10-30-05`; gateway `rw-gateway-v1-2026-10-30`; portal build `2026-10-30-04` |
 | 2.1 | 31 October 2026 | Implementation | Portal print reports are now paginated per format. Kas (7 columns) prints on A4 landscape while letters and complaints print on A4 portrait. A shared `openPagedReport` measures rows off-screen and rebuilds each page so the report header and table header repeat on every page, while the period metadata and summary cards appear only on the first page. Every page footer carries the row count, period, and a **Hal X/Y** page counter, and the kas total rows stay at the end of the data. All table column headers print centered, including numeric columns. Portal build `2026-10-31-03` |
 | 2.2 | 31 October 2026 | Decision | Phase 5 rollout parked at the owner's request. RT017 and RT018 remain live as reference and pilot; RT019-RT026 are deferred indefinitely and no new RT is scheduled. The rollout runbook (`ROLLOUT-RT.md`), the phase A-H gates (`MAINTENANCE.md` 6.4), and the per-RT ticket (`ROLLOUT-TICKET.md`) stay ready, so resuming only requires a new ticket and no code change. Phases 1-4 are unchanged and remain fully deployed. Portal build `2026-10-31-03` |
+| 2.3 | 1 November 2026 | Implementation | Closed the four remaining BRD gaps in the RW portal, portal-only (no RT backend or orchestrator redeploy). **FR-RW-06**: every summary card is now a button that navigates to its detail page, and the Has escalation card also presets `Perlu Tindak Lanjut` on the complaints page. **FR-RW-05**: the resident page gains a print report (A4 portrait, follows the active search) built on the shared `openPagedReport`, so all four lists now print. **FR-WRG-05**: RW Admin gains a cross-RT duplicate-NIK scan that groups repeated NIKs, flags cross-RT groups, shows the row IDs for manual review in each RT, and prints the list; the scan is read-only and never merges records, and RTs that failed to scan are listed explicitly. **NFR-08**: `MAINTENANCE.md` backup coverage now includes the RW 06 orchestrator spreadsheet, with a per-asset table, an orchestrator backup section (audit and decision logs are not recoverable from anything but the copy; triggers and Script Properties are not part of a spreadsheet copy), an RW 06 deployment-registry block, and a weekly orchestrator backup task. Portal build `2026-11-01-01`; portal harness 51 scenarios |

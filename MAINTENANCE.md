@@ -103,6 +103,19 @@ Maintain this registry outside the repository, for example in a password manager
 
 The registry is required for token rotation, access review, and disaster recovery.
 
+RW 06 keeps its own registry entry, separate from the per-RT rows:
+
+| Item | RW 06 |
+|---|---|
+| Portal domain | `sapa-rw06.pages.dev` (Cloudflare Pages, root directory `rw`) |
+| Orchestrator spreadsheet ID | |
+| Orchestrator Web App `/exec` URL | |
+| `GATEWAY_SECRET` location | |
+| `RT_TOKEN_<RTID>` locations | |
+| Access application name | |
+| Orchestrator backup folder | |
+| Last orchestrator restore drill | |
+
 ---
 
 ## 4. Routine maintenance
@@ -111,6 +124,7 @@ The registry is required for token rotation, access review, and disaster recover
 |---|---|
 | Weekly | Run `node tools/check-deployment.js --live` from the deployed branch |
 | Weekly | Back up each RT spreadsheet and verify the copy opens |
+| Weekly | Back up the RW 06 orchestrator spreadsheet and verify the copy opens |
 | Weekly | Check email failures, Drive capacity, and Apps Script quota warnings |
 | Weekly | Review duplicate NIK, duplicate phone numbers, and kas anomalies |
 | Monthly | Restore one backup into a test spreadsheet and verify the data |
@@ -364,13 +378,30 @@ Sign-off: RW 06 owner, RT admin, and the person running `check-deployment.js --l
 
 ## 7. Backup procedure
 
+Coverage required by NFR-08: every RT spreadsheet **and** the RW 06 orchestrator spreadsheet. A release is not complete while any of them has no verified backup.
+
+| Asset | Owner | Frequency | Storage |
+|---|---|---|---|
+| Each RT spreadsheet (`Data_Warga`, `Iuran_Kas`, `Pengajuan_Surat`, `Lapor_Aspirasi`, `Lapor_Tindak_Lanjut`, RW columns) | RT admin | Weekly and before every release | That RT's shared Drive folder |
+| RW 06 orchestrator spreadsheet (`RT_Registry`, `Users`, `Settings`, `KPI_Snapshot`, `Surat_Decision_Log`, `Lapor_Rw_Log`, `Outbox`, `Audit_Log`) | RW 06 owner | Weekly and before every orchestrator release | RW 06 shared Drive folder |
+| `code.gs` (RT backend and orchestrator), portal files, config | System owner | Every release | Git |
+| RT photo folder (`LAPOR_FOLDER_ID`) | RT admin | Monthly | Drive copy |
+
 ### Spreadsheet
 
-- Use **File > Make a copy** weekly and before any schema change.
-- Keep at least eight weekly copies and twelve monthly copies.
-- Name copies with the RT and date, for example `Backup SAPA RT018 2026-10-25`.
-- Store copies in the RT's shared Drive folder, not a personal folder.
+- Use **File > Make a copy** weekly and before any schema change, for **both** an RT spreadsheet and the RW 06 orchestrator spreadsheet.
+- Keep at least eight weekly copies and twelve monthly copies per spreadsheet.
+- Name copies with the owner and date, for example `Backup SAPA RT018 2026-10-25` and `Backup SAPA RW06 Orchestrator 2026-10-25`.
+- Store copies in the matching shared Drive folder (RT folder for RT data, RW 06 folder for the orchestrator), not a personal folder.
 - Google Sheets version history is a first line of defence, not a replacement for copies.
+
+#### RW 06 orchestrator spreadsheet
+
+- Back up the orchestrator spreadsheet separately from every RT; it holds the RT registry, RW users, settings, decision/response logs, KPI snapshots, outbox, and audit log.
+- Back up **before** changing `Settings`, `Users`, or `RT_Registry` rows, and before deploying a new orchestrator version.
+- Settings and registry rows are also recoverable from `agents.md`, `rw/README.md`, and the deployment registry; the audit log and decision logs are not, so they depend entirely on the copy.
+- Trigger state and Script Properties (`GATEWAY_SECRET`, `RT_TOKEN_<RTID>`, `RW_BOOTSTRAP_ADMIN`) are **not** part of a spreadsheet copy. Record them in the deployment registry; never keep them in the repository.
+- After a restore, re-run `setupOrchestrator()` only if tabs are missing, run `installTriggers()` again (triggers are not copied), and re-check the version markers in `agents.md`.
 
 ### Code and configuration
 
@@ -387,9 +418,9 @@ Sign-off: RW 06 owner, RT admin, and the person running `check-deployment.js --l
 
 ### Restore drill
 
-1. Restore the copy into a test spreadsheet.
+1. Restore the copy into a test spreadsheet (RT data or RW 06 orchestrator data).
 2. Point a test deployment at the copy.
-3. Verify residents, kas balance, letters, complaints, and photo links.
+3. Verify residents, kas balance, letters, complaints, and photo links (RT); or registry, users, settings, decision logs, outbox, and audit log (RW 06 orchestrator).
 4. Only then restore production data row by row.
 5. Do not overwrite production with an untested copy.
 
@@ -520,3 +551,4 @@ Review this document quarterly and after every critical incident.
 | 1.1 | 25 October 2026 | Added RW 06 schema rollout, `RW_TOKEN` rotation, and pilot verification steps |
 | 1.2 | 25 October 2026 | RT backend v36 (`saldoAwal`), RW orchestrator setup, trigger/outbox operations, and orchestrator tests |
 | 1.3 | 26 October 2026 | RT backend v37 repairs invalid `Rw Status`, escalation timestamp column, and shows No. Pengaduan in the RT RW panel |
+| 1.4 | 31 October 2026 | NFR-08 backup coverage extended to the RW 06 orchestrator spreadsheet. Added a per-asset backup table (RT spreadsheets, orchestrator spreadsheet, code, photo folders), a dedicated orchestrator backup section (settings/registry recoverable, audit and decision logs are not, triggers and Script Properties are not part of a copy), an RW 06 row in the deployment registry, and a weekly orchestrator backup task |
