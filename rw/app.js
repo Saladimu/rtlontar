@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-01-02';
+    var BUILD = '2026-11-01-03';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -977,8 +977,9 @@
                         (isAdmin() ? '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="warga-dup"><i class="fa-solid fa-clone"></i> Cek NIK ganda</button></div>' : '') +
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>' + esc(f.rt) + '</h2><p id="warga-count">' + fmtInt(res.total) + ' warga aktif</p></div></div>' +
+                    '<div class="card-hint"><i class="fa-solid fa-clock-rotate-left"></i> Klik <strong>Riwayat</strong> pada baris warga untuk melihat pengajuan surat dan pengaduan warga tersebut.</div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Warga</th><th>NIK</th><th>No HP</th><th>Alamat</th><th>Status</th><th>Pekerjaan</th></tr></thead>' +
+                    '<thead><tr><th>Warga</th><th>NIK</th><th>No HP</th><th>Alamat</th><th>Status</th><th>Pekerjaan</th><th>Riwayat</th></tr></thead>' +
                     '<tbody id="warga-body"></tbody></table></div></div>' +
                     '<div id="warga-pager"></div></section>';
                 paintWarga();
@@ -1061,6 +1062,7 @@
         var sliced = pageSlice(filtered, 'warga');
         var body = sliced.rows.map(function (r) {
             var kepala = isKepalaKeluarga(r);
+            var rowId = String(r['ID'] || '');
             return '<tr' + (kepala ? ' class="kk-head"' : '') + '>' +
                 '<td><span class="cell-main">' + esc(r['Nama Lengkap'] || '-') + '</span><span class="cell-sub">KK ' + esc(kkValue(r) || '-') + (kepala ? ' · kepala keluarga' : '') + '</span></td>' +
                 '<td class="nowrap">' + esc(r['NIK'] || '-') + '</td>' +
@@ -1068,15 +1070,136 @@
                 '<td>' + esc(r['Alamat/No Rumah'] || '-') + '</td>' +
                 '<td>' + esc(r['Status'] || '-') + '</td>' +
                 '<td><span class="cell-main">' + esc(r['Pekerjaan'] || '-') + '</span><span class="cell-sub">' + esc(r['Pendidikan'] || '-') + '</span></td>' +
+                '<td class="nowrap">' + (rowId
+                    ? '<button type="button" class="btn btn-ghost btn-sm" id="warga-hist-' + esc(rowId) + '" data-warga-hist="' + esc(rowId) + '" title="Riwayat pengajuan surat dan pengaduan"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>'
+                    : '<span class="cell-sub">-</span>') + '</td>' +
                 '</tr>';
         }).join('');
         var tbody = $('warga-body');
-        if (tbody) tbody.innerHTML = body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-users"></i><p>Tidak ada warga yang cocok.</p></div></td></tr>';
+        if (tbody) tbody.innerHTML = body || '<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-users"></i><p>Tidak ada warga yang cocok.</p></div></td></tr>';
+        bindWargaHistory(sliced.rows);
         var pager = $('warga-pager');
         if (pager) pager.innerHTML = pagerHtml('warga', sliced);
         bindPager('warga', paintWarga);
         var count = $('warga-count');
         if (count) count.textContent = fmtInt(filtered.length) + ' dari ' + fmtInt(data.res.total) + ' warga aktif';
+    }
+
+    // Riwayat per warga: pengajuan surat dan pengaduan dicocokkan lewat NIK
+    // (digit saja). Bila NIK kosong/tersamar sehingga tidak bisa dipakai,
+    // pencocokan jatuh ke nama yang dinormalkan. Hanya baca, tidak menulis.
+    function wargaNikKey(value) {
+        return String(value === null || value === undefined ? '' : value).replace(/\D/g, '');
+    }
+
+    function wargaNameKey(value) {
+        return String(value === null || value === undefined ? '' : value).trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function belongsToWarga(warga, record) {
+        var wNik = wargaNikKey(warga['NIK']);
+        var rNik = wargaNikKey(record && record['NIK']);
+        // NIK tersamar untuk RW Viewer hanya menyisakan 4 digit terakhir, yang
+        // terlalu pendek untuk pencocokan aman; dalam kondisi itu (atau NIK
+        // kosong) pencocokan jatuh ke nama.
+        if (wNik.length >= 8 && rNik.length >= 8) return wNik === rNik;
+        var wName = wargaNameKey(warga['Nama Lengkap']);
+        var rName = wargaNameKey(record && record['Nama Lengkap Pemohon'] !== undefined
+            ? record['Nama Lengkap Pemohon'] : record && record['Nama Warga']);
+        return !!(wName && rName && wName === rName);
+    }
+
+    function wargaHistoryHtml(warga, suratRows, laporRows, failedSheets) {
+        var surat = (suratRows || []).filter(function (r) { return belongsToWarga(warga, r); })
+            .sort(function (a, b) { return String(b['Timestamp'] || '').localeCompare(String(a['Timestamp'] || '')); });
+        var lapor = (laporRows || []).filter(function (r) { return belongsToWarga(warga, r); })
+            .sort(function (a, b) { return String(b['Timestamp'] || '').localeCompare(String(a['Timestamp'] || '')); });
+
+        var suratHtml;
+        if (!surat.length) {
+            suratHtml = '<div class="empty" style="padding:18px 0"><i class="fa-solid fa-file-signature"></i><p>Belum ada pengajuan surat untuk warga ini.</p></div>';
+        } else {
+            suratHtml = '<div class="table-wrap"><table>' +
+                '<thead><tr><th>Tanggal</th><th>Jenis surat / No. Surat</th><th>Status RT</th><th>Status RW</th></tr></thead><tbody>' +
+                surat.map(function (r) {
+                    return '<tr>' +
+                        '<td class="nowrap">' + fmtDay(r['Timestamp']) + '</td>' +
+                        '<td><span class="cell-main">' + esc(r['Jenis Surat'] || '-') + '</span><span class="cell-sub">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
+                        '<td>' + rtSuratBadge(r['Status Pengurusan']) + '</td>' +
+                        '<td>' + rwSuratBadge(r['Rw Status']) + '</td>' +
+                        '</tr>';
+                }).join('') +
+                '</tbody></table></div>';
+        }
+
+        var laporHtml;
+        if (!lapor.length) {
+            laporHtml = '<div class="empty" style="padding:18px 0"><i class="fa-solid fa-comment-dots"></i><p>Belum ada pengaduan dari warga ini.</p></div>';
+        } else {
+            laporHtml = '<div class="table-wrap"><table>' +
+                '<thead><tr><th>Tanggal / nomor</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th></tr></thead><tbody>' +
+                lapor.map(function (r) {
+                    return '<tr>' +
+                        '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Timestamp']) + '</span><span class="cell-sub">' + esc(r['No. Pengaduan'] || '-') + '</span></td>' +
+                        '<td><span class="cell-main">' + esc(r['Judul Pengaduan'] || '-') + '</span><span class="cell-sub">' + esc(r['Jenis Pengaduan'] || '') + '</span></td>' +
+                        '<td>' + rtLaporBadge(r['Status']) + '</td>' +
+                        '<td>' + rwLaporBadge(r['Rw Status']) + '</td>' +
+                        '</tr>';
+                }).join('') +
+                '</tbody></table></div>';
+        }
+
+        var failure = (failedSheets || []).length
+            ? '<div class="notice notice-warn"><i class="fa-solid fa-triangle-exclamation"></i><div>Riwayat ' +
+                esc(failedSheets.join(' dan ')) + ' tidak dapat dimuat dari RT ini. Coba lagi atau periksa kesehatan RT.</div></div>'
+            : '';
+        return failure + '<div class="drawer-section tint tint-brand"><h3>Warga</h3><dl class="detail-list">' +
+            detailRow('Nama', esc(warga['Nama Lengkap'] || '-')) +
+            detailRow('NIK', esc(warga['NIK'] || '-')) +
+            detailRow('No. KK', esc(kkValue(warga) || '-')) +
+            detailRow('Status', esc(warga['Status'] || '-')) +
+            detailRow('Alamat', esc(warga['Alamat/No Rumah'] || '-')) +
+            '</dl></div>' +
+            '<div class="drawer-section tint tint-blue"><h3>Riwayat pengajuan surat · ' + fmtInt(surat.length) + '</h3>' + suratHtml + '</div>' +
+            '<div class="drawer-section tint tint-amber"><h3>Riwayat pengaduan · ' + fmtInt(lapor.length) + '</h3>' + laporHtml + '</div>' +
+            '<p class="cell-sub" style="margin:0">Riwayat ini hanya untuk peninjauan. Portal RW tidak mengubah data warga maupun pengajuan (FR-WRG-03).</p>';
+    }
+
+    function openWargaHistory(warga, rtId) {
+        if (!warga) return;
+        var title = warga['Nama Lengkap'] || 'Riwayat warga';
+        openDrawer('Riwayat warga · ' + (rtId || '-'), title,
+            '<div class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i>Memuat riwayat...</div>');
+        var failed = [];
+        var suratReq = api('rwList', { rtId: rtId, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false })
+            .then(function (res) { return rowsToObjects(res.headers, res.rows); },
+                function () { failed.push('pengajuan surat'); return []; });
+        var laporReq = api('rwList', { rtId: rtId, sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0, includeArchived: false })
+            .then(function (res) { return rowsToObjects(res.headers, res.rows); },
+                function () { failed.push('pengaduan'); return []; });
+        Promise.all([suratReq, laporReq]).then(function (results) {
+            var body = $('drawer-body');
+            if (!body) return;
+            body.innerHTML = wargaHistoryHtml(warga, results[0], results[1], failed);
+        }).catch(function (err) {
+            var body = $('drawer-body');
+            if (body) body.innerHTML = '<div class="notice notice-error"><i class="fa-solid fa-circle-exclamation"></i><div>' +
+                esc((err && err.message) || 'Gagal memuat riwayat warga.') + '</div></div>';
+        });
+    }
+
+    function bindWargaHistory(rows) {
+        var rtId = state.filters.warga.rt;
+        document.querySelectorAll('[data-warga-hist]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                if (e && e.stopPropagation) e.stopPropagation();
+                var id = btn.getAttribute('data-warga-hist');
+                var warga = (rows || state.warga && state.warga.rows || []).find(function (r) {
+                    return String(r['ID']) === String(id);
+                });
+                if (warga) openWargaHistory(warga, rtId);
+            });
+        });
     }
 
     function printWargaReport(rows, meta) {
