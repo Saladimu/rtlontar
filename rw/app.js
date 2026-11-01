@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-01-03';
+    var BUILD = '2026-11-01-04';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -1120,13 +1120,14 @@
             suratHtml = '<div class="empty" style="padding:18px 0"><i class="fa-solid fa-file-signature"></i><p>Belum ada pengajuan surat untuk warga ini.</p></div>';
         } else {
             suratHtml = '<div class="table-wrap"><table>' +
-                '<thead><tr><th>Tanggal</th><th>Jenis surat / No. Surat</th><th>Status RT</th><th>Status RW</th></tr></thead><tbody>' +
+                '<thead><tr><th>Tanggal</th><th>Jenis surat / No. Surat</th><th>Status RT</th><th>Status RW</th><th>Aksi</th></tr></thead><tbody>' +
                 surat.map(function (r) {
-                    return '<tr>' +
+                    return '<tr class="clickable" data-hist-surat="' + esc(r['ID'] || '') + '">' +
                         '<td class="nowrap">' + fmtDay(r['Timestamp']) + '</td>' +
                         '<td><span class="cell-main">' + esc(r['Jenis Surat'] || '-') + '</span><span class="cell-sub">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
                         '<td>' + rtSuratBadge(r['Status Pengurusan']) + '</td>' +
                         '<td>' + rwSuratBadge(r['Rw Status']) + '</td>' +
+                        '<td class="nowrap"><button type="button" class="btn btn-ghost btn-sm" data-hist-open-surat="' + esc(r['ID'] || '') + '"><i class="fa-solid fa-up-right-from-square"></i> Buka</button></td>' +
                         '</tr>';
                 }).join('') +
                 '</tbody></table></div>';
@@ -1137,13 +1138,14 @@
             laporHtml = '<div class="empty" style="padding:18px 0"><i class="fa-solid fa-comment-dots"></i><p>Belum ada pengaduan dari warga ini.</p></div>';
         } else {
             laporHtml = '<div class="table-wrap"><table>' +
-                '<thead><tr><th>Tanggal / nomor</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th></tr></thead><tbody>' +
+                '<thead><tr><th>Tanggal / nomor</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th><th>Aksi</th></tr></thead><tbody>' +
                 lapor.map(function (r) {
-                    return '<tr>' +
+                    return '<tr class="clickable" data-hist-lapor="' + esc(r['ID'] || '') + '">' +
                         '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Timestamp']) + '</span><span class="cell-sub">' + esc(r['No. Pengaduan'] || '-') + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Judul Pengaduan'] || '-') + '</span><span class="cell-sub">' + esc(r['Jenis Pengaduan'] || '') + '</span></td>' +
                         '<td>' + rtLaporBadge(r['Status']) + '</td>' +
                         '<td>' + rwLaporBadge(r['Rw Status']) + '</td>' +
+                        '<td class="nowrap"><button type="button" class="btn btn-ghost btn-sm" data-hist-open-lapor="' + esc(r['ID'] || '') + '"><i class="fa-solid fa-up-right-from-square"></i> Buka</button></td>' +
                         '</tr>';
                 }).join('') +
                 '</tbody></table></div>';
@@ -1162,7 +1164,7 @@
             '</dl></div>' +
             '<div class="drawer-section tint tint-blue"><h3>Riwayat pengajuan surat · ' + fmtInt(surat.length) + '</h3>' + suratHtml + '</div>' +
             '<div class="drawer-section tint tint-amber"><h3>Riwayat pengaduan · ' + fmtInt(lapor.length) + '</h3>' + laporHtml + '</div>' +
-            '<p class="cell-sub" style="margin:0">Riwayat ini hanya untuk peninjauan. Portal RW tidak mengubah data warga maupun pengajuan (FR-WRG-03).</p>';
+            '<p class="cell-sub" style="margin:0"><i class="fa-solid fa-circle-info"></i> Klik baris atau tombol <strong>Buka</strong> untuk melihat detail. Riwayat ini hanya untuk peninjauan; portal RW tidak mengubah data warga maupun pengajuan (FR-WRG-03).</p>';
     }
 
     function openWargaHistory(warga, rtId) {
@@ -1181,10 +1183,43 @@
             var body = $('drawer-body');
             if (!body) return;
             body.innerHTML = wargaHistoryHtml(warga, results[0], results[1], failed);
+            bindWargaHistoryOpen(warga, rtId, results[0], results[1]);
         }).catch(function (err) {
             var body = $('drawer-body');
             if (body) body.innerHTML = '<div class="notice notice-error"><i class="fa-solid fa-circle-exclamation"></i><div>' +
                 esc((err && err.message) || 'Gagal memuat riwayat warga.') + '</div></div>';
+        });
+    }
+
+    // Baris riwayat dapat diklik untuk membuka detail aslinya (drawer surat atau
+    // pengaduan). Tombol "Kembali" pada detail mengembalikan pengguna ke panel
+    // riwayat warga yang sama.
+    function bindWargaHistoryOpen(warga, rtId, suratRows, laporRows) {
+        var back = function () { openWargaHistory(warga, rtId); };
+
+        function findById(list, id) {
+            return (list || []).find(function (r) { return String(r['ID']) === String(id); });
+        }
+
+        function bindPair(buttonAttr, rowAttr, rows, open) {
+            ['[' + buttonAttr + ']', '[' + rowAttr + ']'].forEach(function (selector) {
+                document.querySelectorAll(selector).forEach(function (node) {
+                    if (node.getAttribute('data-hist-bound')) return;
+                    node.setAttribute('data-hist-bound', '1');
+                    node.addEventListener('click', function (e) {
+                        if (e && e.stopPropagation) e.stopPropagation();
+                        var record = findById(rows, node.getAttribute(buttonAttr) || node.getAttribute(rowAttr));
+                        if (record) open(record);
+                    });
+                });
+            });
+        }
+
+        bindPair('data-hist-open-surat', 'data-hist-surat', suratRows, function (record) {
+            openSurat(record, rtId, back);
+        });
+        bindPair('data-hist-open-lapor', 'data-hist-lapor', laporRows, function (record) {
+            openLapor(record, rtId, back);
         });
     }
 
@@ -1734,6 +1769,20 @@
         return badge(s || '-', 'badge-neutral', 'fa-circle-info');
     }
 
+    // Tautan kembali dipakai saat detail dibuka dari panel riwayat warga,
+    // supaya pengguna dapat kembali ke riwayat tanpa kehilangan konteks.
+    function drawerBackLink(back) {
+        if (typeof back !== 'function') return '';
+        return '<div class="drawer-back"><button type="button" class="btn btn-ghost btn-sm" id="drawer-back">' +
+            '<i class="fa-solid fa-arrow-left"></i> Kembali ke riwayat warga</button></div>';
+    }
+
+    function bindDrawerBack(back) {
+        if (typeof back !== 'function') return;
+        var btn = $('drawer-back');
+        if (btn) btn.addEventListener('click', function () { back(); });
+    }
+
     function openDrawer(eyebrow, title, html) {
         $('drawer-eyebrow').textContent = eyebrow;
         $('drawer-title').textContent = title;
@@ -2041,9 +2090,10 @@
         });
     }
 
-    function openSurat(r) {
-        var rtId = state.filters.surat.rt;
-        var html = '<div class="drawer-section tint tint-brand"><h3>Pemohon</h3><dl class="detail-list">' +
+    function openSurat(r, rtOverride, back) {
+        var rtId = rtOverride || state.filters.surat.rt;
+        var html = drawerBackLink(back) +
+            '<div class="drawer-section tint tint-brand"><h3>Pemohon</h3><dl class="detail-list">' +
             detailRow('Nama', esc(r['Nama Lengkap Pemohon'])) +
             detailRow('NIK', esc(r['NIK'])) +
             detailRow('No. HP', esc(r['No. HP / WhatsApp'])) +
@@ -2068,13 +2118,15 @@
             suratActionPanel(r, rtId);
         openDrawer('Pengajuan surat · ' + (r['ID'] || ''), r['Jenis Surat'] || 'Detail pengajuan', html);
         bindSuratActions(r, rtId);
+        bindDrawerBack(back);
     }
 
-    function openLapor(r) {
+    function openLapor(r, rtOverride, back) {
         var laporId = r['ID'];
-        var rtId = state.filters.lapor.rt;
+        var rtId = rtOverride || state.filters.lapor.rt;
         var foto = laporFotoBlock(r['Foto / Bukti Pendukung']);
         openDrawer('Pengaduan · ' + (r['No. Pengaduan'] || laporId || ''), r['Judul Pengaduan'] || 'Detail pengaduan',
+            drawerBackLink(back) +
             '<div class="drawer-section tint tint-brand"><h3>Pengaduan</h3><dl class="detail-list">' +
             detailRow('No. pengaduan', esc(r['No. Pengaduan'])) +
             detailRow('Warga', esc(r['Nama Warga'])) +
@@ -2097,6 +2149,7 @@
             '<div class="drawer-section tint tint-green"><h3>Riwayat tindak lanjut RW</h3><div id="lapor-timeline" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i>Memuat riwayat...</div></div>');
         bindLaporFoto(foto.sources);
         bindLaporActions(r, rtId);
+        bindDrawerBack(back);
         if (!laporId) {
             $('lapor-timeline').innerHTML = '<div class="empty"><i class="fa-solid fa-clock-rotate-left"></i><p>Riwayat tidak tersedia.</p></div>';
             return;
