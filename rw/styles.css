@@ -440,6 +440,8 @@ tbody tr.kk-head .cell-main { font-weight: 700; }
 .drawer-head h2 { margin: 2px 0 0; font-size: 17px; }
 .drawer-eyebrow { margin: 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 700; }
 .drawer-body { padding: 20px 22px 40px; overflow-y: auto; }
+.drawer-back { margin-bottom: 14px; }
+.drawer-back .btn { gap: 6px; }
 .drawer-section { margin-bottom: 22px; }
 .drawer-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 0 0 8px; }
 .drawer-section.tint {
