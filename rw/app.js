@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-10-31-03';
+    var BUILD = '2026-11-01-01';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -902,17 +902,19 @@
         ensureDashboard().then(function (d) {
             var t = d.totals || {};
             var cards = [
-                ['Warga aktif', fmtInt(t.warga), 'jiwa', 'fa-users', ''],
-                ['Saldo kas', fmtMoney(t.kasSaldo), 'gabungan semua RT', 'fa-wallet', 'money'],
-                ['Surat menunggu', fmtInt(t.suratMenunggu), 'perlu keputusan RW', 'fa-file-signature', ''],
-                ['Pengaduan terbuka', fmtInt(t.laporTerbuka), 'belum selesai', 'fa-comment-dots', ''],
-                ['Eskalasi RW', fmtInt(t.laporEskalasi), 'menunggu tindak lanjut', 'fa-paper-plane', '']
+                ['kpi-warga', 'Warga aktif', fmtInt(t.warga), 'jiwa', 'fa-users', '', { page: 'warga' }],
+                ['kpi-kas', 'Saldo kas', fmtMoney(t.kasSaldo), 'gabungan semua RT', 'fa-wallet', 'money', { page: 'kas' }],
+                ['kpi-surat', 'Surat menunggu', fmtInt(t.suratMenunggu), 'perlu keputusan RW', 'fa-file-signature', '', { page: 'surat' }],
+                ['kpi-lapor', 'Pengaduan terbuka', fmtInt(t.laporTerbuka), 'belum selesai', 'fa-comment-dots', '', { page: 'lapor' }],
+                ['kpi-eskalasi', 'Eskalasi RW', fmtInt(t.laporEskalasi), 'menunggu tindak lanjut', 'fa-paper-plane', '', { page: 'lapor', status: 'Perlu Tindak Lanjut' }]
             ];
             var kpi = cards.map(function (c) {
-                return '<article class="kpi-card">' +
-                    '<div class="kpi-head"><span class="kpi-label">' + esc(c[0]) + '</span><span class="kpi-icon"><i class="fa-solid ' + c[3] + '"></i></span></div>' +
-                    '<p class="kpi-value ' + c[4] + '">' + c[1] + '</p>' +
-                    '<p class="kpi-note">' + esc(c[2]) + '</p></article>';
+                return '<button type="button" class="kpi-card kpi-link" id="' + esc(c[0]) + '" data-kpi-page="' + esc(c[6].page) + '"' +
+                    (c[6].status ? ' data-kpi-status="' + esc(c[6].status) + '"' : '') +
+                    ' title="Buka rincian ' + esc(c[1].toLowerCase()) + '">' +
+                    '<span class="kpi-head"><span class="kpi-label">' + esc(c[1]) + '</span><span class="kpi-icon"><i class="fa-solid ' + c[4] + '"></i></span></span>' +
+                    '<span class="kpi-value ' + c[5] + '">' + c[2] + '</span>' +
+                    '<span class="kpi-note">' + esc(c[3]) + '<i class="fa-solid fa-arrow-right kpi-go"></i></span></button>';
             }).join('');
 
             var rows = (d.rts || []).map(function (rt) {
@@ -970,6 +972,8 @@
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="warga-rt">' + rtOptions(f.rt) + '</select></div>' +
                         '<div class="field" style="flex:1"><label>Cari</label><span class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input class="control" id="warga-q" placeholder="Nama, NIK, KK, HP, atau alamat" value="' + esc(f.q) + '"></span></div>' +
+                        '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="warga-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
+                        (isAdmin() ? '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="warga-dup"><i class="fa-solid fa-clone"></i> Cek NIK ganda</button></div>' : '') +
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>' + esc(f.rt) + '</h2><p id="warga-count">' + fmtInt(res.total) + ' warga aktif</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
@@ -985,20 +989,33 @@
                     state.pages.warga = 1;
                     paintWarga();
                 });
+                $('warga-print').addEventListener('click', function () {
+                    printWargaReport(filteredWarga(), { rt: f.rt, query: f.q });
+                });
+                var dupBtn = $('warga-dup');
+                if (dupBtn) dupBtn.addEventListener('click', function () { openNikDuplicates(); });
                 setSync('Data ' + f.rt, 'ok');
             });
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
+    }
+
+    function filteredWarga() {
+        var data = state.warga;
+        if (!data) return [];
+        var f = state.filters.warga;
+        var q = String(f.q || '').trim().toLowerCase();
+        if (!q) return data.rows;
+        return data.rows.filter(function (r) {
+            return [r['Nama Lengkap'], r['Nomor KK'], r['NIK'], r['No HP'], r['Alamat/No Rumah'], r['Pekerjaan']]
+                .some(function (v) { return String(v || '').toLowerCase().indexOf(q) !== -1; });
+        });
     }
 
     function paintWarga() {
         var data = state.warga;
         if (!data) return;
         var f = state.filters.warga;
-        var q = String(f.q || '').trim().toLowerCase();
-        var filtered = q ? data.rows.filter(function (r) {
-            return [r['Nama Lengkap'], r['Nomor KK'], r['NIK'], r['No HP'], r['Alamat/No Rumah'], r['Pekerjaan']]
-                .some(function (v) { return String(v || '').toLowerCase().indexOf(q) !== -1; });
-        }) : data.rows;
+        var filtered = filteredWarga();
         var sliced = pageSlice(filtered, 'warga');
         var body = sliced.rows.map(function (r) {
             return '<tr>' +
@@ -1017,6 +1034,160 @@
         bindPager('warga', paintWarga);
         var count = $('warga-count');
         if (count) count.textContent = fmtInt(filtered.length) + ' dari ' + fmtInt(data.res.total) + ' warga aktif';
+    }
+
+    function printWargaReport(rows, meta) {
+        var tableRows = rows.map(function (r, idx) {
+            return '<tr>' +
+                '<td class="c">' + (idx + 1) + '</td>' +
+                '<td>' + esc(r['Nama Lengkap'] || '-') + '<br><span style="color:#64748b;font-size:10px">KK ' + esc(r['Nomor KK'] || '-') + '</span></td>' +
+                '<td class="nw">' + esc(r['NIK'] || '-') + '</td>' +
+                '<td class="nw">' + esc(r['No HP'] || '-') + '</td>' +
+                '<td>' + esc(r['Alamat/No Rumah'] || '-') + '</td>' +
+                '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
+                '<td>' + esc(r['Pekerjaan'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Pendidikan'] || '-') + '</span></td>' +
+                '</tr>';
+        });
+        var headerLabel = meta.query ? 'Pencarian: ' + meta.query : 'Semua warga aktif';
+        openPagedReport({
+            title: 'Laporan Data Warga',
+            subtitle: rtLabel(meta.rt),
+            meta: headerLabel,
+            docTitle: 'Laporan Data Warga - ' + rtLabel(meta.rt),
+            orientation: 'portrait',
+            colCount: 7,
+            emptyText: 'Tidak ada warga pada filter ini.',
+            theadHtml: '<tr>' +
+                '<th class="c" style="width:30px">No</th><th>Warga / KK</th>' +
+                '<th class="nw" style="width:96px">NIK</th><th class="nw" style="width:80px">No HP</th>' +
+                '<th>Alamat</th><th class="c" style="width:70px">Status</th><th>Pekerjaan / pendidikan</th>' +
+                '</tr>',
+            rows: tableRows,
+            footerLeft: 'RW 06 Portal Pengurus · Jumlah baris: ' + fmtInt(rows.length) + (meta.query ? ' · cari: ' + meta.query : '')
+        });
+    }
+
+    // FR-WRG-05: NIK ganda dilaporkan, bukan digabung otomatis. Pemindaian
+    // memakai NIK apa adanya dari setiap RT aktif; data tidak pernah ditulis
+    // balik ke RT mana pun.
+    function nikDigits(value) {
+        return String(value === null || value === undefined ? '' : value).replace(/\D/g, '');
+    }
+
+    function collectNikGroups(rtRows) {
+        var groups = {};
+        rtRows.forEach(function (entry) {
+            (entry.rows || []).forEach(function (r) {
+                var nik = nikDigits(r['NIK']);
+                if (!nik) return;
+                if (!groups[nik]) groups[nik] = [];
+                groups[nik].push({
+                    rtId: entry.rtId,
+                    nama: r['Nama Lengkap'] || '-',
+                    kk: r['Nomor KK'] || '-',
+                    nik: r['NIK'] || '-',
+                    hp: r['No HP'] || '-',
+                    alamat: r['Alamat/No Rumah'] || '-',
+                    status: r['Status'] || '-',
+                    pekerjaan: r['Pekerjaan'] || '-',
+                    id: r['ID'] || '-'
+                });
+            });
+        });
+        return Object.keys(groups).sort().map(function (nik) {
+            var list = groups[nik];
+            var rts = {};
+            list.forEach(function (e) { rts[e.rtId] = true; });
+            return { nik: nik, rows: list, rts: Object.keys(rts) };
+        }).filter(function (g) { return g.rows.length > 1; }).sort(function (a, b) {
+            if (b.rts.length !== a.rts.length) return b.rts.length - a.rts.length;
+            return b.rows.length - a.rows.length;
+        });
+    }
+
+    function nikDuplicateHtml(groups, masked, scanned) {
+        if (!groups.length) {
+            return '<div class="notice notice-ok"><i class="fa-solid fa-circle-check"></i><div>Tidak ditemukan NIK ganda pada ' + fmtInt(scanned) + ' RT yang dipindai.</div></div>';
+        }
+        var cross = groups.filter(function (g) { return g.rts.length > 1; }).length;
+        var blocks = groups.map(function (g) {
+            var rows = g.rows.map(function (e) {
+                return '<tr>' +
+                    '<td class="nowrap">' + esc(e.rtId) + '</td>' +
+                    '<td><span class="cell-main">' + esc(e.nama) + '</span><span class="cell-sub">KK ' + esc(e.kk) + '</span></td>' +
+                    '<td class="nowrap">' + esc(e.nik) + '</td>' +
+                    '<td>' + esc(e.alamat) + '</td>' +
+                    '<td class="nowrap">' + esc(e.status) + '</td>' +
+                    '<td class="nowrap"><span class="cell-sub">' + esc(e.id) + '</span></td>' +
+                    '</tr>';
+            }).join('');
+            return '<section class="drawer-section">' +
+                '<h3>NIK ' + esc(g.nik) + ' · ' + fmtInt(g.rows.length) + ' baris · ' + (g.rts.length > 1 ? 'lintas RT' : 'satu RT') + '</h3>' +
+                '<div class="table-wrap"><table>' +
+                '<thead><tr><th>RT</th><th>Warga</th><th>NIK</th><th>Alamat</th><th>Status</th><th>ID</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody></table></div>' +
+                '</section>';
+        }).join('');
+        return '<div class="notice notice-warn"><i class="fa-solid fa-triangle-exclamation"></i><div>' +
+            fmtInt(groups.length) + ' NIK ganda (' + fmtInt(cross) + ' lintas RT). Tinjau manual di RT masing-masing; sistem tidak menggabungkan data otomatis.' +
+            (masked ? ' Nilai NIK dimasking untuk RW Viewer sehingga hasil pemeriksaan bisa kurang akurat.' : '') +
+            '</div></div>' + blocks;
+    }
+
+    function openNikDuplicates() {
+        var rts = (state.dashboard && state.dashboard.rts) || [];
+        if (!rts.length) { toast('Belum ada RT aktif.', 'error'); return; }
+        openDrawer('Pemeriksaan data', 'NIK ganda', '<div class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i>Memindai ' + fmtInt(rts.length) + ' RT...</div>');
+        var jobs = rts.map(function (rt) {
+            return api('rwList', { rtId: rt.rtId, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false })
+                .then(function (res) { return { rtId: rt.rtId, rows: rowsToObjects(res.headers, res.rows), masked: !!res.masked }; },
+                    function () { return { rtId: rt.rtId, rows: [], failed: true }; });
+        });
+        Promise.all(jobs).then(function (results) {
+            var masked = results.some(function (r) { return r.masked; });
+            var failed = results.filter(function (r) { return r.failed; }).map(function (r) { return r.rtId; });
+            var groups = collectNikGroups(results);
+            var html = (failed.length
+                ? '<div class="notice notice-warn"><i class="fa-solid fa-triangle-exclamation"></i><div>RT berikut tidak dapat dipindai: <strong>' + esc(failed.join(', ')) + '</strong>. Hasil mungkin belum lengkap.</div></div>'
+                : '') + nikDuplicateHtml(groups, masked, results.length) +
+                '<div class="action-buttons"><button type="button" class="btn btn-ghost" id="warga-dup-print"><i class="fa-solid fa-print"></i> Cetak daftar NIK ganda</button></div>';
+            $('drawer-body').innerHTML = html;
+            var printBtn = $('warga-dup-print');
+            if (printBtn) printBtn.addEventListener('click', function () { printNikDuplicateReport(groups); });
+        }).catch(function (err) {
+            $('drawer-body').innerHTML = '<div class="notice notice-warn"><i class="fa-solid fa-triangle-exclamation"></i><div>' + esc(err.message || 'Gagal memindai NIK ganda.') + '</div></div>';
+        });
+    }
+
+    function printNikDuplicateReport(groups) {
+        var rows = [];
+        groups.forEach(function (g) {
+            g.rows.forEach(function (e, idx) {
+                rows.push('<tr>' +
+                    '<td class="nw">' + (idx === 0 ? esc(g.nik) : '') + '</td>' +
+                    '<td class="nw">' + esc(e.rtId) + '</td>' +
+                    '<td>' + esc(e.nama) + '<br><span style="color:#64748b;font-size:10px">KK ' + esc(e.kk) + '</span></td>' +
+                    '<td>' + esc(e.alamat) + '</td>' +
+                    '<td class="c">' + esc(e.status) + '</td>' +
+                    '<td class="c">' + (idx === 0 ? fmtInt(g.rows.length) + ' baris / ' + fmtInt(g.rts.length) + ' RT' : '') + '</td>' +
+                    '</tr>');
+            });
+        });
+        openPagedReport({
+            title: 'Laporan NIK Ganda',
+            subtitle: 'RW 06 · seluruh RT',
+            meta: fmtInt(groups.length) + ' NIK ganda · tinjau manual, tidak digabung otomatis',
+            docTitle: 'Laporan NIK Ganda - RW 06',
+            orientation: 'portrait',
+            colCount: 6,
+            emptyText: 'Tidak ditemukan NIK ganda.',
+            theadHtml: '<tr>' +
+                '<th class="nw" style="width:104px">NIK</th><th class="nw" style="width:52px">RT</th>' +
+                '<th>Warga / KK</th><th>Alamat</th><th class="c" style="width:70px">Status</th><th class="c" style="width:86px">Kemunculan</th>' +
+                '</tr>',
+            rows: rows,
+            footerLeft: 'RW 06 Portal Pengurus · ' + fmtInt(groups.length) + ' NIK ganda'
+        });
     }
 
     function renderKas() {
@@ -2340,6 +2511,17 @@
         });
         var page = $('page');
         page.addEventListener('click', function (e) {
+            var kpi = e.target.closest('[data-kpi-page]');
+            if (kpi) {
+                var target = kpi.getAttribute('data-kpi-page');
+                var status = kpi.getAttribute('data-kpi-status');
+                if (state.filters[target] && 'status' in state.filters[target]) {
+                    state.filters[target].status = status || '';
+                    state.pages[target] = 1;
+                }
+                navigate(target);
+                return;
+            }
             var rtRow = e.target.closest('tr[data-rt]');
             if (rtRow) {
                 state.filters.warga.rt = rtRow.getAttribute('data-rt');
