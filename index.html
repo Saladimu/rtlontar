@@ -2043,7 +2043,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-11-01-05';
+        const APP_BUILD = '2026-11-01-06';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -5479,9 +5479,16 @@
             const sNama = wargaNameKey(surat && surat.nama);
             return !!(wNama && sNama && wNama === sNama);
         }
+        // Kunci No. HP yang setara untuk "0812..." dan "62812..." agar pengaduan
+        // yang masuk lewat Portal Publik (tersimpan 62...) tetap cocok dengan
+        // nomor warga di Data_Warga (tersimpan apa adanya).
+        function wargaHpKey(v) {
+            const norm = waNumber(v);
+            return norm || wargaNikKey(v);
+        }
         function laporBelongsToWarga(warga, lapor) {
-            const wHp = wargaNikKey(warga && warga.hp);
-            const lHp = wargaNikKey(lapor && lapor.noHp);
+            const wHp = wargaHpKey(warga && warga.hp);
+            const lHp = wargaHpKey(lapor && lapor.noHp);
             if (wHp.length >= 9 && lHp.length >= 9) return wHp === lHp;
             const wNama = wargaNameKey(warga && warga.nama);
             const lNama = wargaNameKey(lapor && lapor.nama);
@@ -5494,7 +5501,7 @@
             }
             const rows = list.map(function (item) {
                 const tanggal = String(fmtTimestamp(item.waktu) || '').split(' ')[0];
-                const isArchived = String(item.arsip || '').toLowerCase() === 'ya';
+                const isArchived = isArchivedSurat(item);
                 return '<tr class="border-b border-slate-100 align-top hover:bg-cyan-50 cursor-pointer transition" ' +
                         'onclick="openWargaSuratRecord(\'' + escAttr(item._id || '') + '\')" title="Klik untuk membuka pengajuan surat">' +
                     '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(tanggal || '-') + '</td>' +
@@ -5524,7 +5531,7 @@
             }
             const rows = list.map(function (item) {
                 const tanggal = String(fmtTimestamp(item.waktu) || '').split(' ')[0];
-                const isArchived = String(item.arsip || '').toLowerCase() === 'ya';
+                const isArchived = isArchivedLapor(item);
                 return '<tr class="border-b border-slate-100 align-top hover:bg-teal-50 cursor-pointer transition" ' +
                         'onclick="openWargaLaporRecord(\'' + escAttr(item._id || '') + '\')" title="Klik untuk membuka pengaduan">' +
                     '<td class="py-2 pr-3 whitespace-nowrap text-slate-600 text-xs">' + escAttr(tanggal || '-') +
@@ -5567,10 +5574,16 @@
         function showWargaSuratHistory(index) {
             const warga = appState.warga[index];
             if (!warga) return;
+            // waktu sudah diformat "dd-Mmm-yyyy HH:mm" oleh applySheetsData, sehingga
+            // pengurutan leksikal biasa salah urut (mis. 31-Des di atas 05-Okt).
+            // Pakai kunci kronologis yang sama dengan tabel & cetak.
+            const byWaktuDesc = function (a, b) {
+                return laporWaktuKey(b && b.waktu).localeCompare(laporWaktuKey(a && a.waktu));
+            };
             const suratList = (appState.surat || []).filter(function (s) { return suratBelongsToWarga(warga, s); })
-                .sort(function (a, b) { return String(b.waktu || '').localeCompare(String(a.waktu || '')); });
+                .sort(byWaktuDesc);
             const laporList = (appState.lapor || []).filter(function (l) { return laporBelongsToWarga(warga, l); })
-                .sort(function (a, b) { return String(b.waktu || '').localeCompare(String(a.waktu || '')); });
+                .sort(byWaktuDesc);
             const sub = document.getElementById('modal-warga-surat-sub');
             if (sub) {
                 sub.innerHTML = escAttr(warga.nama || '-') + ' &middot; NIK ' + escAttr(maskNik(warga.nik)) +
