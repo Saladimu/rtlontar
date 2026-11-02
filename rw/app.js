@@ -316,13 +316,16 @@
     // di tab yang sama. Isinya hanya respons baca yang sudah ditampilkan ke
     // pengguna yang sama; entri dibuang saat build berubah, saat menulis data,
     // dan otomatis hilang saat tab ditutup (tidak ada PII yang menetap).
+    // Umur maksimum sesi tersimpan yang boleh dipakai untuk menggambar
+    // kerangka aplikasi sebelum verifikasi ulang gateway selesai.
+    var EARLY_SESSION_MAX_MS = 5 * 60 * 1000;
     var READ_CACHE_PREFIX = 'rw_read_v1:';
     // Batas per entri agar satu daftar besar (mis. 2000 baris) tidak menghabiskan
     // kuota sessionStorage (~5 MB) dan menggagalkan cache entri lain.
     var PERSIST_MAX_BYTES = 262144;
     var PERSIST_ACTIONS = {
-        rwDashboard: true, rwList: true, rwUsersList: true, rwRegistryList: true,
-        rwSettingsGet: true, rwAuditList: true, rwOutboxList: true
+        rwSession: true, rwDashboard: true, rwList: true, rwUsersList: true,
+        rwRegistryList: true, rwSettingsGet: true, rwAuditList: true, rwOutboxList: true
     };
 
     function sessionStore() {
@@ -2905,16 +2908,38 @@
         }
         bindGlobal();
         $('build-info').textContent = 'Portal build ' + BUILD;
+        // Sesi yang sudah diverifikasi gateway di tab ini boleh dipakai untuk
+        // menggambar kerangka seketika; verifikasi ulang tetap berjalan dan
+        // mengganti layar dengan pesan akses bila ternyata ditolak.
+        var cachedSession = readCache[apiKey('rwSession', null)];
+        var earlyShown = false;
+        // Batas khusus sesi: lebih pendek daripada cache data, karena kerangka
+        // aplikasi hanya boleh tampil seketika bila sesi yang tersimpan masih
+        // baru. Verifikasi ulang tetap berjalan dan akan menutupnya bila ditolak.
+        if (cachedSession && cachedDash &&
+            Date.now() - cachedSession.at < EARLY_SESSION_MAX_MS) {
+            state.session = cachedSession.data;
+            earlyShown = true;
+            showApp();
+            renderChrome();
+            navigate('dashboard');
+        }
         // Ringkasan RT tidak bergantung pada data sesi (identitas sudah diverifikasi
         // gateway), jadi permintaannya dimulai bersamaan dengan rwSession. Satu
         // round-trip lebih cepat dan hasilnya masuk ke cache/dedupe `api()`,
         // sehingga renderDashboard tinggal memakainya.
-        api('rwDashboard').catch(function () {});
-        api('rwSession').then(function (res) {
+        if (!earlyShown) api('rwDashboard').catch(function () {});
+        // {fresh:true} wajib: sesi yang dihidrasi dari sessionStorage tidak boleh
+        // menjawab verifikasi, kalau tidak akun yang sudah dicabut tetap lolos.
+        api('rwSession', null, { fresh: true }).then(function (res) {
             state.session = res;
-            showApp();
-            renderChrome();
-            navigate('dashboard');
+            if (!earlyShown) {
+                showApp();
+                renderChrome();
+                navigate('dashboard');
+            } else {
+                renderChrome();
+            }
             prefetchPages();
         }).catch(function (err) {
             if (err.code === 'unauthorized') {
