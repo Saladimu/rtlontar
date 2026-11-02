@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-01-04';
+    var BUILD = '2026-11-02-01';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -270,6 +270,10 @@
     };
     var readCache = {};
     var inflight = {};
+    // Dinaikkan setiap clearReadCache(). Respons yang dimulai sebelum
+    // pembersihan tidak boleh menulis cache lagi, karena isinya sudah basi
+    // (mis. daftar surat sebelum keputusan RW disimpan).
+    var cacheGeneration = 0;
 
     function apiKey(action, payload) {
         return action + '|' + JSON.stringify(payload || {});
@@ -294,7 +298,10 @@
     }
 
     function clearReadCache() {
+        cacheGeneration++;
         readCache = {};
+        inflight = {};
+        clearPersistedCache();
         state.dashboard = null;
         state.dashboardLoadedAt = 0;
         dashboardPromise = null;
@@ -303,6 +310,88 @@
     // Umur maksimum entri cache. Setelah TTL, data lama tetap ditampilkan
     // seketika (stale-while-revalidate) lalu diperbarui di latar belakang.
     var READ_CACHE_MAX_MS = 10 * 60 * 1000;
+
+    // Cache baca juga disalin ke sessionStorage supaya perpindahan menu tetap
+    // seketika setelah halaman dimuat ulang (F5) atau dibuka dari tautan lain
+    // di tab yang sama. Isinya hanya respons baca yang sudah ditampilkan ke
+    // pengguna yang sama; entri dibuang saat build berubah, saat menulis data,
+    // dan otomatis hilang saat tab ditutup (tidak ada PII yang menetap).
+    var READ_CACHE_PREFIX = 'rw_read_v1:';
+    // Batas per entri agar satu daftar besar (mis. 2000 baris) tidak menghabiskan
+    // kuota sessionStorage (~5 MB) dan menggagalkan cache entri lain.
+    var PERSIST_MAX_BYTES = 262144;
+    var PERSIST_ACTIONS = {
+        rwDashboard: true, rwList: true, rwUsersList: true, rwRegistryList: true,
+        rwSettingsGet: true, rwAuditList: true, rwOutboxList: true
+    };
+
+    function sessionStore() {
+        try {
+            if (typeof sessionStorage === 'undefined' || !sessionStorage) return null;
+            return sessionStorage;
+        } catch (e) { return null; }
+    }
+
+    function persistEntry(key, entry) {
+        var action = String(key).split('|')[0];
+        if (!PERSIST_ACTIONS[action]) return;
+        var store = sessionStore();
+        if (!store) return;
+        var raw;
+        try {
+            raw = JSON.stringify({ v: BUILD, at: entry.at, data: entry.data });
+        } catch (e) { return; }
+        if (!raw || raw.length > PERSIST_MAX_BYTES) return;
+        try {
+            store.setItem(READ_CACHE_PREFIX + key, raw);
+        } catch (e) {
+            // Kuota penuh: buang cache persisten lain lalu coba sekali lagi.
+            // Cache memori tetap berjalan apa pun hasilnya.
+            clearPersistedCache();
+            try { store.setItem(READ_CACHE_PREFIX + key, raw); } catch (e2) {}
+        }
+    }
+
+    // Muat kembali entri cache dari sesi tab. Entri dari build lain diabaikan
+    // agar data lama tidak tampil setelah deploy.
+    function hydrateReadCache() {
+        var store = sessionStore();
+        if (!store) return;
+        try {
+            var drop = [];
+            for (var i = 0; i < store.length; i++) {
+                var sk = store.key(i);
+                if (!sk || sk.indexOf(READ_CACHE_PREFIX) !== 0) continue;
+                var raw = store.getItem(sk);
+                var entry = null;
+                try { entry = raw ? JSON.parse(raw) : null; } catch (e) { entry = null; }
+                var key = sk.slice(READ_CACHE_PREFIX.length);
+                var action = key.split('|')[0];
+                if (!entry || entry.v !== BUILD || !PERSIST_ACTIONS[action] ||
+                    !entry.at || Date.now() - entry.at >= READ_CACHE_MAX_MS) {
+                    drop.push(sk);
+                    continue;
+                }
+                readCache[key] = { at: entry.at, data: entry.data };
+            }
+            drop.forEach(function (sk) { try { store.removeItem(sk); } catch (e) {} });
+        } catch (e) {
+            // Akses storage gagal: lanjut tanpa cache persisten.
+        }
+    }
+
+    function clearPersistedCache() {
+        var store = sessionStore();
+        if (!store) return;
+        try {
+            var drop = [];
+            for (var i = 0; i < store.length; i++) {
+                var sk = store.key(i);
+                if (sk && sk.indexOf(READ_CACHE_PREFIX) === 0) drop.push(sk);
+            }
+            drop.forEach(function (sk) { try { store.removeItem(sk); } catch (e) {} });
+        } catch (e) {}
+    }
 
     function delay(ms) {
         return new Promise(function (resolve) { setTimeout(resolve, ms); });
@@ -336,8 +425,12 @@
             }
         }
         if (inflight[key]) return inflight[key];
+        var gen = cacheGeneration;
         var promise = apiOnce(action, payload, 1).then(function (data) {
-            if (READ_TTL_MS[action] !== 0) readCache[key] = { at: Date.now(), data: data };
+            if (READ_TTL_MS[action] !== 0 && gen === cacheGeneration) {
+                readCache[key] = { at: Date.now(), data: data };
+                persistEntry(key, readCache[key]);
+            }
             return data;
         });
         inflight[key] = promise;
@@ -352,9 +445,14 @@
     function revalidate(action, payload) {
         var key = apiKey(action, payload);
         if (inflight[key]) return inflight[key];
+        var gen = cacheGeneration;
         var promise = apiOnce(action, payload, 0).then(function (data) {
+            // Pembersihan cache terjadi saat revalidasi berjalan: hasil ini
+            // tidak boleh dikembalikan ke cache maupun menggambar ulang.
+            if (gen !== cacheGeneration) return data;
             var before = readCache[key] ? JSON.stringify(readCache[key].data) : '';
             readCache[key] = { at: Date.now(), data: data };
+            persistEntry(key, readCache[key]);
             if (action === 'rwDashboard') {
                 state.dashboard = data;
                 state.dashboardLoadedAt = Date.now();
@@ -504,6 +602,13 @@
     function ensureDashboard(force) {
         var fresh = state.dashboard && (Date.now() - state.dashboardLoadedAt < 60000);
         if (state.dashboard && fresh && !force) return Promise.resolve(state.dashboard);
+        // Sudah ada ringkasan (dari cache memori/sesi): tampilkan seketika dan
+        // perbarui di latar belakang. Ini menghapus jeda "Memuat..." saat
+        // berpindah menu atau memuat ulang halaman.
+        if (state.dashboard && !force) {
+            revalidate('rwDashboard', null);
+            return Promise.resolve(state.dashboard);
+        }
         if (dashboardPromise) return dashboardPromise;
         dashboardPromise = api('rwDashboard', null, { fresh: !!force }).then(function (res) {
             dashboardPromise = null;
@@ -839,16 +944,26 @@
         }
         state.prefetched = true;
         var jobs = [
-            { rtId: rtId, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false },
-            { rtId: rtId, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false },
-            { rtId: rtId, sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0, includeArchived: false },
-            { rtId: rtId, sheet: 'Iuran_Kas', limit: 2000, offset: 0, includeArchived: true }
+            { action: 'rwList', payload: { rtId: rtId, sheet: 'Data_Warga', limit: 2000, offset: 0, includeArchived: false } },
+            { action: 'rwList', payload: { rtId: rtId, sheet: 'Pengajuan_Surat', limit: 2000, offset: 0, includeArchived: false } },
+            { action: 'rwList', payload: { rtId: rtId, sheet: 'Lapor_Aspirasi', limit: 2000, offset: 0, includeArchived: false } },
+            { action: 'rwList', payload: { rtId: rtId, sheet: 'Iuran_Kas', limit: 2000, offset: 0, includeArchived: true } }
         ];
-        jobs.forEach(function (payload, i) {
+        // Halaman administrasi hanya untuk RW Admin dan tidak ter-prefetch
+        // sebelumnya, sehingga menu itu paling terasa "Memuat...". Ambil juga
+        // di latar belakang (setelah daftar utama) agar klik menu langsung tampil.
+        if (isAdmin()) {
+            jobs.push({ action: 'rwUsersList', payload: null });
+            jobs.push({ action: 'rwRegistryList', payload: null });
+            jobs.push({ action: 'rwSettingsGet', payload: null });
+            jobs.push({ action: 'rwOutboxList', payload: null });
+            jobs.push({ action: 'rwAuditList', payload: { limit: 200 } });
+        }
+        jobs.forEach(function (job, i) {
             setTimeout(function () {
-                if (apiPeek('rwList', payload)) return;
-                api('rwList', payload).catch(function () {});
-            }, 300 + i * 400);
+                if (apiPeek(job.action, job.payload)) return;
+                api(job.action, job.payload).catch(function () {});
+            }, 100 + i * 120);
         });
     }
 
@@ -2686,12 +2801,22 @@
         var btn = $('refresh-btn');
         if (btn) btn.disabled = true;
         setSync('Menyegarkan', '');
+        var gen = cacheGeneration;
         api('rwRefresh').then(function (res) {
             // rwRefresh sudah mengembalikan dashboard terbaru; pakai langsung agar
             // tidak ada fan-out kedua yang memperlambat dan memicu timeout.
             if (res && res.rts) {
                 state.dashboard = res;
                 state.dashboardLoadedAt = Date.now();
+                // Simpan juga sebagai cache baca agar perpindahan menu dan
+                // pemuatan ulang berikutnya langsung memakai ringkasan ini.
+                // Lewati bila aksi tulis terjadi selama refresh berjalan:
+                // cache sudah dibersihkan dan ringkasan ini sudah basi.
+                if (gen === cacheGeneration) {
+                    var dashKey = apiKey('rwDashboard', null);
+                    readCache[dashKey] = { at: Date.now(), data: res };
+                    persistEntry(dashKey, readCache[dashKey]);
+                }
             } else {
                 clearReadCache();
                 return ensureDashboard(true);
@@ -2766,6 +2891,18 @@
     }
 
     function boot() {
+        hydrateReadCache();
+        // Ringkasan dari cache sesi dipakai lebih dulu agar menu langsung bisa
+        // dibuka (default RT sudah diketahui) sebelum jaringan menjawab. Di sini
+        // TTL singkat rwDashboard sengaja dilewati (masih dalam batas
+        // READ_CACHE_MAX_MS): data lama tetap ditampilkan seketika lalu
+        // divalidasi ulang di latar belakang oleh ensureDashboard().
+        var cachedDash = readCache[apiKey('rwDashboard', null)];
+        if (cachedDash && !state.dashboard &&
+            Date.now() - cachedDash.at < READ_CACHE_MAX_MS) {
+            state.dashboard = cachedDash.data;
+            state.dashboardLoadedAt = cachedDash.at;
+        }
         bindGlobal();
         $('build-info').textContent = 'Portal build ' + BUILD;
         // Ringkasan RT tidak bergantung pada data sesi (identitas sudah diverifikasi
