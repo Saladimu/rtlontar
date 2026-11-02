@@ -491,7 +491,9 @@ Berkas terkait: `fonts.css` (induk `@font-face` + kelas ikon FA yang dipakai) da
 ### Optimasi jaringan
 
 - **Ikon & font self-hosted (tanpa CDN):** Font Awesome 6 di-subset ke ikon yang benar-benar dipakai (`fonts/fa-*.woff2`, total ~13 KB) dan Inter di-subset Latin/bobot 400–700 (`fonts/inter-latin.woff2` ~36 KB), dimuat lewat `fonts.css` same-origin. Tidak ada lagi koneksi ke `cdnjs.cloudflare.com` / `fonts.googleapis.com`.
-- **Pemeriksaan update hemat kuota:** versi build HTML dibaca dari **`version.json`** yang kecil (dengan `cache: 'no-cache'` → respons **304 tanpa body** bila tidak berubah), bukan mengunduh ulang seluruh `index.html` tiap 60 detik.
+- **Pemeriksaan update hemat kuota:** versi build HTML dibaca dari **`version.json`** yang kecil (dengan `cache: 'no-cache'` → respons **304 tanpa body** bila tidak berubah), bukan mengunduh ulang seluruh `index.html` tiap 60 detik. Saat tab kembali terlihat, cek versi di-throttle **minimal 60 detik** (bukan setiap kali fokus), di samping interval 10 menit.
+- **`config.js` ber-versi (bukan `Date.now()`):** skrip konfigurasi dimuat sebagai `config.js?v=<EXPECTED_CONFIG_VERSION>` sehingga browser/CDN boleh meng-cache-nya; versi dinaikkan bersamaan konstanta di HTML setiap kali `config.js` berubah. Service worker tetap **network-first** untuk `config.js` agar pembaruan cepat terdeteksi.
+- **Penyimpanan lokal hemat (debounce):** `saveLocalState()` menggabungkan perubahan beruntun (250 ms) sebelum menulis enam daftar ke `localStorage`, dan memaksa tulis (`flushLocalState()`) saat `pagehide`/tab disembunyikan sehingga data tidak hilang.
 - **Caching aset (`_headers`):** berkas **`_headers`** (Cloudflare Pages) memberi `Cache-Control` lama (7 hari) untuk ikon statis ber-cache-buster (`rt-icon.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico`) dan untuk `/fonts/*`, serta `must-revalidate` untuk `/config.js`, `/version.json`, `/sw.js`, dan `/fonts.css` agar deteksi versi tetap akurat.
 - **Gambar dioptimalkan & anti-CLS:** semua `<img>` memakai `width`/`height` + `decoding="async"`, gambar QR `loading="lazy"`. Ukuran berkas: `qr-public.png` 49,5 KB → 17,3 KB (QR tetap valid), `rt-icon.png` 26 KB → 24 KB, `icon-192.png` 8,3 KB → 8 KB, `apple-touch-icon.png` 7,8 KB → 7,5 KB. Tautan ikon diberi cache-buster `?v=`.
 
@@ -594,7 +596,7 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 
 > **Performa gambar:** semua `<img>` memakai atribut `width`/`height` (mencegah layout bergeser saat memuat) + `decoding="async"`; gambar QR dimuat `loading="lazy"`. Aset `qr-public.png`, `rt-icon.png`, `icon-192.png`, dan `apple-touch-icon.png` sudah dikompres (QR dari ~50 KB menjadi ~17 KB, tetap dapat dipindai). Bila mengganti berkas gambar, naikkan query `?v=` pada tautan ikon agar cache browser terbarui.
 
-> **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server. Selain itu, seluruh teks yang berasal dari Google Sheets **di-escape** sebelum ditampilkan (Pengumuman/Kegiatan di Portal Publik, kartu Ringkasan di admin) sehingga karakter `<`/`&` tidak dapat menyuntikkan markup.
+> **Catatan keamanan (berlapis):** proteksi halaman admin ada di Cloudflare Access; proteksi data tetap ada di token backend (`ADMIN_TOKEN`). Data warga/kas tidak pernah dikirim ke portal publik berkat endpoint `readPublic`, dan toggle **Portal Publik ON/OFF** ditegakkan di sisi server. Selain itu, seluruh teks yang berasal dari Google Sheets **di-escape** sebelum ditampilkan (Pengumuman/Kegiatan di Portal Publik, kartu Ringkasan di admin, serta tabel **Data Warga**, **Iuran & Kas**, kartu **Pengumuman** dan **Kegiatan** di admin) sehingga karakter `<`/`&` tidak dapat menyuntikkan markup.
 
 ---
 

@@ -14,8 +14,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SAPA RT">
     <!-- Preconnect untuk aset eksternal (data backend). -->
-    <link rel="preconnect" href="https://script.google.com">
-    <link rel="preconnect" href="https://script.googleusercontent.com">
+    <link rel="dns-prefetch" href="https://script.google.com">
     <!-- Tailwind CSS (hasil build statis; regenerate via tailwind.config.js).
          Dulu memakai Play CDN yang harus mengunduh engine + generate CSS saat runtime. -->
     <link rel="stylesheet" href="tailwind.css">
@@ -91,13 +90,14 @@
             .nav-new-note { animation: none; }
         }
     </style>
-    <!-- Konfigurasi identitas RT (ubah di config.js). Dimuat dengan cache-bust
-         agar perubahan config.js langsung terlihat tanpa hard refresh. -->
+    <!-- Konfigurasi identitas RT (ubah di config.js). URL diberi versi (bukan
+         Date.now()) agar browser/CDN boleh meng-cache config.js; versi dinaikkan
+         bersamaan EXPECTED_CONFIG_VERSION saat config berubah. -->
     <script>
         (function () {
             window.RT_CONFIG_READY = false;
             var s = document.createElement('script');
-            s.src = 'config.js?v=' + Date.now();
+            s.src = 'config.js?v=12';
             s.onload = function () {
                 window.RT_CONFIG_READY = true;
                 if (typeof window.__onConfigReady === 'function') window.__onConfigReady();
@@ -2043,7 +2043,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-11-01-06';
+        const APP_BUILD = '2026-11-02-01';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -3023,14 +3023,20 @@
         function startUpdateWatcher() {
             if (window.__rtUpdateWatcher) return;
             window.__rtUpdateWatcher = true;
+            let lastCheck = 0;
             const tick = function () {
                 if (document.visibilityState === 'hidden') return;
+                const now = Date.now();
+                // Throttle: tab sering bolak-balik terlihat; cukup cek tiap >=60 dtk.
+                if (now - lastCheck < 60000) return;
+                lastCheck = now;
                 checkForUpdate();
             };
             checkForUpdate(); // cek segera saat watcher mulai
+            lastCheck = Date.now();
             setInterval(tick, 600000);
             document.addEventListener('visibilitychange', function () {
-                if (document.visibilityState !== 'hidden') checkForUpdate();
+                if (document.visibilityState !== 'hidden') tick();
             });
         }
 
@@ -3082,7 +3088,14 @@
         }
 
         // Save State locally
-        function saveLocalState() {
+        // Serialisasi 6 daftar cukup berat bila dipanggil beruntun (mis. impor
+        // massal dari Sheets). Tulis ditunda (debounce) dan digabung; tetap
+        // di-flush sebelum halaman ditinggalkan agar data tidak hilang.
+        var __localSaveTimer = 0;
+        var __localDirty = false;
+
+        function writeLocalState() {
+            __localDirty = false;
             localStorage.setItem('rt_warga', JSON.stringify(appState.warga));
             localStorage.setItem('rt_kas', JSON.stringify(appState.kas));
             localStorage.setItem('rt_pengumuman', JSON.stringify(appState.pengumuman));
@@ -3092,6 +3105,34 @@
             localStorage.setItem('rt_saldo_awal', String(Number(appState.saldoAwal) || 0));
             renderDashboardStats();
             updateLastUpdated();
+        }
+
+        function flushLocalState() {
+            if (__localSaveTimer) {
+                clearTimeout(__localSaveTimer);
+                __localSaveTimer = 0;
+            }
+            // Hanya menulis bila ada perubahan tertunda (hindari I/O sia-sia).
+            if (__localDirty) writeLocalState();
+        }
+
+        function saveLocalState() {
+            __localDirty = true;
+            if (__localSaveTimer) clearTimeout(__localSaveTimer);
+            __localSaveTimer = setTimeout(function () {
+                __localSaveTimer = 0;
+                writeLocalState();
+            }, 250);
+        }
+
+        // Jangan sampai perubahan lokal hilang saat tab ditutup/dipindah.
+        if (window && typeof window.addEventListener === 'function') {
+            window.addEventListener('pagehide', flushLocalState);
+        }
+        if (document && typeof document.addEventListener === 'function') {
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState === 'hidden') flushLocalState();
+            });
         }
 
         // Render Dashboard Statistics
@@ -3495,30 +3536,30 @@
                 tr.title = 'Klik untuk edit';
                 tr.onclick = () => editWarga(originalIndex);
                 tr.innerHTML = `
-                    <td class="px-3 py-2 text-slate-600 text-xs whitespace-nowrap">${item.nomorKK || '-'}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs whitespace-nowrap">${escAttr(item.nomorKK || '-')}</td>
                     <td class="px-3 py-2">
-                        <div class="font-semibold text-slate-800">${item.nama}${archiveBadge}</div>
-                        <div class="text-xs text-slate-500">${hitungUsia(item.tanggalLahir) || '-'}</div>
+                        <div class="font-semibold text-slate-800">${escAttr(item.nama)}${archiveBadge}</div>
+                        <div class="text-xs text-slate-500">${escAttr(hitungUsia(item.tanggalLahir) || '-')}</div>
                     </td>
                     <td class="px-3 py-2">
-                        <div class="text-slate-500 text-xs">${item.nik || '-'}</div>
-                        <div class="text-slate-600 text-xs">${fmtPhone(item.hp) || '-'}</div>
+                        <div class="text-slate-500 text-xs">${escAttr(item.nik || '-')}</div>
+                        <div class="text-slate-600 text-xs">${escAttr(fmtPhone(item.hp) || '-')}</div>
                     </td>
                     <td class="px-3 py-2">
-                        <div class="text-slate-600">${item.tempat || '-'}</div>
-                        <div class="text-slate-600 text-xs">${fmtDateDisplay(item.tanggalLahir) || '-'}</div>
+                        <div class="text-slate-600">${escAttr(item.tempat || '-')}</div>
+                        <div class="text-slate-600 text-xs">${escAttr(fmtDateDisplay(item.tanggalLahir) || '-')}</div>
                     </td>
                     <td class="px-3 py-2 text-xs">
-                        <div class="text-slate-600">${item.status || '-'}</div>
-                        <div class="text-slate-500">${item.jenisKelamin || '-'}</div>
+                        <div class="text-slate-600">${escAttr(item.status || '-')}</div>
+                        <div class="text-slate-500">${escAttr(item.jenisKelamin || '-')}</div>
                     </td>
                     <td class="px-3 py-2 text-xs">
-                        <div class="text-slate-600">${item.pendidikan || '-'}</div>
-                        <div class="text-slate-500">${item.pekerjaan || '-'}</div>
+                        <div class="text-slate-600">${escAttr(item.pendidikan || '-')}</div>
+                        <div class="text-slate-500">${escAttr(item.pekerjaan || '-')}</div>
                     </td>
                     <td class="px-3 py-2">
                         <div class="mb-0.5">${statusBadge}</div>
-                        <div class="text-slate-600 text-xs">${item.alamat}</div>
+                        <div class="text-slate-600 text-xs">${escAttr(item.alamat)}</div>
                     </td>
                     <td class="px-3 py-2 text-center whitespace-nowrap">
                         <button onclick="event.stopPropagation(); showWargaSuratHistory(${originalIndex})" class="text-cyan-600 hover:text-cyan-800 p-1 rounded mr-2" title="Riwayat pengajuan surat"><i class="fa-solid fa-clock-rotate-left"></i></button>
@@ -4046,12 +4087,12 @@
                 tr.title = reversal ? 'Entri reversal (tidak dapat diedit)' : (reversed ? 'Transaksi dibatalkan' : 'Klik untuk edit');
                 tr.onclick = () => editKas(originalIndex);
                 tr.innerHTML = `
-                    <td class="${paired ? 'border-l-4 border-amber-300 ' : ''}px-3 py-2 text-slate-500 text-xs">${fmtDateDisplay(item.tanggal)}</td>
-                    <td class="px-3 py-2 font-medium text-slate-800">${item.nama}${cancelBadge}</td>
-                    <td class="px-3 py-2 text-slate-600 text-xs">${item.noRumah || '-'}</td>
+                    <td class="${paired ? 'border-l-4 border-amber-300 ' : ''}px-3 py-2 text-slate-500 text-xs">${escAttr(fmtDateDisplay(item.tanggal))}</td>
+                    <td class="px-3 py-2 font-medium text-slate-800">${escAttr(item.nama)}${cancelBadge}</td>
+                    <td class="px-3 py-2 text-slate-600 text-xs">${escAttr(item.noRumah || '-')}</td>
                     <td class="px-3 py-2">${jenisBadge}</td>
                     <td class="px-3 py-2 text-right ${amountClass}">${formatRupiah(item.jumlah)}</td>
-                    <td class="px-3 py-2 text-slate-500 text-xs">${item.keterangan || '-'}</td>
+                    <td class="px-3 py-2 text-slate-500 text-xs">${escAttr(item.keterangan || '-')}</td>
                     <td class="px-3 py-2 text-center whitespace-nowrap">
                         ${reversal
                             ? `<button onclick="event.stopPropagation(); deleteKasReversal(${originalIndex})" class="text-rose-500 hover:text-rose-700 p-1 rounded" title="Hapus entri reversal"><i class="fa-solid fa-trash-can"></i></button>`
@@ -4214,19 +4255,19 @@
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-start mb-2 gap-2">
-                            <span class="text-xs px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">${item.kategori}</span>
+                            <span class="text-xs px-2.5 py-1 rounded-full bg-purple-100 text-purple-700 font-medium">${escAttr(item.kategori)}</span>
                             <div class="flex items-center gap-2">
                                 <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold ${pub ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
                                     <i class="fa-solid ${pub ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${pub ? 'Publik' : 'Disembunyikan'}
                                 </span>
-                                <span class="text-xs text-slate-400">${fmtDateDisplay(item.tanggal)}</span>
+                                <span class="text-xs text-slate-400">${escAttr(fmtDateDisplay(item.tanggal))}</span>
                             </div>
                         </div>
-                        <h3 class="font-bold text-slate-800 text-base mb-2">${item.judul}</h3>
-                        <p class="text-sm text-slate-600 whitespace-pre-line">${item.isi}</p>
+                        <h3 class="font-bold text-slate-800 text-base mb-2">${escAttr(item.judul)}</h3>
+                        <p class="text-sm text-slate-600 whitespace-pre-line">${escAttr(item.isi)}</p>
                     </div>
                     <div class="pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
-                        <span><i class="fa-regular fa-circle-user mr-1"></i>${item.pj}</span>
+                        <span><i class="fa-regular fa-circle-user mr-1"></i>${escAttr(item.pj)}</span>
                         <div class="flex space-x-2">
                             <button onclick="togglePublikPengumuman(${index})" class="${pub ? 'text-amber-500 hover:text-amber-700' : 'text-emerald-600 hover:text-emerald-800'}"><i class="fa-solid ${pub ? 'fa-eye-slash' : 'fa-eye'}"></i> ${pub ? 'Sembunyikan' : 'Tampilkan'}</button>
                             <button onclick="editPengumuman(${index})" class="text-blue-500 hover:text-blue-700"><i class="fa-solid fa-pen"></i> Edit</button>
@@ -4271,14 +4312,14 @@
                 card.innerHTML = `
                     <div>
                         <div class="flex items-center justify-between border-b pb-2 mb-3 gap-2">
-                            <span class="font-bold text-slate-800 text-base">${item.namaKegiatan}</span>
-                            <span class="text-xs px-2 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg"><i class="fa-regular fa-clock mr-1"></i>${item.waktu}</span>
+                            <span class="font-bold text-slate-800 text-base">${escAttr(item.namaKegiatan)}</span>
+                            <span class="text-xs px-2 py-1 bg-rose-50 text-rose-600 font-semibold rounded-lg"><i class="fa-regular fa-clock mr-1"></i>${escAttr(item.waktu)}</span>
                         </div>
                         <div class="space-y-1.5 text-xs text-slate-600">
-                            <p><i class="fa-regular fa-calendar w-4 text-slate-400"></i> <span class="font-medium">${fmtDateDisplay(item.tanggal)}</span></p>
-                            <p><i class="fa-solid fa-location-dot w-4 text-slate-400"></i> ${item.lokasi}</p>
-                            <p><i class="fa-solid fa-user-gear w-4 text-slate-400"></i> PJ: ${item.pj}</p>
-                            ${item.keterangan ? `<p class="mt-2 text-slate-500 italic bg-slate-50 p-2 rounded-lg">"${item.keterangan}"</p>` : ''}
+                            <p><i class="fa-regular fa-calendar w-4 text-slate-400"></i> <span class="font-medium">${escAttr(fmtDateDisplay(item.tanggal))}</span></p>
+                            <p><i class="fa-solid fa-location-dot w-4 text-slate-400"></i> ${escAttr(item.lokasi)}</p>
+                            <p><i class="fa-solid fa-user-gear w-4 text-slate-400"></i> PJ: ${escAttr(item.pj)}</p>
+                            ${item.keterangan ? `<p class="mt-2 text-slate-500 italic bg-slate-50 p-2 rounded-lg">"${escAttr(item.keterangan)}"</p>` : ''}
                         </div>
                     </div>
                     <div class="pt-2 border-t border-slate-100 flex justify-between items-center">
@@ -6139,7 +6180,7 @@
                     : '';
                 tr.innerHTML = `
                     <td class="p-4 whitespace-nowrap">
-                        <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
+                        <div class="text-slate-600 text-xs">${escAttr(fmtTimestamp(item.waktu) || '-')}</div>
                         <div class="text-slate-700 text-xs font-semibold mt-0.5">${escAttr(item._id || '-')}</div>
                     </td>
                     <td class="p-4">
@@ -7539,7 +7580,7 @@
                     : '';
                 tr.innerHTML = `
                     <td class="p-4 whitespace-nowrap">
-                        <div class="text-slate-600 text-xs">${fmtTimestamp(item.waktu) || '-'}</div>
+                        <div class="text-slate-600 text-xs">${escAttr(fmtTimestamp(item.waktu) || '-')}</div>
                         <div class="text-slate-700 text-xs font-semibold mt-0.5">${escAttr(item.noPengaduan || '-')}</div>
                     </td>
                     <td class="p-4">
