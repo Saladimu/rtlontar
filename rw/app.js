@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-02-01';
+    var BUILD = '2026-11-02-03';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -25,9 +25,10 @@
         dashboard: null,
         filters: {
             warga: { rt: '', q: '' },
-            kas: { rt: '', from: '', to: '' },
-            surat: { rt: '', status: '', from: '', to: '' },
-            lapor: { rt: '', status: '', from: '', to: '' }
+            kas: { rt: '', from: '', to: '', q: '' },
+            surat: { rt: '', status: '', from: '', to: '', q: '' },
+            lapor: { rt: '', status: '', from: '', to: '', q: '' },
+            audit: { q: '' }
         },
         busy: false,
         actionBusy: false,
@@ -241,6 +242,64 @@
         var callback = warningState.onConfirm;
         closeWarning();
         if (callback) callback();
+    }
+
+    // Status jaringan dipakai untuk memberi tahu pengguna bahwa data yang
+    // tampil berasal dari cache, bukan dari RT. Selama offline, seluruh daftar
+    // tetap dapat dibuka dari cache baca sesi.
+    var offlineState = { offline: false };
+
+    function fmtClock(ts) {
+        if (!ts) return '';
+        try {
+            return new Intl.DateTimeFormat('id-ID', {
+                timeZone: TZ, hour: '2-digit', minute: '2-digit'
+            }).format(new Date(ts));
+        } catch (e) { return ''; }
+    }
+
+    function renderOfflineBanner() {
+        var el = $('offline-banner');
+        if (!el) return;
+        if (!offlineState.offline) {
+            el.classList.add('hidden');
+            return;
+        }
+        var last = state.dashboardLoadedAt || 0;
+        if (!last) {
+            var dash = readCache[apiKey('rwDashboard', null)];
+            last = dash && dash.at ? dash.at : 0;
+        }
+        var clock = fmtClock(last);
+        var text = clock
+            ? 'Anda sedang offline. Menampilkan data terakhir yang tersimpan pukul ' + clock + ' WIB.'
+            : 'Anda sedang offline. Menampilkan data terakhir yang tersimpan.';
+        var target = $('offline-text');
+        if (target) target.textContent = text;
+        el.classList.remove('hidden');
+    }
+
+    function setOffline(offline) {
+        offlineState.offline = !!offline;
+        renderOfflineBanner();
+    }
+
+    function bindNetworkStatus() {
+        if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+            offlineState.offline = true;
+        }
+        if (typeof addEventListener === 'function') {
+            addEventListener('online', function () {
+                setOffline(false);
+                toast('Kembali online. Memuat data terbaru.', 'success');
+                if (state.session) { clearReadCache(); refresh(); }
+            });
+            addEventListener('offline', function () {
+                setOffline(true);
+                setSync('Offline', 'warn');
+            });
+        }
+        renderOfflineBanner();
     }
 
     function getDevEmail() {
@@ -537,6 +596,9 @@
         if (!el) return;
         el.className = 'sync-pill' + (cls ? ' ' + cls : '');
         el.innerHTML = '<i class="fa-solid ' + (cls === 'error' ? 'fa-circle-exclamation' : cls === 'warn' ? 'fa-triangle-exclamation' : 'fa-circle-notch') + '"></i><span>' + esc(label) + '</span>';
+        // Renderer memanggil setSync setelah filter diterapkan, jadi ini titik
+        // yang tepat untuk menyelaraskan URL tanpa menambah pemanggilan.
+        syncHash();
     }
 
     function showAccess(message) {
@@ -565,10 +627,16 @@
         var meta = PAGE_META[state.page] || PAGE_META.dashboard;
         $('page-title').textContent = meta[0];
         $('page-subtitle').textContent = meta[1];
+        // Judul tab mengikuti halaman aktif agar mudah dibedakan saat banyak
+        // tab portal terbuka, dan ikut terbaca pembaca layar.
+        try { document.title = meta[0] + ' · RW 06'; } catch (e) {}
         var admin = isAdmin();
         document.querySelectorAll('.nav-item').forEach(function (btn) {
             var page = btn.getAttribute('data-page');
-            btn.classList.toggle('active', page === state.page);
+            var active = page === state.page;
+            btn.classList.toggle('active', active);
+            if (active) btn.setAttribute('aria-current', 'page');
+            else btn.removeAttribute('aria-current');
             if (isAdminPage(page)) {
                 btn.disabled = !admin;
                 btn.setAttribute('aria-disabled', admin ? 'false' : 'true');
@@ -704,6 +772,36 @@
             (periodActive(f)
                 ? '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="' + esc(prefix) + '-clear"><i class="fa-solid fa-filter-circle-xmark"></i> Reset periode</button></div>'
                 : '');
+    }
+
+    // Kotak cari generik untuk daftar selain Data Warga. Pencarian dilakukan
+    // di sisi klien atas data yang sudah diambil, jadi tidak memicu permintaan
+    // baru ke orkestrator dan tetap cepat setelah cache hangat.
+    function searchControl(id, value, placeholder) {
+        return '<div class="field" style="flex:1;min-width:220px"><label for="' + esc(id) + '">Cari</label>' +
+            '<span class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i>' +
+            '<input class="control" id="' + esc(id) + '" placeholder="' + esc(placeholder) + '" value="' + esc(value || '') + '"></span></div>';
+    }
+
+    function filterByQuery(rows, query, fields) {
+        var q = String(query || '').trim();
+        if (!q) return rows || [];
+        return (rows || []).filter(function (row) {
+            return fields.some(function (field) {
+                return String(row[field] === null || row[field] === undefined ? '' : row[field])
+                    .toLowerCase().indexOf(q.toLowerCase()) !== -1;
+            });
+        });
+    }
+
+    function bindSearch(id, f, rerender) {
+        var input = $(id);
+        if (!input) return;
+        input.addEventListener('input', function (e) {
+            f.q = e.target.value;
+            state.pages[state.page] = 1;
+            rerender();
+        });
     }
 
     function bindPeriodControls(prefix, f, rerender) {
@@ -1547,6 +1645,7 @@
                 var rows = allRows.filter(function (r) {
                     return !hasPeriod || periodMatch(r['Tanggal'] || r['Timestamp'], f.from, f.to);
                 });
+                rows = filterByQuery(rows, f.q, ['Nama Warga', 'No Rumah', 'Jenis Transaksi', 'Keterangan']);
                 // Saldo saat ini selalu dari seluruh transaksi aktif; kartu
                 // periode menghitung arus pada rentang yang dipilih saja.
                 var totalMasuk = 0, totalKeluar = 0, aktif = 0;
@@ -1590,6 +1689,7 @@
                 $('page').innerHTML =
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="kas-rt">' + rtOptions(f.rt) + '</select></div>' +
+                        searchControl('kas-q', f.q, 'Nama warga, rumah, atau keterangan') +
                         periodControls('kas', f) +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="kas-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
                     '</div>' +
@@ -1599,12 +1699,13 @@
                         '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pemasukan</span></div><p class="kpi-value money" style="color:#047857">' + fmtMoney(periodMasuk) + '</p><p class="kpi-note">' + fmtInt(periodCount) + ' transaksi pada periode</p></article>' +
                         '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pengeluaran</span></div><p class="kpi-value money" style="color:#be123c">' + fmtMoney(periodKeluar) + '</p><p class="kpi-note">Saldo akhir periode ' + fmtMoney(closing) + '</p></article>' +
                     '</div><div style="height:16px"></div>' + listNotice(res) +
-                    '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · ' + esc(periodLabel(f)) + ' · arsip tidak dihitung</p></div></div>' +
+                    '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · arsip tidak dihitung</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal</th><th>Warga</th><th>Jenis</th><th class="num">Nominal</th><th>Keterangan</th></tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada transaksi pada periode ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('kas', sliced) + '</section>';
                 $('kas-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.kas = 1; renderKas(); });
+                bindSearch('kas-q', f, renderKas);
                 bindPeriodControls('kas', f, renderKas);
                 bindPager('kas', renderKas);
                 $('kas-print').addEventListener('click', function () {
@@ -1755,6 +1856,7 @@
             return api('rwList', payload).then(function (res) {
                 var allRows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var rows = allRows.filter(function (r) { return periodMatch(r['Timestamp'], f.from, f.to); });
+                rows = filterByQuery(rows, f.q, ['Nama Lengkap Pemohon', 'NIK', 'Jenis Surat', 'No. Surat', 'Keperluan / Alasan Pengajuan', 'Status Pengurusan', 'Rw Status']);
                 var sliced = pageSlice(rows, 'surat');
                 var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-surat="' + esc(r['ID']) + '">' +
@@ -1770,16 +1872,18 @@
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="surat-rt">' + rtOptions(f.rt) + '</select></div>' +
                         '<div class="field"><label>Status RW</label><select class="control" id="surat-status">' + statusOptions(f.status, ['', 'Menunggu', 'Disetujui', 'Dikembalikan', 'Ditolak', 'Tidak Perlu'], 'Semua status') + '</select></div>' +
+                        searchControl('surat-q', f.q, 'Nama, NIK, jenis, atau nomor surat') +
                         periodControls('surat', f) +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="surat-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
                     '</div>' + listNotice(res) +
-                    '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(rows.length) + ' pengajuan · ' + esc(periodLabel(f)) + ' · klik baris untuk detail</p></div></div>' +
+                    '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(rows.length) + ' pengajuan · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal</th><th><span class="th-stack">Pemohon</span><span class="th-sub">NIK</span></th><th><span class="th-stack">Jenis surat</span><span class="th-sub">No. Surat</span></th><th>Status RT</th><th>Status RW</th><th>Revisi</th></tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('surat', sliced) + '</section>';
                 $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.surat = 1; renderSurat(); });
                 $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.surat = 1; renderSurat(); });
+                bindSearch('surat-q', f, renderSurat);
                 bindPeriodControls('surat', f, renderSurat);
                 bindPager('surat', renderSurat);
                 $('surat-print').addEventListener('click', function () {
@@ -1811,6 +1915,7 @@
             return api('rwList', payload).then(function (res) {
                 var allRows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var rows = allRows.filter(function (r) { return periodMatch(r['Timestamp'], f.from, f.to); });
+                rows = filterByQuery(rows, f.q, ['Nama Warga', 'No. Pengaduan', 'Judul Pengaduan', 'Jenis Pengaduan', 'Detail Pengaduan', 'Alamat / No. Rumah', 'Status', 'Rw Status']);
                 var sliced = pageSlice(rows, 'lapor');
                 var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-lapor="' + esc(r['ID']) + '">' +
@@ -1826,16 +1931,18 @@
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="lapor-rt">' + rtOptions(f.rt) + '</select></div>' +
                         '<div class="field"><label>Status RW</label><select class="control" id="lapor-status">' + statusOptions(f.status, ['', 'Perlu Tindak Lanjut', 'Ditangani RW', 'Selesai RW', 'Tidak Perlu'], 'Semua status') + '</select></div>' +
+                        searchControl('lapor-q', f.q, 'Warga, nomor, atau judul pengaduan') +
                         periodControls('lapor', f) +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="lapor-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
                     '</div>' + listNotice(res) +
-                    '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(rows.length) + ' pengaduan · ' + esc(periodLabel(f)) + ' · klik baris untuk detail</p></div></div>' +
+                    '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(rows.length) + ' pengaduan · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr><th>Tanggal / nomor</th><th>Warga</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th><th>Diperbarui</th></tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-comment-dots"></i><p>Tidak ada pengaduan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('lapor', sliced) + '</section>';
                 $('lapor-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.lapor = 1; renderLapor(); });
                 $('lapor-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.lapor = 1; renderLapor(); });
+                bindSearch('lapor-q', f, renderLapor);
                 bindPeriodControls('lapor', f, renderLapor);
                 bindPager('lapor', renderLapor);
                 $('lapor-print').addEventListener('click', function () {
@@ -2763,7 +2870,9 @@
         if (!isAdmin()) { $('page').innerHTML = adminOnlyNotice('Audit'); return; }
         if (!apiPeek('rwAuditList', { limit: 200 })) pageLoading('Memuat audit...');
         api('rwAuditList', { limit: 200 }).then(function (res) {
-            var rows = res.audit || [];
+            var fa = state.filters.audit;
+            var allRows = res.audit || [];
+            var rows = filterByQuery(allRows, fa.q, ['Aktor', 'Email', 'Aksi', 'RT ID', 'Target', 'Hasil', 'Detail']);
             var sliced = pageSlice(rows, 'audit');
             var body = sliced.rows.map(function (a) {
                 return '<tr>' +
@@ -2776,12 +2885,16 @@
                     '</tr>';
             }).join('');
             $('page').innerHTML =
-                '<div class="toolbar"><span class="cell-sub">' + fmtInt(rows.length) + ' entri terakhir · retensi audit 12 bulan</span></div>' +
-                '<section class="card"><div class="card-head"><div><h2>Audit log</h2><p>Login, keputusan, tanggapan, registry, dan pengaturan.</p></div></div>' +
+                '<div class="toolbar">' +
+                    searchControl('audit-q', fa.q, 'User, aksi, RT, atau detail') +
+                    '<span class="cell-sub" style="align-self:center">' + fmtInt(rows.length) + ' dari ' + fmtInt(allRows.length) + ' entri · retensi audit 12 bulan</span>' +
+                '</div>' +
+                '<section class="card"><div class="card-head"><div><h2>Audit log</h2><p>Login, keputusan, tanggapan, registry, dan pengaturan.' + (fa.q ? ' · cari "' + esc(fa.q) + '"' : '') + '</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
                 '<thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>RT / target</th><th>Hasil</th><th>Detail</th></tr></thead>' +
                 '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-list-check"></i><p>Belum ada entri audit.</p></div></td></tr>') + '</tbody></table></div></div>' +
                 pagerHtml('audit', sliced) + '</section>';
+            bindSearch('audit-q', fa, renderers.audit);
             bindPager('audit', renderers.audit);
             setSync('Audit', 'ok');
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
@@ -2793,9 +2906,93 @@
         if (!renderers[page]) page = 'dashboard';
         if (isAdminPage(page) && !isAdmin()) page = 'dashboard';
         state.page = page;
+        // Klik menu selalu menutup drawer, termasuk saat halaman tidak berubah.
         closeDrawer();
+        syncHash();
         renderChrome();
         renderers[page]();
+    }
+
+    // Filter yang ikut disimpan di URL agar tautan dapat dibagikan dan F5
+    // kembali ke tampilan yang sama. Hanya field yang aman (tanpa data warga)
+    // yang masuk; drawer dan pencarian warga tidak ikut agar URL tetap pendek.
+    var HASH_FIELDS = {
+        // Pencarian warga sengaja tidak masuk URL: query bisa memuat nama/NIK.
+        warga: ['rt'],
+        kas: ['rt', 'from', 'to', 'q'],
+        surat: ['rt', 'status', 'from', 'to', 'q'],
+        lapor: ['rt', 'status', 'from', 'to', 'q'],
+        audit: ['q']
+    };
+
+    function buildHash() {
+        var page = state.page || 'dashboard';
+        var fields = HASH_FIELDS[page];
+        var parts = [];
+        var f = fields ? (state.filters[page] || {}) : {};
+        (fields || []).forEach(function (name) {
+            var value = f[name];
+            if (!isBlank(value)) parts.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
+        });
+        // Ringkasan tanpa filter adalah tampilan bawaan; biarkan URL tetap
+        // bersih agar tidak menambah hash yang tidak perlu.
+        if (page === 'dashboard' && !parts.length) return '';
+        return '#/' + page + (parts.length ? '?' + parts.join('&') : '');
+    }
+
+    function syncHash() {
+        if (typeof history === 'undefined' || !history.replaceState) return;
+        try {
+            var next = buildHash();
+            if (next === String(location.hash || '')) return;
+            history.replaceState(null, '', next || location.pathname || './');
+        } catch (e) { /* diabaikan: URL bukan hal kritis */ }
+    }
+
+    function parseHash() {
+        var raw = String((typeof location !== 'undefined' && location.hash) || '');
+        if (raw.indexOf('#/') !== 0) return null;
+        var rest = raw.slice(2);
+        var qIndex = rest.indexOf('?');
+        var page = qIndex === -1 ? rest : rest.slice(0, qIndex);
+        page = page.replace(/\/+$/, '');
+        if (!page) return { page: 'dashboard', params: {} };
+        var params = {};
+        if (qIndex !== -1) {
+            try {
+                new URLSearchParams(rest.slice(qIndex + 1)).forEach(function (value, key) {
+                    if (key) params[key] = value;
+                });
+            } catch (e) { /* abaikan parameter rusak */ }
+        }
+        return { page: page, params: params };
+    }
+
+    function applyRoute(route) {
+        if (!route) return false;
+        var page = renderers[route.page] ? route.page : 'dashboard';
+        if (isAdminPage(page) && !isAdmin()) return false;
+        var fields = HASH_FIELDS[page] || [];
+        var f = state.filters[page];
+        if (f) {
+            fields.forEach(function (name) {
+                f[name] = Object.prototype.hasOwnProperty.call(route.params, name) ? route.params[name] : '';
+            });
+        }
+        var pageChanged = state.page !== page;
+        state.page = page;
+        if (pageChanged) closeDrawer();
+        renderChrome();
+        renderers[page]();
+        // Rapikan tautan: buang parameter tak dikenal dan hash Ringkasan kosong.
+        syncHash();
+        return true;
+    }
+
+    function applyHash() {
+        var route = parseHash();
+        if (!route) return false;
+        return applyRoute(route);
     }
 
     function refresh() {
@@ -2845,6 +3042,14 @@
             });
         });
         $('refresh-btn').addEventListener('click', refresh);
+        bindNetworkStatus();
+        if (typeof addEventListener === 'function') {
+            addEventListener('hashchange', function () {
+                // Tautan yang tidak diizinkan (mis. admin untuk Viewer) tidak
+                // mengubah halaman; rapikan kembali URL ke tampilan aktif.
+                if (!applyHash()) syncHash();
+            });
+        }
         $('access-retry').addEventListener('click', function () { location.reload(); });
         $('menu-btn').addEventListener('click', function () { $('sidebar').classList.add('open'); });
         $('sidebar-close').addEventListener('click', function () { $('sidebar').classList.remove('open'); });
@@ -2922,7 +3127,7 @@
             earlyShown = true;
             showApp();
             renderChrome();
-            navigate('dashboard');
+            startRoute();
         }
         // Ringkasan RT tidak bergantung pada data sesi (identitas sudah diverifikasi
         // gateway), jadi permintaannya dimulai bersamaan dengan rwSession. Satu
@@ -2936,7 +3141,7 @@
             if (!earlyShown) {
                 showApp();
                 renderChrome();
-                navigate('dashboard');
+                startRoute();
             } else {
                 renderChrome();
             }
@@ -2950,6 +3155,12 @@
                 showAccess(err.message || 'Gagal memeriksa akses ke portal RW.');
             }
         });
+    }
+
+    // Halaman awal: hormati deep link bila ada, jika tidak kembali ke
+    // Ringkasan. applyHash() sudah memvalidasi peran admin dan filter.
+    function startRoute() {
+        if (!applyHash()) navigate('dashboard');
     }
 
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
