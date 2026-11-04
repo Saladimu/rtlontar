@@ -2043,7 +2043,7 @@
         // (atau public.html) dan melakukan deploy, walau config.js tidak berubah.
         // checkForUpdate() membandingkan nilai ini dengan versi di server sehingga
         // pengguna yang masih membuka halaman lama diberi tombol "Muat Ulang".
-        const APP_BUILD = '2026-11-02-02';
+        const APP_BUILD = '2026-11-02-03';
 
         // ID stabil untuk tiap baris. Disimpan di kolom bantu "ID" (kolom terakhir)
         // dan dipakai untuk update/delete, sehingga tidak bergantung urutan baris.
@@ -6078,29 +6078,38 @@
             const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
             const filterStatus = filterEl ? filterEl.value : '';
             const filterRw = filterRwEl ? filterRwEl.value : '';
-            const matched = appState.surat.slice().reverse().filter(function (item) {
+            // `scoped` = periode + pencarian + status RW, tanpa filter status.
+            // Kartu ringkasan memakai ini agar distribusi status tetap terlihat
+            // saat pengguna memilih salah satu status pada dropdown.
+            const scoped = appState.surat.slice().reverse().filter(function (item) {
                 if (!suratMatchesPeriod(item)) return false;
                 const haystack = [item._id, item.nama, item.nik, maskNik(item.nik), item.noHp, waNumber(item.noHp), item.alamat, item.jenisSurat, item.keperluan, item.status, item.noSurat, item.catatan, item.rwStatus, item.rwCatatan, item.rwOleh, item.waktu, fmtTimestamp(item.waktu)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
-                const matchStatus = filterStatus === '' || (item.status || 'Pending') === filterStatus;
                 const matchRw = filterRw === '' || (item.rwStatus || 'Tidak Perlu') === filterRw;
-                return matchSearch && matchStatus && matchRw;
+                return matchSearch && matchRw;
             });
-            return { search: search, filterStatus: filterStatus, filterRw: filterRw, matched: matched };
+            const matched = filterStatus === ''
+                ? scoped
+                : scoped.filter(function (item) { return (item.status || 'Pending') === filterStatus; });
+            return { search: search, filterStatus: filterStatus, filterRw: filterRw, scoped: scoped, matched: matched };
         }
 
         function renderSuratTable() {
             const tbody = document.getElementById('table-surat-body');
             if (!tbody) return;
-            const { search, filterStatus, filterRw, matched } = computeSuratFilter();
+            const { search, filterStatus, filterRw, scoped, matched } = computeSuratFilter();
 
             tbody.innerHTML = '';
 
-            // Ringkasan jumlah per status (pengajuan yang diarsipkan tidak dihitung).
+            // Ringkasan jumlah per status mengikuti periode, pencarian, dan
+            // status RW yang aktif, tetapi TIDAK ikut terfilter oleh pilihan
+            // status itu sendiri; dengan begitu distribusi semua status tetap
+            // terlihat. Arsip tidak dihitung agar cocok dengan baris aktif.
+            const countItems = scoped.filter(function (x) { return !isArchivedSurat(x); });
             ['Pending', 'Diproses', 'Selesai', 'Ditolak'].forEach(function (s) {
                 const el = document.getElementById('surat-count-' + s.toLowerCase());
-                if (el) el.innerText = appState.surat.filter(function (x) { return !isArchivedSurat(x) && (x.status || 'Pending') === s; }).length;
+                if (el) el.innerText = countItems.filter(function (x) { return (x.status || 'Pending') === s; }).length;
             });
 
             // Baris yang diarsipkan disembunyikan kecuali "Tampilkan arsip" aktif.
@@ -7480,32 +7489,40 @@
             const filterRw = filterRwEl ? filterRwEl.value : '';
 
             const list = (appState.lapor || []).slice().reverse(); // terbaru dahulu
-            const matched = list.filter(function (item) {
+            // `scoped` = bulan + pencarian + status RW, tanpa filter status;
+            // dipakai kartu ringkasan agar distribusi status tetap informatif.
+            const scoped = list.filter(function (item) {
                 const haystack = [item._id, item.noPengaduan, item.nama, item.noHp, waNumber(item.noHp), item.alamat, item.jenisPengaduan, item.judul, item.detail, item.lokasi, item.status, item.petugas, item.catatan, item.rwStatus, item.rwPetugas, item.waktu, fmtTimestamp(item.waktu)]
                     .map(v => (v == null ? '' : String(v).toLowerCase()));
                 const matchSearch = search === '' || haystack.some(v => v.indexOf(search) !== -1);
-                const matchStatus = filterStatus === '' || (item.status || 'Diterima') === filterStatus;
                 const matchRw = filterRw === '' || (item.rwStatus || 'Tidak Perlu') === filterRw;
-                return matchSearch && matchStatus && matchRw && laporMatchesMonth(item);
+                return matchSearch && matchRw && laporMatchesMonth(item);
             });
+            const matched = filterStatus === ''
+                ? scoped
+                : scoped.filter(function (item) { return (item.status || 'Diterima') === filterStatus; });
 
             const aktifItems = matched.filter(function (item) { return !isArchivedLapor(item); });
             const archivedItems = showArchivedLapor ? matched.filter(function (item) { return isArchivedLapor(item); }) : [];
             const filtered = showArchivedLapor ? archivedItems.concat(aktifItems) : aktifItems;
-            return { search, filterStatus, filterRw, matched, aktifItems, archivedItems, filtered };
+            return { search, filterStatus, filterRw, scoped, matched, aktifItems, archivedItems, filtered };
         }
 
         function renderLaporTable() {
             const tbody = document.getElementById('table-lapor-body');
             if (!tbody) return;
-            const { search, filterStatus, filterRw, aktifItems, archivedItems, filtered } = computeLaporFilter();
+            const { search, filterStatus, filterRw, scoped, matched, aktifItems, archivedItems, filtered } = computeLaporFilter();
 
             tbody.innerHTML = '';
 
-            // Ringkasan jumlah per status (yang diarsipkan tidak dihitung).
+            // Ringkasan jumlah per status mengikuti bulan, pencarian, dan
+            // status RW yang aktif, tetapi TIDAK ikut terfilter oleh pilihan
+            // status itu sendiri; distribusi status tetap terlihat. Arsip tidak
+            // dihitung agar cocok dengan baris aktif.
+            const countItems = scoped.filter(function (x) { return !isArchivedLapor(x); });
             ['Diterima', 'Diproses', 'Selesai'].forEach(function (s) {
                 const el = document.getElementById('lapor-count-' + s.toLowerCase());
-                if (el) el.innerText = (appState.lapor || []).filter(function (x) { return !isArchivedLapor(x) && laporMatchesMonth(x) && (x.status || 'Diterima') === s; }).length;
+                if (el) el.innerText = countItems.filter(function (x) { return (x.status || 'Diterima') === s; }).length;
             });
 
             const showSections = showArchivedLapor && archivedItems.length > 0;
