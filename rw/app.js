@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-02-05';
+    var BUILD = '2026-11-02-06';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -45,10 +45,53 @@
             // kolom ini mengikuti urutan asli tanpa pengurutan ulang.
             audit: { key: '', dir: 'desc' }
         },
+        // Pilihan massal surat disimpan per ID agar tidak hilang saat daftar
+        // digambar ulang karena pencarian, urutan, atau paginasi.
+        bulkSurat: {},
         pages: { warga: 1, kas: 1, surat: 1, lapor: 1, pengguna: 1, registry: 1, pengaturan: 1, outbox: 1, audit: 1 },
         digestText: ''
     };
     var warningState = { onConfirm: null };
+
+    // Tema terang/gelap. Pilihan manual disimpan di localStorage; bila belum
+    // pernah memilih, tema mengikuti preferensi sistem. Atribut dipasang di
+    // <html> agar seluruh token warna pada styles.css langsung berganti.
+    var THEME_KEY = 'rw_theme';
+    function storedTheme() {
+        try {
+            var v = localStorage.getItem(THEME_KEY);
+            return v === 'dark' || v === 'light' ? v : '';
+        } catch (e) { return ''; }
+    }
+    function systemTheme() {
+        try {
+            return typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        } catch (e) { return 'light'; }
+    }
+    function currentTheme() { return storedTheme() || systemTheme(); }
+    function applyTheme(theme) {
+        var dark = theme === 'dark';
+        try {
+            if (document.documentElement && document.documentElement.setAttribute) {
+                document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+            }
+        } catch (e) { /* diabaikan */ }
+        var btn = $('theme-btn');
+        if (btn) {
+            btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+            btn.setAttribute('aria-label', dark ? 'Ganti ke tema terang' : 'Ganti ke tema gelap');
+        }
+        var icon = $('theme-icon');
+        if (icon) icon.className = 'fa-solid ' + (dark ? 'fa-sun' : 'fa-moon');
+        var meta = document.querySelector ? document.querySelector('meta[name="theme-color"]') : null;
+        if (meta && meta.setAttribute) meta.setAttribute('content', dark ? '#0b1220' : '#0f766e');
+        return dark;
+    }
+    function toggleTheme() {
+        var next = currentTheme() === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* diabaikan */ }
+        applyTheme(next);
+    }
 
     function $(id) { return document.getElementById(id); }
     function esc(value) {
@@ -341,6 +384,22 @@
                 timeZone: TZ, hour: '2-digit', minute: '2-digit'
             }).format(new Date(ts));
         } catch (e) { return ''; }
+    }
+
+    // Umur tampilan kartu ringkasan. Setelah melewati TTL cache server, nilai
+    // yang terlihat mungkin sudah tidak segar, jadi beri penanda kuning.
+    function freshnessInfo(ts, ttlMs) {
+        if (!ts) return { label: '', stale: false };
+        var age = Math.max(0, Date.now() - ts);
+        var stale = ttlMs > 0 && age > ttlMs;
+        return { label: fmtRelative(ts), stale: stale };
+    }
+
+    function kpiFreshness(ts, ttlMs) {
+        var info = freshnessInfo(ts, ttlMs);
+        if (!info.label) return '';
+        return '<span class="kpi-fresh' + (info.stale ? ' stale' : '') + '">' +
+            '<span class="kpi-dot" aria-hidden="true"></span>' + esc(info.label) + '</span>';
     }
 
     function renderOfflineBanner() {
@@ -1049,6 +1108,113 @@
         });
     }
 
+    // ================= EKSPOR CSV =================
+    // CSV memakai baris hasil filter yang sama dengan tabel dan cetak, jadi
+    // pengurus tidak perlu menyusun ulang data di Sheets/Excel.
+    function csvCell(value) {
+        var s = value === null || value === undefined ? '' : String(value);
+        // Cegah formula injection: Excel menjalankan sel yang diawali =, +, -,
+        // atau @. Awali dengan apostrof agar tetap terbaca sebagai teks.
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        if (/[",\n\r;]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+        return s;
+    }
+
+    function buildCsv(headers, rows) {
+        var lines = [headers.map(csvCell).join(';')];
+        (rows || []).forEach(function (row) {
+            lines.push((row || []).map(csvCell).join(';'));
+        });
+        // BOM + CRLF agar Excel (khususnya versi Windows) membuka UTF-8 dan
+        // pemisah titik koma dengan benar tanpa wizard impor.
+        return '\ufeff' + lines.join('\r\n') + '\r\n';
+    }
+
+    function todayStamp() {
+        return jakartaDay(new Date()) || new Date().toISOString().slice(0, 10);
+    }
+
+    function downloadCsv(filename, content) {
+        try {
+            if (typeof Blob === 'undefined' || typeof URL === 'undefined' || !URL.createObjectURL) {
+                toast('Browser ini tidak mendukung unduhan CSV.', 'error');
+                return false;
+            }
+            var blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 1000);
+            toast('CSV ' + filename + ' diunduh.', 'success');
+            return true;
+        } catch (e) {
+            toast('Gagal membuat berkas CSV.', 'error');
+            return false;
+        }
+    }
+
+    function exportWargaCsv(rows, f) {
+        var headers = ['No', 'No. KK', 'NIK', 'Nama Lengkap', 'Status', 'No HP', 'Alamat/No Rumah', 'Pekerjaan', 'Pendidikan'];
+        var data = sortWargaByKk(rows).map(function (r, i) {
+            return [i + 1, kkValue(r), r['NIK'], r['Nama Lengkap'], r['Status'], r['No HP'], r['Alamat/No Rumah'], r['Pekerjaan'], r['Pendidikan']];
+        });
+        downloadCsv('warga-' + (f.rt || 'rw06') + '-' + todayStamp() + '.csv', buildCsv(headers, data));
+    }
+
+    function exportKasCsv(rows, f) {
+        var headers = ['Tanggal', 'Nama Warga', 'No Rumah', 'Jenis Transaksi', 'Jumlah (Rp)', 'Keterangan', 'Arsip', 'Reversal Dari'];
+        var data = (rows || []).map(function (r) {
+            return [
+                fmtDay(r['Tanggal'] || r['Timestamp']),
+                r['Nama Warga'], r['No Rumah'], r['Jenis Transaksi'],
+                Number(r['Jumlah (Rp)']) || 0,
+                r['Keterangan'],
+                isArchived(r['Diarsipkan']) ? 'Ya' : 'Tidak',
+                r['Reversal Dari']
+            ];
+        });
+        downloadCsv('kas-' + (f.rt || 'rw06') + '-' + todayStamp() + '.csv', buildCsv(headers, data));
+    }
+
+    function exportSuratCsv(rows, f) {
+        var headers = ['Tanggal', 'Nama Pemohon', 'NIK', 'Jenis Surat', 'No. Surat', 'Keperluan', 'Status RT', 'Status RW', 'Revisi', 'Catatan RW', 'Diperbarui'];
+        var data = (rows || []).map(function (r) {
+            return [
+                fmtDay(r['Timestamp']),
+                r['Nama Lengkap Pemohon'], r['NIK'], r['Jenis Surat'], r['No. Surat'],
+                r['Keperluan / Alasan Pengajuan'], r['Status Pengurusan'], r['Rw Status'],
+                Number(r['Rw Revisi']) || 0, r['Rw Catatan'], fmtDay(r['Rw Tanggal'])
+            ];
+        });
+        downloadCsv('surat-' + (f.rt || 'rw06') + '-' + todayStamp() + '.csv', buildCsv(headers, data));
+    }
+
+    function exportLaporCsv(rows, f) {
+        // Catatan tanggapan RW tersimpan sebagai linimasa di sheet
+        // Lapor_Tindak_Lanjut, bukan kolom di Lapor_Aspirasi, jadi CSV memuat
+        // catatan RT dan petugas RW yang memang ada pada baris ini.
+        var headers = ['Tanggal', 'No. Pengaduan', 'Nama Warga', 'Alamat / No. Rumah', 'Jenis Pengaduan', 'Judul Pengaduan', 'Detail', 'Harapan / Solusi', 'Status RT', 'Catatan RT', 'Status RW', 'Petugas RW', 'Diperbarui'];
+        var data = (rows || []).map(function (r) {
+            return [
+                fmtDay(r['Timestamp']), r['No. Pengaduan'], r['Nama Warga'], r['Alamat / No. Rumah'],
+                r['Jenis Pengaduan'], r['Judul Pengaduan'], r['Detail Pengaduan'], r['Harapan / Solusi'],
+                r['Status'], r['Catatan Tindak Lanjut'], r['Rw Status'], r['Rw Petugas'],
+                fmtDay(r['Rw Diperbarui'])
+            ];
+        });
+        downloadCsv('pengaduan-' + (f.rt || 'rw06') + '-' + todayStamp() + '.csv', buildCsv(headers, data));
+    }
+
+    function csvButton(id, label) {
+        return '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="' + esc(id) + '">' +
+            '<i class="fa-solid fa-file-csv"></i> ' + esc(label || 'Ekspor CSV') + '</button></div>';
+    }
+
     // Kotak cari generik untuk daftar selain Data Warga. Pencarian dilakukan
     // di sisi klien atas data yang sudah diambil, jadi tidak memicu permintaan
     // baru ke orkestrator dan tetap cepat setelah cache hangat.
@@ -1447,13 +1613,16 @@
                 ['kpi-lapor', 'Pengaduan terbuka', fmtInt(t.laporTerbuka), 'belum selesai', 'fa-comment-dots', '', { page: 'lapor' }],
                 ['kpi-eskalasi', 'Eskalasi RW', fmtInt(t.laporEskalasi), 'menunggu tindak lanjut', 'fa-paper-plane', '', { page: 'lapor', status: 'Perlu Tindak Lanjut' }]
             ];
+            var ttl = Number(d.cacheTtlSeconds || 0) * 1000;
+            var fresh = kpiFreshness(state.dashboardLoadedAt || d.generatedAt, ttl);
             var kpi = cards.map(function (c) {
                 return '<button type="button" class="kpi-card kpi-link" id="' + esc(c[0]) + '" data-kpi-page="' + esc(c[6].page) + '"' +
                     (c[6].status ? ' data-kpi-status="' + esc(c[6].status) + '"' : '') +
                     ' title="Buka rincian ' + esc(c[1].toLowerCase()) + '">' +
                     '<span class="kpi-head"><span class="kpi-label">' + esc(c[1]) + '</span><span class="kpi-icon"><i class="fa-solid ' + c[4] + '"></i></span></span>' +
                     '<span class="kpi-value ' + c[5] + '">' + c[2] + '</span>' +
-                    '<span class="kpi-note">' + esc(c[3]) + '<i class="fa-solid fa-arrow-right kpi-go"></i></span></button>';
+                    '<span class="kpi-note">' + esc(c[3]) + '<i class="fa-solid fa-arrow-right kpi-go"></i></span>' +
+                    fresh + '</button>';
             }).join('');
 
             var rows = (d.rts || []).map(function (rt) {
@@ -1512,6 +1681,7 @@
                         '<div class="field"><label>RT</label><select class="control" id="warga-rt">' + rtOptions(f.rt) + '</select></div>' +
                         '<div class="field" style="flex:1"><label>Cari</label><span class="search-wrap"><i class="fa-solid fa-magnifying-glass"></i><input class="control" id="warga-q" placeholder="Nama, NIK, KK, HP, atau alamat" value="' + esc(f.q) + '"></span></div>' +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="warga-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
+                        csvButton('warga-csv') +
                         (isAdmin() ? '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="warga-dup"><i class="fa-solid fa-clone"></i> Cek NIK ganda</button></div>' : '') +
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>' + esc(f.rt) + '</h2><p id="warga-count">' + fmtInt(res.total) + ' warga aktif</p></div></div>' +
@@ -1539,6 +1709,9 @@
                 bindSort('warga', paintWarga);
                 $('warga-print').addEventListener('click', function () {
                     printWargaReport(filteredWarga(), { rt: f.rt, query: f.q });
+                });
+                $('warga-csv').addEventListener('click', function () {
+                    exportWargaCsv(filteredWarga(), f);
                 });
                 var dupBtn = $('warga-dup');
                 if (dupBtn) dupBtn.addEventListener('click', function () { openNikDuplicates(); });
@@ -1802,7 +1975,7 @@
                 '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
                 '<td class="nw">' + esc(r['No HP'] || '-') + '</td>' +
                 '<td>' + esc(r['Alamat/No Rumah'] || '-') + '</td>' +
-                '<td>' + esc(r['Pekerjaan'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Pendidikan'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Pekerjaan'] || '-') + '<br><span style="color:var(--muted);font-size:10px">' + esc(r['Pendidikan'] || '-') + '</span></td>' +
                 '</tr>';
         });
         var headerLabel = meta.query ? 'Pencarian: ' + meta.query : 'Semua warga aktif';
@@ -1931,7 +2104,7 @@
                 rows.push('<tr>' +
                     '<td class="nw">' + (idx === 0 ? esc(g.nik) : '') + '</td>' +
                     '<td class="nw">' + esc(e.rtId) + '</td>' +
-                    '<td>' + esc(e.nama) + '<br><span style="color:#64748b;font-size:10px">KK ' + esc(e.kk) + '</span></td>' +
+                    '<td>' + esc(e.nama) + '<br><span style="color:var(--muted);font-size:10px">KK ' + esc(e.kk) + '</span></td>' +
                     '<td>' + esc(e.alamat) + '</td>' +
                     '<td class="c">' + esc(e.status) + '</td>' +
                     '<td class="c">' + (idx === 0 ? fmtInt(g.rows.length) + ' baris / ' + fmtInt(g.rts.length) + ' RT' : '') + '</td>' +
@@ -2025,12 +2198,13 @@
                         searchControl('kas-q', f.q, 'Nama warga, rumah, atau keterangan') +
                         periodControls('kas', f) +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="kas-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
+                        csvButton('kas-csv') +
                     '</div>' +
                     '<div class="grid kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">' +
                         '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo saat ini</span><span class="kpi-icon"><i class="fa-solid fa-wallet"></i></span></div><p class="kpi-value money">' + fmtMoney(saldo) + '</p><p class="kpi-note">' + fmtInt(aktif) + ' transaksi aktif</p></article>' +
                         '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Saldo awal periode</span></div><p class="kpi-value money">' + fmtMoney(opening) + '</p><p class="kpi-note">' + esc(periodNote) + '</p></article>' +
-                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pemasukan</span></div><p class="kpi-value money" style="color:#047857">' + fmtMoney(periodMasuk) + '</p><p class="kpi-note">' + fmtInt(periodCount) + ' transaksi pada periode</p></article>' +
-                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pengeluaran</span></div><p class="kpi-value money" style="color:#be123c">' + fmtMoney(periodKeluar) + '</p><p class="kpi-note">Saldo akhir periode ' + fmtMoney(closing) + '</p></article>' +
+                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pemasukan</span></div><p class="kpi-value money" style="color:var(--green)">' + fmtMoney(periodMasuk) + '</p><p class="kpi-note">' + fmtInt(periodCount) + ' transaksi pada periode</p></article>' +
+                        '<article class="kpi-card"><div class="kpi-head"><span class="kpi-label">Pengeluaran</span></div><p class="kpi-value money" style="color:var(--danger)">' + fmtMoney(periodKeluar) + '</p><p class="kpi-note">Saldo akhir periode ' + fmtMoney(closing) + '</p></article>' +
                     '</div><div style="height:16px"></div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · arsip tidak dihitung</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
@@ -2050,6 +2224,9 @@
                 $('kas-print').addEventListener('click', function () {
                     printKasReport(rows, { rt: f.rt, period: periodLabel(f), opening: opening, masuk: periodMasuk, keluar: periodKeluar, closing: closing });
                 });
+                $('kas-csv').addEventListener('click', function () {
+                    exportKasCsv(rows, f);
+                });
                 setSync('Data ' + f.rt, 'ok');
             });
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
@@ -2068,7 +2245,7 @@
             return '<tr>' +
                 '<td class="c">' + (idx + 1) + '</td>' +
                 '<td class="nw">' + esc(fmtDay(r['Tanggal'] || r['Timestamp'])) + '</td>' +
-                '<td>' + esc(r['Nama Warga'] || '-') + (archived ? ' <span style="font-size:9px;background:#fde68a;color:#92400e;border-radius:4px;padding:0 4px">Arsip</span>' : '') + '</td>' +
+                '<td>' + esc(r['Nama Warga'] || '-') + (archived ? ' <span style="font-size:9px;background:var(--amber-soft);color:var(--amber);border-radius:4px;padding:0 4px">Arsip</span>' : '') + '</td>' +
                 '<td class="c">' + esc(r['No Rumah'] || '-') + '</td>' +
                 '<td class="c">' + esc(r['Jenis Transaksi'] || '-') + '</td>' +
                 '<td class="r">' + esc(fmtMoney(r['Jumlah (Rp)'])) + '</td>' +
@@ -2117,8 +2294,8 @@
             return '<tr>' +
                 '<td class="c">' + (idx + 1) + '</td>' +
                 '<td class="nw">' + esc(fmtDay(r['Timestamp'])) + '</td>' +
-                '<td>' + esc(r['Nama Lengkap Pemohon'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['NIK'] || '-') + '</span></td>' +
-                '<td>' + esc(r['Jenis Surat'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
+                '<td>' + esc(r['Nama Lengkap Pemohon'] || '-') + '<br><span style="color:var(--muted);font-size:10px">' + esc(r['NIK'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Jenis Surat'] || '-') + '<br><span style="color:var(--muted);font-size:10px">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
                 '<td class="c">' + esc(r['Status Pengurusan'] || '-') + '</td>' +
                 '<td class="c">' + esc(r['Rw Status'] || '-') + '</td>' +
                 '<td class="c">' + esc(fmtInt(r['Rw Revisi'] || 0)) + 'x</td>' +
@@ -2155,9 +2332,9 @@
         var tableRows = rows.map(function (r, idx) {
             return '<tr>' +
                 '<td class="c">' + (idx + 1) + '</td>' +
-                '<td class="nw">' + esc(fmtDay(r['Timestamp'])) + '<br><span style="color:#64748b;font-size:10px">' + esc(r['No. Pengaduan'] || '-') + '</span></td>' +
-                '<td>' + esc(r['Nama Warga'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Alamat / No. Rumah'] || '-') + '</span></td>' +
-                '<td>' + esc(r['Judul Pengaduan'] || '-') + '<br><span style="color:#64748b;font-size:10px">' + esc(r['Jenis Pengaduan'] || '-') + '</span></td>' +
+                '<td class="nw">' + esc(fmtDay(r['Timestamp'])) + '<br><span style="color:var(--muted);font-size:10px">' + esc(r['No. Pengaduan'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Nama Warga'] || '-') + '<br><span style="color:var(--muted);font-size:10px">' + esc(r['Alamat / No. Rumah'] || '-') + '</span></td>' +
+                '<td>' + esc(r['Judul Pengaduan'] || '-') + '<br><span style="color:var(--muted);font-size:10px">' + esc(r['Jenis Pengaduan'] || '-') + '</span></td>' +
                 '<td class="c">' + esc(r['Status'] || '-') + '</td>' +
                 '<td class="c">' + esc(r['Rw Status'] || '-') + '</td>' +
                 '</tr>';
@@ -2198,8 +2375,18 @@
                 rows = filterByQuery(rows, f.q, ['Nama Lengkap Pemohon', 'NIK', 'Jenis Surat', 'No. Surat', 'Keperluan / Alasan Pengajuan', 'Status Pengurusan', 'Rw Status']);
                 rows = sortRows(rows, 'surat');
                 var sliced = pageSlice(rows, 'surat');
+                var canBulk = isAdmin();
+                if (canBulk) pruneBulkSurat(rows);
+                var selected = bulkSuratIds();
                 var body = sliced.rows.map(function (r) {
+                    var pending = String(r['Rw Status']) === 'Menunggu';
+                    var checked = pending && state.bulkSurat[String(r['ID'])];
                     return '<tr class="clickable" data-surat="' + esc(r['ID']) + '">' +
+                        (canBulk
+                            ? '<td class="nowrap">' + (pending
+                                ? '<input type="checkbox" class="row-check" data-bulk-surat="' + esc(r['ID']) + '"' + (checked ? ' checked' : '') + ' aria-label="Pilih pengajuan ' + esc(r['Nama Lengkap Pemohon'] || '-') + '">'
+                                : '<span class="cell-sub">-</span>') + '</td>'
+                            : '') +
                         '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Timestamp']) + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Nama Lengkap Pemohon'] || '-') + '</span><span class="cell-sub">' + esc(r['NIK'] || '-') + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Jenis Surat'] || '-') + '</span><span class="cell-sub">' + esc(r['No. Surat'] || 'Belum bernomor') + '</span></td>' +
@@ -2208,6 +2395,14 @@
                         '<td class="nowrap">' + fmtInt(r['Rw Revisi'] || 0) + ' kali</td>' +
                         '</tr>';
                 }).join('');
+                var bulkBar = canBulk
+                    ? '<div class="bulk-bar" id="surat-bulk-bar">' +
+                        '<span class="bulk-count" id="surat-bulk-count">' + fmtInt(selected.length) + ' dipilih</span>' +
+                        '<button type="button" class="btn btn-ghost btn-sm" id="surat-bulk-all"><i class="fa-solid fa-check-double"></i> Pilih semua Menunggu</button>' +
+                        '<button type="button" class="btn btn-ghost btn-sm" id="surat-bulk-clear"><i class="fa-solid fa-xmark"></i> Bersihkan</button>' +
+                        '<button type="button" class="btn btn-primary btn-sm" id="surat-bulk-approve"' + (selected.length ? '' : ' disabled') + '><i class="fa-solid fa-circle-check"></i> Setujui pilihan</button>' +
+                    '</div>'
+                    : '';
                 $('page').innerHTML =
                     '<div class="toolbar">' +
                         '<div class="field"><label>RT</label><select class="control" id="surat-rt">' + rtOptions(f.rt) + '</select></div>' +
@@ -2215,10 +2410,12 @@
                         searchControl('surat-q', f.q, 'Nama, NIK, jenis, atau nomor surat') +
                         periodControls('surat', f) +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="surat-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
-                    '</div>' + listNotice(res) +
+                        csvButton('surat-csv') +
+                    '</div>' + bulkBar + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(rows.length) + ' pengajuan · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
                     '<thead><tr>' +
+                        (canBulk ? '<th class="bulk-col"><span class="sr-only">Pilih</span></th>' : '') +
                         sortHeader('surat', 'time', 'Tanggal') +
                         sortHeader('surat', 'pemohon', 'Pemohon', 'NIK') +
                         '<th><span class="th-stack">Jenis surat</span><span class="th-sub">No. Surat</span></th>' +
@@ -2226,7 +2423,7 @@
                         sortHeader('surat', 'status', 'Status RW') +
                         sortHeader('surat', 'revisi', 'Revisi', '', true) +
                     '</tr></thead>' +
-                    '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
+                    '<tbody>' + (body || '<tr><td colspan="' + (canBulk ? 7 : 6) + '"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('surat', sliced) + '</section>';
                 $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.surat = 1; renderSurat(); });
                 $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.surat = 1; renderSurat(); });
@@ -2237,6 +2434,9 @@
                 $('surat-print').addEventListener('click', function () {
                     printSuratReport(rows, { rt: f.rt, period: periodLabel(f), status: f.status || 'Semua status' });
                 });
+                $('surat-csv').addEventListener('click', function () {
+                    exportSuratCsv(rows, f);
+                });
                 document.querySelectorAll('[data-surat]').forEach(function (tr) {
                     tr.addEventListener('click', function () {
                         var id = tr.getAttribute('data-surat');
@@ -2244,6 +2444,7 @@
                         if (row) openSurat(row);
                     });
                 });
+                bindBulkSurat(rows, f.rt);
                 setSync('Data ' + f.rt, 'ok');
             });
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
@@ -2283,6 +2484,7 @@
                         searchControl('lapor-q', f.q, 'Warga, nomor, atau judul pengaduan') +
                         periodControls('lapor', f) +
                         '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="lapor-print"><i class="fa-solid fa-print"></i> Cetak laporan</button></div>' +
+                        csvButton('lapor-csv') +
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(rows.length) + ' pengaduan · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
@@ -2303,6 +2505,9 @@
                 bindPager('lapor', renderLapor);
                 $('lapor-print').addEventListener('click', function () {
                     printLaporReport(rows, { rt: f.rt, period: periodLabel(f), status: f.status || 'Semua status' });
+                });
+                $('lapor-csv').addEventListener('click', function () {
+                    exportLaporCsv(rows, f);
                 });
                 document.querySelectorAll('[data-lapor]').forEach(function (tr) {
                     tr.addEventListener('click', function () {
@@ -2384,6 +2589,142 @@
         drawer.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('drawer-open');
         releaseFocus();
+    }
+
+    // ================= KEPUTUSAN MASSAL SURAT =================
+    // Hanya pengajuan berstatus Menunggu yang bisa dipilih. Setiap baris tetap
+    // membawa `Rw Versi` masing-masing sehingga pengaman idempotensi dan
+    // deteksi perubahan bersamaan sama persis dengan keputusan satu per satu.
+    function bulkSuratIds() {
+        return Object.keys(state.bulkSurat).filter(function (id) { return state.bulkSurat[id]; });
+    }
+
+    function clearBulkSurat() {
+        state.bulkSurat = {};
+    }
+
+    // Pilihan lama yang tidak lagi ada di daftar dibuang agar penghitung tidak
+    // menyebut pengajuan yang sudah tidak terlihat (mis. setelah ganti RT).
+    function pruneBulkSurat(rows) {
+        var present = {};
+        (rows || []).forEach(function (r) { present[String(r['ID'])] = true; });
+        Object.keys(state.bulkSurat).forEach(function (id) {
+            if (!present[id]) delete state.bulkSurat[id];
+        });
+    }
+
+    function toggleBulkSurat(id, checked) {
+        if (!id) return;
+        if (checked) state.bulkSurat[id] = true;
+        else delete state.bulkSurat[id];
+    }
+
+    function bulkEligible(rows) {
+        return (rows || []).filter(function (r) { return String(r['Rw Status']) === 'Menunggu'; });
+    }
+
+    function submitBulkSurat(rows, rtId) {
+        if (state.actionBusy) return;
+        var ids = bulkSuratIds();
+        var chosen = (rows || []).filter(function (r) { return ids.indexOf(String(r['ID'])) !== -1; });
+        if (!chosen.length) { toast('Pilih minimal satu pengajuan.', 'error'); return; }
+        var notPending = chosen.filter(function (r) { return String(r['Rw Status']) !== 'Menunggu'; });
+        if (notPending.length) {
+            toast('Sebagian pengajuan sudah tidak menunggu. Muat ulang daftar lalu pilih lagi.', 'error');
+            return;
+        }
+        var message = '<p>Setujui <strong>' + fmtInt(chosen.length) + '</strong> pengajuan surat sekaligus?</p>' +
+            '<div class="warning-summary">' +
+            chosen.slice(0, 8).map(function (r) {
+                return '<p>' + esc(r['Nama Lengkap Pemohon'] || '-') + ' · ' + esc(r['Jenis Surat'] || '-') + '</p>';
+            }).join('') +
+            (chosen.length > 8 ? '<p>dan ' + fmtInt(chosen.length - 8) + ' pengajuan lain.</p>' : '') +
+            '</div>' +
+            '<p class="modal-note">Semua keputusan dikirim ke ' + esc(rtLabel(rtId)) + ' dan dicatat di audit. Bila satu pengajuan sudah berubah, pengajuan itu dilewati dan sisanya tetap diproses.</p>';
+        openWarning({
+            eyebrow: 'Keputusan massal',
+            title: 'Setujui pengajuan terpilih?',
+            message: message,
+            tone: 'primary',
+            icon: 'fa-circle-check',
+            confirmIcon: 'fa-circle-check',
+            confirmLabel: 'Ya, Setujui ' + fmtInt(chosen.length),
+            onConfirm: function () { performBulkSurat(chosen, rtId); }
+        });
+    }
+
+    function performBulkSurat(chosen, rtId) {
+        state.actionBusy = true;
+        var done = 0, queued = 0, skipped = 0, failed = 0;
+        var index = 0;
+        function next() {
+            if (index >= chosen.length) {
+                state.actionBusy = false;
+                clearBulkSurat();
+                clearReadCache();
+                renderers[state.page]();
+                var parts = [fmtInt(done + queued) + ' disetujui'];
+                if (queued) parts.push(fmtInt(queued) + ' menunggu kirim ulang');
+                if (skipped) parts.push(fmtInt(skipped) + ' dilewati');
+                if (failed) parts.push(fmtInt(failed) + ' gagal');
+                toast(parts.join(' · ') + '.', failed ? 'error' : 'success');
+                return;
+            }
+            var r = chosen[index++];
+            var versi = Number(r['Rw Versi'] || 1) || 1;
+            api('rwSuratDecision', {
+                rtId: rtId,
+                id: r['ID'],
+                decision: 'Disetujui',
+                catatan: '',
+                expectedVersi: versi,
+                kunci: makeKunci('SRT-BULK', [rtId, r['ID'], versi, 'Disetujui'])
+            }).then(function (res) {
+                // `queued` berarti keputusan sudah tersimpan dan akan dicoba
+                // ulang otomatis, jadi tetap dihitung sebagai disetujui.
+                if (res && res.queued) queued++;
+                else done++;
+            }).catch(function (err) {
+                var code = String((err && err.code) || '');
+                if (code === 'stale' || code === 'not_pending' || code === 'max_negative') skipped++;
+                else failed++;
+            }).then(next);
+        }
+        next();
+    }
+
+    function updateBulkBar(rows) {
+        var ids = bulkSuratIds();
+        var count = $('surat-bulk-count');
+        if (count) count.textContent = fmtInt(ids.length) + ' dipilih';
+        var approve = $('surat-bulk-approve');
+        if (approve) approve.disabled = !ids.length || state.actionBusy;
+    }
+
+    function bindBulkSurat(rows, rtId) {
+        if (!isAdmin()) return;
+        document.querySelectorAll('[data-bulk-surat]').forEach(function (box) {
+            box.addEventListener('click', function (e) { e.stopPropagation(); });
+            box.addEventListener('change', function (e) {
+                toggleBulkSurat(e.target.getAttribute('data-bulk-surat'), e.target.checked);
+                updateBulkBar(rows);
+            });
+        });
+        var all = $('surat-bulk-all');
+        if (all) all.addEventListener('click', function () {
+            // Hanya baris Menunggu pada tampilan saat ini yang dipilih agar
+            // keputusan massal tidak menyentuh pengajuan yang sudah final.
+            bulkEligible(rows).forEach(function (r) { state.bulkSurat[String(r['ID'])] = true; });
+            renderers[state.page]();
+        });
+        var clear = $('surat-bulk-clear');
+        if (clear) clear.addEventListener('click', function () {
+            clearBulkSurat();
+            renderers[state.page]();
+        });
+        var approve = $('surat-bulk-approve');
+        if (approve) approve.addEventListener('click', function () { submitBulkSurat(rows, rtId); });
+        updateBulkBar(rows);
     }
 
     function suratActionPanel(r, rtId) {
@@ -2882,7 +3223,7 @@
                     '<td>' + (rt.aktif ? badge('Aktif', 'badge-green', 'fa-circle-check') : badge('Nonaktif', 'badge-neutral', 'fa-plug-circle-check')) + '</td>' +
                     '<td class="nowrap"><span class="cell-main">' + esc(rt.backendVersion || '-') + '</span><span class="cell-sub">' + fmtRelative(rt.lastSync) + '</span>' +
                         (mismatch ? '<span class="cell-sub cell-warn"><i class="fa-solid fa-code-branch"></i> diharapkan ' + esc(expected) + '</span>' : '') + '</td>' +
-                    '<td>' + (rt.lastError ? '<span class="cell-sub" style="color:#be123c">' + esc(rt.lastError) + '</span>' : '<span class="cell-sub">-</span>') + '</td>' +
+                    '<td>' + (rt.lastError ? '<span class="cell-sub" style="color:var(--danger)">' + esc(rt.lastError) + '</span>' : '<span class="cell-sub">-</span>') + '</td>' +
                     '<td class="nowrap">' +
                         '<button type="button" class="btn btn-ghost" data-rt-edit="' + esc(rt.rtId) + '"><i class="fa-solid fa-pen-to-square"></i> Ubah</button> ' +
                         '<button type="button" class="btn btn-ghost" data-rt-health="' + esc(rt.rtId) + '"><i class="fa-solid fa-plug-circle-check"></i> Cek</button>' +
@@ -3429,6 +3770,18 @@
             });
         });
         $('refresh-btn').addEventListener('click', refresh);
+        applyTheme(currentTheme());
+        var themeBtn = $('theme-btn');
+        if (themeBtn) themeBtn.addEventListener('click', toggleTheme);
+        // Saat belum ada pilihan manual, ikuti perubahan preferensi sistem.
+        try {
+            if (typeof matchMedia === 'function') {
+                var mq = matchMedia('(prefers-color-scheme: dark)');
+                if (mq && mq.addEventListener) mq.addEventListener('change', function () {
+                    if (!storedTheme()) applyTheme(systemTheme());
+                });
+            }
+        } catch (e) { /* diabaikan */ }
         bindNetworkStatus();
         if (typeof addEventListener === 'function') {
             addEventListener('hashchange', function () {
@@ -3494,6 +3847,7 @@
     }
 
     function boot() {
+        applyTheme(currentTheme());
         hydrateReadCache();
         // Ringkasan dari cache sesi dipakai lebih dulu agar menu langsung bisa
         // dibuka (default RT sudah diketahui) sebelum jaringan menjawab. Di sini
