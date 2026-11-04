@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-02-03';
+    var BUILD = '2026-11-02-04';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -597,7 +597,8 @@
         el.className = 'sync-pill' + (cls ? ' ' + cls : '');
         el.innerHTML = '<i class="fa-solid ' + (cls === 'error' ? 'fa-circle-exclamation' : cls === 'warn' ? 'fa-triangle-exclamation' : 'fa-circle-notch') + '"></i><span>' + esc(label) + '</span>';
         // Renderer memanggil setSync setelah filter diterapkan, jadi ini titik
-        // yang tepat untuk menyelaraskan URL tanpa menambah pemanggilan.
+        // yang tepat untuk menyelaraskan URL dan memulihkan fokus kotak cari.
+        restoreSearchFocus();
         syncHash();
     }
 
@@ -794,14 +795,39 @@
         });
     }
 
+    // Renderer daftar mengganti seluruh isi #page secara asinkron, jadi kotak
+    // cari yang sedang dipakai ikut hancur. Fokus dan posisi kursor dicatat di
+    // sini lalu dipulihkan setelah render selesai (lihat setSync) supaya
+    // pengguna bisa mengetik lebih dari satu huruf.
+    var pendingSearchFocus = null;
+
     function bindSearch(id, f, rerender) {
         var input = $(id);
         if (!input) return;
         input.addEventListener('input', function (e) {
             f.q = e.target.value;
             state.pages[state.page] = 1;
+            pendingSearchFocus = {
+                id: id,
+                caret: typeof e.target.selectionStart === 'number' ? e.target.selectionStart : String(f.q).length
+            };
             rerender();
         });
+    }
+
+    function restoreSearchFocus() {
+        var pending = pendingSearchFocus;
+        if (!pending) return;
+        pendingSearchFocus = null;
+        var input = $(pending.id);
+        if (!input || !input.focus) return;
+        try {
+            input.focus();
+            if (input.setSelectionRange) {
+                var pos = typeof pending.caret === 'number' ? pending.caret : String(input.value || '').length;
+                input.setSelectionRange(pos, pos);
+            }
+        } catch (e) { /* diabaikan: fokus bukan hal kritis */ }
     }
 
     function bindPeriodControls(prefix, f, rerender) {
@@ -2903,6 +2929,7 @@
     var renderers = { dashboard: renderDashboard, warga: renderWarga, kas: renderKas, surat: renderSurat, lapor: renderLapor, pengguna: renderPengguna, registry: renderRegistry, pengaturan: renderPengaturan, outbox: renderOutbox, audit: renderAudit };
 
     function navigate(page) {
+        pendingSearchFocus = null;
         if (!renderers[page]) page = 'dashboard';
         if (isAdminPage(page) && !isAdmin()) page = 'dashboard';
         state.page = page;
@@ -2970,6 +2997,7 @@
 
     function applyRoute(route) {
         if (!route) return false;
+        pendingSearchFocus = null;
         var page = renderers[route.page] ? route.page : 'dashboard';
         if (isAdminPage(page) && !isAdmin()) return false;
         var fields = HASH_FIELDS[page] || [];
