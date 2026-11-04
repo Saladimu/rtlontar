@@ -292,6 +292,11 @@ a { color: inherit; }
 .btn-blue { background: var(--blue); color: var(--on-brand); }
 .btn-blue:hover { background: var(--blue-hover); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+/* Tombol berwarna yang nonaktif dibuat netral agar tidak terlihat bisa
+   ditekan (mis. "Setujui pilihan" saat belum ada yang dipilih). */
+.btn-primary:disabled, .btn-blue:disabled, .btn-danger:disabled {
+    background: var(--line); border-color: var(--line); color: var(--muted); opacity: 1;
+}
 .btn.icon-only { padding: 8px 10px; }
 
 .icon-btn {
@@ -467,6 +472,7 @@ th.is-active .th-sort-icon { color: var(--brand); }
     background: var(--panel-2);
 }
 .bulk-count { font-size: 12px; font-weight: 700; color: var(--ink); margin-right: 4px; }
+.bulk-hint { flex: 1 1 220px; min-width: 0; font-size: 11.5px; color: var(--muted); }
 .bulk-bar .btn[disabled] { opacity: 0.55; cursor: not-allowed; }
 .bulk-col { width: 38px; }
 .row-check { width: 15px; height: 15px; cursor: pointer; accent-color: var(--brand); }
