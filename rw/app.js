@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-02-06';
+    var BUILD = '2026-11-02-07';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -2385,7 +2385,7 @@
                         (canBulk
                             ? '<td class="nowrap">' + (pending
                                 ? '<input type="checkbox" class="row-check" data-bulk-surat="' + esc(r['ID']) + '"' + (checked ? ' checked' : '') + ' aria-label="Pilih pengajuan ' + esc(r['Nama Lengkap Pemohon'] || '-') + '">'
-                                : '<span class="cell-sub">-</span>') + '</td>'
+                                : '<span class="cell-sub bulk-na" title="Hanya pengajuan berstatus Menunggu yang bisa dipilih">-</span>') + '</td>'
                             : '') +
                         '<td class="nowrap"><span class="cell-main">' + fmtDay(r['Timestamp']) + '</span></td>' +
                         '<td><span class="cell-main">' + esc(r['Nama Lengkap Pemohon'] || '-') + '</span><span class="cell-sub">' + esc(r['NIK'] || '-') + '</span></td>' +
@@ -2395,12 +2395,17 @@
                         '<td class="nowrap">' + fmtInt(r['Rw Revisi'] || 0) + ' kali</td>' +
                         '</tr>';
                 }).join('');
+                // Jumlah yang benar-benar bisa diputuskan pada tampilan ini.
+                // Bila nol, bilah aksi menjelaskan alasannya agar tombol tidak
+                // terkesan rusak ketika semua pengajuan sudah final.
+                var pendingCount = bulkEligible(rows).length;
                 var bulkBar = canBulk
                     ? '<div class="bulk-bar" id="surat-bulk-bar">' +
                         '<span class="bulk-count" id="surat-bulk-count">' + fmtInt(selected.length) + ' dipilih</span>' +
-                        '<button type="button" class="btn btn-ghost btn-sm" id="surat-bulk-all"><i class="fa-solid fa-check-double"></i> Pilih semua Menunggu</button>' +
-                        '<button type="button" class="btn btn-ghost btn-sm" id="surat-bulk-clear"><i class="fa-solid fa-xmark"></i> Bersihkan</button>' +
+                        '<button type="button" class="btn btn-ghost btn-sm" id="surat-bulk-all"' + (pendingCount ? '' : ' disabled') + '><i class="fa-solid fa-check-double"></i> Pilih semua Menunggu</button>' +
+                        '<button type="button" class="btn btn-ghost btn-sm" id="surat-bulk-clear"' + (selected.length ? '' : ' disabled') + '><i class="fa-solid fa-xmark"></i> Bersihkan</button>' +
                         '<button type="button" class="btn btn-primary btn-sm" id="surat-bulk-approve"' + (selected.length ? '' : ' disabled') + '><i class="fa-solid fa-circle-check"></i> Setujui pilihan</button>' +
+                        (pendingCount ? '' : '<span class="bulk-hint" id="surat-bulk-hint">Tidak ada pengajuan berstatus <strong>Menunggu</strong> pada tampilan ini.</span>') +
                     '</div>'
                     : '';
                 $('page').innerHTML =
@@ -2697,6 +2702,11 @@
         var ids = bulkSuratIds();
         var count = $('surat-bulk-count');
         if (count) count.textContent = fmtInt(ids.length) + ' dipilih';
+        var pending = bulkEligible(rows).length;
+        var all = $('surat-bulk-all');
+        if (all) all.disabled = !pending || state.actionBusy;
+        var clear = $('surat-bulk-clear');
+        if (clear) clear.disabled = !ids.length || state.actionBusy;
         var approve = $('surat-bulk-approve');
         if (approve) approve.disabled = !ids.length || state.actionBusy;
     }
