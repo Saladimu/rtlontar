@@ -50,7 +50,7 @@
                 </div>
                 <button type="button" class="icon-btn sidebar-close" id="sidebar-close" aria-label="Tutup menu"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <nav class="nav" id="nav">
+            <nav class="nav" id="nav" aria-label="Menu utama">
                 <button type="button" class="nav-item" data-page="dashboard"><i class="fa-solid fa-chart-pie"></i><span>Ringkasan</span></button>
                 <button type="button" class="nav-item" data-page="warga"><i class="fa-solid fa-users"></i><span>Data Warga</span></button>
                 <button type="button" class="nav-item" data-page="kas"><i class="fa-solid fa-wallet"></i><span>Kas RT</span></button>
@@ -78,7 +78,7 @@
 
         <div class="main">
             <header class="topbar">
-                <button type="button" class="icon-btn menu-btn" id="menu-btn" aria-label="Buka menu"><i class="fa-solid fa-bars"></i></button>
+                <button type="button" class="icon-btn menu-btn" id="menu-btn" aria-label="Buka menu" aria-controls="sidebar" aria-expanded="false"><i class="fa-solid fa-bars"></i></button>
                 <div class="topbar-title">
                     <h1 id="page-title">Ringkasan</h1>
                     <p id="page-subtitle">Kondisi terkini seluruh RT</p>
@@ -94,11 +94,11 @@
                 <span id="offline-text">Anda sedang offline. Menampilkan data terakhir yang tersimpan.</span>
             </div>
 
-            <main class="page" id="page"></main>
+            <main class="page" id="page" tabindex="-1"></main>
         </div>
     </div>
 
-    <div id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div id="drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawer-title" aria-hidden="true">
         <div class="drawer-backdrop" data-close-drawer></div>
         <section class="drawer-panel">
             <header class="drawer-head">
@@ -112,7 +112,7 @@
         </section>
     </div>
 
-    <div id="modal-warning" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="warning-title">
+    <div id="modal-warning" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="warning-title" aria-hidden="true">
         <div class="modal-backdrop" id="warning-backdrop" data-close-warning></div>
         <section class="modal-card">
             <header class="modal-head">

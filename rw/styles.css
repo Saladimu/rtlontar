@@ -201,6 +201,9 @@ a { color: inherit; }
 .sync-pill.error { color: var(--danger); background: var(--danger-soft); border-color: transparent; }
 
 .page { padding: 24px; max-width: 1440px; width: 100%; margin: 0 auto; }
+/* #page difokuskan secara programatik setelah dialog ditutup; bukan bagian
+   urutan Tab, jadi garis fokus tidak perlu ditampilkan. */
+.page[tabindex="-1"]:focus { outline: none; }
 
 .btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 7px;
@@ -356,6 +359,25 @@ tbody tr.kk-head .cell-main { font-weight: 700; }
 }
 .th-stack { display: block; }
 .th-sub { display: block; margin-top: 2px; color: #94a3b8; font-size: 9.5px; letter-spacing: 0.04em; text-transform: none; font-weight: 600; }
+
+/* Header yang bisa diurutkan: seluruh area <th> menjadi tombol agar mudah
+   diklik, dengan panah kecil sebagai penanda arah aktif. */
+th.th-sort { padding: 0; }
+.th-sort-btn {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%;
+    padding: 10px 14px;
+    background: none; border: 0;
+    color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit;
+    text-align: inherit; cursor: pointer;
+}
+th.th-sort.num .th-sort-btn { justify-content: flex-end; }
+.th-sort-btn:hover { color: var(--ink); background: #eef2f7; }
+.th-sort-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.th-sort-icon { margin-left: auto; font-size: 9px; color: #cbd5e1; }
+th.th-sort.num .th-sort-icon { margin-left: 6px; }
+th.is-active .th-sort-btn { color: var(--brand); }
+th.is-active .th-sort-icon { color: var(--brand); }
 
 .pager {
     display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -555,6 +577,10 @@ body.modal-open { overflow: hidden; }
     .hide-sm { display: none; }
     .search-wrap .control { min-width: 0; width: 100%; }
     .search-wrap { width: 100%; }
+    /* Toolbar tetap terbaca di tablet: periode cepat dan tanggal tidak
+       memaksa halaman menggulir mendatar. */
+    .toolbar .field { flex: 1 1 180px; min-width: 0; }
+    .toolbar .field .control { width: 100%; min-width: 0; }
 }
 @media (max-width: 520px) {
     .offline-banner { margin: 10px 14px -6px; }

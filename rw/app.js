@@ -2,7 +2,7 @@
 (function () {
     'use strict';
 
-    var BUILD = '2026-11-02-04';
+    var BUILD = '2026-11-02-05';
     var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
     var TZ = 'Asia/Jakarta';
     var PAGE_META = {
@@ -25,15 +25,26 @@
         dashboard: null,
         filters: {
             warga: { rt: '', q: '' },
-            kas: { rt: '', from: '', to: '', q: '' },
-            surat: { rt: '', status: '', from: '', to: '', q: '' },
-            lapor: { rt: '', status: '', from: '', to: '', q: '' },
+            kas: { rt: '', from: '', to: '', preset: '', q: '' },
+            surat: { rt: '', status: '', from: '', to: '', preset: '', q: '' },
+            lapor: { rt: '', status: '', from: '', to: '', preset: '', q: '' },
             audit: { q: '' }
         },
         busy: false,
         actionBusy: false,
         prefetched: false,
         dashboardLoadedAt: 0,
+        // Urutan awal: daftar transaksi/surat/pengaduan/audit terbaru di atas,
+        // warga tetap memakai kelompok Nomor KK. Klik header untuk mengubah.
+        sorts: {
+            warga: { key: '', dir: 'asc' },
+            kas: { key: 'time', dir: 'desc' },
+            surat: { key: 'time', dir: 'desc' },
+            lapor: { key: 'time', dir: 'desc' },
+            // Audit disajikan orkestrator dari yang terbaru, jadi default
+            // kolom ini mengikuti urutan asli tanpa pengurutan ulang.
+            audit: { key: '', dir: 'desc' }
+        },
         pages: { warga: 1, kas: 1, surat: 1, lapor: 1, pengguna: 1, registry: 1, pengaturan: 1, outbox: 1, audit: 1 },
         digestText: ''
     };
@@ -203,6 +214,70 @@
         toast._t = setTimeout(function () { el.classList.add('hidden'); }, type === 'error' ? 7000 : 4000);
     }
 
+    // ================= FOKUS DIALOG =================
+    // Drawer dan modal menahan fokus di dalam panelnya, mengembalikan fokus ke
+    // elemen pemicu saat ditutup, dan menandai status buka/tutupnya lewat
+    // aria-hidden agar pembaca layar tahu dialog mana yang sedang aktif.
+    var focusTrap = { element: null, previous: null, handler: null };
+    // Baris tabel bukan elemen fokus, jadi document.activeElement sering kali
+    // <body> saat drawer dibuka dari klik baris. Simpan pemicu terakhir agar
+    // fokus tetap bisa dikembalikan ke tempat yang masuk akal.
+    var lastTrigger = null;
+
+    function rememberTrigger(target) {
+        if (!target || !target.closest) return;
+        var el = target.closest('button, a[href], tr[data-surat], tr[data-lapor], input, select, textarea');
+        if (el) lastTrigger = el;
+    }
+
+    function focusableIn(root) {
+        if (!root || !root.querySelectorAll) return [];
+        var selector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+        return Array.prototype.slice.call(root.querySelectorAll(selector)).filter(function (el) {
+            return !el.classList || !el.classList.contains('hidden');
+        });
+    }
+
+    function trapFocus(root) {
+        releaseFocus(true);
+        if (!root) return;
+        var active = typeof document !== 'undefined' ? document.activeElement : null;
+        focusTrap.element = root;
+        focusTrap.previous = active && active !== document.body ? active : lastTrigger;
+        focusTrap.handler = function (e) {
+            if (e.key !== 'Tab' || !focusTrap.element) return;
+            var items = focusableIn(focusTrap.element);
+            if (!items.length) return;
+            var first = items[0];
+            var last = items[items.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        };
+        document.addEventListener('keydown', focusTrap.handler);
+    }
+
+    function releaseFocus(skipRestore) {
+        if (focusTrap.handler) document.removeEventListener('keydown', focusTrap.handler);
+        var previous = focusTrap.previous;
+        focusTrap.element = null;
+        focusTrap.previous = null;
+        focusTrap.handler = null;
+        // Mengembalikan fokus ke pemicu agar pengguna keyboard tidak kembali ke
+        // awal dokumen setelah dialog ditutup.
+        if (!skipRestore && previous && previous.focus) {
+            try { previous.focus(); } catch (e) { /* diabaikan */ }
+        }
+        // Baris tabel bukan elemen yang dapat menerima fokus; bila fokus tidak
+        // kembali ke pemicu, arahkan ke area konten agar pengguna keyboard
+        // tidak terlempar ke awal dokumen.
+        if (!skipRestore && typeof document !== 'undefined' && document.activeElement === document.body) {
+            var page = $('page');
+            if (page && page.focus) {
+                try { page.focus(); } catch (e) { /* diabaikan */ }
+            }
+        }
+    }
+
     function openWarning(opts) {
         var options = opts || {};
         var tone = options.tone || 'primary';
@@ -224,7 +299,9 @@
         }
         warningState.onConfirm = typeof options.onConfirm === 'function' ? options.onConfirm : null;
         $('modal-warning').classList.remove('hidden');
+        $('modal-warning').setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
+        trapFocus($('modal-warning'));
         var cancel = $('warning-cancel');
         if (cancel && cancel.focus) cancel.focus();
     }
@@ -232,10 +309,18 @@
     function closeWarning() {
         warningState.onConfirm = null;
         var modal = $('modal-warning');
-        if (modal) modal.classList.add('hidden');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
         document.body.classList.remove('modal-open');
         var confirm = $('warning-confirm');
         if (confirm) confirm.disabled = false;
+        releaseFocus();
+        // Modal bisa dibuka di atas drawer; setelah modal tertutup, drawer
+        // kembali memegang fokus sampai ditutup pengguna.
+        var drawer = $('drawer');
+        if (drawer && !drawer.classList.contains('hidden')) trapFocus(drawer);
     }
 
     function runWarningConfirm() {
@@ -758,21 +843,210 @@
         return !!(f && (f.from || f.to));
     }
 
+    // Tanggal "hari ini" menurut Asia/Jakarta, bukan zona waktu perangkat,
+    // agar preset periode konsisten dengan tanggal yang dilihat pengurus.
+    function jakartaDay(date) {
+        try {
+            var parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(date || new Date());
+            var out = {};
+            parts.forEach(function (p) { out[p.type] = p.value; });
+            return out.year + '-' + out.month + '-' + out.day;
+        } catch (e) { return ''; }
+    }
+
+    function addDays(isoDay, delta) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDay || ''));
+        if (!m) return '';
+        var d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+        d.setUTCDate(d.getUTCDate() + delta);
+        return d.toISOString().slice(0, 10);
+    }
+
+    // Preset periode yang paling sering dipakai bagian administrasi. Rentang
+    // dihitung dalam komponen tanggal saja agar batas hari tidak bergeser.
+    var PERIOD_PRESETS = [
+        { value: 'today', label: 'Hari ini' },
+        { value: 'last7', label: '7 hari terakhir' },
+        { value: 'thismonth', label: 'Bulan ini' },
+        { value: 'lastmonth', label: 'Bulan lalu' }
+    ];
+
+    function presetRange(preset) {
+        var today = jakartaDay(new Date());
+        if (!today) return null;
+        if (preset === 'today') return { from: today, to: today };
+        if (preset === 'last7') return { from: addDays(today, -6), to: today };
+        if (preset === 'thismonth') return { from: today.slice(0, 8) + '01', to: today };
+        if (preset === 'lastmonth') {
+            var m = /^(\d{4})-(\d{2})/.exec(today);
+            var first = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 2, 1));
+            var last = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, 0));
+            return { from: first.toISOString().slice(0, 10), to: last.toISOString().slice(0, 10) };
+        }
+        return null;
+    }
+
+    function presetLabel(preset) {
+        for (var i = 0; i < PERIOD_PRESETS.length; i++) {
+            if (PERIOD_PRESETS[i].value === preset) return PERIOD_PRESETS[i].label;
+        }
+        return '';
+    }
+
     function periodLabel(f) {
         if (!periodActive(f)) return 'Semua periode';
         var from = f.from ? fmtDay(f.from) : 'awal';
         var to = f.to ? fmtDay(f.to) : 'sekarang';
-        return 'Periode ' + from + ' s.d. ' + to;
+        var fast = presetLabel(f && f.preset);
+        return (fast ? fast + ' (' : 'Periode ') + from + ' s.d. ' + to + (fast ? ')' : '');
     }
 
     function periodControls(prefix, f) {
-        return '<div class="field"><label for="' + esc(prefix) + '-from">Dari tanggal</label>' +
+        var options = PERIOD_PRESETS.map(function (p) {
+            return '<option value="' + esc(p.value) + '"' + (f.preset === p.value ? ' selected' : '') + '>' + esc(p.label) + '</option>';
+        }).join('');
+        return '<div class="field"><label for="' + esc(prefix) + '-preset">Periode cepat</label>' +
+                '<select class="control" id="' + esc(prefix) + '-preset">' +
+                    '<option value=""' + (!f.preset ? ' selected' : '') + '>Rentang manual</option>' +
+                    options +
+                '</select></div>' +
+            '<div class="field"><label for="' + esc(prefix) + '-from">Dari tanggal</label>' +
                 '<input type="date" class="control" id="' + esc(prefix) + '-from" value="' + esc(f.from || '') + '"></div>' +
             '<div class="field"><label for="' + esc(prefix) + '-to">Sampai tanggal</label>' +
                 '<input type="date" class="control" id="' + esc(prefix) + '-to" value="' + esc(f.to || '') + '"></div>' +
             (periodActive(f)
                 ? '<div class="field"><label>&nbsp;</label><button type="button" class="btn btn-ghost" id="' + esc(prefix) + '-clear"><i class="fa-solid fa-filter-circle-xmark"></i> Reset periode</button></div>'
                 : '');
+    }
+
+    // ================= URUTAN KOLOM =================
+    // Spesifikasi nilai per kolom yang bisa diurutkan. Tipe `num` membandingkan
+    // angka, `time` memakai komponen tanggal ISO agar urutan kronologis benar
+    // walau format tampilan berbeda-beda.
+    function sortTimeValue(row, keys) {
+        for (var i = 0; i < keys.length; i++) {
+            var raw = row[keys[i]];
+            if (isBlank(raw)) continue;
+            var day = toIsoDay(raw);
+            if (!day) continue;
+            // Jam memakai komponen Asia/Jakarta agar entri pada hari yang sama
+            // tetap terurut kronologis, bukan menurut akhiran zona waktu.
+            var j = jakartaParts(String(raw));
+            var clock = j && j.hour !== undefined ? j.hour + ':' + j.minute : '';
+            return day + ' ' + clock;
+        }
+        return '';
+    }
+
+    var SORT_SPECS = {
+        warga: {
+            nama: { type: 'text', get: function (r) { return r['Nama Lengkap']; } },
+            nik: { type: 'text', get: function (r) { return r['NIK']; } },
+            hp: { type: 'text', get: function (r) { return r['No HP']; } },
+            alamat: { type: 'text', get: function (r) { return r['Alamat/No Rumah']; } },
+            status: { type: 'text', get: function (r) { return r['Status']; } },
+            pekerjaan: { type: 'text', get: function (r) { return r['Pekerjaan']; } }
+        },
+        kas: {
+            time: { type: 'time', get: function (r) { return sortTimeValue(r, ['Tanggal', 'Timestamp']); } },
+            warga: { type: 'text', get: function (r) { return r['Nama Warga']; } },
+            jenis: { type: 'text', get: function (r) { return r['Jenis Transaksi']; } },
+            nominal: { type: 'num', get: function (r) { return Number(r['Jumlah (Rp)']) || 0; } }
+        },
+        surat: {
+            time: { type: 'time', get: function (r) { return sortTimeValue(r, ['Timestamp', 'Tanggal']); } },
+            pemohon: { type: 'text', get: function (r) { return r['Nama Lengkap Pemohon']; } },
+            status: { type: 'text', get: function (r) { return r['Rw Status']; } },
+            revisi: { type: 'num', get: function (r) { return Number(r['Rw Revisi']) || 0; } }
+        },
+        lapor: {
+            time: { type: 'time', get: function (r) { return sortTimeValue(r, ['Timestamp']); } },
+            warga: { type: 'text', get: function (r) { return r['Nama Warga']; } },
+            status: { type: 'text', get: function (r) { return r['Rw Status']; } },
+            updated: { type: 'time', get: function (r) { return sortTimeValue(r, ['Rw Diperbarui']); } }
+        },
+        audit: {
+            time: { type: 'time', get: function (r) { return sortTimeValue(r, ['Waktu']); } },
+            user: { type: 'text', get: function (r) { return r['Aktor']; } },
+            aksi: { type: 'text', get: function (r) { return r['Aksi']; } },
+            hasil: { type: 'text', get: function (r) { return r['Hasil']; } }
+        }
+    };
+
+    function defaultSortDir(page, key) {
+        var def = (SORT_SPECS[page] || {})[key];
+        if (!def) return 'asc';
+        return def.type === 'time' || def.type === 'num' ? 'desc' : 'asc';
+    }
+
+    function sortRows(rows, page) {
+        var spec = state.sorts[page];
+        var def = spec && spec.key ? (SORT_SPECS[page] || {})[spec.key] : null;
+        if (!def) return (rows || []).slice();
+        var dir = spec.dir === 'asc' ? 1 : -1;
+        return (rows || []).slice().sort(function (a, b) {
+            var va = def.get(a);
+            var vb = def.get(b);
+            var c;
+            if (def.type === 'num') {
+                c = (Number(va) || 0) - (Number(vb) || 0);
+            } else {
+                c = String(va === null || va === undefined ? '' : va)
+                    .localeCompare(String(vb === null || vb === undefined ? '' : vb), 'id', { numeric: true });
+            }
+            return c * dir;
+        });
+    }
+
+    function sortHeader(page, key, label, sub, numeric) {
+        var spec = state.sorts[page] || {};
+        var active = spec.key === key;
+        var icon = active ? (spec.dir === 'asc' ? 'fa-arrow-up-short-wide' : 'fa-arrow-down-wide-short') : 'fa-sort';
+        var sortAttr = active ? (spec.dir === 'asc' ? 'ascending' : 'descending') : 'none';
+        return '<th class="th-sort' + (active ? ' is-active' : '') + (numeric ? ' num' : '') + '" scope="col" aria-sort="' + sortAttr + '">' +
+            '<button type="button" class="th-sort-btn" data-sort-page="' + esc(page) + '" data-sort-key="' + esc(key) + '">' +
+                '<span' + (sub ? ' class="th-stack"' : '') + '>' + esc(label) + '</span>' +
+                (sub ? '<span class="th-sub">' + esc(sub) + '</span>' : '') +
+                '<i class="fa-solid ' + icon + ' th-sort-icon" aria-hidden="true"></i>' +
+            '</button></th>';
+    }
+
+    // Data Warga hanya menggambar ulang tbody, jadi status header diperbarui
+    // langsung di DOM agar panah dan aria-sort selalu mencerminkan urutan aktif.
+    function refreshSortHeaders(page) {
+        var spec = state.sorts[page] || {};
+        document.querySelectorAll('[data-sort-page]').forEach(function (btn) {
+            if (btn.getAttribute('data-sort-page') !== page) return;
+            var th = btn.parentNode;
+            var key = btn.getAttribute('data-sort-key');
+            var active = spec.key === key;
+            if (th && th.classList) th.classList.toggle('is-active', active);
+            if (th && th.setAttribute) {
+                th.setAttribute('aria-sort', active ? (spec.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+            }
+            var icon = btn.querySelector ? btn.querySelector('.th-sort-icon') : null;
+            if (icon) {
+                icon.className = 'fa-solid th-sort-icon ' +
+                    (active ? (spec.dir === 'asc' ? 'fa-arrow-up-short-wide' : 'fa-arrow-down-wide-short') : 'fa-sort');
+            }
+        });
+    }
+
+    function bindSort(page, rerender) {
+        document.querySelectorAll('[data-sort-page]').forEach(function (btn) {
+            if (btn.getAttribute('data-sort-page') !== page) return;
+            btn.addEventListener('click', function () {
+                var key = btn.getAttribute('data-sort-key');
+                var spec = state.sorts[page] || (state.sorts[page] = { key: key, dir: 'asc' });
+                if (spec.key === key) spec.dir = spec.dir === 'asc' ? 'desc' : 'asc';
+                else { spec.key = key; spec.dir = defaultSortDir(page, key); }
+                state.pages[page] = 1;
+                rerender();
+                refreshSortHeaders(page);
+            });
+        });
     }
 
     // Kotak cari generik untuk daftar selain Data Warga. Pencarian dilakukan
@@ -833,16 +1107,38 @@
     function bindPeriodControls(prefix, f, rerender) {
         var from = $(prefix + '-from');
         var to = $(prefix + '-to');
+        var preset = $(prefix + '-preset');
         function apply() {
             f.from = from ? from.value : '';
             f.to = to ? to.value : '';
+            // Mengubah tanggal secara manual berarti preset tidak lagi akurat.
+            f.preset = '';
             state.pages[state.page] = 1;
             rerender();
         }
         if (from) from.addEventListener('change', apply);
         if (to) to.addEventListener('change', apply);
+        if (preset) {
+            preset.addEventListener('change', function (e) {
+                var value = e.target.value;
+                f.preset = value;
+                if (value) {
+                    var range = presetRange(value);
+                    if (range && from) from.value = range.from;
+                    if (range && to) to.value = range.to;
+                    f.from = range && range.from || '';
+                    f.to = range && range.to || '';
+                }
+                state.pages[state.page] = 1;
+                rerender();
+            });
+        }
         var clear = $(prefix + '-clear');
-        if (clear) clear.addEventListener('click', function () { f.from = ''; f.to = ''; state.pages[state.page] = 1; rerender(); });
+        if (clear) clear.addEventListener('click', function () {
+            f.from = ''; f.to = ''; f.preset = '';
+            state.pages[state.page] = 1;
+            rerender();
+        });
     }
 
     // Jendela cetak dibuka dari klik pengguna dan langsung memanggil print()
@@ -1221,7 +1517,14 @@
                     '<section class="card"><div class="card-head"><div><h2>' + esc(f.rt) + '</h2><p id="warga-count">' + fmtInt(res.total) + ' warga aktif</p></div></div>' +
                     '<div class="card-hint"><i class="fa-solid fa-clock-rotate-left"></i> Klik <strong>Riwayat</strong> pada baris warga untuk melihat pengajuan surat dan pengaduan warga tersebut.</div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Warga</th><th>NIK</th><th>No HP</th><th>Alamat</th><th>Status</th><th>Pekerjaan</th><th>Riwayat</th></tr></thead>' +
+                    '<thead><tr>' +
+                        sortHeader('warga', 'nama', 'Warga') +
+                        sortHeader('warga', 'nik', 'NIK') +
+                        sortHeader('warga', 'hp', 'No HP') +
+                        sortHeader('warga', 'alamat', 'Alamat') +
+                        sortHeader('warga', 'status', 'Status') +
+                        sortHeader('warga', 'pekerjaan', 'Pekerjaan') +
+                        '<th>Riwayat</th></tr></thead>' +
                     '<tbody id="warga-body"></tbody></table></div></div>' +
                     '<div id="warga-pager"></div></section>';
                 paintWarga();
@@ -1233,6 +1536,7 @@
                     state.pages.warga = 1;
                     paintWarga();
                 });
+                bindSort('warga', paintWarga);
                 $('warga-print').addEventListener('click', function () {
                     printWargaReport(filteredWarga(), { rt: f.rt, query: f.q });
                 });
@@ -1252,7 +1556,9 @@
             return [r['Nama Lengkap'], r['Nomor KK'], r['NIK'], r['No HP'], r['Alamat/No Rumah'], r['Pekerjaan']]
                 .some(function (v) { return String(v || '').toLowerCase().indexOf(q) !== -1; });
         }) : data.rows;
-        return sortWargaByKk(rows);
+        // Tanpa kolom terpilih, pertahankan urutan resmi per Nomor KK.
+        var spec = state.sorts.warga;
+        return spec && spec.key ? sortRows(rows, 'warga') : sortWargaByKk(rows);
     }
 
     function isKepalaKeluarga(r) {
@@ -1672,6 +1978,7 @@
                     return !hasPeriod || periodMatch(r['Tanggal'] || r['Timestamp'], f.from, f.to);
                 });
                 rows = filterByQuery(rows, f.q, ['Nama Warga', 'No Rumah', 'Jenis Transaksi', 'Keterangan']);
+                rows = sortRows(rows, 'kas');
                 // Saldo saat ini selalu dari seluruh transaksi aktif; kartu
                 // periode menghitung arus pada rentang yang dipilih saja.
                 var totalMasuk = 0, totalKeluar = 0, aktif = 0;
@@ -1727,11 +2034,17 @@
                     '</div><div style="height:16px"></div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Riwayat transaksi</h2><p>Urut tanggal terbaru · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · arsip tidak dihitung</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Tanggal</th><th>Warga</th><th>Jenis</th><th class="num">Nominal</th><th>Keterangan</th></tr></thead>' +
+                    '<thead><tr>' +
+                        sortHeader('kas', 'time', 'Tanggal') +
+                        sortHeader('kas', 'warga', 'Warga') +
+                        sortHeader('kas', 'jenis', 'Jenis') +
+                        sortHeader('kas', 'nominal', 'Nominal', '', true) +
+                        '<th>Keterangan</th></tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="5"><div class="empty"><i class="fa-solid fa-wallet"></i><p>Belum ada transaksi pada periode ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('kas', sliced) + '</section>';
                 $('kas-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.kas = 1; renderKas(); });
                 bindSearch('kas-q', f, renderKas);
+                bindSort('kas', renderKas);
                 bindPeriodControls('kas', f, renderKas);
                 bindPager('kas', renderKas);
                 $('kas-print').addEventListener('click', function () {
@@ -1883,6 +2196,7 @@
                 var allRows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var rows = allRows.filter(function (r) { return periodMatch(r['Timestamp'], f.from, f.to); });
                 rows = filterByQuery(rows, f.q, ['Nama Lengkap Pemohon', 'NIK', 'Jenis Surat', 'No. Surat', 'Keperluan / Alasan Pengajuan', 'Status Pengurusan', 'Rw Status']);
+                rows = sortRows(rows, 'surat');
                 var sliced = pageSlice(rows, 'surat');
                 var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-surat="' + esc(r['ID']) + '">' +
@@ -1904,12 +2218,20 @@
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Pengajuan surat</h2><p>' + fmtInt(rows.length) + ' pengajuan · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Tanggal</th><th><span class="th-stack">Pemohon</span><span class="th-sub">NIK</span></th><th><span class="th-stack">Jenis surat</span><span class="th-sub">No. Surat</span></th><th>Status RT</th><th>Status RW</th><th>Revisi</th></tr></thead>' +
+                    '<thead><tr>' +
+                        sortHeader('surat', 'time', 'Tanggal') +
+                        sortHeader('surat', 'pemohon', 'Pemohon', 'NIK') +
+                        '<th><span class="th-stack">Jenis surat</span><span class="th-sub">No. Surat</span></th>' +
+                        '<th>Status RT</th>' +
+                        sortHeader('surat', 'status', 'Status RW') +
+                        sortHeader('surat', 'revisi', 'Revisi', '', true) +
+                    '</tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-file-signature"></i><p>Tidak ada pengajuan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('surat', sliced) + '</section>';
                 $('surat-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.surat = 1; renderSurat(); });
                 $('surat-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.surat = 1; renderSurat(); });
                 bindSearch('surat-q', f, renderSurat);
+                bindSort('surat', renderSurat);
                 bindPeriodControls('surat', f, renderSurat);
                 bindPager('surat', renderSurat);
                 $('surat-print').addEventListener('click', function () {
@@ -1942,6 +2264,7 @@
                 var allRows = sortByTimeDesc(rowsToObjects(res.headers, res.rows), 'Timestamp');
                 var rows = allRows.filter(function (r) { return periodMatch(r['Timestamp'], f.from, f.to); });
                 rows = filterByQuery(rows, f.q, ['Nama Warga', 'No. Pengaduan', 'Judul Pengaduan', 'Jenis Pengaduan', 'Detail Pengaduan', 'Alamat / No. Rumah', 'Status', 'Rw Status']);
+                rows = sortRows(rows, 'lapor');
                 var sliced = pageSlice(rows, 'lapor');
                 var body = sliced.rows.map(function (r) {
                     return '<tr class="clickable" data-lapor="' + esc(r['ID']) + '">' +
@@ -1963,12 +2286,19 @@
                     '</div>' + listNotice(res) +
                     '<section class="card"><div class="card-head"><div><h2>Pengaduan warga</h2><p>' + fmtInt(rows.length) + ' pengaduan · ' + esc(periodLabel(f)) + (f.q ? ' · cari "' + esc(f.q) + '"' : '') + ' · klik baris untuk detail</p></div></div>' +
                     '<div class="card-body flush"><div class="table-wrap"><table>' +
-                    '<thead><tr><th>Tanggal / nomor</th><th>Warga</th><th>Pengaduan</th><th>Status RT</th><th>Status RW</th><th>Diperbarui</th></tr></thead>' +
+                    '<thead><tr>' +
+                        sortHeader('lapor', 'time', 'Tanggal / nomor') +
+                        sortHeader('lapor', 'warga', 'Warga') +
+                        '<th>Pengaduan</th><th>Status RT</th>' +
+                        sortHeader('lapor', 'status', 'Status RW') +
+                        sortHeader('lapor', 'updated', 'Diperbarui') +
+                    '</tr></thead>' +
                     '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-comment-dots"></i><p>Tidak ada pengaduan pada filter ini.</p></div></td></tr>') + '</tbody></table></div></div>' +
                     pagerHtml('lapor', sliced) + '</section>';
                 $('lapor-rt').addEventListener('change', function (e) { f.rt = e.target.value; state.pages.lapor = 1; renderLapor(); });
                 $('lapor-status').addEventListener('change', function (e) { f.status = e.target.value; state.pages.lapor = 1; renderLapor(); });
                 bindSearch('lapor-q', f, renderLapor);
+                bindSort('lapor', renderLapor);
                 bindPeriodControls('lapor', f, renderLapor);
                 bindPager('lapor', renderLapor);
                 $('lapor-print').addEventListener('click', function () {
@@ -2039,11 +2369,21 @@
         $('drawer-title').textContent = title;
         $('drawer-body').innerHTML = html;
         $('drawer').classList.remove('hidden');
+        $('drawer').setAttribute('aria-hidden', 'false');
         document.body.classList.add('drawer-open');
+        trapFocus($('drawer'));
+        // Fokus awal ke tombol tutup di header (bukan backdrop) agar Escape/Tab
+        // langsung bekerja dan pembaca layar mengumumkan judul dialog.
+        var close = $('drawer').querySelector ? $('drawer').querySelector('.drawer-head [data-close-drawer]') : null;
+        if (close && close.focus) close.focus();
     }
     function closeDrawer() {
-        $('drawer').classList.add('hidden');
+        var drawer = $('drawer');
+        if (!drawer || drawer.classList.contains('hidden')) return;
+        drawer.classList.add('hidden');
+        drawer.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('drawer-open');
+        releaseFocus();
     }
 
     function suratActionPanel(r, rtId) {
@@ -2899,6 +3239,7 @@
             var fa = state.filters.audit;
             var allRows = res.audit || [];
             var rows = filterByQuery(allRows, fa.q, ['Aktor', 'Email', 'Aksi', 'RT ID', 'Target', 'Hasil', 'Detail']);
+            rows = sortRows(rows, 'audit');
             var sliced = pageSlice(rows, 'audit');
             var body = sliced.rows.map(function (a) {
                 return '<tr>' +
@@ -2917,10 +3258,18 @@
                 '</div>' +
                 '<section class="card"><div class="card-head"><div><h2>Audit log</h2><p>Login, keputusan, tanggapan, registry, dan pengaturan.' + (fa.q ? ' · cari "' + esc(fa.q) + '"' : '') + '</p></div></div>' +
                 '<div class="card-body flush"><div class="table-wrap"><table>' +
-                '<thead><tr><th>Waktu</th><th>User</th><th>Aksi</th><th>RT / target</th><th>Hasil</th><th>Detail</th></tr></thead>' +
+                '<thead><tr>' +
+                    sortHeader('audit', 'time', 'Waktu') +
+                    sortHeader('audit', 'user', 'User') +
+                    sortHeader('audit', 'aksi', 'Aksi') +
+                    '<th>RT / target</th>' +
+                    sortHeader('audit', 'hasil', 'Hasil') +
+                    '<th>Detail</th>' +
+                '</tr></thead>' +
                 '<tbody>' + (body || '<tr><td colspan="6"><div class="empty"><i class="fa-solid fa-list-check"></i><p>Belum ada entri audit.</p></div></td></tr>') + '</tbody></table></div></div>' +
                 pagerHtml('audit', sliced) + '</section>';
             bindSearch('audit-q', fa, renderers.audit);
+            bindSort('audit', renderers.audit);
             bindPager('audit', renderers.audit);
             setSync('Audit', 'ok');
         }).catch(function (err) { pageError(err); setSync('Gagal memuat', 'error'); });
@@ -2946,9 +3295,9 @@
     var HASH_FIELDS = {
         // Pencarian warga sengaja tidak masuk URL: query bisa memuat nama/NIK.
         warga: ['rt'],
-        kas: ['rt', 'from', 'to', 'q'],
-        surat: ['rt', 'status', 'from', 'to', 'q'],
-        lapor: ['rt', 'status', 'from', 'to', 'q'],
+        kas: ['rt', 'from', 'to', 'preset', 'q'],
+        surat: ['rt', 'status', 'from', 'to', 'preset', 'q'],
+        lapor: ['rt', 'status', 'from', 'to', 'preset', 'q'],
         audit: ['q']
     };
 
@@ -2958,6 +3307,10 @@
         var parts = [];
         var f = fields ? (state.filters[page] || {}) : {};
         (fields || []).forEach(function (name) {
+            // Saat preset aktif, tanggal tidak perlu ditulis: preset dihitung
+            // ulang saat tautan dibuka sehingga label "Hari ini" tetap benar
+            // meski dibuka pada hari berikutnya.
+            if (f.preset && (name === 'from' || name === 'to')) return;
             var value = f[name];
             if (!isBlank(value)) parts.push(encodeURIComponent(name) + '=' + encodeURIComponent(value));
         });
@@ -3006,6 +3359,12 @@
             fields.forEach(function (name) {
                 f[name] = Object.prototype.hasOwnProperty.call(route.params, name) ? route.params[name] : '';
             });
+            // Tautan yang hanya membawa preset tetap menghasilkan rentang yang
+            // benar, sehingga label dan filter konsisten setelah muat ulang.
+            if (f.preset && (!f.from || !f.to)) {
+                var range = presetRange(f.preset);
+                if (range) { f.from = range.from; f.to = range.to; }
+            }
         }
         var pageChanged = state.page !== page;
         state.page = page;
@@ -3079,8 +3438,14 @@
             });
         }
         $('access-retry').addEventListener('click', function () { location.reload(); });
-        $('menu-btn').addEventListener('click', function () { $('sidebar').classList.add('open'); });
-        $('sidebar-close').addEventListener('click', function () { $('sidebar').classList.remove('open'); });
+        $('menu-btn').addEventListener('click', function () {
+            $('sidebar').classList.add('open');
+            $('menu-btn').setAttribute('aria-expanded', 'true');
+        });
+        $('sidebar-close').addEventListener('click', function () {
+            $('sidebar').classList.remove('open');
+            $('menu-btn').setAttribute('aria-expanded', 'false');
+        });
         $('toast-close').addEventListener('click', function () { $('toast').classList.add('hidden'); });
         var warningCancel = $('warning-cancel');
         if (warningCancel) warningCancel.addEventListener('click', closeWarning);
@@ -3099,9 +3464,11 @@
                 if (modal && !modal.classList.contains('hidden')) { closeWarning(); return; }
                 closeDrawer();
                 $('sidebar').classList.remove('open');
+                $('menu-btn').setAttribute('aria-expanded', 'false');
             }
         });
         document.addEventListener('click', function (e) {
+            rememberTrigger(e.target);
             var retry = e.target.closest('[data-retry]');
             if (retry) { renderers[state.page](); }
         });
