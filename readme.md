@@ -425,7 +425,15 @@ window.RT_CONFIG = {
 
 ## 🧪 Demo Statis (`demo/`) untuk Calon Pengguna
 
-Folder `demo/` berisi salinan aplikasi yang **berjalan tanpa backend** dan dapat dibuka langsung dari hosting statis (GitHub Pages, Cloudflare Pages, raw.githack, dan sebagainya). Cocok untuk memperkenalkan aplikasi ke calon pengguna sebelum mereka melakukan pemasangan sendiri.
+Folder `demo/` berisi salinan aplikasi yang **berjalan tanpa backend** dan dapat dibuka langsung dari hosting statis (GitHub Pages, Cloudflare Pages, dan sebagainya). Cocok untuk memperkenalkan aplikasi ke calon pengguna sebelum mereka melakukan pemasangan sendiri.
+
+URL demo publik (GitHub Pages):
+
+| Halaman | URL |
+|---|---|
+| Pemilih demo | https://saladimu.github.io/rtlontar/demo/ |
+| Admin RT (mode lokal) | https://saladimu.github.io/rtlontar/demo/rt/ |
+| Portal RW (mock `/api`) | https://saladimu.github.io/rtlontar/demo/rw/ |
 
 Isinya:
 
@@ -449,11 +457,13 @@ Menjalankan demo secara lokal:
 npx serve demo
 ```
 
-Untuk URL publik tanpa workflow deploy, gunakan layanan yang menyajikan berkas mentah dengan MIME yang benar, misalnya:
+Untuk URL publik, GitHub Pages menyajikan folder `demo/` apa adanya dari branch `main`:
 
 ```text
-https://raw.githack.com/<user>/<repo>/main/demo/
+https://saladimu.github.io/rtlontar/demo/
 ```
+
+Aktifkan sekali di **Settings → Pages → Deploy from a branch → `main` / `/ (root)`**. Setiap push ke `main` yang menyertakan `demo/` akan diperbarui otomatis.
 
 > Catatan: demo memakai data contoh RT018. Perubahan yang dilakukan pengunjung hanya tersimpan di `localStorage` browser mereka sendiri dan tidak pernah dikirim ke Google Sheets atau gateway RW produksi.
 
