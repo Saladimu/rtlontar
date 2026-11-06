@@ -423,6 +423,42 @@ window.RT_CONFIG = {
 
 ---
 
+## 🧪 Demo Statis (`demo/`) untuk Calon Pengguna
+
+Folder `demo/` berisi salinan aplikasi yang **berjalan tanpa backend** dan dapat dibuka langsung dari hosting statis (GitHub Pages, Cloudflare Pages, raw.githack, dan sebagainya). Cocok untuk memperkenalkan aplikasi ke calon pengguna sebelum mereka melakukan pemasangan sendiri.
+
+Isinya:
+
+| Halaman | Isi | Catatan |
+|---|---|---|
+| `demo/index.html` | Halaman pemilih demo | Tautan ke Admin RT dan Portal RW |
+| `demo/rt/` | SAPA-RT Admin (mode lokal) | `publicApiUrl`/`apiBase` kosong; data contoh di-seed ke `localStorage`; service worker dan pemantau versi dinonaktifkan |
+| `demo/rw/` | Portal RW 06 | `/api` di-mock di browser oleh `mock-api.js`; akun demo `rw@example.com` (RW Admin) dan `viewer@example.com` (RW Viewer) |
+
+Membangun ulang demo setelah sumber berubah:
+
+```bash
+node tools/build-demo.js
+```
+
+Skrip ini menyalin aset dari `index.html`, `rw/index.html`, `config.js`, serta data contoh `rw/tools/mock-data.js`. Jangan mengedit berkas di dalam `demo/` secara langsung karena akan tertimpa saat build berikutnya.
+
+Menjalankan demo secara lokal:
+
+```bash
+npx serve demo
+```
+
+Untuk URL publik tanpa workflow deploy, gunakan layanan yang menyajikan berkas mentah dengan MIME yang benar, misalnya:
+
+```text
+https://raw.githack.com/<user>/<repo>/main/demo/
+```
+
+> Catatan: demo memakai data contoh RT018. Perubahan yang dilakukan pengunjung hanya tersimpan di `localStorage` browser mereka sendiri dan tidak pernah dikirim ke Google Sheets atau gateway RW produksi.
+
+---
+
 ## 🎬 Mode Demo (Offline)
 
 Untuk memperagakan aplikasi ke pengguna **tanpa** menghubungkan ke Google Sheets, **kosongkan `publicApiUrl` dan `apiBase` di `config.js`**. Aplikasi otomatis berjalan dalam **mode lokal**:

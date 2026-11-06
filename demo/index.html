@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAPA RT - Demo Aplikasi</title>
+    <link rel="icon" type="image/png" href="rt/favicon.ico">
+    <link rel="stylesheet" href="rt/fonts.css">
+    <link rel="stylesheet" href="rt/tailwind.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+    <main class="max-w-5xl mx-auto px-6 py-12">
+        <header class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-teal-600 text-white mb-4">
+                <i class="fa-solid fa-house-crack text-2xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900">SAPA RT - Demo Aplikasi</h1>
+            <p class="text-slate-500 mt-2">Demo statis tanpa backend. Semua data contoh hanya tersimpan di browser Anda.</p>
+        </header>
+
+        <div class="grid gap-6 md:grid-cols-2">
+            <a href="rt/" class="block bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-11 h-11 rounded-xl bg-cyan-100 text-cyan-700 flex items-center justify-center">
+                        <i class="fa-solid fa-desktop text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Admin RT</h2>
+                        <p class="text-xs text-slate-500">Mode lokal (localStorage)</p>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-600">Kelola data warga, iuran kas, pengumuman, kegiatan, pengajuan surat, dan pengaduan. Perubahan hanya tersimpan di browser ini.</p>
+                <span class="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-cyan-700">
+                    <i class="fa-solid fa-arrow-right"></i> Buka Admin RT
+                </span>
+            </a>
+
+            <a href="rw/" class="block bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-11 h-11 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center">
+                        <i class="fa-solid fa-users text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Portal RW</h2>
+                        <p class="text-xs text-slate-500">Mock /api di browser</p>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-600">Ringkasan RT, keputusan surat, tanggapan pengaduan, pengguna, registry, pengaturan, outbox, dan audit dengan data contoh.</p>
+                <span class="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-teal-700">
+                    <i class="fa-solid fa-arrow-right"></i> Buka Portal RW
+                </span>
+            </a>
+        </div>
+
+        <div class="mt-8 bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="text-sm font-bold text-slate-900 mb-2"><i class="fa-solid fa-circle-info mr-2 text-slate-400"></i>Akun demo Portal RW</h2>
+            <ul class="text-sm text-slate-600 space-y-1">
+                <li><b>RW Admin:</b> rw@example.com &mdash; dapat menyetujui surat dan menanggapi pengaduan.</li>
+                <li><b>RW Viewer:</b> viewer@example.com &mdash; hanya baca, data sensitif disamarkan.</li>
+                <li>Ganti akun dengan menambahkan <code class="bg-slate-100 px-1 rounded">?devEmail=viewer@example.com</code> pada URL Portal RW.</li>
+            </ul>
+            <p class="text-xs text-slate-400 mt-3">Data admin RT dapat dikosongkan lewat menu Integrasi Google Sheets &rarr; Reset Demo Data (Local).</p>
+        </div>
+    </main>
+</body>
+</html>
