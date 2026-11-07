@@ -648,7 +648,9 @@ Sebelum push/unggah ke Cloudflare Pages, naikkan penanda versi yang sesuai agar 
 
 ## Pemeliharaan & Rilis
 
-Prosedur lengkap ada di `MAINTENANCE.md`: rutinitas mingguan/bulanan, backup dan uji restore, rotasi token, rollback, onboarding RT baru, serta registry deployment. Rollout RT baru **diparkir** per 31 Oktober 2026 (BRD-RW06 §15.1: RT017 dan RT018 aktif, RT019-RT026 ditunda). Bila dilanjutkan, ikuti panduan langkah demi langkah di **`ROLLOUT-RT.md`** (perintah, tabel konfigurasi, smoke test, dan troubleshooting); ringkasan gate-nya ada di **checklist rollout Fase A–H** `MAINTENANCE.md` §6.4.
+Prosedur lengkap ada di `MAINTENANCE.md`: rutinitas mingguan/bulanan, backup dan uji restore, rotasi token, rollback, onboarding RT baru, serta registry deployment. Rollout RT baru **diparkir** per 31 Oktober 2026 (BRD-RW06 §15.1: RT017 dan RT018 aktif, RT019-RT026 ditunda).
+
+Bila rollout dilanjutkan dan Anda ingin menaikkan **satu RT baru dari nol sampai siap pakai**, ikuti **`PANDUAN-RT-BARU.md`**. Panduan itu membahas dua varian: **tanpa Portal RW** (Layanan Surat dimatikan, atau persetujuan surat diubah manual di spreadsheet) dan **dengan Portal RW 06** (RT didaftarkan ke portal yang sudah ada). Untuk ringkasan fase A–H dan perintah copy-paste, lihat juga **`ROLLOUT-RT.md`**; ringkasan gate-nya ada di **checklist rollout Fase A–H** `MAINTENANCE.md` §6.4.
 
 Model branch:
 
