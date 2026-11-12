@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // Membangun folder `demo/` statis dari sumber aplikasi.
 //
-// Demo berisi dua aplikasi yang berjalan tanpa backend:
-//   1. demo/rt  - Admin SAPA-RT dalam mode lokal (localStorage), data contoh
-//                 di-seed otomatis dari rw/tools/mock-data.js.
-//   2. demo/rw  - Portal RW dengan `/api` di-mock di sisi browser
-//                 (mock-api.js mem-patch window.fetch).
-//   3. demo/index.html - halaman pemilih demo.
+// Demo berisi tiga aplikasi yang berjalan tanpa backend:
+//   1. demo/rt     - Admin SAPA-RT dalam mode lokal (localStorage), data contoh
+//                    di-seed otomatis dari rw/tools/mock-data.js.
+//   2. demo/rw     - Portal RW dengan `/api` di-mock di sisi browser
+//                    (mock-api.js mem-patch window.fetch).
+//   3. demo/public - Portal Publik dengan endpoint JSONP/tulis di-mock di sisi
+//                    browser (mock-api.js mem-patch appendChild & fetch).
+//   4. demo/index.html - halaman pemilih demo.
 //
 // Tidak ada permintaan ke Google Sheets / gateway produksi. Jalankan ulang
 // setiap kali sumber berubah:
@@ -273,6 +275,198 @@ function buildRw() {
     buildMockApi();
 }
 
+// ---------------------------------------------------------------- Public mock
+// Mock Portal Publik: memakai ulang mesin handler dari tools/mock-server.js
+// (model data + pembaca publik + submit), lalu menyalurkan permintaan lewat
+// JSONP (pembacaan) dan fetch POST (penulisan) di sisi browser.
+function buildPublicMockApi() {
+    const serverSrc = read('tools/mock-server.js');
+
+    const modelStart = serverSrc.indexOf('const DATA_FIELDS = {');
+    const modelEnd = serverSrc.indexOf('// ================= Penyimpanan =================');
+    if (modelStart === -1 || modelEnd === -1 || modelEnd <= modelStart) {
+        throw new Error('Gagal mengekstrak model data dari tools/mock-server.js');
+    }
+    const model = serverSrc.slice(modelStart, modelEnd).trim();
+
+    const handlerStart = serverSrc.indexOf('function findRowIndex(sheetName, id)');
+    const handlerEnd = serverSrc.indexOf('// ================= HTTP =================');
+    if (handlerStart === -1 || handlerEnd === -1 || handlerEnd <= handlerStart) {
+        throw new Error('Gagal mengekstrak handler dari tools/mock-server.js');
+    }
+    const handlers = serverSrc.slice(handlerStart, handlerEnd).trim();
+
+    const sheets = {
+        Data_Warga: RT.rows.Data_Warga || [],
+        Iuran_Kas: RT.rows.Iuran_Kas || [],
+        Pengumuman: seed.pengumuman.map(function (p) {
+            return [p.timestamp, p.tanggal, p.judul, p.isi, p.kategori, p.pj, p.publik, p._id];
+        }),
+        Kegiatan_Warga: seed.kegiatan.map(function (k) {
+            return [k.timestamp, k.namaKegiatan, k.tanggal, k.waktu, k.lokasi, k.pj, k.keterangan, k.publik, k._id];
+        }),
+        Pengajuan_Surat: RT.rows.Pengajuan_Surat || [],
+        Lapor_Aspirasi: RT.rows.Lapor_Aspirasi || [],
+        Lapor_Tindak_Lanjut: RT.rows.Lapor_Tindak_Lanjut || []
+    };
+
+    const indent = function (text) {
+        return text.split('\n').map(function (line) { return line ? '    ' + line : line; }).join('\n');
+    };
+
+    const js = '/* Dibuat otomatis oleh tools/build-demo.js.\n' +
+        '   Mock Portal Publik sisi browser (JSONP + fetch POST). Tidak ada backend. */\n' +
+        '(function () {\n' +
+        '    var SHEET_NAMES = ["Data_Warga", "Iuran_Kas", "Pengumuman", "Kegiatan_Warga", "Pengajuan_Surat", "Lapor_Aspirasi"];\n' +
+        "    var CODE_VERSION = 'publik-v39-2026-10-28';\n" +
+        '    var SEED_SHEETS = ' + JSON.stringify(sheets) + ';\n\n' +
+        indent(model) + '\n\n' +
+        '    var store = {\n' +
+        '        rtId: "RT018", portalEnabled: true, laporEnabled: true, suratEnabled: true,\n' +
+        '        adminEmail: "", saldoAwal: ' + (Number(RT.saldoAwal) || 0) + ',\n' +
+        '        sheets: SEED_SHEETS\n' +
+        '    };\n' +
+        '    // Demo tidak menyimpan ke disk; perubahan hanya bertahan selama tab terbuka.\n' +
+        '    function saveStore() {}\n\n' +
+        indent(handlers) + '\n\n' +
+        '    function parseQuery(url) {\n' +
+        '        var out = {};\n' +
+        '        try {\n' +
+        '            new URL(url, location.href).searchParams.forEach(function (v, k) { out[k] = v; });\n' +
+        '        } catch (e) { /* abaikan */ }\n' +
+        '        return out;\n' +
+        '    }\n\n' +
+        '    function handleGet(params) {\n' +
+        '        var a = params.action;\n' +
+        "        if (a === 'readPublic') return readPublicSheets();\n" +
+        "        if (a === 'checkSurat') return handleCheckSurat(params);\n" +
+        "        if (a === 'checkSuratDuplicate') return handleCheckSuratDuplicate(params);\n" +
+        "        if (a === 'lookupWarga') return handleLookupWarga(params);\n" +
+        "        if (a === 'lookupWargaHp') return handleLookupWargaHp(params);\n" +
+        "        if (a === 'checkLapor') return handleCheckLapor(params);\n" +
+        "        if (a === 'checkLaporDuplicate') return handleCheckLaporDuplicate(params);\n" +
+        "        return { result: 'error', code: 'unknown_action', message: 'Aksi tidak dikenal: ' + a };\n" +
+        '    }\n\n' +
+        '    function isApiPath(pathname) {\n' +
+        "        return pathname === '/api' || /\\/api$/.test(pathname);\n" +
+        '    }\n\n' +
+        '    // JSONP: public.html membuat <script src="/api?...&callback=...">, jadi\n' +
+        '    // kita bajak properti src untuk memanggil callback tanpa jaringan.\n' +
+        '    var nativeCreateElement = document.createElement.bind(document);\n' +
+        '    var scriptSrcDesc = null;\n' +
+        '    try { scriptSrcDesc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, \'src\'); } catch (e) { scriptSrcDesc = null; }\n' +
+        '    document.createElement = function (tag, options) {\n' +
+        '        var el = nativeCreateElement(tag, options);\n' +
+        "        if (String(tag).toLowerCase() !== 'script' || !scriptSrcDesc) return el;\n" +
+        '        var stored = \'\';\n' +
+        '        try {\n' +
+        '            Object.defineProperty(el, \'src\', {\n' +
+        '                configurable: true,\n' +
+        '                get: function () { return stored; },\n' +
+        '                set: function (value) {\n' +
+        '                    var url = String(value == null ? \'\' : value);\n' +
+        '                    stored = url;\n' +
+        '                    var pathname = url;\n' +
+        '                    try { pathname = new URL(url, location.href).pathname; } catch (e) { /* abaikan */ }\n' +
+        '                    if (!isApiPath(pathname)) { scriptSrcDesc.set.call(el, url); return; }\n' +
+        '                    var params = parseQuery(url);\n' +
+        '                    var payload;\n' +
+        '                    try { payload = handleGet(params); } catch (err) { payload = { result: \'error\', message: String(err && err.message || err) }; }\n' +
+        '                    var cb = params.callback;\n' +
+        '                    setTimeout(function () {\n' +
+        '                        if (cb && typeof window[cb] === \'function\') window[cb](payload);\n' +
+        '                        else if (typeof el.onerror === \'function\') el.onerror();\n' +
+        '                    }, 10);\n' +
+        '                }\n' +
+        '            });\n' +
+        '        } catch (e) { /* abaikan */ }\n' +
+        '        return el;\n' +
+        '    };\n\n' +
+        '    // Tulis: postToSheets memakai fetch POST dengan body JSON (text/plain).\n' +
+        '    var originalFetch = window.fetch ? window.fetch.bind(window) : null;\n' +
+        '    window.fetch = function (input, init) {\n' +
+        "        var url = (typeof input === 'string') ? input : ((input && input.url) || '');\n" +
+        '        var pathname = url;\n' +
+        "        try { pathname = new URL(url, location.href).pathname; } catch (e) { /* abaikan */ }\n" +
+        "        var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();\n" +
+        '        if (isApiPath(pathname) && method === \'POST\') {\n' +
+        '            var body = {};\n' +
+        "            try { body = JSON.parse((init && init.body) || '{}') || {}; } catch (e) { body = {}; }\n" +
+        '            var out;\n' +
+        "            try { out = handlePost(body); } catch (err) { out = { result: 'error', message: String(err && err.message || err) }; }\n" +
+        '            return Promise.resolve(new Response(JSON.stringify(out), {\n' +
+        '                status: 200,\n' +
+        "                headers: { 'content-type': 'application/json; charset=utf-8' }\n" +
+        '            }));\n' +
+        '        }\n' +
+        '        if (originalFetch) return originalFetch(input, init);\n' +
+        "        return Promise.reject(new Error('fetch tidak tersedia'));\n" +
+        '    };\n' +
+        '})();\n';
+
+    write('public/mock-api.js', js);
+}
+
+function buildPublic() {
+    let html = read('public.html');
+
+    html = mustReplace(html,
+        "        if ('serviceWorker' in navigator) {\n" +
+        "            window.addEventListener('load', function () {\n" +
+        "                navigator.serviceWorker.register('sw.js').catch(function () {});\n" +
+        "            });\n" +
+        "        }\n",
+        "        // Demo statis: service worker dinonaktifkan agar tidak meng-cache demo.\n",
+        'service worker publik');
+
+    html = mustReplace(html,
+        '                startUpdateWatcher();',
+        '                // Demo statis: pemantau versi dinonaktifkan.',
+        'startUpdateWatcher publik');
+
+    html = mustReplace(html,
+        '    <!-- ================= JAVASCRIPT ================= -->',
+        '    <script src="mock-api.js"></script>\n' +
+        '    <!-- ================= JAVASCRIPT ================= -->',
+        'mock script publik');
+
+    html = mustReplace(html,
+        '</body>',
+        '    <script>\n' +
+        '        window.addEventListener("DOMContentLoaded", function () {\n' +
+        '            var a = document.createElement("a");\n' +
+        '            a.id = "demo-badge";\n' +
+        '            a.href = "../index.html";\n' +
+        '            a.textContent = "Demo - kembali ke pilihan";\n' +
+        '            a.style.cssText = "position:fixed;right:14px;bottom:14px;z-index:2147483647;" +\n' +
+        '                "background:#0f172a;color:#fff;font:600 12px/1 Inter,system-ui,sans-serif;" +\n' +
+        '                "padding:9px 12px;border-radius:999px;text-decoration:none;opacity:.85;" +\n' +
+        '                "box-shadow:0 6px 18px rgba(15,23,42,.28)";\n' +
+        '            document.body.appendChild(a);\n' +
+        '        });\n' +
+        '    </script>\n' +
+        '</body>',
+        'badge publik');
+    write('public/index.html', html);
+
+    // config.js demo: tanpa endpoint produksi, proxy same-origin di-mock.
+    let cfg = read('config.js');
+    cfg = cfg.replace(/publicApiUrl:\s*'[^']*'/, "publicApiUrl: ''");
+    cfg = cfg.replace(/apiBase:\s*'[^']*'/, "apiBase: '/api'");
+    cfg = cfg.replace(/publicPortalUrl:\s*'[^']*'/, "publicPortalUrl: ''");
+    cfg = cfg.replace(/^\s*rt:\s*'[^']*'/m, "    rt: '" + RT_NUMBER + "'");
+    cfg = cfg.replace(/^\s*alamatrt:\s*'[^']*'/m, "    alamatrt: '" + String(RT.alamat || ('Lontar ' + RT_NUMBER)).replace(/'/g, "\\'") + "'");
+    write('public/config.js', cfg);
+
+    ['tailwind.css', 'fonts.css', 'favicon.ico', 'rt-icon.png', 'icon-192.png',
+        'apple-touch-icon.png', 'manifest-public.webmanifest', 'qr-public.png', 'fonts']
+        .forEach(function (asset) {
+            copy(asset, 'public/' + asset);
+        });
+
+    buildPublicMockApi();
+}
+
 // ---------------------------------------------------------------- landing
 function buildLanding() {
     const html = `<!DOCTYPE html>
@@ -330,6 +524,22 @@ function buildLanding() {
                     <i class="fa-solid fa-arrow-right"></i> Buka Portal RW
                 </span>
             </a>
+
+            <a href="public/" class="block bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition md:col-span-2">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i class="fa-solid fa-bullhorn text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-900">Portal Publik Warga</h2>
+                        <p class="text-xs text-slate-500">Mock JSONP + POST di browser</p>
+                    </div>
+                </div>
+                <p class="text-sm text-slate-600">Pengumuman & agenda kegiatan, pengajuan surat, lapor & aspirasi, serta cek status surat/pengaduan. Data contoh RT018 dimuat lewat mock di browser.</p>
+                <span class="inline-flex items-center gap-2 mt-4 text-sm font-semibold text-emerald-700">
+                    <i class="fa-solid fa-arrow-right"></i> Buka Portal Publik
+                </span>
+            </a>
         </div>
 
         <div class="mt-8 bg-white rounded-2xl border border-slate-200 p-6">
@@ -341,6 +551,15 @@ function buildLanding() {
             </ul>
             <p class="text-xs text-slate-400 mt-3">Data admin RT dapat dikosongkan lewat menu Integrasi Google Sheets &rarr; Reset Demo Data (Local).</p>
         </div>
+
+        <div class="mt-6 bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="text-sm font-bold text-slate-900 mb-2"><i class="fa-solid fa-lightbulb mr-2 text-slate-400"></i>Contoh data Portal Publik</h2>
+            <ul class="text-sm text-slate-600 space-y-1">
+                <li><b>Cek status surat:</b> NIK <code class="bg-slate-100 px-1 rounded">3173010101010001</code> &amp; HP <code class="bg-slate-100 px-1 rounded">081234567890</code>, atau No. Pengajuan <code class="bg-slate-100 px-1 rounded">SRT-018-1</code>.</li>
+                <li><b>Cek pengaduan:</b> No. Pengaduan <code class="bg-slate-100 px-1 rounded">ADU/2026-012</code>.</li>
+                <li><b>Lapor &amp; ajukan surat:</b> gunakan No. WhatsApp warga contoh di atas (data warga hanya ada di mock browser).</li>
+            </ul>
+        </div>
     </main>
 </body>
 </html>
@@ -350,5 +569,6 @@ function buildLanding() {
 
 buildRt();
 buildRw();
+buildPublic();
 buildLanding();
 console.log('Demo dibangun di ' + path.relative(ROOT, DEMO) + '/');

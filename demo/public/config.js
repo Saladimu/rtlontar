@@ -1,0 +1,188 @@
+/* ============================================================
+   KONFIGURASI IDENTITAS SISTEM RT
+   ------------------------------------------------------------
+   Ubah HANYA nilai di dalam RT_CONFIG di bawah ini untuk
+   menyesuaikan informasi RT pada seluruh aplikasi
+   (index.html dan public.html).
+
+   Semua teks di halaman (judul, header, footer, sub-judul, tooltip,
+   alt logo, dan placeholder form) diisi otomatis dari konfigurasi ini
+   melalui atribut data-rt / data-rt-placeholder / data-rt-title /
+   data-rt-aria-label / data-rt-alt.
+   Identitas RT/RW/alamat cukup diubah di sini (satu file) — teks
+   turunan (dashboardTitle, wargaTitle, kasTitle, publicSubtitle,
+   footer, wilayah, judul tab, placeholder) menyesuaikan otomatis.
+   ============================================================ */
+window.RT_CONFIG = {
+    // Versi konfigurasi. Naikkan (mis. '2', '3', ...) setiap kali mengubah config.js.
+    // Halaman membandingkannya dengan EXPECTED_CONFIG_VERSION (ada di index.html &
+    // public.html) dan melakukan hard refresh otomatis bila berbeda, sehingga HTML
+    // yang masih tersimpan di cache browser ikut diperbarui (sekali saja, ada guard).
+    version: '12',
+    appName: 'SAPA RT',
+    appLongName: 'Sistem Administrasi & Pelayanan Antarwarga',
+
+    // Versi rilis aplikasi yang tampil di footer (mis. 'v1.0.0').
+    // Naikkan saat ada rilis/perubahan besar. Berbeda dari `version` (penanda
+    // sinkronisasi config) dan `APP_BUILD` (penanda build HTML).
+    appVersion: 'v1.0.0',
+    rt: '018',
+    rw: '06',
+    kelurahan: 'Tanjung Duren Utara',
+    kecamatan: 'Grogol Petamburan',
+    kota: 'Jakarta Barat',
+    provinsi: 'DKI Jakarta',
+
+    // Nama kawasan / jalan tempat RT berada. Hanya dipakai untuk tampilan.
+    alamatrt: 'Lontar Timur',
+    tahun: new Date().getFullYear(),
+    alamatContoh: 'Jl. Lontar Barat No. 06',
+    lokasiContoh: 'Depan lapangan',
+
+    // Contoh teks placeholder pada field No. Surat (admin). Token {rt}, {rw},
+    // dan {tahun} diisi otomatis dari nilai di atas. Ubah bagian "474"/"X"
+    // atau susunannya sesuai format nomor surat RT.
+    suratNoContoh: 'mis. 474/{rt}-RT/RW.{rw}/X/{tahun}',
+
+    // URL Web App Google Apps Script untuk Portal Publik (endpoint readPublic).
+    // Salin URL Web App (yang berakhiran /exec) di sini agar public.html dapat
+    // diakses cukup lewat "public.html" tanpa parameter ?url=...
+    // Kosongkan ('') untuk memakai parameter ?url=... (kompatibilitas lama).
+    publicApiUrl: '',
+
+    // Path proxy same-origin (Cloudflare Pages Function, lihat folder `functions/`).
+    // Dipakai sebagai jalur utama request ke Apps Script supaya browser tidak
+    // memanggil script.google.com secara lintas-situs (menghindari blokir cookie
+    // pihak ketiga/ITP/ekstensi yang membuat JSONP gagal). Bila proxy tidak
+    // tersedia (mis. pratinjau lokal), aplikasi otomatis jatuh ke publicApiUrl.
+    // Kosongkan ('') untuk selalu memakai publicApiUrl (URL langsung).
+    apiBase: '/api',
+
+    // URL halaman Portal Publik yang dibagikan ke warga. Satu domain dengan
+    // admin (akses admin dikunci Cloudflare Access pada path "/" & "/index.html",
+    // sedangkan "/public" + aset publik di-bypass). Contoh:
+    // https://sapa-rt017.pages.dev/public
+    // Kosongkan ('') untuk memakai public.html lokal (atau ?url=... bila publicApiUrl kosong).
+    publicPortalUrl: '',
+
+    // Daftar pilihan "Jenis Surat" pada fitur Pengajuan Surat. Dipakai oleh
+    // index.html (admin) & public.html (form warga) agar seragam. Backend
+    // (code.gs) menyimpan teksnya apa adanya; ubah daftar ini kapan saja lalu
+    // naikkan `version` agar halaman lama ter-refresh otomatis.
+    jenisSurat: [
+        'Surat Pengantar KTP-el',
+        'Surat Pengantar Kartu Keluarga (KK)',
+        'Surat Pengantar Pindah Keluar',
+        'Surat Pengantar Kedatangan Warga',
+        'Surat Pengantar Akta Kelahiran',
+        'Surat Keterangan Kematian',
+        'Surat Keterangan Tidak Mampu (SKTM)',
+        'Surat Keterangan Domisili (Perorangan)',
+        'Surat Keterangan Domisili Usaha',
+        'Surat Keterangan Belum Menikah / Pengantar Nikah',
+        'Surat Pengantar SKCK',
+        'Surat Keterangan Izin Keramaian / Acara Warga',
+        'Lainnya'
+    ],
+
+    // Daftar status pengurusan surat (diubah oleh pengurus di halaman admin).
+    statusSurat: ['Pending', 'Diproses', 'Selesai', 'Ditolak'],
+
+    // Daftar pilihan "Jenis Pengaduan" pada fitur Lapor & Aspirasi. Dipakai oleh
+    // index.html (admin) & public.html (form warga) agar seragam. Backend
+    // (code.gs) menyimpan teksnya apa adanya.
+    jenisPengaduan: [
+        '🏠 Lingkungan & Kebersihan',
+        '💡 Penerangan Jalan',
+        '🚰 Saluran Air / Drainase',
+        '🛣️ Jalan & Fasilitas Umum',
+        '🔊 Ketertiban / Kebisingan',
+        '🚗 Parkir / Akses Jalan',
+        '🔐 Keamanan Lingkungan',
+        '🗑️ Sampah',
+        '🐕 Hewan / Gangguan Lingkungan',
+        '👥 Kegiatan Warga',
+        '📄 Administrasi RT',
+        '💬 Aspirasi / Saran',
+        'Lainnya'
+    ],
+
+    // Daftar status penanganan pengaduan (diubah oleh pengurus di halaman admin).
+    statusPengaduan: ['Diterima', 'Diproses', 'Selesai']
+};
+
+(function () {
+    var c = window.RT_CONFIG;
+
+    function rtShort() { return 'RT ' + c.rt + '/RW ' + c.rw; }
+    function rtFull() { return 'RT ' + c.rt + ' / RW ' + c.rw + ' ' + c.kelurahan; }
+    function wilayah() { return c.alamatrt + ', ' + c.kelurahan + ', ' + c.kecamatan; }
+    function copyright() { return '\u00A9 ' + c.tahun + ' ' + c.appName + ' \u00B7 ' + rtShort() + ' ' + c.alamatrt + ', ' + c.kelurahan; }
+
+    // Nilai untuk setiap atribut data-rt.
+    var values = {
+        appName: c.appName,
+        appLongName: c.appLongName,
+        appNameRt: c.appName,
+        appVersion: c.appVersion,
+        dashboardTitle: 'Ringkasan RT ' + c.rt + ' / RW ' + c.rw,
+        headerName: c.appName,
+        rtShort: rtShort(),
+        rtFull: rtFull(),
+        kelurahan: c.kelurahan,
+        wilayah: wilayah(),
+        wargaTitle: 'Data Warga RT ' + c.rt + ' / RW ' + c.rw,
+        kasTitle: 'Iuran Kas RT ' + c.rt + ' / RW ' + c.rw,
+        wargaSubtitle: 'Pendataan warga ' + c.kelurahan,
+        pengumumanSubtitle: 'Papan informasi resmi ' + c.appName,
+        publicSubtitle: 'Portal Publik ' + rtShort(),
+        footerAdmin: copyright() + ' \u00B7 ' + c.appVersion,
+        footerPublic: copyright() + ' - Portal Publik \u00B7 ' + c.appVersion,
+        titleAdmin: c.appName + ' ' + c.rt,
+        titlePublic: c.appName + ' - Portal Publik ' + rtShort(),
+        aboutTitle: 'Tentang ' + c.appName,
+        logoAlt: 'Logo ' + c.appName
+    };
+
+    // Nilai untuk setiap atribut data-rt-placeholder.
+    var placeholders = {
+        alamat: c.alamatContoh,
+        pj: 'Ketua RT ' + c.rt,
+        lokasi: c.lokasiContoh + ' ' + c.rt,
+        suratNo: String(c.suratNoContoh || 'mis. 474/{rt}-RT/RW.{rw}/X/{tahun}')
+            .replace(/\{rt\}/g, c.rt)
+            .replace(/\{rw\}/g, c.rw)
+            .replace(/\{tahun\}/g, c.tahun)
+    };
+
+    function apply() {
+        document.querySelectorAll('[data-rt]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt')];
+            if (val !== undefined && val !== null) el.textContent = val;
+        });
+        document.querySelectorAll('[data-rt-title]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt-title')];
+            if (val !== undefined && val !== null) el.setAttribute('title', val);
+        });
+        document.querySelectorAll('[data-rt-aria-label]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt-aria-label')];
+            if (val !== undefined && val !== null) el.setAttribute('aria-label', val);
+        });
+        document.querySelectorAll('[data-rt-alt]').forEach(function (el) {
+            var val = values[el.getAttribute('data-rt-alt')];
+            if (val !== undefined && val !== null) el.setAttribute('alt', val);
+        });
+        document.querySelectorAll('[data-rt-placeholder]').forEach(function (el) {
+            var val = placeholders[el.getAttribute('data-rt-placeholder')];
+            if (val) el.setAttribute('placeholder', val);
+        });
+    }
+
+    window.RT = { config: c, rtShort: rtShort, rtFull: rtFull, wilayah: wilayah, apply: apply };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', apply);
+    } else {
+        apply();
+    }
+})();

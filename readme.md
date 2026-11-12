@@ -434,14 +434,22 @@ URL demo publik (GitHub Pages):
 | Pemilih demo | https://saladimu.github.io/rtlontar/demo/ |
 | Admin RT (mode lokal) | https://saladimu.github.io/rtlontar/demo/rt/ |
 | Portal RW (mock `/api`) | https://saladimu.github.io/rtlontar/demo/rw/ |
+| Portal Publik Warga (mock JSONP) | https://saladimu.github.io/rtlontar/demo/public/ |
 
 Isinya:
 
 | Halaman | Isi | Catatan |
 |---|---|---|
-| `demo/index.html` | Halaman pemilih demo | Tautan ke Admin RT dan Portal RW |
+| `demo/index.html` | Halaman pemilih demo | Tautan ke Admin RT, Portal RW, dan Portal Publik |
 | `demo/rt/` | SAPA-RT Admin (mode lokal) | `publicApiUrl`/`apiBase` kosong; data contoh di-seed ke `localStorage`; service worker dan pemantau versi dinonaktifkan |
 | `demo/rw/` | Portal RW 06 | `/api` di-mock di browser oleh `mock-api.js`; akun demo `rw@example.com` (RW Admin) dan `viewer@example.com` (RW Viewer) |
+| `demo/public/` | Portal Publik Warga (RT018) | Pembacaan JSONP (`<script src="/api?...">`) dan penulisan `fetch` POST di-mock di browser oleh `mock-api.js`; service worker dan pemantau versi dinonaktifkan |
+
+Contoh data Portal Publik untuk dicoba:
+
+- **Cek status surat:** NIK `3173010101010001` & No. HP `081234567890`, atau No. Pengajuan `SRT-018-1`.
+- **Cek pengaduan:** No. Pengaduan `ADU/2026-012`.
+- **Ajukan surat / kirim pengaduan:** gunakan No. WhatsApp warga contoh di atas; data warga hanya ada di mock browser.
 
 Membangun ulang demo setelah sumber berubah:
 
@@ -449,13 +457,15 @@ Membangun ulang demo setelah sumber berubah:
 node tools/build-demo.js
 ```
 
-Skrip ini menyalin aset dari `index.html`, `rw/index.html`, `config.js`, serta data contoh `rw/tools/mock-data.js`. Jangan mengedit berkas di dalam `demo/` secara langsung karena akan tertimpa saat build berikutnya.
+Skrip ini menyalin aset dari `index.html`, `public.html`, `rw/index.html`, `config.js`, serta data contoh `rw/tools/mock-data.js`. Jangan mengedit berkas di dalam `demo/` secara langsung karena akan tertimpa saat build berikutnya.
 
 Menjalankan demo secara lokal:
 
 ```bash
 npx serve demo
 ```
+
+> Jalankan lewat server HTTP (`npx serve demo`), bukan membuka `demo/index.html` langsung dari `file://`. Mode lokal Admin RT dan mock Portal Publik memerlukan `localStorage`/origin yang valid.
 
 Untuk URL publik, GitHub Pages menyajikan folder `demo/` apa adanya dari branch `main`:
 
@@ -465,7 +475,7 @@ https://saladimu.github.io/rtlontar/demo/
 
 Aktifkan sekali di **Settings → Pages → Deploy from a branch → `main` / `/ (root)`**. Setiap push ke `main` yang menyertakan `demo/` akan diperbarui otomatis.
 
-> Catatan: demo memakai data contoh RT018. Perubahan yang dilakukan pengunjung hanya tersimpan di `localStorage` browser mereka sendiri dan tidak pernah dikirim ke Google Sheets atau gateway RW produksi.
+> Catatan: demo memakai data contoh RT018. Perubahan yang dilakukan pengunjung hanya tersimpan di `localStorage`/memori tab browser mereka sendiri dan tidak pernah dikirim ke Google Sheets atau gateway RW produksi.
 
 ---
 
